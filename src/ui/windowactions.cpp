@@ -95,12 +95,13 @@ void MainWindow::createActions() {
     audio->addMenu(trackMenus_->audioMenu());
     audio->addMenu(tuning->audioDelayMenu());
     menuBar()->addMenu(trackMenus_->subtitleMenu());
-    auto *playlistMenu = menuBar()->addMenu(tr("播放列表(&L)"));
-    playlistMenu->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
+    playlistMenu_ = menuBar()->addMenu(tr("播放列表(&L)"));
+    playlistMenu_->setObjectName(QStringLiteral("playlistMenu"));
+    playlistMenu_->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
     auto *modeMenu = new PlaylistModeMenu(*playlist_, this);
     connect(modeMenu, &PlaylistModeMenu::feedback, this,
             [this](const QString &message) { statusBar()->showMessage(message, 2500); });
-    playlistMenu->addMenu(modeMenu->menu());
+    playlistMenu_->addMenu(modeMenu->menu());
     auto *view = menuBar()->addMenu(tr("视图(&V)"));
     view->addAction(fullscreenAction_);
     showPlaylistAction_ =

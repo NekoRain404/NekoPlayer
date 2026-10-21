@@ -67,6 +67,7 @@ class MainWindow final : public QMainWindow {
     QAction *clearPlaylistAction_ = nullptr;
     QAction *showPlaylistAction_ = nullptr;
     QMenu *contextMenu_ = nullptr;
+    QMenu *playlistMenu_ = nullptr;
     QTimer controlsTimer_;
     QStringList pendingPaths_;
     QByteArray normalGeometry_;

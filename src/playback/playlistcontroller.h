@@ -27,6 +27,8 @@ class PlaylistController final : public QObject {
     void playOrPause();
     void playNext();
     void playPrevious();
+    void removeAt(int row);
+    void moveItem(int from, int to);
     void clear();
     void setRepeatMode(RepeatMode mode);
     void cycleRepeatMode();
@@ -42,12 +44,15 @@ class PlaylistController final : public QObject {
     void mediaLoadFailed(const QString &message);
 
   private:
-    bool playFirstAvailable(int firstRow, int step = 1, bool wrap = false);
+    enum class ScanResult { Started, Exhausted, Cancelled };
+    ScanResult playFirstAvailable(int firstRow, int step = 1, bool wrap = false);
     void updateFileLoop();
     void finishQueue();
     MpvController &player_;
     PlaylistModel *model_;
     bool exhausted_ = false;
+    bool playbackQueued_ = false;
+    quint64 playbackRevision_ = 0;
     int navigationStep_ = 1;
     RepeatMode repeatMode_ = RepeatMode::Off;
     QSet<int> failedRows_;

@@ -56,8 +56,10 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         QStringLiteral("color: #8b92a3; font-size: 18px; background: transparent;"));
     auto *videoLayout = new QVBoxLayout(video_);
     videoLayout->addWidget(emptyHint_);
-    playlistPane_ = new PlaylistPane(playlist_->model(), appendAction_, previousAction_,
-                                     nextAction_, clearPlaylistAction_, content);
+    playlistPane_ = new PlaylistPane(*playlist_, appendAction_, previousAction_, nextAction_,
+                                     clearPlaylistAction_, content);
+    playlistMenu_->addSeparator();
+    playlistMenu_->addActions(playlistPane_->editingActions());
     playlistPane_->hide();
     auto *body = new QWidget(content);
     auto *bodyLayout = new QHBoxLayout(body);
@@ -86,6 +88,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
             &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::rowsInserted, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::rowsRemoved, this, &MainWindow::updateState);
+    connect(playlist_->model(), &PlaylistModel::rowsMoved, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::modelReset, this, &MainWindow::updateState);
     connect(playlistPane_, &PlaylistPane::playRequested, playlist_.get(), [this](int row) {
         if (video_->isReady())
@@ -213,9 +216,6 @@ void MainWindow::updateState() {
     nextAction_->setEnabled(video_->isReady() && playlist_->hasNext());
     clearPlaylistAction_->setEnabled(playlist_->model()->rowCount() > 0 ||
                                      !pendingPaths_.isEmpty());
-    const auto currentRow = playlist_->model()->currentIndex();
-    playlistPane_->view()->setCurrentIndex(currentRow >= 0 ? playlist_->model()->index(currentRow)
-                                                           : QModelIndex{});
     transport_->present(state);
     emptyHint_->setVisible(!state.active);
     setWindowTitle(state.path.isEmpty()

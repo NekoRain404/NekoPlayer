@@ -9,11 +9,11 @@
 | `MediaTrack` / `mpvtracks.cpp` | 类型内唯一的轨道编号、元数据、选择状态；将 mpv node 解析为拥有数据的快照 | 领域类型不依赖 mpv；解析器只依赖 Qt Core / client API |
 | `MediaChapter` / `mpvchapters.cpp` | 章节原始编号、标题及起始秒数；复制借用的 node 为独立快照 | 领域类型不依赖 mpv，解析器不依赖 UI |
 | `playbacktime.cpp` | 时间字符串解析与格式化，校验格式、有限值及转换范围 | Qt Core，无播放或窗口状态 |
-| `PlaylistModel` | 本地文件队列与当前项；提供 Qt model 角色 | Qt Core，不直接控制播放器 |
+| `PlaylistModel` | 本地文件队列、当前项与原生单项移动；提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器 |
 | `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环策略与有界失败恢复 | 仅依赖 `MpvController` 与 `PlaylistModel` |
 | `VideoWidget` | GL 上下文、物理像素 FBO、帧更新、隐藏时跳帧、资源释放 | 只处理渲染，不提交播放命令 |
 | `TransportBar` | 展示时间/进度/音量，拖动预览，发出定位和音量意图 | 状态快照和 QAction，不操作 mpv |
-| `PlaylistPane` | 队列视图和上一项/下一项/清空动作入口 | 只依赖 model 与共享 QAction |
+| `PlaylistPane` | 队列视图、独立编辑选择、当前项标识及编辑动作入口 | 通过队列业务 API 和共享 QAction 操作，不接触 mpv |
 | `TrackMenus` | 音轨、字幕菜单和外挂字幕文件入口 | 依赖控制器快照与业务接口，不接触 mpv handle |
 | `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
 | `PlaylistModeMenu` | 互斥播放模式动作、R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
@@ -52,6 +52,10 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 
 解码偏好由控制器记录成功提交到同一 mpv client 的最新用户意图，`hardwareDecodingEnabled` 不代表实际使用硬解；运行时异步设置 `hwdec=auto-safe/no`，相同偏好不重复提交。`PlaybackState::hardwareDecoder` 继续观察 `hwdec-current`，区分未播放、无视频解码器、软件及具体硬解 API。设置对话框缓存 active/decoder，只在相关值变化时刷新标签，不增加轮询或逐帧配置写盘。SessionStore 在 schema 1 增加可选 `video/hardwareDecoding`，缺失／非法值默认 true；SessionManager 关闭时读取即时意图，启动在加载媒体前应用。异步命令错误通过现有错误信号报告，硬件不可用时的正常回退不改变用户偏好。
 
-目前没有播放进度持久化、拖放重排、随机模式、完整偏好设置界面、插件框架、多引擎或完整主题系统。
+目前没有播放进度持久化、随机模式、完整偏好设置界面、插件框架、多引擎或完整主题系统。
 
 字幕显示实现集中在 `mpvcontroller_subtitles.cpp`，复用同一 client 的异步 `set` 命令；只有变更的字段才提交，UTF-8 字体作为独立参数传递。`SubtitlePreferences` 表示最新成功入队的用户意图，快速步进和关闭保存直接读取它，不等待属性观察；异步执行错误仍由现有错误信号报告，不宣称后端已执行成功。显示开关使用 `sub-visibility`，不改 `sid`；缩放为 0.25–4，位置为 0–100，拒绝非有限步进；字体去除首尾空白，空值、控制字符或超长名称回退 `sans-serif`。不设置 ASS 强制覆盖，不新增帧复制、轮询或媒体重载。schema 1 的可选 `subtitles/*` 字段缺失或损坏时分别回退默认值；停止、换片和渲染重建不清除偏好。字幕菜单仍按媒体状态启用，空闲设置入口由全局设置菜单和共享 F6 动作提供。对话框只在打开时枚举字体，保留泛型及当前未安装的字体名称；偏好变化通知驱动动作刷新，无逐帧处理。
+
+列表编辑沿用 Qt 的 `beginMoveRows`／`endMoveRows` 与 QListView InternalMove，不重载媒体。内部 MIME 对象持有 `QPersistentModelIndex`，跨移动和删除跟踪真实条目，区分重复路径并拒绝外部或已失效数据。当前行和失败行集合随结构变更映射；删除当前项先停止并取消自动续播，再选择邻项，迟到 EOF／加载错误不能自行启动它。面板通过持久索引区分编辑选择与播放项，仅播放项身份改变才同步选择；代理用 CurrentRole 加粗，不让 model 依赖字体。编辑 QAction 由面板提供给列表、按钮和主菜单，快捷键仅在列表聚焦时生效；不订阅播放进度，不新增帧处理或配置写盘。
+
+缺失文件的同步错误回调也允许修改队列：首次报错前才为剩余扫描候选建立持久索引快照，按原遍历顺序最多尝试每个仍存在的候选一次，回调中新追加的项留给下一次导航。正常有效文件入口不构建整表快照。新扫描、清空或移除当前项会使旧扫描修订号失效；取消与耗尽是不同结果，取消不能发出 queueFinished 或覆盖重入的新播放请求。

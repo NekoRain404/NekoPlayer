@@ -1,0 +1,39 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "sanitizers",
+      "inherits": "debug",
+      "cacheVariables": { "NEKOPLAYER_SANITIZERS": "ON" }
+    },
+    {
+      "name": "debug-x11",
+      "inherits": "debug",
+      "cacheVariables": { "NEKOPLAYER_WINDOW_TEST_BACKEND": "x11" }
+    },
+    {
+      "name": "sanitizers-x11",
+      "inherits": "debug-x11",
+      "cacheVariables": { "NEKOPLAYER_SANITIZERS": "ON" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "debug", "configurePreset": "debug" },
+    { "name": "sanitizers", "configurePreset": "sanitizers" },
+    { "name": "debug-x11", "configurePreset": "debug-x11" },
+    { "name": "sanitizers-x11", "configurePreset": "sanitizers-x11" }
+  ],
+  "testPresets": [
+    { "name": "debug", "configurePreset": "debug", "output": { "outputOnFailure": true } },
+    { "name": "sanitizers", "configurePreset": "sanitizers", "output": { "outputOnFailure": true } },
+    { "name": "debug-x11", "configurePreset": "debug-x11", "output": { "outputOnFailure": true } },
+    { "name": "sanitizers-x11", "configurePreset": "sanitizers-x11", "output": { "outputOnFailure": true } }
+  ]
+}

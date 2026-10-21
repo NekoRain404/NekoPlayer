@@ -30,6 +30,7 @@ endif()
 
 add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.cpp
     src/playback/mpvcontroller_navigation.cpp
+    src/playback/mpvcontroller_video.cpp
     src/playback/mpvcontroller_subtitles.cpp src/playback/subtitlepreferences.cpp
     src/playback/mpvchapters.cpp src/playback/playbacktime.cpp
     src/playback/playlistcontroller.cpp src/playback/playlistmodel.cpp)
@@ -44,7 +45,7 @@ target_link_libraries(neko_input PUBLIC neko_playback)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
     src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/trackmenus.cpp
-    src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp
+    src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
     src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp
     src/ui/subtitledisplaymenu.cpp src/ui/subtitlesettingsdialog.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input Qt6::Widgets Qt6::OpenGLWidgets)

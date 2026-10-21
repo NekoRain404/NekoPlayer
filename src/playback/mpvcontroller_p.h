@@ -69,6 +69,7 @@ struct MpvController::Impl {
     bool ready = false;
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
+    VideoPresentation presentation;
     uint64_t request = 0;
     struct TuningSetting {
         const char *name;

@@ -3,6 +3,7 @@
 #include "mediachapter.h"
 #include "mediatrack.h"
 #include "subtitlepreferences.h"
+#include "videopresentation.h"
 #include <QList>
 #include <QObject>
 #include <QString>
@@ -43,6 +44,9 @@ class MpvController final : public QObject {
     [[nodiscard]] bool hardwareDecodingEnabled() const;
     [[nodiscard]] const SubtitlePreferences &subtitlePreferences() const;
     void setSubtitlePreferences(const SubtitlePreferences &preferences);
+    // Session-only accepted intent; asynchronous errors are reported separately.
+    [[nodiscard]] const VideoPresentation &videoPresentation() const;
+    void setVideoAspect(VideoAspect aspect);
 
   public slots:
     void openFile(const QString &path);
@@ -73,6 +77,9 @@ class MpvController final : public QObject {
     void setSubtitlePosition(double position);
     void adjustSubtitlePosition(double delta);
     void setSubtitleFont(const QString &font);
+    void setVideoRotation(int clockwiseDegrees);
+    void rotateVideoClockwise();
+    void rotateVideoCounterClockwise();
     void prepareForRendererReset();
     void resumeAfterRendererReset();
 
@@ -81,6 +88,7 @@ class MpvController final : public QObject {
     void muteRequested(bool muted);
     void hardwareDecodingPreferenceChanged(bool enabled);
     void subtitlePreferencesChanged();
+    void videoPresentationChanged();
     void stateChanged();
     void tuningChanged();
     void tracksChanged();

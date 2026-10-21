@@ -8,6 +8,7 @@
 #include "subtitledisplaymenu.h"
 #include "trackmenus.h"
 #include "tuningmenus.h"
+#include "videomenu.h"
 
 #include <QAction>
 #include <QKeySequence>
@@ -95,6 +96,10 @@ void MainWindow::createActions() {
     audio->addMenu(trackMenus_->audioMenu());
     audio->addMenu(tuning->audioDelayMenu());
     menuBar()->addMenu(trackMenus_->subtitleMenu());
+    auto *video = new VideoMenu(*controller_, this);
+    connect(video, &VideoMenu::feedback, this,
+            [this](const QString &message) { statusBar()->showMessage(message, 2500); });
+    menuBar()->addMenu(video->menu());
     playlistMenu_ = menuBar()->addMenu(tr("播放列表(&L)"));
     playlistMenu_->setObjectName(QStringLiteral("playlistMenu"));
     playlistMenu_->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
@@ -132,6 +137,7 @@ void MainWindow::createActions() {
     contextMenu_->addSeparator();
     contextMenu_->addMenu(trackMenus_->audioMenu());
     contextMenu_->addMenu(trackMenus_->subtitleMenu());
+    contextMenu_->addMenu(video->menu());
     contextMenu_->addSeparator();
     contextMenu_->addAction(playbackSettings);
     setContextMenuPolicy(Qt::CustomContextMenu);

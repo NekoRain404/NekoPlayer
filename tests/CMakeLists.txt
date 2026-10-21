@@ -141,6 +141,14 @@ add_dependencies(file_drop_test test_track_media)
 add_test(NAME file-drop COMMAND file_drop_test)
 set_tests_properties(file-drop PROPERTIES TIMEOUT 60)
 
+add_executable(video_presentation_test video_presentation_test.cpp)
+target_link_libraries(video_presentation_test PRIVATE neko_playback Qt6::Test)
+target_compile_definitions(video_presentation_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"
+    TEST_EXTERNAL_SUBTITLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt")
+add_dependencies(video_presentation_test test_track_media)
+add_test(NAME video-presentation COMMAND video_presentation_test)
+set_tests_properties(video-presentation PROPERTIES TIMEOUT 60)
+
 set(NEKOPLAYER_WINDOW_TEST_BACKEND "wayland" CACHE STRING
     "Desktop backend for GUI integration tests (wayland or x11)")
 set_property(CACHE NEKOPLAYER_WINDOW_TEST_BACKEND PROPERTY STRINGS wayland x11)
@@ -164,6 +172,10 @@ else()
     message(FATAL_ERROR "NEKOPLAYER_WINDOW_TEST_BACKEND must be wayland or x11")
 endif()
 add_executable(window_test window_test.cpp)
+add_executable(video_window_test video_window_test.cpp)
+target_link_libraries(video_window_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME video-window COMMAND ${WINDOW_TEST_RUNNER} $<TARGET_FILE:video_window_test>)
+set_tests_properties(video-window PROPERTIES TIMEOUT 30 ENVIRONMENT "${WINDOW_TEST_ENVIRONMENT}")
 add_executable(file_drop_window_test file_drop_window_test.cpp)
 target_link_libraries(file_drop_window_test PRIVATE neko_ui Qt6::Test)
 target_compile_definitions(file_drop_window_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"

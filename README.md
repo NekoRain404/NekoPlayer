@@ -2,7 +2,7 @@
 
 以 **C++20 / Qt 6 + libmpv** 为基础，目标是做出接近 PotPlayer 的桌面播放体验：打开即播、完整快捷键与右键菜单、灵活的字幕/音轨选择、播放列表和可理解的设置。
 
-当前为可播放的早期版本：Qt Widgets + QOpenGLWidget 嵌入 libmpv，提供深色紧凑控制区、菜单、右键菜单和本地播放列表。本地媒体可通过打开、添加、拖放或命令行进入队列；支持暂停、停止、时间定位、章节导航、上一项/下一项、音量、静音、全屏、音轨切换、内嵌字幕选择、外挂字幕加载、字幕显示设置、倍速与音频／字幕延迟调整。队列、音量、硬解、字幕显示及窗口偏好可在正常退出后恢复；播放设置已提供解码方式选择，完整偏好设置与高级画质能力留待后续开发。
+当前为可播放的早期版本：Qt Widgets + QOpenGLWidget 嵌入 libmpv，提供深色紧凑控制区、菜单、右键菜单和本地播放列表。本地媒体可通过打开、添加、拖放或命令行进入队列；支持暂停、停止、时间定位、章节导航、上一项/下一项、音量、静音、全屏、音轨切换、内嵌字幕选择、外挂字幕加载、字幕显示设置、画面比例／旋转、倍速与音频／字幕延迟调整。队列、音量、硬解、字幕显示及窗口偏好可在正常退出后恢复；播放设置已提供解码方式选择，完整偏好设置与高级画质能力留待后续开发。
 
 ## 构建与检查
 
@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time|file-drop)$' --output-on-failure
+ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test
-ctest --test-dir build/sanitizers -R '^(decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time|file-drop)$' --output-on-failure
+cmake --build --preset sanitizers --target decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
+ctest --test-dir build/sanitizers -R '^(decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -61,6 +61,7 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | 显示 / 隐藏字幕 | V |
 | 放大 / 缩小字幕 | Alt+PageUp / Alt+PageDown |
 | 上移 / 下移字幕 | Alt+↑ / Alt+↓ |
+| 向左 / 向右旋转画面 90° | Alt+← / Alt+→ |
 | 字幕显示设置 | F6 |
 | 播放 / 暂停 | 空格 |
 | 上一项 / 下一项 | 多媒体上一曲 / 下一曲键 |
@@ -91,6 +92,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 “字幕 → 字幕显示”提供显示开关、缩放与上下移动；隐藏仅控制可见性，保留轨道选择。F6 或“设置 → 字幕显示设置”在未播放时也可打开，提供 0.25–4 倍缩放、0–100% 垂直位置和默认字体；100% 指原始位置，数值越小越靠上。对话框编辑为草稿，应用／确定才提交，恢复默认也需应用，取消保留已应用的修改。默认字体用于未指定字体的文本字幕，ASS 保留原样式，缩放／移动可能影响排版；位图字幕的效果取决于格式及 mpv 支持。偏好跨换片、停止及渲染恢复保留，正常退出保存，下次加载媒体前恢复。旧配置缺失或非法字段使用独立默认值，`--no-config` 不持久保存。字幕像素和真实字体效果尚待 Wayland 实机验收。
 
 播放速度菜单提供 0.25–4 倍预设和自定义输入，并启用 mpv 音调修正。音频延迟范围为 ±10 秒，字幕延迟范围为 ±600 秒；正值延后、负值提前。菜单显示后端确认的值，快速连续按键累积调整。倍速和延迟在本次运行中跨停止、换片及渲染恢复保留，重新启动恢复为 1 倍和零延迟，不写入会话配置。
+
+“视频”菜单与右键菜单提供原始比例、4:3、16:9、16:10、21:9 和拉伸填满；原始比例交给 mpv 读取媒体比例，拉伸会填满视频区域。Alt+←／Alt+→ 每次向左／向右旋转 90°，可从菜单重置旋转；旋转叠加在文件方向元数据上，重置仍尊重原始方向。菜单显示最新已提交的意图，后端执行失败会提示；比例提交失败后可重新选择比例恢复。比例与旋转在本次运行中跨停止、换片和渲染恢复保留，退出后恢复默认值。变换使用 mpv 原生选项，不新增 CPU 帧复制或视频滤镜，默认安全自动硬解保持不变；真实 Wayland 画面和硬解互操作效果尚待实机验收。
 
 “播放 → 定位”与右键菜单共用章节列表和时间输入。章节显示起始时间与标题，缺失标题时显示章节编号；选章及上下章保持暂停，不重新打开文件，首尾不会越界切换队列。Ctrl+G 接受秒数、分:秒或时:分:秒，可带最多三位小数；负数、非法格式与超过媒体时长的目标不可提交。时间请求精确到毫秒，最终显示帧仍由媒体时间戳决定，不承诺任意毫秒都有对应帧。不可定位的媒体会禁用这些操作。
 

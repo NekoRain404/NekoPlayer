@@ -3,6 +3,7 @@
 #include "shuffleorder.h"
 
 #include <QObject>
+#include <QPersistentModelIndex>
 #include <QSet>
 
 class MpvController;
@@ -24,10 +25,11 @@ class PlaylistController final : public QObject {
     [[nodiscard]] bool hasPrevious() const;
     [[nodiscard]] RepeatMode repeatMode() const;
     [[nodiscard]] bool shuffleEnabled() const;
+    [[nodiscard]] double pendingResumePosition() const;
 
   public slots:
     void addFiles(const QStringList &paths);
-    void restoreFiles(const QStringList &paths, int currentIndex);
+    void restoreFiles(const QStringList &paths, int currentIndex, double resumePosition = 0);
     void playAt(int row);
     void playOrPause();
     void playNext();
@@ -68,4 +70,6 @@ class PlaylistController final : public QObject {
     bool shuffleEnabled_ = false;
     ShuffleOrder shuffle_;
     QSet<int> failedRows_;
+    QPersistentModelIndex resumeEntry_;
+    double resumePosition_ = 0;
 };

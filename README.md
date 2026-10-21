@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+ctest --test-dir build/debug -R '^(code-size|backend-startup|resume|media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target media_information_test media_report_test frame_step_test ab_loop_test decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
-ctest --test-dir build/sanitizers -R '^(media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+cmake --build --preset sanitizers --target resume_test media_information_test media_report_test frame_step_test ab_loop_test decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
+ctest --test-dir build/sanitizers -R '^(resume|media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -92,7 +92,7 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 
 随机播放可从同一菜单或 Shift+R 独立开关，与循环模式组合，保留列表显示顺序及重复路径条目的独立身份。当前项视为本轮已访问，下一项从剩余条目中随机选择；不循环时一轮结束即停止，列表循环会开启新一轮，多项时避免轮次交界立即重复当前项。上一项沿实际访问历史回退，下一项先重走前向历史，再抽取新项；历史最多保留 1024 项。追加条目加入待播池，移动条目不打乱历史身份，删除当前项会停止并以邻项重新建立随机顺序。切换随机开关不重载媒体、不改变暂停和位置；显式选播或停止后重新播放会重新建立一轮。随机状态与历史仅在本次运行保留。
 
-正常退出会保存播放列表、当前行、音量／静音、窗口大小和最大化状态、列表面板显示状态及媒体对话框目录。再次启动只恢复队列，按空格才开始播放；命令行文件替换恢复队列。退出全屏时或在全屏下关闭，均保留之前的普通窗口状态，不在下次启动自动全屏。配置使用版本化 INI，Linux 默认位于 `$XDG_CONFIG_HOME/NekoPlayer/NekoPlayer/session.ini`（未设置时位于 `~/.config/` 下）；保存失败会提示，损坏或未知版本的配置不会被覆盖。`--no-config` 与 `--smoke-test` 均不读写配置。此阶段不保存播放进度、轨道和外挂字幕，也不提供崩溃恢复；同时运行多个实例时以最后保存的会话为准。
+正常退出会保存播放列表、当前行及其播放位置、音量／静音、窗口大小和最大化状态、列表面板显示状态及媒体对话框目录。再次启动只恢复空闲队列，按空格才从上次位置继续；剩余不超过一秒时从头开始。续播位置只属于上次选中的条目，移动条目会保留，停止、清空、删除该条目或播放其他条目会取消；相同路径的重复条目独立处理。命令行文件替换恢复队列。退出全屏时或在全屏下关闭，均保留之前的普通窗口状态，不在下次启动自动全屏。配置使用版本化 INI，Linux 默认位于 `$XDG_CONFIG_HOME/NekoPlayer/NekoPlayer/session.ini`（未设置时位于 `~/.config/` 下）；保存失败会提示，损坏或未知版本的配置不会被覆盖。`--no-config` 与 `--smoke-test` 均不读写配置。此阶段不提供每文件历史、轨道／外挂字幕持久化或崩溃恢复，也不检测同一路径的文件是否已被替换；同时运行多个实例时以最后保存的会话为准。
 
 “声音 → 音轨”和“字幕”菜单可查看轨道编号、标题、语言、编码及当前选择，也可关闭音轨或字幕；右键菜单共用这些入口。加载外挂字幕后自动选中该轨道。切换轨道无需重新打开媒体，保持暂停状态；停止或换片时清空旧轨道。图形上下文重建时恢复音轨、字幕选择和已加载的外挂字幕。外挂字幕可通过文件对话框或单文件拖放加载，拖放识别 srt、ass、ssa、sub、vtt、sup、idx、mks（扩展名不区分大小写）。请先播放媒体，再单独拖入一个字幕文件；空闲时、一次拖入多个字幕或混合媒体与字幕会整体拒绝并提示，不修改播放列表。VobSub 的 idx/sub 配对请选择 idx，伴随文件交给 mpv 读取。其他扩展名沿用媒体追加行为，文件能否解析由 mpv 判断。
 

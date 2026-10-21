@@ -5,11 +5,15 @@
 
 #include <QFileInfo>
 #include <QPersistentModelIndex>
+#include <cmath>
 
 PlaylistController::PlaylistController(MpvController &player, QObject *parent)
     : QObject(parent), player_(player), model_(new PlaylistModel(this)) {
     connect(&player_, &MpvController::playbackFinished, this, &PlaylistController::playFinished);
     connect(&player_, &MpvController::mediaLoadFailed, this, &PlaylistController::mediaLoadFailed);
+    const auto cancelResume = [this] { resumeEntry_ = QPersistentModelIndex{}; };
+    connect(&player_, &MpvController::stopRequested, this, cancelResume);
+    connect(&player_, &MpvController::fileOpenRequested, this, cancelResume);
     // FILE_LOADED can precede a no-decodable-frames error. Keep failure history
     // until a successful EOF or explicit navigation starts a new attempt chain.
     connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistController::updateFileLoop);
@@ -60,6 +64,10 @@ bool PlaylistController::hasPrevious() const {
 
 PlaylistController::RepeatMode PlaylistController::repeatMode() const { return repeatMode_; }
 bool PlaylistController::shuffleEnabled() const { return shuffleEnabled_; }
+double PlaylistController::pendingResumePosition() const {
+    return resumeEntry_.isValid() && resumeEntry_.row() == model_->currentIndex() ? resumePosition_
+                                                                                  : 0;
+}
 
 void PlaylistController::setShuffleEnabled(bool enabled) {
     if (shuffleEnabled_ == enabled)
@@ -121,13 +129,18 @@ void PlaylistController::playAt(int row) {
     playFirstAvailable(row);
 }
 
-void PlaylistController::restoreFiles(const QStringList &paths, int currentIndex) {
+void PlaylistController::restoreFiles(const QStringList &paths, int currentIndex,
+                                      double resumePosition) {
     clear();
     model_->addFiles(paths);
     if (model_->rowCount() > 0)
         model_->setCurrentIndex(qBound(0, currentIndex, model_->rowCount() - 1));
     if (shuffleEnabled_)
         shuffle_.reset(*model_, model_->currentIndex());
+    if (std::isfinite(resumePosition) && resumePosition > 0 && model_->currentIndex() >= 0) {
+        resumeEntry_ = model_->index(model_->currentIndex());
+        resumePosition_ = resumePosition;
+    }
     emit currentChanged(model_->currentIndex());
 }
 
@@ -270,6 +283,8 @@ PlaylistController::ScanResult PlaylistController::playFirstAvailable(int firstR
             continue;
         const auto path = model_->pathAt(row);
         if (!QFileInfo(path).isFile()) {
+            if (resumeEntry_.isValid() && resumeEntry_.row() == row)
+                resumeEntry_ = QPersistentModelIndex{};
             // Only the error path needs identity snapshots. Callbacks may edit
             // arbitrary rows; visit each surviving original candidate once.
             if (!snapshot) {
@@ -296,13 +311,16 @@ PlaylistController::ScanResult PlaylistController::playFirstAvailable(int firstR
 }
 
 void PlaylistController::startRow(int row, int step) {
+    const auto startPosition =
+        resumeEntry_.isValid() && resumeEntry_.row() == row ? resumePosition_ : 0;
+    resumeEntry_ = QPersistentModelIndex{};
     exhausted_ = false;
     playbackQueued_ = true;
     navigationStep_ = step;
     if (shuffleEnabled_)
         shuffle_.select(*model_, row);
     model_->setCurrentIndex(row);
-    player_.openFile(model_->pathAt(row));
+    player_.openFileAtPosition(model_->pathAt(row), startPosition);
     emit currentChanged(row);
 }
 
@@ -322,6 +340,8 @@ PlaylistController::ScanResult PlaylistController::playShuffled(int step) {
         }
         const auto path = model_->pathAt(entry.row());
         if (!QFileInfo(path).isFile()) {
+            if (resumeEntry_ == entry)
+                resumeEntry_ = QPersistentModelIndex{};
             failedRows_.insert(entry.row());
             shuffle_.rejectCurrent(step);
             emit queueError(tr("文件不存在：%1").arg(path));

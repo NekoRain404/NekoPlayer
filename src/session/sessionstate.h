@@ -22,6 +22,7 @@ struct SessionState {
     int currentIndex = -1;
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
+    double resumePosition = 0;
 };
 
 struct SessionLoadResult {

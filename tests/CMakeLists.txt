@@ -129,6 +129,13 @@ add_dependencies(playlist_shuffle_test test_media)
 add_test(NAME playlist-shuffle COMMAND playlist_shuffle_test)
 set_tests_properties(playlist-shuffle PROPERTIES TIMEOUT 60)
 
+add_executable(resume_test resume_test.cpp)
+target_link_libraries(resume_test PRIVATE neko_session Qt6::Test)
+target_compile_definitions(resume_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(resume_test test_media)
+add_test(NAME resume COMMAND resume_test)
+set_tests_properties(resume PROPERTIES TIMEOUT 60)
+
 add_executable(session_test session_test.cpp)
 target_link_libraries(session_test PRIVATE neko_session Qt6::Test)
 target_compile_definitions(session_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")

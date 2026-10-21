@@ -23,7 +23,8 @@ SessionLoadResult SessionManager::restore() {
         return loaded;
     audio_ = loaded.state.audio;
     mediaDirectory_ = loaded.state.window.mediaDirectory;
-    playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex);
+    playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
+                           loaded.state.resumePosition);
     player_.setVolume(audio_.volume);
     player_.setMuted(audio_.muted);
     player_.setHardwareDecodingEnabled(loaded.state.hardwareDecodingEnabled);
@@ -35,9 +36,12 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     if (!loadError_.isEmpty())
         return loadError_;
     window.mediaDirectory = mediaDirectory_;
+    const auto position = player_.state().path == playlist_.model()->currentPath()
+                              ? player_.resumePosition()
+                              : playlist_.pendingResumePosition();
     return store_.save({audio_, std::move(window), playlist_.model()->paths() + pendingPaths,
                         playlist_.model()->currentIndex(), player_.hardwareDecodingEnabled(),
-                        player_.subtitlePreferences()});
+                        player_.subtitlePreferences(), position});
 }
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }
 void SessionManager::rememberMedia(const QString &path) {

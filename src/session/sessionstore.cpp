@@ -66,6 +66,8 @@ SessionState normalized(SessionState state) {
         paths.append(QDir::cleanPath(path));
     }
     state.paths = std::move(paths);
+    if (current < 0 || !std::isfinite(state.resumePosition) || state.resumePosition < 0)
+        state.resumePosition = 0;
     state.currentIndex = current >= 0 ? current : (state.paths.isEmpty() ? -1 : 0);
     const QFileInfo directory(state.window.mediaDirectory);
     if (!directory.isAbsolute() || !directory.isDir())
@@ -102,6 +104,9 @@ SessionLoadResult SessionStore::load() const {
     state.currentIndex = settings.value(QStringLiteral("playlist/currentIndex"), -1).toInt(&valid);
     if (!valid)
         state.currentIndex = -1;
+    const auto resume =
+        settings.value(QStringLiteral("playlist/resumePosition"), 0).toDouble(&valid);
+    state.resumePosition = valid ? resume : 0;
     state.window.geometry = settings.value(QStringLiteral("window/geometry")).toByteArray();
     state.window.playlistVisible = readBool(settings, QStringLiteral("window/playlistVisible"));
     state.window.mediaDirectory =
@@ -130,6 +135,7 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("subtitles/font"), saved.subtitles.font);
     settings.setValue(QStringLiteral("playlist/paths"), saved.paths);
     settings.setValue(QStringLiteral("playlist/currentIndex"), saved.currentIndex);
+    settings.setValue(QStringLiteral("playlist/resumePosition"), saved.resumePosition);
     settings.setValue(QStringLiteral("window/geometry"), saved.window.geometry);
     settings.setValue(QStringLiteral("window/playlistVisible"), saved.window.playlistVisible);
     settings.setValue(QStringLiteral("window/mediaDirectory"), saved.window.mediaDirectory);

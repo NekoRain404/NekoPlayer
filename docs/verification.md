@@ -2,6 +2,15 @@
 
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
+Session resume position stage (2026-10-22):
+
+- `cmake --build --preset debug -j 4` succeeded, including NekoPlayer and compile-only window suites. The selected headless CTest run passed 21/21 in 38.40 seconds: code-size, backend startup, resume, media information/report, frame stepping, A-B looping, decoding, playback, playlist editing/modes/shuffle, tracks, session, tuning, navigation, playback time, file drop and video presentation.
+- Sanitizer targets rebuilt successfully. The selected ASan/UBSan CTest run passed 9/9 in 24.75 seconds: media information, navigation, playback, playlist/edit/modes/shuffle, resume and session, without sanitizer errors.
+- Real headless libmpv coverage verifies idle and loading saves, native `loadfile start=` resume without autoplay, one-time consumption, near-end and stop reset, duplicate-path identity, persistent-index moves, missing/undecodable selected entries, rapid replacement ownership, renderer recovery before the first position event, and native single-file repeat returning to media start. No polling, CPU frame copies, Rust or Vulkan path was added; GPU OpenGL rendering and `hwdec=auto-safe` remain unchanged.
+- Initial regressions were reproduced before the final fixes: a failed selected file with no successor retained its old bookmark, a rapid replacement let an earlier END_FILE clear a newer load's offset, and renderer recovery before the first position event restarted at zero. Bookmark ownership now follows libmpv command replies and `playlist_entry_id`, and recovery transfers the pending target to its new load.
+- Formatting, `git diff --check`, the 500/800-line checker and clang-format dry-run passed. `tests/window_test.cpp` remains the existing 800-line exception at 566 lines; the new resume test is 345 lines and all other touched ordinary files remain under 500 lines.
+- No GUI/window/smoke tests ran, per the user's request. Actual Wayland shortcut delivery, rendered frames, physical hardware decoding, and file identity validation after a path is replaced remain unverified or intentionally out of scope. Session saving remains normal-exit only and does not provide crash recovery or per-file history.
+
 Media information stage (2026-10-22):
 
 - `cmake --build --preset debug -j 4` succeeded, including NekoPlayer and all compile-only window suites. `ctest --test-dir build/debug -R '^(code-size|backend-startup|media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure` passed 20/20 in 36.38 seconds after the final production fix.

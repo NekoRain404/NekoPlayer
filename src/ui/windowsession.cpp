@@ -23,7 +23,9 @@ void MainWindow::restoreSession(const QString &path) {
     }
     showPlaylistAction_->setChecked(loaded.state.window.playlistVisible);
     if (!loaded.state.paths.isEmpty())
-        statusBar()->showMessage(tr("已恢复播放列表 · 按空格开始播放"));
+        statusBar()->showMessage(loaded.state.resumePosition > 0
+                                     ? tr("已恢复播放列表 · 按空格从上次位置继续播放")
+                                     : tr("已恢复播放列表 · 按空格开始播放"));
 }
 
 QString MainWindow::saveSession() {

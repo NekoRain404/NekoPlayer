@@ -59,8 +59,11 @@ void MpvController::Impl::updateProperty(const mpv_event &event) {
         observeTuning(subtitleDelay, *static_cast<double *>(value.data));
         return;
     case Position:
-        if (state.active)
+        if (state.active) {
             state.position = *static_cast<double *>(value.data);
+            if (mediaReady && !openingCommand && playingEntry == openingEntry)
+                openingPosition.reset();
+        }
         break;
     case Duration:
         if (state.active)
@@ -95,6 +98,7 @@ void MpvController::Impl::drainEvents() {
         case MPV_EVENT_NONE:
             return;
         case MPV_EVENT_START_FILE:
+            playingEntry = static_cast<mpv_event_start_file *>(event->data)->playlist_entry_id;
             resetPlayback();
             loading = true;
             emit owner->stateChanged();
@@ -112,6 +116,8 @@ void MpvController::Impl::drainEvents() {
             break;
         case MPV_EVENT_END_FILE: {
             const auto &end = *static_cast<mpv_event_end_file *>(event->data);
+            if (end.playlist_entry_id == openingEntry)
+                openingPosition.reset();
             const bool expectedReset = recoveringRenderer && end.error == MPV_ERROR_VO_INIT_FAILED;
             if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
                 recoveringRenderer = false;
@@ -141,6 +147,20 @@ void MpvController::Impl::drainEvents() {
             queryChapterRequest(chapterSeekStarted);
             break;
         case MPV_EVENT_COMMAND_REPLY:
+            if (event->reply_userdata == openingCommand && openingCommand) {
+                openingCommand = 0;
+                const auto &result = static_cast<mpv_event_command *>(event->data)->result;
+                if (event->error < 0) {
+                    openingPosition.reset();
+                } else if (result.format == MPV_FORMAT_NODE_MAP) {
+                    const auto &map = *result.u.list;
+                    for (int index = 0; index < map.num; ++index) {
+                        if (QByteArrayView(map.keys[index]) == "playlist_entry_id" &&
+                            map.values[index].format == MPV_FORMAT_INT64)
+                            openingEntry = map.values[index].u.int64;
+                    }
+                }
+            }
             confirmChapterRequest(*event);
             if (canceledRestoreRequests.remove(event->reply_userdata))
                 break;
@@ -175,6 +195,8 @@ void MpvController::Impl::drainEvents() {
             break;
         case MPV_EVENT_SHUTDOWN:
             ready = false;
+            openingPosition.reset();
+            openingCommand = 0;
             recoveringRenderer = false;
             resetPlayback();
             emit owner->stateChanged();

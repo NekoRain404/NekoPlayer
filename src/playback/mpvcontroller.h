@@ -38,6 +38,7 @@ class MpvController final : public QObject {
     [[nodiscard]] QString errorString() const;
     [[nodiscard]] mpv_handle *handle() const;
     [[nodiscard]] const PlaybackState &state() const;
+    [[nodiscard]] double resumePosition() const;
     [[nodiscard]] const MediaInformation &mediaInformation() const;
     [[nodiscard]] const QList<MediaTrack> &tracks() const;
     [[nodiscard]] const QList<MediaChapter> &chapters() const;
@@ -59,6 +60,7 @@ class MpvController final : public QObject {
 
   public slots:
     void openFile(const QString &path);
+    void openFileAtPosition(const QString &path, double seconds);
     void setPaused(bool paused);
     void togglePause();
     void stop();
@@ -95,6 +97,8 @@ class MpvController final : public QObject {
     void resumeAfterRendererReset();
 
   signals:
+    void fileOpenRequested();
+    void stopRequested();
     void volumeRequested(double volume);
     void muteRequested(bool muted);
     void hardwareDecodingPreferenceChanged(bool enabled);

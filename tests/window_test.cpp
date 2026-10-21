@@ -250,6 +250,7 @@ class WindowTest final : public QObject {
         saved.paths = {mediaPath(), mediaPath()};
         saved.currentIndex = 1;
         saved.audio = {34.0, true};
+        saved.resumePosition = 1.24;
         saved.window.playlistVisible = true;
         QVERIFY(SessionStore(file).save(saved).isEmpty());
         {
@@ -257,6 +258,8 @@ class WindowTest final : public QObject {
             QCOMPARE(window.playlist()->model()->rowCount(), 2);
             QCOMPARE(window.playlist()->model()->currentIndex(), 1);
             QVERIFY(!action(window, "pauseAction")->isEnabled());
+            QCOMPARE(window.playlist()->pendingResumePosition(), 1.24);
+            QVERIFY(window.statusBar()->currentMessage().contains(QStringLiteral("上次位置")));
             QVERIFY(action(window, "showPlaylistAction")->isChecked());
             window.show();
             QTRY_VERIFY(window.videoWidget()->isReady());
@@ -272,6 +275,7 @@ class WindowTest final : public QObject {
             const auto loaded = SessionStore(file).load();
             QCOMPARE(loaded.state.window.geometry, normalGeometry);
             QCOMPARE(loaded.state.audio.volume, 52.0);
+            QCOMPARE(loaded.state.resumePosition, 1.24);
             QVERIFY(!loaded.state.audio.muted);
         }
         MainWindow replaced(true, file);
@@ -280,6 +284,7 @@ class WindowTest final : public QObject {
         const auto loaded = SessionStore(file).load();
         QCOMPARE(loaded.state.paths, QStringList{mediaPath()});
         QCOMPARE(loaded.state.currentIndex, 0);
+        QCOMPARE(loaded.state.resumePosition, 0.0);
         MainWindow cleared(true, file);
         cleared.appendFiles({mediaPath()});
         QVERIFY(action(cleared, "clearPlaylistAction")->isEnabled());

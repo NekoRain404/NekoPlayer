@@ -101,6 +101,11 @@ struct MpvController::Impl {
     VideoPresentation presentation;
     AbLoop abLoop;
     bool mediaReady = false;
+    // Preserve load intent until the matching native file reports its position.
+    std::optional<double> openingPosition;
+    uint64_t openingCommand = 0;
+    int64_t openingEntry = -1;
+    int64_t playingEntry = -1;
     bool hasMotionVideo = false;
     uint64_t request = 0;
     struct TuningSetting {

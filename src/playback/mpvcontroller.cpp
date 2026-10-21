@@ -73,6 +73,15 @@ bool MpvController::isReady() const { return impl_->ready; }
 QString MpvController::errorString() const { return impl_->error; }
 mpv_handle *MpvController::handle() const { return impl_->client.get(); }
 const PlaybackState &MpvController::state() const { return impl_->state; }
+double MpvController::resumePosition() const {
+    if (impl_->openingPosition)
+        return *impl_->openingPosition;
+    const auto &state = impl_->state;
+    if (!impl_->mediaReady || !state.seekable || !std::isfinite(state.position) ||
+        state.position <= 0 || state.duration - state.position <= 1.0)
+        return 0;
+    return state.position;
+}
 const MediaInformation &MpvController::mediaInformation() const { return impl_->information; }
 const QList<MediaTrack> &MpvController::tracks() const { return impl_->tracks; }
 const QList<MediaChapter> &MpvController::chapters() const { return impl_->chapters; }
@@ -89,10 +98,14 @@ void MpvController::setHardwareDecodingEnabled(bool enabled) {
     }
 }
 
-void MpvController::openFile(const QString &path) {
-    if (!isReady() || path.isEmpty())
+void MpvController::openFile(const QString &path) { openFileAtPosition(path, 0); }
+
+void MpvController::openFileAtPosition(const QString &path, double seconds) {
+    if (!isReady() || path.isEmpty() || !std::isfinite(seconds) || seconds < 0)
         return;
     impl_->mediaReady = false;
+    impl_->openingPosition = seconds;
+    impl_->openingEntry = -1;
     impl_->cancelInformationQueries();
     const bool informationChanged = impl_->information != MediaInformation{};
     impl_->information = {};
@@ -103,9 +116,16 @@ void MpvController::openFile(const QString &path) {
     impl_->recoveringRenderer = false;
     impl_->resetAbLoop();
     impl_->property("pause", MPV_FORMAT_FLAG, 0);
-    impl_->command({"loadfile", path.toUtf8(), "replace"});
+    const auto options = QByteArray("start=") + QByteArray::number(seconds, 'f', 3);
+    const auto [id, status] =
+        impl_->submitCommand({"loadfile", path.toUtf8(), "replace", "-1", options});
+    impl_->openingCommand = id;
+    if (!id)
+        impl_->openingPosition.reset();
+    emit fileOpenRequested();
     if (informationChanged)
         emit mediaInformationChanged();
+    impl_->report(status);
 }
 void MpvController::setPaused(bool paused) {
     if (state().active)
@@ -114,6 +134,9 @@ void MpvController::setPaused(bool paused) {
 void MpvController::togglePause() { setPaused(!state().paused); }
 void MpvController::stop() {
     impl_->mediaReady = false;
+    impl_->openingPosition.reset();
+    impl_->openingCommand = 0;
+    impl_->openingEntry = -1;
     impl_->cancelInformationQueries();
     const bool informationChanged = impl_->information != MediaInformation{};
     impl_->information = {};
@@ -123,6 +146,7 @@ void MpvController::stop() {
     impl_->recovery.reset();
     impl_->cancelTrackRestore();
     impl_->command({"stop"});
+    emit stopRequested();
     if (informationChanged)
         emit mediaInformationChanged();
 }
@@ -190,6 +214,8 @@ void MpvController::prepareForRendererReset() {
     if (state().active) {
         impl_->recovery = Impl::RecoveryState{
             state(), impl_->tracksToRestore.isEmpty() ? tracks() : impl_->tracksToRestore};
+        if (impl_->openingPosition)
+            impl_->recovery->playback.position = *impl_->openingPosition;
         impl_->recoveringRenderer = true;
     }
 }
@@ -221,14 +247,18 @@ void MpvController::resumeAfterRendererReset() {
         ",ab-loop-a=" + loopPoint(abLoop().start) + ",ab-loop-b=" + loopPoint(abLoop().end);
     impl_->tracksToRestore = saved.tracks;
     impl_->state.path = saved.playback.path;
+    impl_->openingPosition = saved.playback.position;
+    impl_->openingEntry = -1;
     impl_->resetPlayback();
     emit stateChanged();
     const auto [id, status] =
         impl_->submitCommand({"loadfile", saved.playback.path.toUtf8(), "replace", "-1", options});
+    impl_->openingCommand = id;
     if (!id) {
         // No END_FILE will follow a rejected submission. Cancel recovery before
         // reporting errors so a reentrant new media request keeps its state.
         impl_->recoveringRenderer = false;
+        impl_->openingPosition.reset();
         impl_->cancelTrackRestore();
         impl_->resetAbLoop();
     }

@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+ctest --test-dir build/debug -R '^(code-size|backend-startup|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
-ctest --test-dir build/sanitizers -R '^(decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+cmake --build --preset sanitizers --target ab_loop_test decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
+ctest --test-dir build/sanitizers -R '^(ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -68,6 +68,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | 后退 / 前进 5 秒 | ← / → |
 | 跳转到指定时间 | Ctrl+G |
 | 上一章 / 下一章 | Ctrl+PageUp / Ctrl+PageDown |
+| 设置区间起点 A / 终点 B | Ctrl+`[` / Ctrl+`]` |
+| 清除 A–B 区间 | Ctrl+`\` |
 | 音量减 / 加 | ↓ / ↑ |
 | 静音 / 停止 | M / S |
 | 全屏 / 退出全屏 | F 或双击 / Esc |
@@ -99,6 +101,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 “视频”菜单与右键菜单提供原始比例、4:3、16:9、16:10、21:9 和拉伸填满；原始比例交给 mpv 读取媒体比例，拉伸会填满视频区域。Alt+←／Alt+→ 每次向左／向右旋转 90°，可从菜单重置旋转；旋转叠加在文件方向元数据上，重置仍尊重原始方向。菜单显示最新已提交的意图，后端执行失败会提示；比例提交失败后可重新选择比例恢复。比例与旋转在本次运行中跨停止、换片和渲染恢复保留，退出后恢复默认值。变换使用 mpv 原生选项，不新增 CPU 帧复制或视频滤镜，默认安全自动硬解保持不变；真实 Wayland 画面和硬解互操作效果尚待实机验收。
 
 “播放 → 定位”与右键菜单共用章节列表和时间输入。章节显示起始时间与标题，缺失标题时显示章节编号；选章及上下章保持暂停，不重新打开文件，首尾不会越界切换队列。Ctrl+G 接受秒数、分:秒或时:分:秒，可带最多三位小数；负数、非法格式与超过媒体时长的目标不可提交。时间请求精确到毫秒，最终显示帧仍由媒体时间戳决定，不承诺任意毫秒都有对应帧。不可定位的媒体会禁用这些操作。
+
+“播放 → 定位 → A–B 区间循环”可将当前位置分别设为 A 和 B；设置两个端点后由 mpv 原生循环，B 必须晚于 A。可暂停后定位再设端点，操作不重载文件或改变暂停状态；菜单显示最新成功入队的区间，异步执行失败会提示，可清除后重试。区间只属于当前媒体，停止、换片或加载失败时清除，同一媒体的渲染恢复保留；不写入会话配置。循环范围外的手动定位遵循 mpv 语义，定位越过 B 会离开区间播放。该功能不新增进度轮询、CPU 帧复制或解码器。
 
 “设置 → 播放设置”及右键菜单提供“自动（安全）”和“软件解码”，应用后立即切换，取消丢弃尚未应用的修改。自动模式默认请求 `hwdec=auto-safe`，不可用时由 mpv 回退；“实际解码器”独立显示观察到的结果。切换不重新打开媒体，但 mpv 可能重建解码器，画面会短暂中断。偏好在正常退出时保存，下次加载媒体前恢复；旧配置或非法字段默认自动模式。`--no-config` 不保存该偏好。真实 GPU 硬解效果尚未通过本阶段的非 GUI 测试验证。
 

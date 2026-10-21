@@ -1,4 +1,5 @@
 #include "navigationmenu.h"
+#include "abloopmenu.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playbacktime.h"
 #include "timeseekdialog.h"
@@ -25,6 +26,10 @@ NavigationMenu::NavigationMenu(MpvController &player, QWidget *window)
     previous_ =
         make(tr("上一章"), "previousChapterAction", QKeySequence(Qt::CTRL | Qt::Key_PageUp));
     next_ = make(tr("下一章"), "nextChapterAction", QKeySequence(Qt::CTRL | Qt::Key_PageDown));
+    auto *loop = new AbLoopMenu(player_, window_);
+    menu_->addSeparator();
+    menu_->addMenu(loop->menu());
+    connect(loop, &AbLoopMenu::feedback, this, &NavigationMenu::feedback);
     connect(seekTime_, &QAction::triggered, this, &NavigationMenu::chooseTime);
     connect(previous_, &QAction::triggered, &player_, &MpvController::previousChapter);
     connect(next_, &QAction::triggered, &player_, &MpvController::nextChapter);

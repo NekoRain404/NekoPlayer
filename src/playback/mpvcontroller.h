@@ -1,5 +1,6 @@
 #pragma once
 
+#include "abloop.h"
 #include "mediachapter.h"
 #include "mediatrack.h"
 #include "subtitlepreferences.h"
@@ -47,6 +48,10 @@ class MpvController final : public QObject {
     // Session-only accepted intent; asynchronous errors are reported separately.
     [[nodiscard]] const VideoPresentation &videoPresentation() const;
     void setVideoAspect(VideoAspect aspect);
+    [[nodiscard]] const AbLoop &abLoop() const;
+    bool setLoopStart(double seconds);
+    bool setLoopEnd(double seconds);
+    bool clearAbLoop();
 
   public slots:
     void openFile(const QString &path);
@@ -89,6 +94,7 @@ class MpvController final : public QObject {
     void hardwareDecodingPreferenceChanged(bool enabled);
     void subtitlePreferencesChanged();
     void videoPresentationChanged();
+    void abLoopChanged();
     void stateChanged();
     void tuningChanged();
     void tracksChanged();

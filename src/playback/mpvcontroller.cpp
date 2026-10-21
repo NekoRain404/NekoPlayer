@@ -12,7 +12,8 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
         std::pair{"osc", "no"}, std::pair{"input-default-bindings", "no"},
         std::pair{"input-vo-keyboard", "no"}, std::pair{"hwdec", "auto-safe"},
         std::pair{"idle", "yes"}, std::pair{"audio-pitch-correction", "yes"},
-        std::pair{"keep-open", "no"}, std::pair{"video-timing-offset", "0"},
+        std::pair{"reset-on-next-file", "ab-loop-a,ab-loop-b"}, std::pair{"keep-open", "no"},
+        std::pair{"video-timing-offset", "0"},
         // Eight-tap kernels avoid mpv 0.41's uninitialized LUT padding.
         std::pair{"scale", "spline64"}, std::pair{"cscale", "spline64"},
         std::pair{"dscale", "spline64"}};
@@ -88,6 +89,7 @@ void MpvController::openFile(const QString &path) {
     impl_->recovery.reset();
     impl_->cancelTrackRestore();
     impl_->recoveringRenderer = false;
+    impl_->resetAbLoop();
     impl_->property("pause", MPV_FORMAT_FLAG, 0);
     impl_->command({"loadfile", path.toUtf8(), "replace"});
 }
@@ -97,6 +99,8 @@ void MpvController::setPaused(bool paused) {
 }
 void MpvController::togglePause() { setPaused(!state().paused); }
 void MpvController::stop() {
+    impl_->recoveringRenderer = false;
+    impl_->resetAbLoop();
     impl_->cancelChapterRequest();
     impl_->recovery.reset();
     impl_->cancelTrackRestore();
@@ -186,14 +190,27 @@ void MpvController::resumeAfterRendererReset() {
     // Releasing an mpv renderer disables video. Reload at the saved position,
     // including video-only files whose core may have reached END_FILE.
     // Restore the saved external set explicitly to avoid auto-loading duplicates.
-    const auto options = QByteArray("start=") +
-                         QByteArray::number(saved.playback.position, 'f', 3) +
-                         ",pause=" + (saved.playback.paused ? "yes" : "no") +
-                         ",aid=" + selectedInternal(MediaTrack::Type::Audio) +
-                         ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no";
+    const auto loopPoint = [](const std::optional<double> &value) {
+        return value ? QByteArray::number(*value, 'g', 17) : QByteArray("no");
+    };
+    const auto options =
+        QByteArray("start=") + QByteArray::number(saved.playback.position, 'f', 3) +
+        ",pause=" + (saved.playback.paused ? "yes" : "no") +
+        ",aid=" + selectedInternal(MediaTrack::Type::Audio) +
+        ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no" +
+        ",ab-loop-a=" + loopPoint(abLoop().start) + ",ab-loop-b=" + loopPoint(abLoop().end);
     impl_->tracksToRestore = saved.tracks;
     impl_->state.path = saved.playback.path;
     impl_->resetPlayback();
     emit stateChanged();
-    impl_->command({"loadfile", saved.playback.path.toUtf8(), "replace", "-1", options});
+    const auto [id, status] =
+        impl_->submitCommand({"loadfile", saved.playback.path.toUtf8(), "replace", "-1", options});
+    if (!id) {
+        // No END_FILE will follow a rejected submission. Cancel recovery before
+        // reporting errors so a reentrant new media request keeps its state.
+        impl_->recoveringRenderer = false;
+        impl_->cancelTrackRestore();
+        impl_->resetAbLoop();
+    }
+    impl_->report(status);
 }

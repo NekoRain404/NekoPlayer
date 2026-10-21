@@ -70,6 +70,8 @@ struct MpvController::Impl {
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
     VideoPresentation presentation;
+    AbLoop abLoop;
+    bool loopMediaReady = false;
     uint64_t request = 0;
     struct TuningSetting {
         const char *name;
@@ -99,9 +101,9 @@ struct MpvController::Impl {
         return status >= 0;
     }
 
-    uint64_t command(std::initializer_list<QByteArray> arguments) {
+    std::pair<uint64_t, int> submitCommand(std::initializer_list<QByteArray> arguments) {
         if (!ready)
-            return 0;
+            return {0, MPV_ERROR_UNINITIALIZED};
         std::vector<const char *> pointers;
         pointers.reserve(arguments.size() + 1);
         for (const auto &argument : arguments)
@@ -109,8 +111,15 @@ struct MpvController::Impl {
         pointers.push_back(nullptr);
         const auto id = ++request;
         const int status = mpv_command_async(client.get(), id, pointers.data());
+        return {status >= 0 ? id : 0, status};
+    }
+
+    uint64_t command(std::initializer_list<QByteArray> arguments) {
+        if (!ready)
+            return 0;
+        const auto [id, status] = submitCommand(arguments);
         report(status);
-        return status >= 0 ? id : 0;
+        return id;
     }
 
     template <typename T> void property(const char *name, mpv_format format, T value) {
@@ -177,6 +186,7 @@ struct MpvController::Impl {
     }
 
     void resetPlayback() {
+        resetAbLoop();
         loading = false;
         state.active = false;
         state.seekable = false;
@@ -197,6 +207,7 @@ struct MpvController::Impl {
     }
 
     void cancelChapterRequest();
+    void resetAbLoop();
     void observeChapter(int64_t index, bool settled = false);
     void selectChapter(int index);
     void queryChapterRequest(bool settled = false);
@@ -381,6 +392,7 @@ struct MpvController::Impl {
                 loading = false;
                 recoveringRenderer = false;
                 state.active = true;
+                loopMediaReady = true;
                 error.clear();
                 restoreExternalTracks();
                 emit owner->stateChanged();
@@ -388,10 +400,14 @@ struct MpvController::Impl {
                 break;
             case MPV_EVENT_END_FILE: {
                 const auto &end = *static_cast<mpv_event_end_file *>(event->data);
-                resetPlayback();
-                emit owner->stateChanged();
                 const bool expectedReset =
                     recoveringRenderer && end.error == MPV_ERROR_VO_INIT_FAILED;
+                if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
+                    recoveringRenderer = false;
+                    recovery.reset();
+                }
+                resetPlayback();
+                emit owner->stateChanged();
                 if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
                     emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(end.error)));
                     report(end.error);
@@ -442,6 +458,7 @@ struct MpvController::Impl {
                 break;
             case MPV_EVENT_SHUTDOWN:
                 ready = false;
+                recoveringRenderer = false;
                 resetPlayback();
                 emit owner->stateChanged();
                 return;

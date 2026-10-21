@@ -8,6 +8,7 @@ class MpvController;
 class VideoWidget;
 class TransportBar;
 class TrackMenus;
+class SessionManager;
 class PlaylistController;
 class PlaylistPane;
 class QAction;
@@ -17,7 +18,7 @@ class QLabel;
 class MainWindow final : public QMainWindow {
     Q_OBJECT
   public:
-    explicit MainWindow(bool silentAudio = false);
+    explicit MainWindow(bool silentAudio = false, const QString &sessionPath = {});
     ~MainWindow() override;
     [[nodiscard]] MpvController *controller() const;
     [[nodiscard]] VideoWidget *videoWidget() const;
@@ -33,17 +34,23 @@ class MainWindow final : public QMainWindow {
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
 
   private:
     void createActions();
     void chooseFile();
     void chooseFilesToAppend();
+    void clearPlaylist();
     void updateState();
     void showError(const QString &message);
     void setFullscreen(bool enabled);
     void revealControls();
+    void restoreSession(const QString &path);
+    QString saveSession();
+    [[nodiscard]] QString mediaDirectory() const;
     std::unique_ptr<MpvController> controller_;
     std::unique_ptr<PlaylistController> playlist_;
+    std::unique_ptr<SessionManager> session_;
     VideoWidget *video_ = nullptr;
     TransportBar *transport_ = nullptr;
     TrackMenus *trackMenus_ = nullptr;
@@ -64,4 +71,5 @@ class MainWindow final : public QMainWindow {
     QStringList pendingPaths_;
     QByteArray normalGeometry_;
     bool normalMaximized_ = false;
+    bool sessionSaveAttempted_ = false;
 };

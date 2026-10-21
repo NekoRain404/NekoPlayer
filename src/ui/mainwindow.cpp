@@ -4,6 +4,7 @@
 #include "playback/playlistmodel.h"
 #include "playback/videowidget.h"
 #include "playlistpane.h"
+#include "session/sessionmanager.h"
 #include "transportbar.h"
 
 #include <QAction>
@@ -23,7 +24,7 @@
 #include <QVBoxLayout>
 #include <utility>
 
-MainWindow::MainWindow(bool silentAudio)
+MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     : controller_(std::make_unique<MpvController>(false, silentAudio)),
       playlist_(std::make_unique<PlaylistController>(*controller_)) {
     setWindowTitle(QStringLiteral("NekoPlayer"));
@@ -84,11 +85,13 @@ MainWindow::MainWindow(bool silentAudio)
     connect(playlist_->model(), &PlaylistModel::rowsInserted, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::rowsRemoved, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::modelReset, this, &MainWindow::updateState);
-    connect(playlistPane_, &PlaylistPane::playRequested, playlist_.get(),
-            &PlaylistController::playAt);
+    connect(playlistPane_, &PlaylistPane::playRequested, playlist_.get(), [this](int row) {
+        if (video_->isReady())
+            playlist_->playAt(row);
+    });
     connect(video_, &VideoWidget::renderError, this, [this](const QString &message) {
-        pendingPaths_.clear();
         showError(message);
+        updateState();
     });
     connect(video_, &VideoWidget::contextResetting, controller_.get(),
             &MpvController::prepareForRendererReset);
@@ -99,6 +102,7 @@ MainWindow::MainWindow(bool silentAudio)
             playlist_->addFiles(paths);
         } else
             controller_->resumeAfterRendererReset();
+        updateState();
     });
     connect(transport_, &TransportBar::seekRequested, controller_.get(),
             &MpvController::seekAbsolute);
@@ -120,6 +124,7 @@ MainWindow::MainWindow(bool silentAudio)
         child->setMouseTracking(true);
         child->installEventFilter(this);
     }
+    restoreSession(sessionPath);
     updateState();
     if (!controller_->isReady())
         showError(controller_->errorString());
@@ -127,6 +132,10 @@ MainWindow::MainWindow(bool silentAudio)
 
 MainWindow::~MainWindow() {
     controlsTimer_.stop();
+    if (!sessionSaveAttempted_) {
+        if (const auto error = saveSession(); !error.isEmpty())
+            qWarning().noquote() << error;
+    }
     // QMainWindow deletes children after members. GPU resources must go first.
     delete takeCentralWidget();
 }
@@ -143,8 +152,7 @@ void MainWindow::openFiles(const QStringList &paths) {
         showError(tr("OpenGL 初始化失败，无法打开媒体文件"));
         return;
     }
-    playlist_->clear();
-    pendingPaths_.clear();
+    clearPlaylist();
     appendFiles(paths);
 }
 
@@ -156,15 +164,23 @@ void MainWindow::appendFiles(const QStringList &paths) {
     }
     if (absolutePaths.isEmpty())
         return;
+    if (session_)
+        session_->rememberMedia(absolutePaths.constFirst());
     if (video_->isReady())
         playlist_->addFiles(absolutePaths);
     else
         pendingPaths_.append(absolutePaths);
+    updateState();
+}
+
+void MainWindow::clearPlaylist() {
+    pendingPaths_.clear();
+    playlist_->clear();
 }
 
 void MainWindow::chooseFile() {
     const auto path =
-        QFileDialog::getOpenFileName(this, tr("打开媒体文件"), {},
+        QFileDialog::getOpenFileName(this, tr("打开媒体文件"), mediaDirectory(),
                                      tr("媒体文件 (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.ts *.mp3 "
                                         "*.flac *.wav);;所有文件 (*)"));
     if (!path.isEmpty())
@@ -173,7 +189,7 @@ void MainWindow::chooseFile() {
 
 void MainWindow::chooseFilesToAppend() {
     const auto paths =
-        QFileDialog::getOpenFileNames(this, tr("添加媒体文件"), {},
+        QFileDialog::getOpenFileNames(this, tr("添加媒体文件"), mediaDirectory(),
                                       tr("媒体文件 (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.ts "
                                          "*.mp3 *.flac *.wav);;所有文件 (*)"));
     appendFiles(paths);
@@ -181,7 +197,8 @@ void MainWindow::chooseFilesToAppend() {
 
 void MainWindow::updateState() {
     const auto &state = controller_->state();
-    pauseAction_->setEnabled(state.active || playlist_->model()->rowCount() > 0);
+    pauseAction_->setEnabled(video_->isReady() &&
+                             (state.active || playlist_->model()->rowCount() > 0));
     stopAction_->setEnabled(state.active);
     const bool canPlay = !state.active || state.paused;
     pauseAction_->setText(canPlay ? tr("播放") : tr("暂停"));
@@ -190,9 +207,10 @@ void MainWindow::updateState() {
     muteAction_->setChecked(state.muted);
     muteAction_->setIcon(
         style()->standardIcon(state.muted ? QStyle::SP_MediaVolumeMuted : QStyle::SP_MediaVolume));
-    previousAction_->setEnabled(playlist_->hasPrevious());
-    nextAction_->setEnabled(playlist_->hasNext());
-    clearPlaylistAction_->setEnabled(playlist_->model()->rowCount() > 0);
+    previousAction_->setEnabled(video_->isReady() && playlist_->hasPrevious());
+    nextAction_->setEnabled(video_->isReady() && playlist_->hasNext());
+    clearPlaylistAction_->setEnabled(playlist_->model()->rowCount() > 0 ||
+                                     !pendingPaths_.isEmpty());
     const auto currentRow = playlist_->model()->currentIndex();
     playlistPane_->view()->setCurrentIndex(currentRow >= 0 ? playlist_->model()->index(currentRow)
                                                            : QModelIndex{});

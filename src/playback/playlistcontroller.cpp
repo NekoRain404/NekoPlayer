@@ -30,6 +30,14 @@ void PlaylistController::addFiles(const QStringList &paths) {
 
 void PlaylistController::playAt(int row) { playFirstAvailable(row); }
 
+void PlaylistController::restoreFiles(const QStringList &paths, int currentIndex) {
+    clear();
+    model_->addFiles(paths);
+    if (model_->rowCount() > 0)
+        model_->setCurrentIndex(qBound(0, currentIndex, model_->rowCount() - 1));
+    emit currentChanged(model_->currentIndex());
+}
+
 void PlaylistController::playOrPause() {
     if (player_.state().active)
         player_.togglePause();

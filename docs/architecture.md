@@ -13,8 +13,11 @@
 | `TransportBar` | 展示时间/进度/音量，拖动预览，发出定位和音量意图 | 状态快照和 QAction，不操作 mpv |
 | `PlaylistPane` | 队列视图和上一项/下一项/清空动作入口 | 只依赖 model 与共享 QAction |
 | `TrackMenus` | 音轨、字幕菜单和外挂字幕文件入口 | 依赖控制器快照与业务接口，不接触 mpv handle |
+| `SessionState` / `SessionStore` | 音频偏好、窗口偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
+| `SessionManager` | 恢复空闲队列及音频偏好，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
 | `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调 | 通过队列和控制器接口发出业务操作 |
 | `windowactions.cpp` | 同一 MainWindow 类的动作与菜单装配 | 菜单、按钮、快捷键共用 QAction |
+| `windowsession.cpp` | 同一 MainWindow 类的会话装配、窗口 geometry 与关闭保存 | SessionManager、Qt Widgets，不介入帧渲染 |
 | `main.cpp` | 参数解析、启动和 smoke 退出条件 | 后端诊断实现单独保留 |
 
 业务路径：用户文件入口 → `PlaylistController` 选择有效本地项 → 控制器异步命令 → mpv 事件 → Qt 接收者队列 → 状态信号 → 展示更新。EOF 自动选择下一项；加载失败只跳过后续项，不将一般 mpv 错误误认为队列切换。渲染路径独立：mpv 更新回调 → Qt 队列 → GL current → render API → Qt 合成。
@@ -29,4 +32,8 @@
 
 普通手写代码文件最多 500 行（含头文件、测试、CMake 和测试启动脚本）。`src/ui/mainwindow.cpp` 和 `tests/window_test.cpp` 是已登记的集中协调/桌面集成例外，最多 800 行；例外列表由 `cmake/CheckCodeSize.cmake` 强制执行，新增项必须有明确理由。新增职责拆成独立组件；同一类的紧密相关装配代码可以分文件，不为拆文件增加无用途的抽象。保持 Qt parent ownership 与 RAII 的资源归属唯一。
 
-本阶段有内存播放列表，但没有队列持久化、拖放重排、随机/循环模式、配置持久化、插件框架、多引擎或完整主题系统。
+会话只在启动读取、关闭保存，不订阅时间进度写盘。音量和静音偏好订阅控制器的用户意图信号，避免异步初始属性通知或刚启动就关闭时把已保存值覆盖为默认值。队列通过 restoreFiles 恢复但不播放；窗口播放入口在 renderer ready 后启用。渲染就绪前的待播路径也纳入退出快照，清空动作同时清除它们；渲染失败保留它们供下次启动。MainWindow 关闭时保存，未经过 closeEvent 的析构提供一次兜底保存。
+
+QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文件。Qt 按路径缓存解析结果，而 FormatError 属于具体 QSettings 实例，因此校验把文件字节复制到唯一临时文件后完整解析，避免第二次访问丢失先前的格式错误。未知版本或解析失败拒绝覆盖；路径仅接受绝对本地路径，缺失文件保留，标量域值归一化。正常窗口 geometry 通过 Qt 跨平台 API 保存，全屏下保存进入全屏前的 geometry，不跨启动恢复全屏。默认路径在 main 决定，smoke/no-config 和默认构造的测试窗口禁用会话读写。
+
+目前没有播放进度持久化、拖放重排、随机/循环模式、完整偏好设置界面、插件框架、多引擎或完整主题系统。

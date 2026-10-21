@@ -31,6 +31,13 @@ add_dependencies(playlist_test test_media)
 add_test(NAME playlist COMMAND playlist_test)
 set_tests_properties(playlist PROPERTIES TIMEOUT 60)
 
+add_executable(session_test session_test.cpp)
+target_link_libraries(session_test PRIVATE neko_session Qt6::Test)
+target_compile_definitions(session_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(session_test test_media)
+add_test(NAME session COMMAND session_test)
+set_tests_properties(session PROPERTIES TIMEOUT 60)
+
 set(TEST_TRACK_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/multiple-tracks.mkv")
 add_custom_command(OUTPUT "${TEST_TRACK_MEDIA}"
     COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y

@@ -2,6 +2,7 @@
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 #include "playback/videowidget.h"
+#include "session/sessionstore.h"
 #include "ui/mainwindow.h"
 #include <QAction>
 #include <QDragEnterEvent>
@@ -15,6 +16,7 @@
 #include <QSignalSpy>
 #include <QSlider>
 #include <QStatusBar>
+#include <QTemporaryDir>
 #include <QtTest>
 
 namespace {
@@ -49,6 +51,52 @@ qint64 selectedTrack(MainWindow &window, MediaTrack::Type type) {
 class WindowTest final : public QObject {
     Q_OBJECT
   private slots:
+    void sessionRestoresWithoutAutoplayAndSavesOnClose() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionState saved;
+        saved.paths = {mediaPath(), mediaPath()};
+        saved.currentIndex = 1;
+        saved.audio = {34.0, true};
+        saved.window.playlistVisible = true;
+        QVERIFY(SessionStore(file).save(saved).isEmpty());
+        {
+            MainWindow window(true, file);
+            QCOMPARE(window.playlist()->model()->rowCount(), 2);
+            QCOMPARE(window.playlist()->model()->currentIndex(), 1);
+            QVERIFY(!action(window, "pauseAction")->isEnabled());
+            QVERIFY(action(window, "showPlaylistAction")->isChecked());
+            window.show();
+            QTRY_VERIFY(window.videoWidget()->isReady());
+            QTRY_VERIFY(action(window, "pauseAction")->isEnabled());
+            QVERIFY(!window.controller()->state().active);
+            window.controller()->setVolume(52);
+            window.controller()->setMuted(false);
+            window.resize(920, 540);
+            const auto normalGeometry = window.saveGeometry();
+            action(window, "fullscreenAction")->trigger();
+            QTRY_VERIFY(window.isFullScreen());
+            window.close();
+            const auto loaded = SessionStore(file).load();
+            QCOMPARE(loaded.state.window.geometry, normalGeometry);
+            QCOMPARE(loaded.state.audio.volume, 52.0);
+            QVERIFY(!loaded.state.audio.muted);
+        }
+        MainWindow replaced(true, file);
+        replaced.openFiles({mediaPath()}); // Also save files queued before renderer initialization.
+        replaced.close();
+        const auto loaded = SessionStore(file).load();
+        QCOMPARE(loaded.state.paths, QStringList{mediaPath()});
+        QCOMPARE(loaded.state.currentIndex, 0);
+        MainWindow cleared(true, file);
+        cleared.appendFiles({mediaPath()});
+        QVERIFY(action(cleared, "clearPlaylistAction")->isEnabled());
+        action(cleared, "clearPlaylistAction")->trigger();
+        cleared.close();
+        QVERIFY(SessionStore(file).load().state.paths.isEmpty());
+    }
+
     void trackMenuActionsFollowBackend() {
         MainWindow window(true);
         auto *audio = window.findChild<QMenu *>(QStringLiteral("audioTracksMenu"));

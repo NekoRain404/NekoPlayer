@@ -35,6 +35,7 @@ QString PlaylistModel::currentPath() const {
 }
 
 QString PlaylistModel::pathAt(int row) const { return paths_.value(row); }
+QStringList PlaylistModel::paths() const { return paths_; }
 
 int PlaylistModel::addFiles(const QStringList &paths) {
     QStringList additions;

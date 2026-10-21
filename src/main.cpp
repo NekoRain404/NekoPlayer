@@ -5,6 +5,8 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QDir>
+#include <QStandardPaths>
 #include <QTimer>
 #include <cstdlib>
 #include <iostream>
@@ -23,6 +25,7 @@ int main(int argc, char *argv[]) {
     else
         app = std::make_unique<QApplication>(argc, argv);
     QCoreApplication::setApplicationName(QStringLiteral("NekoPlayer"));
+    QCoreApplication::setOrganizationName(QStringLiteral("NekoPlayer"));
     QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));
 
     QCommandLineParser parser;
@@ -35,13 +38,21 @@ int main(int argc, char *argv[]) {
         {QStringLiteral("smoke-test"), QStringLiteral("验证窗口和渲染初始化后自动退出")});
     parser.addOption(
         {QStringLiteral("silent-audio"), QStringLiteral("使用空音频输出，供自动化检查使用")});
+    parser.addOption(
+        {QStringLiteral("no-config"), QStringLiteral("不读取或保存播放列表和偏好设置")});
     parser.addPositionalArgument(QStringLiteral("files"), QStringLiteral("一个或多个本地媒体文件"),
                                  QStringLiteral("[files...]"));
     parser.process(*app);
     if (checkBackendOnly)
         return checkBackend();
     const auto paths = parser.positionalArguments();
-    MainWindow window(parser.isSet(QStringLiteral("silent-audio")));
+    const bool useConfig =
+        !parser.isSet(QStringLiteral("no-config")) && !parser.isSet(QStringLiteral("smoke-test"));
+    const auto sessionPath =
+        useConfig ? QDir(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation))
+                        .filePath(QStringLiteral("session.ini"))
+                  : QString{};
+    MainWindow window(parser.isSet(QStringLiteral("silent-audio")), sessionPath);
     if (!paths.isEmpty())
         window.openFiles(paths);
     window.show();

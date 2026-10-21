@@ -47,6 +47,8 @@ class MpvController final : public QObject {
     void resumeAfterRendererReset();
 
   signals:
+    void volumeRequested(double volume);
+    void muteRequested(bool muted);
     void stateChanged();
     void tracksChanged();
     void fileLoaded();

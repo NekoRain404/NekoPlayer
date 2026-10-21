@@ -415,10 +415,18 @@ void MpvController::seekRelative(double seconds) {
     impl_->command({"seek", QByteArray::number(seconds, 'f', 3), "relative+exact"});
 }
 void MpvController::setVolume(double volume) {
-    if (std::isfinite(volume))
-        impl_->property("volume", MPV_FORMAT_DOUBLE, std::clamp(volume, 0.0, 100.0));
+    if (isReady() && std::isfinite(volume)) {
+        const auto bounded = std::clamp(volume, 0.0, 100.0);
+        impl_->property("volume", MPV_FORMAT_DOUBLE, bounded);
+        emit volumeRequested(bounded);
+    }
 }
-void MpvController::setMuted(bool muted) { impl_->property("mute", MPV_FORMAT_FLAG, int(muted)); }
+void MpvController::setMuted(bool muted) {
+    if (isReady()) {
+        impl_->property("mute", MPV_FORMAT_FLAG, int(muted));
+        emit muteRequested(muted);
+    }
+}
 
 void MpvController::selectAudioTrack(qint64 id) { impl_->selectTrack(MediaTrack::Type::Audio, id); }
 

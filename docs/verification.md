@@ -2,6 +2,16 @@
 
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
+Session recovery stage:
+
+- `cmake --build --preset debug` succeeded, including NekoPlayer and the compile-only window suite.
+- `ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|tracks|session)$' --output-on-failure` passed 6/6 in 8.79 seconds.
+- `cmake --build --preset sanitizers --target playback_test playlist_test tracks_test session_test` succeeded. `ctest --test-dir build/sanitizers -R '^(playback|playlist|tracks|session)$' --output-on-failure` passed 4/4 in 9.90 seconds without sanitizer errors.
+- Real temporary-file/QSettings tests verify Unicode/spaced and duplicate paths, missing-file retention, selected-row preservation, empty-queue replacement, scalar normalization, unavailable destination errors, and byte-for-byte preservation of future-version/malformed files. A malformed-file regression failed before the fresh-snapshot validation fix: a second QSettings instance reused parsed data without retaining the first instance's FormatError, allowing an otherwise rejected file to be rewritten.
+- Headless libmpv integration verifies idle queue restoration, explicit playback of the restored selection, mute/volume restoration, immediate close before initial property observations, subsequent user audio changes, clear/restart, media-directory memory and files saved before renderer readiness. Missing-behavior failures were observed before implementing store, queue restoration and session manager.
+- GUI integration assertions cover restoring an idle queue and panel state, delaying play until renderer readiness, normal geometry saved when closing fullscreen, startup file replacement and clearing pending files. These tests compile only. Native Wayland geometry restoration, fullscreen close, file-dialog directory use and interactive error dialogs have not been executed, per the user's GUI-test skip.
+- Read-only review caught pending-file loss on clear/render failure; the clear action now removes pending files, while renderer failures retain accepted files for future startup. No remaining must-fix findings were reported after the fixes and snapshot-validation follow-up.
+
 Audio/subtitle track stage:
 
 - Final results: the full Debug build succeeded; the selected Debug checks passed 5/5 in 8.14 seconds, and the ASan/UBSan integration suites passed 3/3 in 9.32 seconds with no reported sanitizer errors. Formatting and `git diff --check` also passed.

@@ -17,6 +17,7 @@ class PlaylistController final : public QObject {
 
   public slots:
     void addFiles(const QStringList &paths);
+    void restoreFiles(const QStringList &paths, int currentIndex);
     void playAt(int row);
     void playOrPause();
     void playNext();

@@ -11,6 +11,30 @@
 class PlaylistTest final : public QObject {
     Q_OBJECT
   private slots:
+    void restoredQueueWaitsForExplicitPlay() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto first = QString::fromUtf8(TEST_MEDIA_PATH);
+        const auto second = temporary.filePath(QStringLiteral("second.mkv"));
+        QVERIFY(QFile::copy(first, second));
+        queue.restoreFiles({first, second, first}, 1);
+        QCOMPARE(queue.model()->paths(), QStringList({first, second, first}));
+        QCOMPARE(queue.model()->currentIndex(), 1);
+        QTest::qWait(100);
+        QVERIFY(!player.state().active);
+        QVERIFY(loaded.isEmpty());
+        queue.playOrPause();
+        QTRY_COMPARE(loaded.count(), 1);
+        QCOMPARE(player.state().path, second);
+        queue.restoreFiles({}, -1);
+        QTRY_VERIFY(!player.state().active);
+        QVERIFY(queue.model()->paths().isEmpty());
+        QCOMPARE(queue.model()->currentIndex(), -1);
+    }
+
     void modelMaintainsOrderAndSelection() {
         PlaylistModel model;
         QCOMPARE(model.addFiles({QStringLiteral("a.mkv"), QStringLiteral("b.mkv")}), 2);

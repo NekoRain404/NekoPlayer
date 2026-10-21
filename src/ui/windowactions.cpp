@@ -39,7 +39,7 @@ void MainWindow::createActions() {
     connect(nextAction_, &QAction::triggered, playlist_.get(), &PlaylistController::playNext);
     clearPlaylistAction_ = make(tr("清空播放列表"), "clearPlaylistAction", {});
     clearPlaylistAction_->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
-    connect(clearPlaylistAction_, &QAction::triggered, playlist_.get(), &PlaylistController::clear);
+    connect(clearPlaylistAction_, &QAction::triggered, this, &MainWindow::clearPlaylist);
     muteAction_ = make(tr("静音"), "muteAction", QKeySequence(Qt::Key_M));
     muteAction_->setCheckable(true);
     connect(muteAction_, &QAction::triggered, controller_.get(), &MpvController::setMuted);

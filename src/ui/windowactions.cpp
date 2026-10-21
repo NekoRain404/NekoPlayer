@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "mediainformationdialog.h"
 #include "navigationmenu.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
@@ -68,9 +69,21 @@ void MainWindow::createActions() {
             [this] { controller_->setVolume(controller_->state().volume - 5); });
     auto *quit = make(tr("退出"), "quitAction", QKeySequence::Quit);
     connect(quit, &QAction::triggered, this, &QWidget::close);
+    auto *information =
+        make(tr("媒体信息…"), "mediaInformationAction", QKeySequence(Qt::CTRL | Qt::Key_F1));
+    connect(information, &QAction::triggered, this, [this] {
+        auto *dialog = findChild<MediaInformationDialog *>();
+        if (!dialog)
+            dialog = new MediaInformationDialog(*controller_, this);
+        dialog->show();
+        dialog->raise();
+        dialog->activateWindow();
+    });
     auto *file = menuBar()->addMenu(tr("文件(&F)"));
     file->addAction(openAction_);
     file->addAction(appendAction_);
+    file->addSeparator();
+    file->addAction(information);
     file->addSeparator();
     file->addAction(quit);
     auto *playback = menuBar()->addMenu(tr("播放(&P)"));
@@ -139,6 +152,7 @@ void MainWindow::createActions() {
     contextMenu_->addMenu(trackMenus_->subtitleMenu());
     contextMenu_->addMenu(video->menu());
     contextMenu_->addSeparator();
+    contextMenu_->addAction(information);
     contextMenu_->addAction(playbackSettings);
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this,

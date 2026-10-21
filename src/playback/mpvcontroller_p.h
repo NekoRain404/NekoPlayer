@@ -5,6 +5,7 @@
 #include "mpvtracks.h"
 
 #include <QFileInfo>
+#include <QHash>
 #include <QMetaObject>
 #include <QSet>
 #include <algorithm>
@@ -36,8 +37,31 @@ enum Property : uint64_t {
     SubtitleDelay,
     Chapters,
     Chapter,
-    VideoImage
+    VideoImage,
+    FileFormat,
+    FileSize,
+    VideoCodec,
+    VideoWidth,
+    VideoHeight,
+    VideoPixelFormat,
+    ContainerFrameRate,
+    AudioCodec,
+    AudioSampleRate,
+    AudioChannels,
+    AudioSampleFormat
 };
+inline constexpr auto informationProperties =
+    std::array{std::tuple{FileFormat, "file-format", MPV_FORMAT_STRING},
+               std::tuple{FileSize, "file-size", MPV_FORMAT_INT64},
+               std::tuple{VideoCodec, "current-tracks/video/codec", MPV_FORMAT_STRING},
+               std::tuple{VideoWidth, "video-params/w", MPV_FORMAT_INT64},
+               std::tuple{VideoHeight, "video-params/h", MPV_FORMAT_INT64},
+               std::tuple{VideoPixelFormat, "video-params/pixelformat", MPV_FORMAT_STRING},
+               std::tuple{ContainerFrameRate, "container-fps", MPV_FORMAT_DOUBLE},
+               std::tuple{AudioCodec, "current-tracks/audio/codec", MPV_FORMAT_STRING},
+               std::tuple{AudioSampleRate, "audio-params/samplerate", MPV_FORMAT_INT64},
+               std::tuple{AudioChannels, "audio-params/channels", MPV_FORMAT_STRING},
+               std::tuple{AudioSampleFormat, "audio-params/format", MPV_FORMAT_STRING}};
 } // namespace MpvPrivate
 
 struct MpvController::Impl {
@@ -49,6 +73,10 @@ struct MpvController::Impl {
     MpvController *owner;
     std::unique_ptr<mpv_handle, MpvPrivate::MpvDeleter> client;
     PlaybackState state;
+    MediaInformation information;
+    // Zero marks a canceled query; retain its id until its reply is consumed.
+    QHash<uint64_t, uint64_t> informationQueries;
+    bool informationRefreshQueued = false;
     QList<MediaTrack> tracks;
     QList<MediaChapter> chapters;
     std::optional<int> requestedChapter;
@@ -189,6 +217,9 @@ struct MpvController::Impl {
 
     void resetPlayback() {
         mediaReady = false;
+        cancelInformationQueries();
+        const bool informationChanged = information != MediaInformation{};
+        information = {};
         resetAbLoop();
         loading = false;
         state.active = false;
@@ -201,6 +232,8 @@ struct MpvController::Impl {
         cancelChapterRequest();
         updateChapters({});
         updateTracks({});
+        if (informationChanged)
+            emit owner->mediaInformationChanged();
     }
 
     void updateChapters(QList<MediaChapter> snapshot) {
@@ -301,182 +334,13 @@ struct MpvController::Impl {
         updateTracks(current);
     }
 
-    void updateProperty(const mpv_event &event) {
-        const auto &value = *static_cast<mpv_event_property *>(event.data);
-        if (event.reply_userdata == VideoImage) {
-            hasMotionVideo =
-                value.data && (state.active || loading) && !*static_cast<int *>(value.data);
-            emit owner->stateChanged();
-            return;
-        }
-        if (event.reply_userdata == Chapters) {
-            updateChapters(value.data && (state.active || loading)
-                               ? parseMpvChapters(*static_cast<mpv_node *>(value.data))
-                               : QList<MediaChapter>{});
-            return;
-        }
-        if (event.reply_userdata == Tracks) {
-            updateTracks(value.data && (state.active || loading)
-                             ? parseMpvTracks(*static_cast<mpv_node *>(value.data))
-                             : QList<MediaTrack>{});
-            return;
-        }
-        if (!value.data) {
-            switch (event.reply_userdata) {
-            case Position:
-                state.position = 0;
-                break;
-            case Duration:
-                state.duration = 0;
-                break;
-            case Seekable:
-                state.seekable = false;
-                break;
-            case HardwareDecoder:
-                state.hardwareDecoder.clear();
-                break;
-            case Chapter:
-                state.currentChapter = -1;
-                break;
-            default:
-                return;
-            }
-            emit owner->stateChanged();
-            return;
-        }
-        switch (event.reply_userdata) {
-        case Chapter:
-            observeChapter(*static_cast<int64_t *>(value.data));
-            break;
-        case Speed:
-            observeTuning(speed, *static_cast<double *>(value.data));
-            return;
-        case AudioDelay:
-            observeTuning(audioDelay, *static_cast<double *>(value.data));
-            return;
-        case SubtitleDelay:
-            observeTuning(subtitleDelay, *static_cast<double *>(value.data));
-            return;
-        case Position:
-            if (state.active)
-                state.position = *static_cast<double *>(value.data);
-            break;
-        case Duration:
-            if (state.active)
-                state.duration = *static_cast<double *>(value.data);
-            break;
-        case Paused:
-            state.paused = *static_cast<int *>(value.data) != 0;
-            break;
-        case Volume:
-            state.volume = *static_cast<double *>(value.data);
-            break;
-        case Muted:
-            state.muted = *static_cast<int *>(value.data) != 0;
-            break;
-        case Seekable:
-            state.seekable = state.active && *static_cast<int *>(value.data) != 0;
-            break;
-        case HardwareDecoder:
-            state.hardwareDecoder = QString::fromUtf8(*static_cast<char **>(value.data));
-            break;
-        default:
-            return;
-        }
-        emit owner->stateChanged();
-    }
-
-    void drainEvents() {
-        if (shuttingDown)
-            return;
-        while (const auto *event = mpv_wait_event(client.get(), 0)) {
-            switch (event->event_id) {
-            case MPV_EVENT_NONE:
-                return;
-            case MPV_EVENT_START_FILE:
-                resetPlayback();
-                loading = true;
-                emit owner->stateChanged();
-                break;
-            case MPV_EVENT_FILE_LOADED:
-                loading = false;
-                recoveringRenderer = false;
-                state.active = true;
-                mediaReady = true;
-                error.clear();
-                restoreExternalTracks();
-                emit owner->stateChanged();
-                emit owner->fileLoaded();
-                break;
-            case MPV_EVENT_END_FILE: {
-                const auto &end = *static_cast<mpv_event_end_file *>(event->data);
-                const bool expectedReset =
-                    recoveringRenderer && end.error == MPV_ERROR_VO_INIT_FAILED;
-                if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
-                    recoveringRenderer = false;
-                    recovery.reset();
-                }
-                resetPlayback();
-                emit owner->stateChanged();
-                if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
-                    emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(end.error)));
-                    report(end.error);
-                }
-                if (end.reason == MPV_END_FILE_REASON_EOF)
-                    emit owner->playbackFinished();
-                break;
-            }
-            case MPV_EVENT_PROPERTY_CHANGE:
-                updateProperty(*event);
-                break;
-            case MPV_EVENT_SEEK:
-                chapterSeekStarted = requestedChapter.has_value() && !chapterCommand;
-                break;
-            case MPV_EVENT_PLAYBACK_RESTART:
-                queryChapterRequest(chapterSeekStarted);
-                break;
-            case MPV_EVENT_COMMAND_REPLY:
-                confirmChapterRequest(*event);
-                if (canceledRestoreRequests.remove(event->reply_userdata))
-                    break;
-                if (event->reply_userdata == restoreCommand && restoreCommand) {
-                    restoreCommand = 0;
-                    restoreNextSubtitle();
-                }
-                report(event->error);
-                break;
-            case MPV_EVENT_GET_PROPERTY_REPLY:
-                if (finishChapterQuery(*event))
-                    break;
-                if (finishTuningQuery(*event))
-                    break;
-                if (canceledRestoreRequests.remove(event->reply_userdata))
-                    break;
-                if (event->reply_userdata == restoreQuery && restoreQuery) {
-                    restoreQuery = 0;
-                    const auto &property = *static_cast<mpv_event_property *>(event->data);
-                    if (event->error >= 0 && property.data)
-                        restoreSelections(parseMpvTracks(*static_cast<mpv_node *>(property.data)));
-                    else
-                        cancelTrackRestore();
-                }
-                report(event->error);
-                break;
-            case MPV_EVENT_SET_PROPERTY_REPLY:
-                confirmTuning(*event);
-                report(event->error);
-                break;
-            case MPV_EVENT_SHUTDOWN:
-                ready = false;
-                recoveringRenderer = false;
-                resetPlayback();
-                emit owner->stateChanged();
-                return;
-            default:
-                break;
-            }
-        }
-    }
+    void updateProperty(const mpv_event &event);
+    bool updateMediaInformation(const mpv_event &event);
+    void refreshMediaInformation();
+    void scheduleInformationRefresh();
+    void cancelInformationQueries();
+    bool finishInformationQuery(const mpv_event &event);
+    void drainEvents();
 
     static void wakeup(void *userdata) {
         auto *self = static_cast<Impl *>(userdata);

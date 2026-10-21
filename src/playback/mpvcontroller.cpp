@@ -50,6 +50,12 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
         if (result < 0)
             return;
     }
+    for (const auto &[id, name, format] : MpvPrivate::informationProperties) {
+        const int result = mpv_observe_property(backend.client.get(), id, name, format);
+        backend.report(result);
+        if (result < 0)
+            return;
+    }
     backend.ready = true;
     // Impl and its QObject receiver remain alive until mpv's callback threads stop.
     mpv_set_wakeup_callback(backend.client.get(), &Impl::wakeup, impl_.get());
@@ -67,6 +73,7 @@ bool MpvController::isReady() const { return impl_->ready; }
 QString MpvController::errorString() const { return impl_->error; }
 mpv_handle *MpvController::handle() const { return impl_->client.get(); }
 const PlaybackState &MpvController::state() const { return impl_->state; }
+const MediaInformation &MpvController::mediaInformation() const { return impl_->information; }
 const QList<MediaTrack> &MpvController::tracks() const { return impl_->tracks; }
 const QList<MediaChapter> &MpvController::chapters() const { return impl_->chapters; }
 bool MpvController::hardwareDecodingEnabled() const { return impl_->hardwareDecodingEnabled; }
@@ -86,6 +93,9 @@ void MpvController::openFile(const QString &path) {
     if (!isReady() || path.isEmpty())
         return;
     impl_->mediaReady = false;
+    impl_->cancelInformationQueries();
+    const bool informationChanged = impl_->information != MediaInformation{};
+    impl_->information = {};
     impl_->state.path = path;
     impl_->cancelChapterRequest();
     impl_->recovery.reset();
@@ -94,6 +104,8 @@ void MpvController::openFile(const QString &path) {
     impl_->resetAbLoop();
     impl_->property("pause", MPV_FORMAT_FLAG, 0);
     impl_->command({"loadfile", path.toUtf8(), "replace"});
+    if (informationChanged)
+        emit mediaInformationChanged();
 }
 void MpvController::setPaused(bool paused) {
     if (state().active)
@@ -102,12 +114,17 @@ void MpvController::setPaused(bool paused) {
 void MpvController::togglePause() { setPaused(!state().paused); }
 void MpvController::stop() {
     impl_->mediaReady = false;
+    impl_->cancelInformationQueries();
+    const bool informationChanged = impl_->information != MediaInformation{};
+    impl_->information = {};
     impl_->recoveringRenderer = false;
     impl_->resetAbLoop();
     impl_->cancelChapterRequest();
     impl_->recovery.reset();
     impl_->cancelTrackRestore();
     impl_->command({"stop"});
+    if (informationChanged)
+        emit mediaInformationChanged();
 }
 void MpvController::setFileLoopEnabled(bool enabled) {
     impl_->command({"set", "loop-file", enabled ? "inf" : "no"});

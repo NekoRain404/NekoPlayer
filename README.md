@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+ctest --test-dir build/debug -R '^(code-size|backend-startup|media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target frame_step_test ab_loop_test decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
-ctest --test-dir build/sanitizers -R '^(frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+cmake --build --preset sanitizers --target media_information_test media_report_test frame_step_test ab_loop_test decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
+ctest --test-dir build/sanitizers -R '^(media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -80,6 +80,7 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | 切换不循环 / 单曲循环 / 列表循环 | R |
 | 开启 / 关闭随机播放 | Shift+R |
 | 播放设置 | F5 |
+| 媒体信息 | Ctrl+F1 |
 
 打开文件会替换现有队列；添加文件、拖入一个或多个本地媒体文件、或传入多个命令行位置参数会追加或创建队列。网络地址及带主机名的 file URL（含 localhost）拖放会被拒绝并显示原因；本地文件请使用普通路径或无主机名的 file URL。全屏默认隐藏菜单与控制区，移动鼠标显示控制区，闲置后收起；错误会显示可见提示。正常播放禁用用户 mpv 配置、脚本、OSC 和默认键绑定，由 NekoPlayer 统一管理交互。
 
@@ -108,6 +109,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 “播放 → 定位 → A–B 区间循环”可将当前位置分别设为 A 和 B；设置两个端点后由 mpv 原生循环，B 必须晚于 A。可暂停后定位再设端点，操作不重载文件或改变暂停状态；菜单显示最新成功入队的区间，异步执行失败会提示，可清除后重试。区间只属于当前媒体，停止、换片或加载失败时清除，同一媒体的渲染恢复保留；不写入会话配置。循环范围外的手动定位遵循 mpv 语义，定位越过 B 会离开区间播放。该功能不新增进度轮询、CPU 帧复制或解码器。
 
 “设置 → 播放设置”及右键菜单提供“自动（安全）”和“软件解码”，应用后立即切换，取消丢弃尚未应用的修改。自动模式默认请求 `hwdec=auto-safe`，不可用时由 mpv 回退；“实际解码器”独立显示观察到的结果。切换不重新打开媒体，但 mpv 可能重建解码器，画面会短暂中断。偏好在正常退出时保存，下次加载媒体前恢复；旧配置或非法字段默认自动模式。`--no-config` 不保存该偏好。真实 GPU 硬解效果尚未通过本阶段的非 GUI 测试验证。
+
+“文件 → 媒体信息”、右键菜单或 Ctrl+F1 可查看当前文件的容器、字节大小、视频编码／尺寸／像素格式、容器帧率、音频编码／采样率／声道／采样格式与实际视频解码方式。窗口非模态，不暂停播放，可选中文本或按“复制”复制报告；换片及轨道变化自动更新。无法取得的参数显示“未知”，容器帧率是估计值，不代表实测输出帧率；文件大小来自 mpv 的媒体源长度，分段媒体不代表所有分段总大小。信息通过事件和解码配置变化后的异步查询更新，不定时轮询。
 
 ## 工程约束与验证边界
 

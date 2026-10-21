@@ -2,6 +2,7 @@
 
 #include "abloop.h"
 #include "mediachapter.h"
+#include "mediainformation.h"
 #include "mediatrack.h"
 #include "subtitlepreferences.h"
 #include "videopresentation.h"
@@ -37,6 +38,7 @@ class MpvController final : public QObject {
     [[nodiscard]] QString errorString() const;
     [[nodiscard]] mpv_handle *handle() const;
     [[nodiscard]] const PlaybackState &state() const;
+    [[nodiscard]] const MediaInformation &mediaInformation() const;
     [[nodiscard]] const QList<MediaTrack> &tracks() const;
     [[nodiscard]] const QList<MediaChapter> &chapters() const;
     // Navigation uses the latest accepted request until the backend confirms it.
@@ -100,6 +102,7 @@ class MpvController final : public QObject {
     void videoPresentationChanged();
     void abLoopChanged();
     void stateChanged();
+    void mediaInformationChanged();
     void tuningChanged();
     void tracksChanged();
     void chaptersChanged();

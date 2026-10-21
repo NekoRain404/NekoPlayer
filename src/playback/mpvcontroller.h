@@ -15,6 +15,9 @@ struct PlaybackState {
     double position = 0;
     double duration = 0;
     double volume = 100;
+    double playbackSpeed = 1;
+    double audioDelay = 0;
+    double subtitleDelay = 0;
     QString path;
     QString hardwareDecoder;
 };
@@ -40,6 +43,12 @@ class MpvController final : public QObject {
     void seekRelative(double seconds);
     void setVolume(double volume);
     void setMuted(bool muted);
+    void setPlaybackSpeed(double multiplier);
+    void adjustPlaybackSpeed(double delta);
+    void setAudioDelay(double seconds);
+    void adjustAudioDelay(double seconds);
+    void setSubtitleDelay(double seconds);
+    void adjustSubtitleDelay(double seconds);
     void selectAudioTrack(qint64 id);
     void selectSubtitleTrack(qint64 id);
     void addSubtitle(const QString &path);
@@ -50,6 +59,7 @@ class MpvController final : public QObject {
     void volumeRequested(double volume);
     void muteRequested(bool muted);
     void stateChanged();
+    void tuningChanged();
     void tracksChanged();
     void fileLoaded();
     void playbackFinished();

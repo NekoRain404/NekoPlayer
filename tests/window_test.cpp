@@ -51,6 +51,44 @@ qint64 selectedTrack(MainWindow &window, MediaTrack::Type type) {
 class WindowTest final : public QObject {
     Q_OBJECT
   private slots:
+    void tuningActionsFollowBackendAndSurviveTrackRebuilds() {
+        MainWindow window(true);
+        auto *speed = window.findChild<QMenu *>(QStringLiteral("speedMenu"));
+        auto *audioDelay = window.findChild<QMenu *>(QStringLiteral("audioDelayMenu"));
+        auto *subtitleDelay = window.findChild<QMenu *>(QStringLiteral("subtitleDelayMenu"));
+        QVERIFY(speed && audioDelay && subtitleDelay);
+        auto *faster = action(window, "speedUpAction");
+        auto *audioLater = action(window, "audioLaterAction");
+        auto *subtitleEarlier = action(window, "subtitleEarlierAction");
+        QVERIFY(faster && audioLater && subtitleEarlier);
+        faster->trigger();
+        faster->trigger();
+        QTRY_VERIFY(qAbs(window.controller()->state().playbackSpeed - 1.2) < 0.0001);
+        QTRY_VERIFY(speed->title().contains(QStringLiteral("1.20")));
+        action(window, "speedResetAction")->trigger();
+        QTRY_VERIFY(qAbs(window.controller()->state().playbackSpeed - (1.0)) < 0.000001);
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        window.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(window.controller()->state().active);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(window.controller()->state().paused);
+        audioLater->trigger();
+        subtitleEarlier->trigger();
+        QTRY_VERIFY(qAbs(window.controller()->state().audioDelay - (0.05)) < 0.000001);
+        QTRY_VERIFY(qAbs(window.controller()->state().subtitleDelay - (-0.1)) < 0.000001);
+        action(window, "subtitleTrack0Action")->trigger();
+        QTRY_COMPARE(selectedTrack(window, MediaTrack::Type::Subtitle), 0);
+        auto *subtitles = window.findChild<QMenu *>(QStringLiteral("subtitleTracksMenu"));
+        QVERIFY(subtitles->actions().contains(subtitleDelay->menuAction()));
+        QVERIFY(subtitleEarlier->isEnabled());
+        QVERIFY(window.controller()->state().paused);
+        action(window, "audioDelayResetAction")->trigger();
+        action(window, "subtitleDelayResetAction")->trigger();
+        QTRY_VERIFY(qAbs(window.controller()->state().audioDelay - (0.0)) < 0.000001);
+        QTRY_VERIFY(qAbs(window.controller()->state().subtitleDelay - (0.0)) < 0.000001);
+    }
+
     void sessionRestoresWithoutAutoplayAndSavesOnClose() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

@@ -26,10 +26,11 @@ QString trackLabel(const MediaTrack &track) {
 }
 } // namespace
 
-TrackMenus::TrackMenus(MpvController &controller, QWidget *window)
+TrackMenus::TrackMenus(MpvController &controller, QWidget *window, QMenu *subtitleDelayMenu)
     : QObject(window), controller_(controller), window_(window),
       audioMenu_(new QMenu(tr("音轨"), window)), subtitleMenu_(new QMenu(tr("字幕(&S)"), window)),
-      audioGroup_(new QActionGroup(audioMenu_)), subtitleGroup_(new QActionGroup(subtitleMenu_)),
+      subtitleDelayMenu_(subtitleDelayMenu), audioGroup_(new QActionGroup(audioMenu_)),
+      subtitleGroup_(new QActionGroup(subtitleMenu_)),
       loadSubtitleAction_(new QAction(tr("加载外挂字幕…"), this)) {
     audioMenu_->setObjectName(QStringLiteral("audioTracksMenu"));
     subtitleMenu_->setObjectName(QStringLiteral("subtitleTracksMenu"));
@@ -83,6 +84,8 @@ void TrackMenus::rebuild() {
     subtitleMenu_->addAction(loadSubtitleAction_);
     subtitleMenu_->addSeparator();
     populate(subtitleMenu_, subtitleGroup_, MediaTrack::Type::Subtitle);
+    subtitleMenu_->addSeparator();
+    subtitleMenu_->addMenu(subtitleDelayMenu_);
     updateAvailability();
 }
 

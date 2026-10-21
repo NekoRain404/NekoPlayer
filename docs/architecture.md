@@ -13,6 +13,7 @@
 | `TransportBar` | 展示时间/进度/音量，拖动预览，发出定位和音量意图 | 状态快照和 QAction，不操作 mpv |
 | `PlaylistPane` | 队列视图和上一项/下一项/清空动作入口 | 只依赖 model 与共享 QAction |
 | `TrackMenus` | 音轨、字幕菜单和外挂字幕文件入口 | 依赖控制器快照与业务接口，不接触 mpv handle |
+| `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
 | `SessionState` / `SessionStore` | 音频偏好、窗口偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
 | `SessionManager` | 恢复空闲队列及音频偏好，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
 | `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调 | 通过队列和控制器接口发出业务操作 |
@@ -25,6 +26,8 @@
 后台回调只排队，不访问 UI、不调用 mpv。带 QObject 接收上下文的排队任务在对象销毁时取消。控制器和表面各自的回调 userdata 保留到对应 mpv 资源完全释放。
 
 轨道管理复用同一 client 的事件循环：观察 `track-list` → 在借用 node 失效前复制字符串和标志 → 快照变化时发送 `tracksChanged` → 重建共享菜单。音轨和字幕编号只在各自类型内唯一；控制器按类型校验编号，0 表示关闭，通过异步命令设置 `aid` / `sid`。外挂字幕路径作为独立 UTF-8 参数传给异步 `sub-add`，解析和文件读取交给 mpv。菜单不订阅时间进度来重建内容；播放状态更新只在 active 变化时更新可用性。停止、加载失败或开始换片会清除轨道快照，闲置状态忽略迟到的非空轨道数据。
+
+控制器公开方法和初始化位于 `mpvcontroller.cpp`，私有事件／恢复实现在 `mpvcontroller_p.h`，不向 UI 暴露内部结构。倍速与延迟通过有限值校验、范围限制和异步属性设置提交；独立 `tuningChanged` 通知避免进度更新触发菜单刷新。每项保留最新请求供连续步进累积，最新设置回复后异步查询实际值，再清除待确认状态。新设置使旧查询失效，旧回复不能清除新请求；不依赖必然出现的属性变化事件，也不比较请求值与后端浮点值来判断完成。此路径无定时轮询、同步查询或配置写盘。倍速／延迟是本次运行的全局偏好，不随媒体状态清空。
 
 销毁顺序：停止窗口定时器 → 删除 central widget / VideoWidget → 撤销 render 回调 → GL current 下释放 renderer → 撤销 client 回调 → 销毁 client。主窗口显式删除 central widget，避免 QMainWindow 基类析构晚于控制器成员的问题。
 

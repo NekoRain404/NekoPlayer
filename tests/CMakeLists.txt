@@ -24,6 +24,13 @@ add_dependencies(playback_test test_media)
 add_test(NAME playback COMMAND playback_test)
 set_tests_properties(playback PROPERTIES TIMEOUT 60)
 
+add_executable(tuning_test tuning_test.cpp)
+target_link_libraries(tuning_test PRIVATE neko_playback Qt6::Test)
+target_compile_definitions(tuning_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(tuning_test test_media)
+add_test(NAME tuning COMMAND tuning_test)
+set_tests_properties(tuning PROPERTIES TIMEOUT 60)
+
 add_executable(playlist_test playlist_test.cpp)
 target_link_libraries(playlist_test PRIVATE neko_playback Qt6::Test)
 target_compile_definitions(playlist_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")

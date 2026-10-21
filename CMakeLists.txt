@@ -37,7 +37,8 @@ add_library(neko_session src/session/sessionstore.cpp src/session/sessionmanager
 target_link_libraries(neko_session PUBLIC neko_playback)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
-    src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/trackmenus.cpp)
+    src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/trackmenus.cpp
+    src/ui/tuningmenus.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session Qt6::Widgets Qt6::OpenGLWidgets)
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)

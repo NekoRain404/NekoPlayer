@@ -3,11 +3,13 @@
 #include "playback/playlistcontroller.h"
 #include "playlistpane.h"
 #include "trackmenus.h"
+#include "tuningmenus.h"
 
 #include <QAction>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMenuBar>
+#include <QStatusBar>
 #include <QStyle>
 
 void MainWindow::createActions() {
@@ -70,11 +72,16 @@ void MainWindow::createActions() {
     playback->addActions({previousAction_, pauseAction_, nextAction_, stopAction_});
     playback->addSeparator();
     playback->addActions({back, forward});
+    auto *tuning = new TuningMenus(*controller_, this);
+    connect(tuning, &TuningMenus::feedback, this,
+            [this](const QString &message) { statusBar()->showMessage(message, 2500); });
+    playback->addMenu(tuning->speedMenu());
     auto *audio = menuBar()->addMenu(tr("声音(&A)"));
     audio->addActions({muteAction_, louder, quieter});
-    trackMenus_ = new TrackMenus(*controller_, this);
+    trackMenus_ = new TrackMenus(*controller_, this, tuning->subtitleDelayMenu());
     audio->addSeparator();
     audio->addMenu(trackMenus_->audioMenu());
+    audio->addMenu(tuning->audioDelayMenu());
     menuBar()->addMenu(trackMenus_->subtitleMenu());
     auto *playlistMenu = menuBar()->addMenu(tr("播放列表(&L)"));
     playlistMenu->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
@@ -90,6 +97,8 @@ void MainWindow::createActions() {
     contextMenu_ = new QMenu(this);
     contextMenu_->addActions({openAction_, appendAction_, pauseAction_, stopAction_});
     contextMenu_->addSeparator();
+    contextMenu_->addMenu(tuning->speedMenu());
+    contextMenu_->addMenu(tuning->audioDelayMenu());
     contextMenu_->addActions(
         {previousAction_, nextAction_, showPlaylistAction_, muteAction_, fullscreenAction_});
     contextMenu_->addSeparator();

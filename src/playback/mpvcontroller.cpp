@@ -1,325 +1,4 @@
-#include "mpvcontroller.h"
-#include "mpvtracks.h"
-
-#include <QFileInfo>
-#include <QMetaObject>
-#include <QSet>
-#include <algorithm>
-#include <array>
-#include <atomic>
-#include <cmath>
-#include <initializer_list>
-#include <optional>
-#include <tuple>
-#include <utility>
-#include <vector>
-
-namespace {
-struct MpvDeleter {
-    void operator()(mpv_handle *handle) const { mpv_terminate_destroy(handle); }
-};
-enum Property : uint64_t {
-    Position = 1,
-    Duration,
-    Paused,
-    Volume,
-    Muted,
-    Seekable,
-    HardwareDecoder,
-    Tracks
-};
-} // namespace
-
-struct MpvController::Impl {
-    struct RecoveryState {
-        PlaybackState playback;
-        QList<MediaTrack> tracks;
-    };
-    MpvController *owner;
-    std::unique_ptr<mpv_handle, MpvDeleter> client;
-    PlaybackState state;
-    QList<MediaTrack> tracks;
-    bool loading = false;
-    std::optional<RecoveryState> recovery;
-    QList<MediaTrack> tracksToRestore;
-    QStringList subtitlePathsToRestore;
-    uint64_t restoreCommand = 0;
-    uint64_t restoreQuery = 0;
-    QSet<uint64_t> canceledRestoreRequests;
-    bool applyingRestoredSelections = false;
-    bool recoveringRenderer = false;
-    QString error;
-    std::atomic_bool shuttingDown{false};
-    bool ready = false;
-    uint64_t request = 0;
-
-    explicit Impl(MpvController *controller) : owner(controller), client(mpv_create()) {}
-
-    void report(int status) {
-        if (status < 0) {
-            error = QString::fromUtf8(mpv_error_string(status));
-            emit owner->errorOccurred(error);
-        }
-    }
-
-    bool option(const char *name, const char *value) {
-        const int status = mpv_set_option_string(client.get(), name, value);
-        report(status);
-        return status >= 0;
-    }
-
-    uint64_t command(std::initializer_list<QByteArray> arguments) {
-        if (!ready)
-            return 0;
-        std::vector<const char *> pointers;
-        pointers.reserve(arguments.size() + 1);
-        for (const auto &argument : arguments)
-            pointers.push_back(argument.constData());
-        pointers.push_back(nullptr);
-        const auto id = ++request;
-        const int status = mpv_command_async(client.get(), id, pointers.data());
-        report(status);
-        return status >= 0 ? id : 0;
-    }
-
-    template <typename T> void property(const char *name, mpv_format format, T value) {
-        if (ready)
-            report(mpv_set_property_async(client.get(), ++request, name, format, &value));
-    }
-
-    void resetPlayback() {
-        loading = false;
-        state.active = false;
-        state.seekable = false;
-        state.position = 0;
-        state.duration = 0;
-        state.hardwareDecoder.clear();
-        updateTracks({});
-    }
-
-    void updateTracks(QList<MediaTrack> snapshot) {
-        if (applyingRestoredSelections && trackSelectionRestored(tracksToRestore, snapshot))
-            cancelTrackRestore();
-        if (tracks == snapshot)
-            return;
-        tracks = std::move(snapshot);
-        emit owner->tracksChanged();
-    }
-
-    void selectTrack(MediaTrack::Type type, qint64 id) {
-        if (!state.active)
-            return;
-        const bool valid = id == 0 || std::any_of(tracks.cbegin(), tracks.cend(),
-                                                  [type, id](const MediaTrack &track) {
-                                                      return track.type == type && track.id == id;
-                                                  });
-        if (!valid) {
-            error = MpvController::tr("所选轨道不存在");
-            emit owner->errorOccurred(error);
-            return;
-        }
-        cancelTrackRestore();
-        command({"set", type == MediaTrack::Type::Audio ? "aid" : "sid",
-                 id == 0 ? QByteArray("no") : QByteArray::number(id)});
-    }
-
-    void cancelTrackRestore() {
-        if (restoreCommand)
-            canceledRestoreRequests.insert(restoreCommand);
-        if (restoreQuery)
-            canceledRestoreRequests.insert(restoreQuery);
-        applyingRestoredSelections = false;
-        tracksToRestore.clear();
-        subtitlePathsToRestore.clear();
-        restoreCommand = restoreQuery = 0;
-    }
-
-    void queryRestoredTracks() {
-        restoreQuery = ++request;
-        const int status =
-            mpv_get_property_async(client.get(), restoreQuery, "track-list", MPV_FORMAT_NODE);
-        report(status);
-        if (status < 0) {
-            restoreQuery = 0;
-            cancelTrackRestore();
-        }
-    }
-
-    void restoreExternalTracks() {
-        if (tracksToRestore.isEmpty())
-            return;
-        QSet<QString> paths;
-        for (const auto &track : tracksToRestore) {
-            if (track.type == MediaTrack::Type::Subtitle && track.external &&
-                !track.externalPath.isEmpty() && !paths.contains(track.externalPath)) {
-                paths.insert(track.externalPath);
-                subtitlePathsToRestore.append(track.externalPath);
-            }
-        }
-        restoreNextSubtitle();
-    }
-
-    void restoreNextSubtitle() {
-        // sub-add spawns backend workers. Chain replies so the final query sees all files.
-        while (!subtitlePathsToRestore.isEmpty()) {
-            const auto path = subtitlePathsToRestore.takeFirst();
-            restoreCommand = command({"sub-add", path.toUtf8(), "auto"});
-            if (restoreCommand)
-                return;
-        }
-        queryRestoredTracks();
-    }
-
-    void restoreSelections(const QList<MediaTrack> &current) {
-        for (const auto type : {MediaTrack::Type::Audio, MediaTrack::Type::Subtitle}) {
-            const auto id = trackIdForRestore(tracksToRestore, current, type);
-            command({"set", type == MediaTrack::Type::Audio ? "aid" : "sid",
-                     id ? QByteArray::number(id) : QByteArray("no")});
-        }
-        applyingRestoredSelections = true;
-        updateTracks(current);
-    }
-
-    void updateProperty(const mpv_event &event) {
-        const auto &value = *static_cast<mpv_event_property *>(event.data);
-        if (event.reply_userdata == Tracks) {
-            updateTracks(value.data && (state.active || loading)
-                             ? parseMpvTracks(*static_cast<mpv_node *>(value.data))
-                             : QList<MediaTrack>{});
-            return;
-        }
-        if (!value.data) {
-            switch (event.reply_userdata) {
-            case Position:
-                state.position = 0;
-                break;
-            case Duration:
-                state.duration = 0;
-                break;
-            case Seekable:
-                state.seekable = false;
-                break;
-            case HardwareDecoder:
-                state.hardwareDecoder.clear();
-                break;
-            default:
-                return;
-            }
-            emit owner->stateChanged();
-            return;
-        }
-        switch (event.reply_userdata) {
-        case Position:
-            if (state.active)
-                state.position = *static_cast<double *>(value.data);
-            break;
-        case Duration:
-            if (state.active)
-                state.duration = *static_cast<double *>(value.data);
-            break;
-        case Paused:
-            state.paused = *static_cast<int *>(value.data) != 0;
-            break;
-        case Volume:
-            state.volume = *static_cast<double *>(value.data);
-            break;
-        case Muted:
-            state.muted = *static_cast<int *>(value.data) != 0;
-            break;
-        case Seekable:
-            state.seekable = state.active && *static_cast<int *>(value.data) != 0;
-            break;
-        case HardwareDecoder:
-            state.hardwareDecoder = QString::fromUtf8(*static_cast<char **>(value.data));
-            break;
-        default:
-            return;
-        }
-        emit owner->stateChanged();
-    }
-
-    void drainEvents() {
-        if (shuttingDown)
-            return;
-        while (const auto *event = mpv_wait_event(client.get(), 0)) {
-            switch (event->event_id) {
-            case MPV_EVENT_NONE:
-                return;
-            case MPV_EVENT_START_FILE:
-                resetPlayback();
-                loading = true;
-                emit owner->stateChanged();
-                break;
-            case MPV_EVENT_FILE_LOADED:
-                loading = false;
-                recoveringRenderer = false;
-                state.active = true;
-                error.clear();
-                restoreExternalTracks();
-                emit owner->stateChanged();
-                emit owner->fileLoaded();
-                break;
-            case MPV_EVENT_END_FILE: {
-                const auto &end = *static_cast<mpv_event_end_file *>(event->data);
-                resetPlayback();
-                emit owner->stateChanged();
-                const bool expectedReset =
-                    recoveringRenderer && end.error == MPV_ERROR_VO_INIT_FAILED;
-                if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
-                    emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(end.error)));
-                    report(end.error);
-                }
-                if (end.reason == MPV_END_FILE_REASON_EOF)
-                    emit owner->playbackFinished();
-                break;
-            }
-            case MPV_EVENT_PROPERTY_CHANGE:
-                updateProperty(*event);
-                break;
-            case MPV_EVENT_COMMAND_REPLY:
-                if (canceledRestoreRequests.remove(event->reply_userdata))
-                    break;
-                if (event->reply_userdata == restoreCommand && restoreCommand) {
-                    restoreCommand = 0;
-                    restoreNextSubtitle();
-                }
-                report(event->error);
-                break;
-            case MPV_EVENT_GET_PROPERTY_REPLY:
-                if (canceledRestoreRequests.remove(event->reply_userdata))
-                    break;
-                if (event->reply_userdata == restoreQuery && restoreQuery) {
-                    restoreQuery = 0;
-                    const auto &property = *static_cast<mpv_event_property *>(event->data);
-                    if (event->error >= 0 && property.data)
-                        restoreSelections(parseMpvTracks(*static_cast<mpv_node *>(property.data)));
-                    else
-                        cancelTrackRestore();
-                }
-                report(event->error);
-                break;
-            case MPV_EVENT_SET_PROPERTY_REPLY:
-                report(event->error);
-                break;
-            case MPV_EVENT_SHUTDOWN:
-                ready = false;
-                resetPlayback();
-                emit owner->stateChanged();
-                return;
-            default:
-                break;
-            }
-        }
-    }
-
-    static void wakeup(void *userdata) {
-        auto *self = static_cast<Impl *>(userdata);
-        if (!self->shuttingDown.load()) {
-            QMetaObject::invokeMethod(
-                self->owner, [self] { self->drainEvents(); }, Qt::QueuedConnection);
-        }
-    }
-};
+#include "mpvcontroller_p.h"
 
 MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
     : QObject(parent), impl_(std::make_unique<Impl>(this)) {
@@ -328,15 +7,15 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
         backend.error = QStringLiteral("无法创建 libmpv 实例");
         return;
     }
-    constexpr auto options =
-        std::array{std::pair{"config", "no"}, std::pair{"load-scripts", "no"},
-                   std::pair{"terminal", "no"}, std::pair{"osc", "no"},
-                   std::pair{"input-default-bindings", "no"}, std::pair{"input-vo-keyboard", "no"},
-                   std::pair{"hwdec", "auto-safe"}, std::pair{"idle", "yes"},
-                   std::pair{"keep-open", "no"}, std::pair{"video-timing-offset", "0"},
-                   // Eight-tap kernels avoid mpv 0.41's uninitialized LUT padding.
-                   std::pair{"scale", "spline64"}, std::pair{"cscale", "spline64"},
-                   std::pair{"dscale", "spline64"}};
+    constexpr auto options = std::array{
+        std::pair{"config", "no"}, std::pair{"load-scripts", "no"}, std::pair{"terminal", "no"},
+        std::pair{"osc", "no"}, std::pair{"input-default-bindings", "no"},
+        std::pair{"input-vo-keyboard", "no"}, std::pair{"hwdec", "auto-safe"},
+        std::pair{"idle", "yes"}, std::pair{"audio-pitch-correction", "yes"},
+        std::pair{"keep-open", "no"}, std::pair{"video-timing-offset", "0"},
+        // Eight-tap kernels avoid mpv 0.41's uninitialized LUT padding.
+        std::pair{"scale", "spline64"}, std::pair{"cscale", "spline64"},
+        std::pair{"dscale", "spline64"}};
     for (const auto &[name, value] : options) {
         if (!backend.option(name, value))
             return;
@@ -350,14 +29,17 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
     if (status < 0)
         return;
     const auto observations =
-        std::array{std::tuple{Position, "time-pos", MPV_FORMAT_DOUBLE},
-                   std::tuple{Duration, "duration", MPV_FORMAT_DOUBLE},
-                   std::tuple{Paused, "pause", MPV_FORMAT_FLAG},
-                   std::tuple{Volume, "volume", MPV_FORMAT_DOUBLE},
-                   std::tuple{Muted, "mute", MPV_FORMAT_FLAG},
-                   std::tuple{Seekable, "seekable", MPV_FORMAT_FLAG},
-                   std::tuple{HardwareDecoder, "hwdec-current", MPV_FORMAT_STRING},
-                   std::tuple{Tracks, "track-list", MPV_FORMAT_NODE}};
+        std::array{std::tuple{Impl::Position, "time-pos", MPV_FORMAT_DOUBLE},
+                   std::tuple{Impl::Duration, "duration", MPV_FORMAT_DOUBLE},
+                   std::tuple{Impl::Paused, "pause", MPV_FORMAT_FLAG},
+                   std::tuple{Impl::Volume, "volume", MPV_FORMAT_DOUBLE},
+                   std::tuple{Impl::Muted, "mute", MPV_FORMAT_FLAG},
+                   std::tuple{Impl::Seekable, "seekable", MPV_FORMAT_FLAG},
+                   std::tuple{Impl::HardwareDecoder, "hwdec-current", MPV_FORMAT_STRING},
+                   std::tuple{Impl::Tracks, "track-list", MPV_FORMAT_NODE},
+                   std::tuple{Impl::Speed, "speed", MPV_FORMAT_DOUBLE},
+                   std::tuple{Impl::AudioDelay, "audio-delay", MPV_FORMAT_DOUBLE},
+                   std::tuple{Impl::SubtitleDelay, "sub-delay", MPV_FORMAT_DOUBLE}};
     for (const auto &[id, name, format] : observations) {
         const int result = mpv_observe_property(backend.client.get(), id, name, format);
         backend.report(result);
@@ -429,6 +111,23 @@ void MpvController::setMuted(bool muted) {
 }
 
 void MpvController::selectAudioTrack(qint64 id) { impl_->selectTrack(MediaTrack::Type::Audio, id); }
+
+void MpvController::setPlaybackSpeed(double multiplier) {
+    impl_->setTuning(impl_->speed, multiplier);
+}
+void MpvController::adjustPlaybackSpeed(double delta) {
+    setPlaybackSpeed(impl_->speed.requested.value_or(state().playbackSpeed) + delta);
+}
+void MpvController::setAudioDelay(double seconds) { impl_->setTuning(impl_->audioDelay, seconds); }
+void MpvController::adjustAudioDelay(double seconds) {
+    setAudioDelay(impl_->audioDelay.requested.value_or(state().audioDelay) + seconds);
+}
+void MpvController::setSubtitleDelay(double seconds) {
+    impl_->setTuning(impl_->subtitleDelay, seconds);
+}
+void MpvController::adjustSubtitleDelay(double seconds) {
+    setSubtitleDelay(impl_->subtitleDelay.requested.value_or(state().subtitleDelay) + seconds);
+}
 
 void MpvController::selectSubtitleTrack(qint64 id) {
     impl_->selectTrack(MediaTrack::Type::Subtitle, id);

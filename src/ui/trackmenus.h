@@ -12,7 +12,7 @@ class QWidget;
 class TrackMenus final : public QObject {
     Q_OBJECT
   public:
-    explicit TrackMenus(MpvController &controller, QWidget *window);
+    explicit TrackMenus(MpvController &controller, QWidget *window, QMenu *subtitleDelayMenu);
     [[nodiscard]] QMenu *audioMenu() const;
     [[nodiscard]] QMenu *subtitleMenu() const;
 
@@ -25,6 +25,7 @@ class TrackMenus final : public QObject {
     QWidget *window_;
     QMenu *audioMenu_;
     QMenu *subtitleMenu_;
+    QMenu *subtitleDelayMenu_;
     QActionGroup *audioGroup_;
     QActionGroup *subtitleGroup_;
     QAction *loadSubtitleAction_;

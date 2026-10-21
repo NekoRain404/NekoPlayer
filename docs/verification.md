@@ -2,6 +2,15 @@
 
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
+Playback tuning stage:
+
+- `cmake --build --preset debug` succeeded, including NekoPlayer and the compile-only window suite. `ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|tracks|session|tuning)$' --output-on-failure` passed 7/7 in 10.12 seconds.
+- `cmake --build --preset sanitizers --target playback_test playlist_test tracks_test session_test tuning_test` succeeded. `ctest --test-dir build/sanitizers -R '^(playback|playlist|tracks|session|tuning)$' --output-on-failure` passed 5/5 in 11.50 seconds without sanitizer errors. Formatting, `git diff --check` and source-size checks passed.
+- Real headless libmpv tests cover speed/audio/subtitle changes without reloading or leaving pause, rapid keyboard-step accumulation before replies, range clamping, nonfinite rejection, renderer-reload and stop/reopen retention, fresh-controller defaults, and subsequent adjustments based on backend changes. Missing-method failures were observed before implementing the tuning API.
+- A regression exposed mpv 0.41's float storage for delays: requesting 0.2 can be observed as 0.2000000029802322, so exact double comparisons are invalid. A second regression reproduced a stale pending value after setting the same delay twice: external -0.3 followed by +0.05 incorrectly became +0.25. Both are resolved by confirming the latest setter with an asynchronous property query rather than relying on equality or a property-change event. The no-op regression failed before this fix and passed afterward.
+- Read-only review identified the no-op confirmation hole; follow-up review found no remaining Critical/Important issues in latest-request handling, reentrancy, menu ownership or shared actions.
+- GUI assertions for tuning actions, observed titles, preserved pause and subtitle-submenu rebuilding compile only. No GUI/window/smoke tests ran, per the user's request. Real Wayland shortcut delivery, custom-input dialogs, audible pitch correction and physical audio/subtitle synchronization remain unverified.
+
 Session recovery stage:
 
 - `cmake --build --preset debug` succeeded, including NekoPlayer and the compile-only window suite.

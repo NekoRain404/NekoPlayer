@@ -2,7 +2,17 @@
 
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
-Latest debug verification (playlist navigation and completion):
+Audio/subtitle track stage:
+
+- Final results: the full Debug build succeeded; the selected Debug checks passed 5/5 in 8.14 seconds, and the ASan/UBSan integration suites passed 3/3 in 9.32 seconds with no reported sanitizer errors. Formatting and `git diff --check` also passed.
+- Full Debug build includes the player and `window_test` executable. The window tests remain compile-only at the user's request; no GUI/window CTest entry is run in this stage.
+- `ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|tracks)$' --output-on-failure` covers code limits, backend startup and the three non-GUI integration suites.
+- `cmake --build --preset sanitizers --target playback_test playlist_test tracks_test` and `ctest --test-dir build/sanitizers -R '^(playback|playlist|tracks)$' --output-on-failure` exercise the same controller paths under ASan/UBSan, including copying borrowed mpv node data. GUI sanitizer execution remains skipped.
+- New FFmpeg fixtures provide two audio tracks, an embedded subtitle, and an external Matroska with two subtitle streams. Track tests verify owned metadata, typed track-ID validation, async audio/subtitle switching and disabling without media reload, UTF-8/spaced external paths, asynchronous load failure and clearing on stop/replacement.
+- Recovery tests cover internal/external/disabled selection, repeated recovery without duplicated external streams, preservation of a selected second stream from a single external file, and a second reset while restoration is pending. The external-subtitle loss and overlapping-reset failures were reproduced before their fixes. An intermediate failure also confirmed that mpv can reset audio selection when reloading with a different external track layout; final selection is restored after external loading completes.
+- GUI wiring assertions now check backend selections in addition to QAction checks. They compile but have not been executed, so actual menu presentation, file-dialog behavior and subtitle pixels remain unverified.
+
+Previous debug verification (playlist navigation and completion):
 
 - `cmake --build --preset debug` succeeded.
 - `ctest --test-dir build/debug -R '^(playback|playlist)$' --output-on-failure` passed both non-GUI integration tests.

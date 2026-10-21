@@ -28,13 +28,13 @@ if(NEKOPLAYER_SANITIZERS)
     endif()
 endif()
 
-add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/playlistcontroller.cpp
-    src/playback/playlistmodel.cpp)
+add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.cpp
+    src/playback/playlistcontroller.cpp src/playback/playlistmodel.cpp)
 target_include_directories(neko_playback PUBLIC src)
 target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
-    src/ui/windowactions.cpp src/ui/transportbar.cpp)
+    src/ui/windowactions.cpp src/ui/transportbar.cpp src/ui/trackmenus.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback Qt6::Widgets Qt6::OpenGLWidgets)
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)

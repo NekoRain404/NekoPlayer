@@ -31,6 +31,37 @@ add_dependencies(playlist_test test_media)
 add_test(NAME playlist COMMAND playlist_test)
 set_tests_properties(playlist PROPERTIES TIMEOUT 60)
 
+set(TEST_TRACK_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/multiple-tracks.mkv")
+add_custom_command(OUTPUT "${TEST_TRACK_MEDIA}"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -i "${TEST_MEDIA}" -f lavfi -i sine=frequency=880:sample_rate=48000
+        -i "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt"
+        -map 0:v -map 0:a -map 1:a -map 2:s -t 4 -c:v copy -c:a pcm_s16le -c:s srt
+        -metadata:s:a:0 language=jpn -metadata:s:a:0 title=Original
+        -metadata:s:a:1 language=eng -metadata:s:a:1 title=English
+        -metadata:s:s:0 language=zho -metadata:s:s:0 "title=简体中文"
+        "${TEST_TRACK_MEDIA}"
+    DEPENDS "${TEST_MEDIA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt" VERBATIM)
+add_custom_target(test_track_media DEPENDS "${TEST_TRACK_MEDIA}")
+set(TEST_MULTI_SUBTITLE "${CMAKE_CURRENT_BINARY_DIR}/media/multiple-subtitles.mks")
+add_custom_command(OUTPUT "${TEST_MULTI_SUBTITLE}"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -i "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt"
+        -i "${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt"
+        -map 0:s -map 1:s -c:s srt -f matroska "${TEST_MULTI_SUBTITLE}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt"
+        "${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt" test_track_media VERBATIM)
+add_custom_target(test_multi_subtitle DEPENDS "${TEST_MULTI_SUBTITLE}")
+add_executable(tracks_test tracks_test.cpp)
+target_link_libraries(tracks_test PRIVATE neko_playback Qt6::Test)
+target_compile_definitions(tracks_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"
+    TEST_MULTI_SUBTITLE_PATH="${TEST_MULTI_SUBTITLE}"
+    TEST_EXTERNAL_SUBTITLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt")
+add_dependencies(tracks_test test_track_media)
+add_dependencies(tracks_test test_multi_subtitle)
+add_test(NAME tracks COMMAND tracks_test)
+set_tests_properties(tracks PROPERTIES TIMEOUT 60)
+
 set(NEKOPLAYER_WINDOW_TEST_BACKEND "wayland" CACHE STRING
     "Desktop backend for GUI integration tests (wayland or x11)")
 set_property(CACHE NEKOPLAYER_WINDOW_TEST_BACKEND PROPERTY STRINGS wayland x11)
@@ -58,6 +89,8 @@ target_link_libraries(window_test PRIVATE neko_ui Qt6::Test)
 target_compile_definitions(window_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
 target_compile_definitions(window_test PRIVATE PLAYER_EXECUTABLE="$<TARGET_FILE:NekoPlayer>")
 target_compile_definitions(window_test PRIVATE TEST_VIDEO_ONLY_PATH="${TEST_VIDEO_ONLY}")
+target_compile_definitions(window_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}")
+add_dependencies(window_test test_track_media)
 add_dependencies(window_test test_video_only)
 add_dependencies(window_test NekoPlayer)
 add_dependencies(window_test test_media)

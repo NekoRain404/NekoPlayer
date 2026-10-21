@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mediatrack.h"
+#include <QList>
 #include <QObject>
 #include <QString>
 #include <memory>
@@ -27,6 +29,7 @@ class MpvController final : public QObject {
     [[nodiscard]] QString errorString() const;
     [[nodiscard]] mpv_handle *handle() const;
     [[nodiscard]] const PlaybackState &state() const;
+    [[nodiscard]] const QList<MediaTrack> &tracks() const;
 
   public slots:
     void openFile(const QString &path);
@@ -37,11 +40,15 @@ class MpvController final : public QObject {
     void seekRelative(double seconds);
     void setVolume(double volume);
     void setMuted(bool muted);
+    void selectAudioTrack(qint64 id);
+    void selectSubtitleTrack(qint64 id);
+    void addSubtitle(const QString &path);
     void prepareForRendererReset();
     void resumeAfterRendererReset();
 
   signals:
     void stateChanged();
+    void tracksChanged();
     void fileLoaded();
     void playbackFinished();
     void mediaLoadFailed(const QString &message);

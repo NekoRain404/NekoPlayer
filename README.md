@@ -2,7 +2,7 @@
 
 以 **C++20 / Qt 6 + libmpv** 为基础，目标是做出接近 PotPlayer 的桌面播放体验：打开即播、完整快捷键与右键菜单、灵活的字幕/音轨选择、播放列表和可理解的设置。
 
-当前为首个可播放版本：Qt Widgets + QOpenGLWidget 嵌入 libmpv，提供深色紧凑控制区、菜单、右键菜单和本地播放列表。本地媒体可通过打开、添加、拖放或命令行进入队列；支持暂停、停止、时间定位、上一项/下一项、音量、静音和全屏。字幕/音轨管理、队列持久化、偏好设置与高级画质能力留待后续开发。
+当前为首个可播放版本：Qt Widgets + QOpenGLWidget 嵌入 libmpv，提供深色紧凑控制区、菜单、右键菜单和本地播放列表。本地媒体可通过打开、添加、拖放或命令行进入队列；支持暂停、停止、时间定位、上一项/下一项、音量、静音、全屏、音轨切换、内嵌字幕选择与外挂字幕加载。队列持久化、偏好设置与高级画质能力留待后续开发。
 
 ## 构建与检查
 
@@ -18,12 +18,18 @@ ctest --preset debug
 ./build/debug/NekoPlayer --check-backend
 ```
 
-无需桌面会话的 OpenGL 启动检查，以及内存检查：
+仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
+
+```bash
+ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|tracks)$' --output-on-failure
+```
+
+内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers
-ctest --preset sanitizers
+cmake --build --preset sanitizers --target playback_test playlist_test tracks_test
+ctest --test-dir build/sanitizers -R '^(playback|playlist|tracks)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -48,6 +54,7 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | --- | --- |
 | 打开文件 | Ctrl+O |
 | 添加文件 / 显示播放列表 | Ctrl+Shift+O / Ctrl+L |
+| 加载外挂字幕 | Ctrl+Shift+S |
 | 播放 / 暂停 | 空格 |
 | 上一项 / 下一项 | 多媒体上一曲 / 下一曲键 |
 | 后退 / 前进 5 秒 | ← / → |
@@ -58,6 +65,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 打开文件会替换现有队列；添加文件、拖入一个或多个本地文件、或传入多个命令行位置参数会追加或创建队列。网络地址拖放会被拒绝并显示原因。全屏默认隐藏菜单与控制区，移动鼠标显示控制区，闲置后收起；错误会显示可见提示。正常播放禁用用户 mpv 配置、脚本、OSC 和默认键绑定，由 NekoPlayer 统一管理交互。
 
 播放结束后自动进入下一项并跳过缺失文件；上一项按逆序跳过缺失文件。队列播完后追加媒体会启动新增项，暂停期间追加则保留当前播放。停止或播完后按空格可重新播放当前项。
+
+“声音 → 音轨”和“字幕”菜单可查看轨道编号、标题、语言、编码及当前选择，也可关闭音轨或字幕；右键菜单共用这些入口。加载外挂字幕后自动选中该轨道。切换轨道无需重新打开媒体，保持暂停状态；停止或换片时清空旧轨道。图形上下文重建时恢复音轨、字幕选择和已加载的外挂字幕。外挂字幕目前通过文件对话框加载，字幕拖放、延迟调整和字体设置尚未实现。
 
 ## 工程约束与验证边界
 

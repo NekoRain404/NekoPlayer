@@ -2,6 +2,7 @@
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playlistpane.h"
+#include "trackmenus.h"
 
 #include <QAction>
 #include <QKeySequence>
@@ -71,6 +72,10 @@ void MainWindow::createActions() {
     playback->addActions({back, forward});
     auto *audio = menuBar()->addMenu(tr("声音(&A)"));
     audio->addActions({muteAction_, louder, quieter});
+    trackMenus_ = new TrackMenus(*controller_, this);
+    audio->addSeparator();
+    audio->addMenu(trackMenus_->audioMenu());
+    menuBar()->addMenu(trackMenus_->subtitleMenu());
     auto *playlistMenu = menuBar()->addMenu(tr("播放列表(&L)"));
     playlistMenu->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
     auto *view = menuBar()->addMenu(tr("视图(&V)"));
@@ -87,6 +92,9 @@ void MainWindow::createActions() {
     contextMenu_->addSeparator();
     contextMenu_->addActions(
         {previousAction_, nextAction_, showPlaylistAction_, muteAction_, fullscreenAction_});
+    contextMenu_->addSeparator();
+    contextMenu_->addMenu(trackMenus_->audioMenu());
+    contextMenu_->addMenu(trackMenus_->subtitleMenu());
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this,
             [this](const QPoint &point) { contextMenu_->popup(mapToGlobal(point)); });

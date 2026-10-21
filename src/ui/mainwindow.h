@@ -7,6 +7,7 @@
 class MpvController;
 class VideoWidget;
 class TransportBar;
+class TrackMenus;
 class PlaylistController;
 class PlaylistPane;
 class QAction;
@@ -45,6 +46,7 @@ class MainWindow final : public QMainWindow {
     std::unique_ptr<PlaylistController> playlist_;
     VideoWidget *video_ = nullptr;
     TransportBar *transport_ = nullptr;
+    TrackMenus *trackMenus_ = nullptr;
     PlaylistPane *playlistPane_ = nullptr;
     QLabel *emptyHint_ = nullptr;
     QAction *openAction_ = nullptr;

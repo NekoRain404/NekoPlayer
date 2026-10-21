@@ -7,6 +7,8 @@
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QLabel>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMimeData>
 #include <QProcess>
 #include <QProcessEnvironment>
@@ -35,11 +37,59 @@ bool hasColoredVideo(const QImage &image) {
 QAction *action(MainWindow &window, const char *name) {
     return window.findChild<QAction *>(QString::fromLatin1(name));
 }
+qint64 selectedTrack(MainWindow &window, MediaTrack::Type type) {
+    for (const auto &track : window.controller()->tracks()) {
+        if (track.type == type && track.selected)
+            return track.id;
+    }
+    return 0;
+}
 } // namespace
 
 class WindowTest final : public QObject {
     Q_OBJECT
   private slots:
+    void trackMenuActionsFollowBackend() {
+        MainWindow window(true);
+        auto *audio = window.findChild<QMenu *>(QStringLiteral("audioTracksMenu"));
+        auto *subtitles = window.findChild<QMenu *>(QStringLiteral("subtitleTracksMenu"));
+        auto *load = action(window, "loadSubtitleAction");
+        QVERIFY(audio && subtitles && load);
+        QVERIFY(!audio->isEnabled());
+        QVERIFY(!subtitles->isEnabled());
+        QVERIFY(!load->isEnabled());
+        QVERIFY(window.menuBar()->actions().contains(subtitles->menuAction()));
+        int audioMenuUses = 0;
+        const auto menus = window.findChildren<QMenu *>();
+        for (auto *menu : menus) {
+            if (menu->actions().contains(audio->menuAction()))
+                ++audioMenuUses;
+        }
+        QCOMPARE(audioMenuUses, 2); // Menu bar and context menu share the same submenu.
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        window.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(window.controller()->state().active);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(action(window, "audioTrack2Action"));
+        QVERIFY(load->isEnabled());
+        QVERIFY(audio->isEnabled());
+        action(window, "audioTrack2Action")->trigger();
+        QTRY_COMPARE(selectedTrack(window, MediaTrack::Type::Audio), 2);
+        QTRY_VERIFY(action(window, "audioTrack2Action")->isChecked());
+        action(window, "subtitleTrack1Action")->trigger();
+        QTRY_COMPARE(selectedTrack(window, MediaTrack::Type::Subtitle), 1);
+        QTRY_VERIFY(action(window, "subtitleTrack1Action")->isChecked());
+        action(window, "subtitleTrack0Action")->trigger();
+        QTRY_COMPARE(selectedTrack(window, MediaTrack::Type::Subtitle), 0);
+        QTRY_VERIFY(action(window, "subtitleTrack0Action")->isChecked());
+        window.controller()->stop();
+        QTRY_VERIFY(!load->isEnabled());
+        QTRY_VERIFY(!action(window, "audioTrack2Action"));
+        QVERIFY(!audio->isEnabled());
+        QVERIFY(!subtitles->isEnabled());
+    }
+
     void rendersVideo() {
         MainWindow window(true);
         window.show();

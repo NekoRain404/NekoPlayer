@@ -51,6 +51,37 @@ qint64 selectedTrack(MainWindow &window, MediaTrack::Type type) {
 class WindowTest final : public QObject {
     Q_OBJECT
   private slots:
+    void playlistModeActionsShareStateAndRefreshNavigation() {
+        MainWindow window(true);
+        auto *off = action(window, "repeatOffAction");
+        auto *one = action(window, "repeatOneAction");
+        auto *all = action(window, "repeatAllAction");
+        auto *cycle = action(window, "cycleRepeatAction");
+        auto *menu = window.findChild<QMenu *>(QStringLiteral("playlistModeMenu"));
+        QVERIFY(off && one && all && cycle && menu);
+        QVERIFY(off->isChecked());
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        window.openFile(mediaPath());
+        QTRY_VERIFY(window.controller()->state().active);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(window.controller()->state().paused);
+        QVERIFY(!action(window, "nextAction")->isEnabled());
+        all->trigger();
+        QCOMPARE(window.playlist()->repeatMode(), PlaylistController::RepeatMode::All);
+        QVERIFY(all->isChecked() && !off->isChecked() && !one->isChecked());
+        QVERIFY(action(window, "nextAction")->isEnabled());
+        QVERIFY(action(window, "previousAction")->isEnabled());
+        QVERIFY(menu->title().contains(all->text()));
+        cycle->trigger();
+        QCOMPARE(window.playlist()->repeatMode(), PlaylistController::RepeatMode::Off);
+        QVERIFY(off->isChecked());
+        QVERIFY(!action(window, "nextAction")->isEnabled());
+        window.playlist()->setRepeatMode(PlaylistController::RepeatMode::One);
+        QVERIFY(one->isChecked());
+        QVERIFY(window.controller()->state().paused);
+    }
+
     void tuningActionsFollowBackendAndSurviveTrackRebuilds() {
         MainWindow window(true);
         auto *speed = window.findChild<QMenu *>(QStringLiteral("speedMenu"));

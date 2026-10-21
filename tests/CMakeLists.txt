@@ -38,6 +38,13 @@ add_dependencies(playlist_test test_media)
 add_test(NAME playlist COMMAND playlist_test)
 set_tests_properties(playlist PROPERTIES TIMEOUT 60)
 
+add_executable(playlist_modes_test playlist_modes_test.cpp)
+target_link_libraries(playlist_modes_test PRIVATE neko_playback Qt6::Test)
+target_compile_definitions(playlist_modes_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(playlist_modes_test test_media)
+add_test(NAME playlist-modes COMMAND playlist_modes_test)
+set_tests_properties(playlist-modes PROPERTIES TIMEOUT 60)
+
 add_executable(session_test session_test.cpp)
 target_link_libraries(session_test PRIVATE neko_session Qt6::Test)
 target_compile_definitions(session_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
@@ -57,6 +64,9 @@ add_custom_command(OUTPUT "${TEST_TRACK_MEDIA}"
         "${TEST_TRACK_MEDIA}"
     DEPENDS "${TEST_MEDIA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt" VERBATIM)
 add_custom_target(test_track_media DEPENDS "${TEST_TRACK_MEDIA}")
+target_compile_definitions(playlist_modes_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"
+    TEST_EXTERNAL_SUBTITLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt")
+add_dependencies(playlist_modes_test test_track_media)
 set(TEST_MULTI_SUBTITLE "${CMAKE_CURRENT_BINARY_DIR}/media/multiple-subtitles.mks")
 add_custom_command(OUTPUT "${TEST_MULTI_SUBTITLE}"
     COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y

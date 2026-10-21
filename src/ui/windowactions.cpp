@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
+#include "playlistmodemenu.h"
 #include "playlistpane.h"
 #include "trackmenus.h"
 #include "tuningmenus.h"
@@ -85,6 +86,10 @@ void MainWindow::createActions() {
     menuBar()->addMenu(trackMenus_->subtitleMenu());
     auto *playlistMenu = menuBar()->addMenu(tr("播放列表(&L)"));
     playlistMenu->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
+    auto *modeMenu = new PlaylistModeMenu(*playlist_, this);
+    connect(modeMenu, &PlaylistModeMenu::feedback, this,
+            [this](const QString &message) { statusBar()->showMessage(message, 2500); });
+    playlistMenu->addMenu(modeMenu->menu());
     auto *view = menuBar()->addMenu(tr("视图(&V)"));
     view->addAction(fullscreenAction_);
     showPlaylistAction_ =
@@ -99,6 +104,7 @@ void MainWindow::createActions() {
     contextMenu_->addSeparator();
     contextMenu_->addMenu(tuning->speedMenu());
     contextMenu_->addMenu(tuning->audioDelayMenu());
+    contextMenu_->addMenu(modeMenu->menu());
     contextMenu_->addActions(
         {previousAction_, nextAction_, showPlaylistAction_, muteAction_, fullscreenAction_});
     contextMenu_->addSeparator();

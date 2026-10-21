@@ -82,6 +82,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
             [this] { statusBar()->showMessage(tr("播放列表已结束")); });
     connect(playlist_.get(), &PlaylistController::queueError, this, &MainWindow::showError);
     connect(playlist_.get(), &PlaylistController::currentChanged, this, &MainWindow::updateState);
+    connect(playlist_.get(), &PlaylistController::repeatModeChanged, this,
+            &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::rowsInserted, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::rowsRemoved, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::modelReset, this, &MainWindow::updateState);

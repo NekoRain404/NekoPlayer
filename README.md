@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|tracks|session|tuning)$' --output-on-failure
+ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|playlist-modes|tracks|session|tuning)$' --output-on-failure
 ```
 
 内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target playback_test playlist_test tracks_test session_test tuning_test
-ctest --test-dir build/sanitizers -R '^(playback|playlist|tracks|session|tuning)$' --output-on-failure
+cmake --build --preset sanitizers --target playback_test playlist_test playlist_modes_test tracks_test session_test tuning_test
+ctest --test-dir build/sanitizers -R '^(playback|playlist|playlist-modes|tracks|session|tuning)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -65,10 +65,13 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | 减慢 / 加快 0.1 倍 / 正常速度 | `[` / `]` / Backspace |
 | 字幕提前 / 延后 100 毫秒 / 归零 | `,` / `.` / `/` |
 | 音频提前 / 延后 50 毫秒 / 归零 | Shift+`,` / Shift+`.` / Shift+`/` |
+| 切换顺序播放 / 单曲循环 / 列表循环 | R |
 
 打开文件会替换现有队列；添加文件、拖入一个或多个本地文件、或传入多个命令行位置参数会追加或创建队列。网络地址拖放会被拒绝并显示原因。全屏默认隐藏菜单与控制区，移动鼠标显示控制区，闲置后收起；错误会显示可见提示。正常播放禁用用户 mpv 配置、脚本、OSC 和默认键绑定，由 NekoPlayer 统一管理交互。
 
 播放结束后自动进入下一项并跳过缺失文件；上一项按逆序跳过缺失文件。队列播完后追加媒体会启动新增项，暂停期间追加则保留当前播放。停止或播完后按空格可重新播放当前项。
+
+“播放列表 → 播放模式”与右键菜单提供顺序播放、单曲循环和列表循环，也可按 R 依次切换。默认顺序播放，循环模式只在本次运行保留。单曲循环只影响自然播完，手动上下项仍切歌；列表循环的上下项及自然播完均支持首尾衔接。单曲及只有一项的列表使用 mpv 原生循环定位，保留音轨选择与外挂字幕；给单项列表追加媒体会恢复自动进入下一项。停止、清空和加载失败不会触发单曲重播；失败队列每行最多尝试一次，全部不可播放时结束，用户可再次显式播放来重试。
 
 正常退出会保存播放列表、当前行、音量／静音、窗口大小和最大化状态、列表面板显示状态及媒体对话框目录。再次启动只恢复队列，按空格才开始播放；命令行文件替换恢复队列。退出全屏时或在全屏下关闭，均保留之前的普通窗口状态，不在下次启动自动全屏。配置使用版本化 INI，Linux 默认位于 `$XDG_CONFIG_HOME/NekoPlayer/NekoPlayer/session.ini`（未设置时位于 `~/.config/` 下）；保存失败会提示，损坏或未知版本的配置不会被覆盖。`--no-config` 与 `--smoke-test` 均不读写配置。此阶段不保存播放进度、轨道和外挂字幕，也不提供崩溃恢复；同时运行多个实例时以最后保存的会话为准。
 

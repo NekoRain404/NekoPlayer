@@ -85,6 +85,9 @@ void MpvController::stop() {
     impl_->cancelTrackRestore();
     impl_->command({"stop"});
 }
+void MpvController::setFileLoopEnabled(bool enabled) {
+    impl_->command({"set", "loop-file", enabled ? "inf" : "no"});
+}
 void MpvController::seekAbsolute(double seconds) {
     if (!state().seekable || !std::isfinite(seconds))
         return;

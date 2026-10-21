@@ -8,12 +8,13 @@
 | `PlaybackState` | 只读播放快照；秒为时间单位，音量 0–100 | 控制器与展示层共用 |
 | `MediaTrack` / `mpvtracks.cpp` | 类型内唯一的轨道编号、元数据、选择状态；将 mpv node 解析为拥有数据的快照 | 领域类型不依赖 mpv；解析器只依赖 Qt Core / client API |
 | `PlaylistModel` | 本地文件队列与当前项；提供 Qt model 角色 | Qt Core，不直接控制播放器 |
-| `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件 | 仅依赖 `MpvController` 与 `PlaylistModel` |
+| `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环策略与有界失败恢复 | 仅依赖 `MpvController` 与 `PlaylistModel` |
 | `VideoWidget` | GL 上下文、物理像素 FBO、帧更新、隐藏时跳帧、资源释放 | 只处理渲染，不提交播放命令 |
 | `TransportBar` | 展示时间/进度/音量，拖动预览，发出定位和音量意图 | 状态快照和 QAction，不操作 mpv |
 | `PlaylistPane` | 队列视图和上一项/下一项/清空动作入口 | 只依赖 model 与共享 QAction |
 | `TrackMenus` | 音轨、字幕菜单和外挂字幕文件入口 | 依赖控制器快照与业务接口，不接触 mpv handle |
 | `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
+| `PlaylistModeMenu` | 互斥播放模式动作、R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
 | `SessionState` / `SessionStore` | 音频偏好、窗口偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
 | `SessionManager` | 恢复空闲队列及音频偏好，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
 | `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调 | 通过队列和控制器接口发出业务操作 |
@@ -22,6 +23,8 @@
 | `main.cpp` | 参数解析、启动和 smoke 退出条件 | 后端诊断实现单独保留 |
 
 业务路径：用户文件入口 → `PlaylistController` 选择有效本地项 → 控制器异步命令 → mpv 事件 → Qt 接收者队列 → 状态信号 → 展示更新。EOF 自动选择下一项；加载失败只跳过后续项，不将一般 mpv 错误误认为队列切换。渲染路径独立：mpv 更新回调 → Qt 队列 → GL current → render API → Qt 合成。
+
+播放模式由队列持有，默认 Off，不写入会话配置。One 和只有一项的 All 通过控制器异步设置 `loop-file`，由 mpv 定位回起点，避免重载解码器和丢失轨道。多项 All 的 EOF／手动导航由应用队列首尾衔接；列表长度或模式改变时立即更新原生循环设置。若切换为 One 时 EOF 已排队，结束回调兜底重播当前项。每次导航最多扫描队列一轮，异步失败行和缺失行记录在失败集合中，错误链不会反复重试同一行。成功自然播完、显式导航或清空会重置失败集合；`FILE_LOADED` 仅代表容器和轨道初始化成功，不能据此清除失败历史。全失败后保留队列，追加或显式操作可重试。模式变化独立通知动作可用性，不订阅时间进度。
 
 后台回调只排队，不访问 UI、不调用 mpv。带 QObject 接收上下文的排队任务在对象销毁时取消。控制器和表面各自的回调 userdata 保留到对应 mpv 资源完全释放。
 
@@ -39,4 +42,4 @@
 
 QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文件。Qt 按路径缓存解析结果，而 FormatError 属于具体 QSettings 实例，因此校验把文件字节复制到唯一临时文件后完整解析，避免第二次访问丢失先前的格式错误。未知版本或解析失败拒绝覆盖；路径仅接受绝对本地路径，缺失文件保留，标量域值归一化。正常窗口 geometry 通过 Qt 跨平台 API 保存，全屏下保存进入全屏前的 geometry，不跨启动恢复全屏。默认路径在 main 决定，smoke/no-config 和默认构造的测试窗口禁用会话读写。
 
-目前没有播放进度持久化、拖放重排、随机/循环模式、完整偏好设置界面、插件框架、多引擎或完整主题系统。
+目前没有播放进度持久化、拖放重排、随机模式、完整偏好设置界面、插件框架、多引擎或完整主题系统。

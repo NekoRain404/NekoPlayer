@@ -39,6 +39,7 @@ class MpvController final : public QObject {
     void setPaused(bool paused);
     void togglePause();
     void stop();
+    void setFileLoopEnabled(bool enabled);
     void seekAbsolute(double seconds);
     void seekRelative(double seconds);
     void setVolume(double volume);

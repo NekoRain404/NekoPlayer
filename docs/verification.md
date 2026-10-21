@@ -2,6 +2,15 @@
 
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
+Playlist repeat modes stage:
+
+- `cmake --build --preset debug` succeeded, including NekoPlayer and the compile-only window suite. `ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|playlist-modes|tracks|session|tuning)$' --output-on-failure` passed 8/8 in 14.03 seconds.
+- `cmake --build --preset sanitizers --target playback_test playlist_test playlist_modes_test tracks_test session_test tuning_test` succeeded. `ctest --test-dir build/sanitizers -R '^(playback|playlist|playlist-modes|tracks|session|tuning)$' --output-on-failure` passed 6/6 in 15.91 seconds without sanitizer errors. Formatting, `git diff --check` and the 500/800-line limits passed.
+- Real headless libmpv tests cover single-file native looping without reload, manual navigation under repeat-one, repeat-all EOF and navigation wrapping, missing and invalid files, exhausted-queue append/retry, stop/clear/empty behavior, and switching modes without reloading or leaving pause. Appending during a single-item repeat-all loop restores automatic next-item playback. Native repeat-one retains the selected second audio track and an external subtitle without another `fileLoaded` event. Initial mode tests failed on the missing Qt property before implementation.
+- Read-only review found two important boundaries, each reproduced before its fix. A valid PCM WAV header with zero samples emits `FILE_LOADED` before failing: clearing failure history there made a two-row repeat-all queue load repeatedly (four errors observed instead of two). History now resets only on successful EOF or explicit navigation/reset; the regression verifies exactly two failures and one queue completion. A controlled EOF signal delivered after switching to repeat-one previously advanced from row zero to row one; the fallback now reloads the current row, while normal native looping still avoids reloads. This controlled signal tests queue behavior at the asynchronous boundary; it does not measure the frequency of a real user EOF race.
+- Follow-up read-only review confirmed both fixes and reported no remaining Critical/Important findings.
+- The window suite's mode action, checked state, menu title, navigation availability and pause-preservation assertions compile only. No GUI/window/smoke tests ran, per the user's request; actual Wayland shortcut delivery and menu interaction remain unverified.
+
 Playback tuning stage:
 
 - `cmake --build --preset debug` succeeded, including NekoPlayer and the compile-only window suite. `ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|tracks|session|tuning)$' --output-on-failure` passed 7/7 in 10.12 seconds.

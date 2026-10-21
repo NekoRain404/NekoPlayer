@@ -19,6 +19,8 @@
 | `PlaylistModeMenu` | 互斥播放模式动作、R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
 | `NavigationMenu` / `TimeSeekDialog` | 章节动作、上下章及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键 |
 | `PlaybackSettingsDialog` | 解码方式草稿、应用／取消与实际解码状态 | 仅调用控制器业务 API，QObject 接收上下文随对话框销毁 |
+| `SubtitlePreferences` | 字幕可见性、缩放、位置及默认字体；统一归一化 | Qt Core 值类型，不依赖 mpv 或 UI |
+| `SubtitleDisplayMenu` / `SubtitleSettingsDialog` | 共享字幕显示动作、快捷键和应用／取消草稿 | 只使用字幕偏好与控制器业务 API，不订阅播放进度 |
 | `SessionState` / `SessionStore` | 音频偏好、窗口偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
 | `SessionManager` | 恢复空闲队列及音频偏好，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
 | `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调 | 通过队列和控制器接口发出业务操作 |
@@ -51,3 +53,5 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 解码偏好由控制器记录成功提交到同一 mpv client 的最新用户意图，`hardwareDecodingEnabled` 不代表实际使用硬解；运行时异步设置 `hwdec=auto-safe/no`，相同偏好不重复提交。`PlaybackState::hardwareDecoder` 继续观察 `hwdec-current`，区分未播放、无视频解码器、软件及具体硬解 API。设置对话框缓存 active/decoder，只在相关值变化时刷新标签，不增加轮询或逐帧配置写盘。SessionStore 在 schema 1 增加可选 `video/hardwareDecoding`，缺失／非法值默认 true；SessionManager 关闭时读取即时意图，启动在加载媒体前应用。异步命令错误通过现有错误信号报告，硬件不可用时的正常回退不改变用户偏好。
 
 目前没有播放进度持久化、拖放重排、随机模式、完整偏好设置界面、插件框架、多引擎或完整主题系统。
+
+字幕显示实现集中在 `mpvcontroller_subtitles.cpp`，复用同一 client 的异步 `set` 命令；只有变更的字段才提交，UTF-8 字体作为独立参数传递。`SubtitlePreferences` 表示最新成功入队的用户意图，快速步进和关闭保存直接读取它，不等待属性观察；异步执行错误仍由现有错误信号报告，不宣称后端已执行成功。显示开关使用 `sub-visibility`，不改 `sid`；缩放为 0.25–4，位置为 0–100，拒绝非有限步进；字体去除首尾空白，空值、控制字符或超长名称回退 `sans-serif`。不设置 ASS 强制覆盖，不新增帧复制、轮询或媒体重载。schema 1 的可选 `subtitles/*` 字段缺失或损坏时分别回退默认值；停止、换片和渲染重建不清除偏好。字幕菜单仍按媒体状态启用，空闲设置入口由全局设置菜单和共享 F6 动作提供。对话框只在打开时枚举字体，保留泛型及当前未安装的字体名称；偏好变化通知驱动动作刷新，无逐帧处理。

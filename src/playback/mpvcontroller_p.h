@@ -68,6 +68,7 @@ struct MpvController::Impl {
     std::atomic_bool shuttingDown{false};
     bool ready = false;
     bool hardwareDecodingEnabled = true;
+    SubtitlePreferences subtitles;
     uint64_t request = 0;
     struct TuningSetting {
         const char *name;

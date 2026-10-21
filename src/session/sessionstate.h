@@ -1,5 +1,6 @@
 #pragma once
 
+#include "playback/subtitlepreferences.h"
 #include <QByteArray>
 #include <QStringList>
 
@@ -20,6 +21,7 @@ struct SessionState {
     QStringList paths;
     int currentIndex = -1;
     bool hardwareDecodingEnabled = true;
+    SubtitlePreferences subtitles;
 };
 
 struct SessionLoadResult {

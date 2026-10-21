@@ -2,6 +2,15 @@
 
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
+Subtitle display preferences stage (2026-10-22):
+
+- `cmake --build --preset debug` succeeded, including NekoPlayer and both compile-only window suites. `ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|subtitles|playback|playlist|playlist-modes|tracks|session|tuning|navigation|playback-time)$' --output-on-failure` passed 12/12 in 19.50 seconds. The subtitles suite also passed ten consecutive runs in 7.27 seconds.
+- The sanitizer targets were rebuilt for this stage. After the final test synchronization change, `cmake --build --preset sanitizers --target subtitles_test` succeeded and `ctest --test-dir build/sanitizers -R '^(decoding|subtitles|playback|playlist|playlist-modes|tracks|session|tuning|navigation|playback-time)$' --output-on-failure` passed 10/10 in 21.62 seconds without sanitizer errors.
+- Real headless libmpv checks cover visibility without losing subtitle selection, scale/position/font delivery, rapid adjustments, normalization, nonfinite rejection, immediate save before event delivery, restart/idle restoration, stop/reopen and renderer recovery. Legacy, malformed and mixed configuration fields retain independent defaults. The missing visibility API failed before implementation.
+- Two intermediate broad Debug runs passed 11/12 and exposed test synchronization errors. A synchronous backend `sid=1` query can precede the controller's queued selected-track snapshot; the test now waits for the corresponding selected track before capturing it. A font reset could initially match the default before the preceding font change was observed; the test now waits for that first transition before requesting the reset. These fixes add explicit state boundaries rather than sleeps or larger timeouts.
+- Read-only review reported no Critical, Important or Minor findings. Formatting, `git diff --check` and the 500/800-line checks passed. The private controller header is 460 lines and the listed window-test exception is 561 lines; the subtitle-specific components remain separate, ordinary files.
+- Draft editing, Apply/OK/Cancel/defaults, preservation of unavailable font names, shared menu actions and shortcuts have compile-only GUI assertions. No GUI/window/smoke tests ran, per the user's request. Actual subtitle pixels, font fallback, ASS layout, Wayland shortcut routing and GPU rendering remain unverified by this stage.
+
 Hardware decoding preferences and mpv 0.41 navigation compatibility stage (2026-10-22):
 
 - `cmake --build --preset debug` succeeded, including NekoPlayer and the compile-only window suite. `ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|playback|playlist|playlist-modes|tracks|session|tuning|navigation|playback-time)$' --output-on-failure` passed 11/11 in 18.44 seconds.

@@ -52,6 +52,7 @@ bool readBool(QSettings &settings, const QString &key, bool fallback = false) {
 }
 
 SessionState normalized(SessionState state) {
+    state.subtitles = state.subtitles.normalized();
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
     QStringList paths;
@@ -89,6 +90,14 @@ SessionLoadResult SessionStore::load() const {
     state.audio.muted = readBool(settings, QStringLiteral("audio/muted"));
     state.hardwareDecodingEnabled =
         readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
+    state.subtitles.visible = readBool(settings, QStringLiteral("subtitles/visible"), true);
+    const auto scale = settings.value(QStringLiteral("subtitles/scale"), 1).toDouble(&valid);
+    state.subtitles.scale = valid ? scale : 1;
+    const auto position =
+        settings.value(QStringLiteral("subtitles/position"), 100).toDouble(&valid);
+    state.subtitles.position = valid ? position : 100;
+    state.subtitles.font =
+        settings.value(QStringLiteral("subtitles/font"), QStringLiteral("sans-serif")).toString();
     state.paths = settings.value(QStringLiteral("playlist/paths")).toStringList();
     state.currentIndex = settings.value(QStringLiteral("playlist/currentIndex"), -1).toInt(&valid);
     if (!valid)
@@ -115,6 +124,10 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("audio/volume"), saved.audio.volume);
     settings.setValue(QStringLiteral("audio/muted"), saved.audio.muted);
     settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
+    settings.setValue(QStringLiteral("subtitles/visible"), saved.subtitles.visible);
+    settings.setValue(QStringLiteral("subtitles/scale"), saved.subtitles.scale);
+    settings.setValue(QStringLiteral("subtitles/position"), saved.subtitles.position);
+    settings.setValue(QStringLiteral("subtitles/font"), saved.subtitles.font);
     settings.setValue(QStringLiteral("playlist/paths"), saved.paths);
     settings.setValue(QStringLiteral("playlist/currentIndex"), saved.currentIndex);
     settings.setValue(QStringLiteral("window/geometry"), saved.window.geometry);

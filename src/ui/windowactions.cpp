@@ -5,6 +5,7 @@
 #include "playbacksettingsdialog.h"
 #include "playlistmodemenu.h"
 #include "playlistpane.h"
+#include "subtitledisplaymenu.h"
 #include "trackmenus.h"
 #include "tuningmenus.h"
 
@@ -85,7 +86,11 @@ void MainWindow::createActions() {
     playback->addMenu(tuning->speedMenu());
     auto *audio = menuBar()->addMenu(tr("声音(&A)"));
     audio->addActions({muteAction_, louder, quieter});
-    trackMenus_ = new TrackMenus(*controller_, this, tuning->subtitleDelayMenu());
+    auto *subtitleDisplay = new SubtitleDisplayMenu(*controller_, this);
+    connect(subtitleDisplay, &SubtitleDisplayMenu::feedback, this,
+            [this](const QString &message) { statusBar()->showMessage(message, 2500); });
+    trackMenus_ =
+        new TrackMenus(*controller_, this, tuning->subtitleDelayMenu(), subtitleDisplay->menu());
     audio->addSeparator();
     audio->addMenu(trackMenus_->audioMenu());
     audio->addMenu(tuning->audioDelayMenu());
@@ -113,6 +118,7 @@ void MainWindow::createActions() {
         dialog.exec();
     });
     settings->addAction(playbackSettings);
+    settings->addAction(subtitleDisplay->settingsAction());
     contextMenu_ = new QMenu(this);
     contextMenu_->addActions({openAction_, appendAction_, pauseAction_, stopAction_});
     contextMenu_->addSeparator();

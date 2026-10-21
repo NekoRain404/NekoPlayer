@@ -2,6 +2,7 @@
 
 #include "mediachapter.h"
 #include "mediatrack.h"
+#include "subtitlepreferences.h"
 #include <QList>
 #include <QObject>
 #include <QString>
@@ -40,6 +41,8 @@ class MpvController final : public QObject {
     [[nodiscard]] int chapterNavigationIndex() const;
     // User preference; state().hardwareDecoder reports the decoder actually in use.
     [[nodiscard]] bool hardwareDecodingEnabled() const;
+    [[nodiscard]] const SubtitlePreferences &subtitlePreferences() const;
+    void setSubtitlePreferences(const SubtitlePreferences &preferences);
 
   public slots:
     void openFile(const QString &path);
@@ -64,6 +67,12 @@ class MpvController final : public QObject {
     void selectAudioTrack(qint64 id);
     void selectSubtitleTrack(qint64 id);
     void addSubtitle(const QString &path);
+    void setSubtitleVisible(bool visible);
+    void setSubtitleScale(double scale);
+    void adjustSubtitleScale(double delta);
+    void setSubtitlePosition(double position);
+    void adjustSubtitlePosition(double delta);
+    void setSubtitleFont(const QString &font);
     void prepareForRendererReset();
     void resumeAfterRendererReset();
 
@@ -71,6 +80,7 @@ class MpvController final : public QObject {
     void volumeRequested(double volume);
     void muteRequested(bool muted);
     void hardwareDecodingPreferenceChanged(bool enabled);
+    void subtitlePreferencesChanged();
     void stateChanged();
     void tuningChanged();
     void tracksChanged();

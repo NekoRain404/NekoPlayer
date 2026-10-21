@@ -298,6 +298,11 @@ class WindowTest final : public QObject {
         QVERIFY(!subtitles->isEnabled());
         QVERIFY(!load->isEnabled());
         QVERIFY(window.menuBar()->actions().contains(subtitles->menuAction()));
+        auto *display = window.findChild<QMenu *>(QStringLiteral("subtitleDisplayMenu"));
+        auto *settings = action(window, "subtitleSettingsAction");
+        QVERIFY(display && settings && settings->isEnabled());
+        QVERIFY(subtitles->actions().contains(display->menuAction()));
+        QCOMPARE(settings->shortcut(), QKeySequence(Qt::Key_F6));
         int audioMenuUses = 0;
         const auto menus = window.findChildren<QMenu *>();
         for (auto *menu : menus) {
@@ -327,6 +332,8 @@ class WindowTest final : public QObject {
         QTRY_VERIFY(!action(window, "audioTrack2Action"));
         QVERIFY(!audio->isEnabled());
         QVERIFY(!subtitles->isEnabled());
+        QVERIFY(settings->isEnabled());
+        QVERIFY(subtitles->actions().contains(display->menuAction()));
     }
 
     void rendersVideo() {

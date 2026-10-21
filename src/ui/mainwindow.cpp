@@ -90,6 +90,10 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(playlist_.get(), &PlaylistController::currentChanged, this, &MainWindow::updateState);
     connect(playlist_.get(), &PlaylistController::repeatModeChanged, this,
             &MainWindow::updateState);
+    connect(playlist_.get(), &PlaylistController::shuffleEnabledChanged, this,
+            &MainWindow::updateState);
+    connect(playlist_.get(), &PlaylistController::navigationChanged, this,
+            &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::rowsInserted, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::rowsRemoved, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::rowsMoved, this, &MainWindow::updateState);

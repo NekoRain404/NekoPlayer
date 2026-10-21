@@ -2,6 +2,16 @@
 
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
+Shuffle playback stage (2026-10-22):
+
+- `cmake --build --preset debug -j 4` succeeded, including NekoPlayer and all compile-only window suites. `ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|session)$' --output-on-failure` passed 8/8 in 16.27 seconds.
+- `cmake --build --preset sanitizers --target playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test session_test -j 4` succeeded. `ctest --test-dir build/sanitizers -R '^(playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|session)$' --output-on-failure` passed 6/6 in 16.73 seconds without sanitizer errors.
+- New headless tests cover independent shuffle/repeat settings, duplicate entries visited once per cycle, unchanged displayed order, actual previous/forward history across moves and removals, repeat-all cycle boundaries, append/clear/restart, paused toggles without reload or position loss, repeat-one manual navigation, real EOF, missing/undecodable files and reentrant error callbacks. A helper-level check performs 4096 draws and confirms history stays bounded at 1024. Missing shuffle behavior failed before implementation.
+- Backward-failure regressions exposed three boundaries before their fixes: a fresh repeat-all cycle excluded the sole surviving current entry forever; removing forward history followed by an asynchronous backward failure caused a Qt list index assertion; and a failed Previous could hide surviving forward history. Fresh cycles now include every row while avoiding an immediate first-draw repeat, empty-history access checks cursor bounds, and exhausted failed backward loads rewind the history boundary. Synchronous missing-file scans preserve the still-playing entry's cursor.
+- Review also found stale paused navigation actions after an exhausted missing-file scan. A regression failed before adding `navigationChanged`; manual exhaustion and queue completion now notify the window independently of time progress. Follow-up read-only review found no remaining Critical/Important issues and reran both reported regressions plus error-callback cancellation successfully.
+- Shared shuffle QAction, Shift+R, independent checked state, mode title and navigation availability have compile-only window assertions. No GUI/window/smoke tests ran, per the user's request. Actual Wayland shortcuts, menu interaction, GPU rendering and active hardware decoding remain unverified by this stage. The OpenGL render path and safe hardware-decoding preference are unchanged; no playback polling or CPU frame copies were added.
+- Formatting, `git diff --check` and the 500/800-line checker passed. No new size exception was needed: the playlist controller is 341 lines, shuffle helper 99 lines and new headless suite 384 lines.
+
 Video presentation stage (2026-10-22):
 
 - A final pre-commit rerun passed the same selected Debug checks 15/15 in 23.75 seconds and ASan/UBSan suites 13/13 in 27.37 seconds without sanitizer errors. No code changed between these runs and the builds below.

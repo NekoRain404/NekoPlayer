@@ -3,6 +3,7 @@
 #include <QObject>
 
 class PlaylistController;
+class QAction;
 class QActionGroup;
 class QMenu;
 class QWidget;
@@ -21,4 +22,5 @@ class PlaylistModeMenu final : public QObject {
     PlaylistController &queue_;
     QMenu *menu_;
     QActionGroup *group_;
+    QAction *shuffleAction_;
 };

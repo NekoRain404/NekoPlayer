@@ -15,6 +15,13 @@ PlaylistController::PlaylistController(MpvController &player, QObject *parent)
     connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistController::updateFileLoop);
     connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistController::updateFileLoop);
     connect(model_, &PlaylistModel::modelReset, this, &PlaylistController::updateFileLoop);
+    connect(model_, &PlaylistModel::rowsInserted, this,
+            [this](const QModelIndex &, int first, int last) {
+                if (shuffleEnabled_)
+                    shuffle_.append(*model_, first, last);
+            });
+    connect(model_, &PlaylistModel::rowsRemoved, this, [this] { shuffle_.prune(); });
+    connect(model_, &PlaylistModel::modelReset, this, [this] { shuffle_ = {}; });
     connect(model_, &PlaylistModel::rowsMoved, this,
             [this](const QModelIndex &, int from, int, const QModelIndex &, int destination) {
                 const auto to = destination > from ? destination - 1 : destination;
@@ -37,16 +44,33 @@ PlaylistModel *PlaylistController::model() { return model_; }
 const PlaylistModel *PlaylistController::model() const { return model_; }
 
 bool PlaylistController::hasNext() const {
+    if (shuffleEnabled_)
+        return model_->currentIndex() >= 0 &&
+               (shuffle_.hasNext() || repeatMode_ == RepeatMode::All);
     return model_->currentIndex() >= 0 &&
            (repeatMode_ == RepeatMode::All || model_->currentIndex() + 1 < model_->rowCount());
 }
 
 bool PlaylistController::hasPrevious() const {
+    if (shuffleEnabled_)
+        return model_->currentIndex() >= 0 && shuffle_.hasPrevious();
     return model_->currentIndex() >= 0 &&
            (repeatMode_ == RepeatMode::All || model_->currentIndex() > 0);
 }
 
 PlaylistController::RepeatMode PlaylistController::repeatMode() const { return repeatMode_; }
+bool PlaylistController::shuffleEnabled() const { return shuffleEnabled_; }
+
+void PlaylistController::setShuffleEnabled(bool enabled) {
+    if (shuffleEnabled_ == enabled)
+        return;
+    shuffleEnabled_ = enabled;
+    if (enabled)
+        shuffle_.reset(*model_, model_->currentIndex());
+    else
+        shuffle_ = {};
+    emit shuffleEnabledChanged(enabled);
+}
 
 void PlaylistController::setRepeatMode(RepeatMode mode) {
     if (mode != RepeatMode::Off && mode != RepeatMode::One && mode != RepeatMode::All)
@@ -92,6 +116,8 @@ void PlaylistController::playAt(int row) {
     if (row < 0 || row >= model_->rowCount())
         return;
     failedRows_.clear();
+    if (shuffleEnabled_)
+        shuffle_.reset(*model_, row);
     playFirstAvailable(row);
 }
 
@@ -100,6 +126,8 @@ void PlaylistController::restoreFiles(const QStringList &paths, int currentIndex
     model_->addFiles(paths);
     if (model_->rowCount() > 0)
         model_->setCurrentIndex(qBound(0, currentIndex, model_->rowCount() - 1));
+    if (shuffleEnabled_)
+        shuffle_.reset(*model_, model_->currentIndex());
     emit currentChanged(model_->currentIndex());
 }
 
@@ -108,6 +136,8 @@ void PlaylistController::playOrPause() {
         player_.togglePause();
     else {
         failedRows_.clear();
+        if (shuffleEnabled_)
+            shuffle_.reset(*model_, model_->currentIndex());
         playFirstAvailable(qMax(0, model_->currentIndex()));
     }
 }
@@ -115,14 +145,22 @@ void PlaylistController::playOrPause() {
 void PlaylistController::playNext() {
     if (hasNext()) {
         failedRows_.clear();
-        playFirstAvailable(model_->currentIndex() + 1, 1, repeatMode_ == RepeatMode::All);
+        const auto result = shuffleEnabled_ ? playShuffled(1)
+                                            : playFirstAvailable(model_->currentIndex() + 1, 1,
+                                                                 repeatMode_ == RepeatMode::All);
+        if (result == ScanResult::Exhausted)
+            emit navigationChanged();
     }
 }
 
 void PlaylistController::playPrevious() {
     if (hasPrevious()) {
         failedRows_.clear();
-        playFirstAvailable(model_->currentIndex() - 1, -1, repeatMode_ == RepeatMode::All);
+        const auto result = shuffleEnabled_ ? playShuffled(-1)
+                                            : playFirstAvailable(model_->currentIndex() - 1, -1,
+                                                                 repeatMode_ == RepeatMode::All);
+        if (result == ScanResult::Exhausted)
+            emit navigationChanged();
     }
 }
 
@@ -146,7 +184,8 @@ void PlaylistController::moveItem(int from, int to) {
 void PlaylistController::removeAt(int row) {
     if (row < 0 || row >= model_->rowCount())
         return;
-    if (row == model_->currentIndex()) {
+    const bool removingCurrent = row == model_->currentIndex();
+    if (removingCurrent) {
         playbackQueued_ = false;
         ++playbackRevision_;
         exhausted_ = false;
@@ -160,6 +199,8 @@ void PlaylistController::removeAt(int row) {
     }
     failedRows_ = std::move(remapped);
     model_->removeAt(row);
+    if (removingCurrent && shuffleEnabled_)
+        shuffle_.reset(*model_, model_->currentIndex());
     emit currentChanged(model_->currentIndex());
 }
 
@@ -167,6 +208,11 @@ void PlaylistController::playFinished() {
     if (!playbackQueued_)
         return;
     failedRows_.clear();
+    if (shuffleEnabled_ && repeatMode_ != RepeatMode::One) {
+        if (playShuffled(1) == ScanResult::Exhausted)
+            finishQueue();
+        return;
+    }
     // Native looping normally suppresses EOF. Handle one already queued while
     // the asynchronous loop setting was changing by reopening the same row.
     const auto nextRow = model_->currentIndex() + (repeatMode_ == RepeatMode::One ? 0 : 1);
@@ -178,10 +224,17 @@ void PlaylistController::mediaLoadFailed(const QString &message) {
     if (!playbackQueued_)
         return;
     failedRows_.insert(model_->currentIndex());
+    if (shuffleEnabled_)
+        shuffle_.rejectCurrent(navigationStep_);
     const auto revision = playbackRevision_;
     emit queueError(message);
     if (revision != playbackRevision_)
         return;
+    if (shuffleEnabled_) {
+        if (playShuffled(navigationStep_) == ScanResult::Exhausted)
+            finishQueue();
+        return;
+    }
     if (playFirstAvailable(model_->currentIndex() + navigationStep_, navigationStep_,
                            repeatMode_ == RepeatMode::All) == ScanResult::Exhausted)
         finishQueue();
@@ -190,6 +243,7 @@ void PlaylistController::mediaLoadFailed(const QString &message) {
 void PlaylistController::finishQueue() {
     playbackQueued_ = false;
     exhausted_ = true;
+    emit navigationChanged();
     emit queueFinished();
 }
 
@@ -235,13 +289,53 @@ PlaylistController::ScanResult PlaylistController::playFirstAvailable(int firstR
                 return ScanResult::Cancelled;
             continue;
         }
-        exhausted_ = false;
-        playbackQueued_ = true;
-        navigationStep_ = step;
-        model_->setCurrentIndex(row);
-        player_.openFile(path);
-        emit currentChanged(row);
+        startRow(row, step);
         return ScanResult::Started;
     }
+    return ScanResult::Exhausted;
+}
+
+void PlaylistController::startRow(int row, int step) {
+    exhausted_ = false;
+    playbackQueued_ = true;
+    navigationStep_ = step;
+    if (shuffleEnabled_)
+        shuffle_.select(*model_, row);
+    model_->setCurrentIndex(row);
+    player_.openFile(model_->pathAt(row));
+    emit currentChanged(row);
+}
+
+PlaylistController::ScanResult PlaylistController::playShuffled(int step) {
+    const auto revision = ++playbackRevision_;
+    // Include bounded history as well as a fresh cycle: failed historical items
+    // must not prevent reaching a surviving earlier item or permit endless wrap.
+    const auto budget = shuffle_.scanBudget() + model_->rowCount();
+    for (int visited = 0; visited < budget; ++visited) {
+        const auto entry =
+            step < 0 ? shuffle_.previous() : shuffle_.next(*model_, repeatMode_ == RepeatMode::All);
+        if (!entry.isValid())
+            break;
+        if (failedRows_.contains(entry.row())) {
+            shuffle_.rejectCurrent(step);
+            continue;
+        }
+        const auto path = model_->pathAt(entry.row());
+        if (!QFileInfo(path).isFile()) {
+            failedRows_.insert(entry.row());
+            shuffle_.rejectCurrent(step);
+            emit queueError(tr("文件不存在：%1").arg(path));
+            if (revision != playbackRevision_)
+                return ScanResult::Cancelled;
+            continue;
+        }
+        startRow(entry.row(), step);
+        return ScanResult::Started;
+    }
+    // A failed load selected an entry that has since been removed from history.
+    // After exhausting backward candidates, all survivors are forward history.
+    // A missing-file scan with the old item still playing retains its cursor.
+    if (step < 0 && failedRows_.contains(model_->currentIndex()))
+        shuffle_.rewindHistory();
     return ScanResult::Exhausted;
 }

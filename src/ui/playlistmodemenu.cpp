@@ -13,7 +13,7 @@ PlaylistModeMenu::PlaylistModeMenu(PlaylistController &queue, QWidget *window)
     menu_->setObjectName(QStringLiteral("playlistModeMenu"));
     using Mode = PlaylistController::RepeatMode;
     const auto modes = std::array{Mode::Off, Mode::One, Mode::All};
-    const auto labels = std::array{tr("顺序播放"), tr("单曲循环"), tr("列表循环")};
+    const auto labels = std::array{tr("不循环"), tr("单曲循环"), tr("列表循环")};
     const auto names = std::array{"repeatOffAction", "repeatOneAction", "repeatAllAction"};
     for (size_t i = 0; i < modes.size(); ++i) {
         auto *action = menu_->addAction(labels[i]);
@@ -24,6 +24,17 @@ PlaylistModeMenu::PlaylistModeMenu(PlaylistController &queue, QWidget *window)
         connect(action, &QAction::triggered, this,
                 [this, mode = modes[i]] { queue_.setRepeatMode(mode); });
     }
+    menu_->addSeparator();
+    shuffleAction_ = menu_->addAction(tr("随机播放"));
+    shuffleAction_->setObjectName(QStringLiteral("shuffleAction"));
+    shuffleAction_->setCheckable(true);
+    shuffleAction_->setShortcut(QKeySequence(Qt::SHIFT | Qt::Key_R));
+    window->addAction(shuffleAction_);
+    connect(shuffleAction_, &QAction::triggered, &queue_, &PlaylistController::setShuffleEnabled);
+    connect(&queue_, &PlaylistController::shuffleEnabledChanged, this, [this] {
+        update();
+        emit feedback(menu_->title());
+    });
     menu_->addSeparator();
     auto *cycle = menu_->addAction(tr("切换播放模式"));
     cycle->setObjectName(QStringLiteral("cycleRepeatAction"));
@@ -40,6 +51,7 @@ PlaylistModeMenu::PlaylistModeMenu(PlaylistController &queue, QWidget *window)
 QMenu *PlaylistModeMenu::menu() const { return menu_; }
 
 void PlaylistModeMenu::update() {
+    shuffleAction_->setChecked(queue_.shuffleEnabled());
     for (auto *action : group_->actions()) {
         const bool selected =
             action->data().value<PlaylistController::RepeatMode>() == queue_.repeatMode();
@@ -47,4 +59,6 @@ void PlaylistModeMenu::update() {
         if (selected)
             menu_->setTitle(tr("播放模式 · %1").arg(action->text()));
     }
+    if (queue_.shuffleEnabled())
+        menu_->setTitle(tr("%1 · %2").arg(menu_->title(), shuffleAction_->text()));
 }

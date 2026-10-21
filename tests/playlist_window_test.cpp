@@ -61,6 +61,30 @@ class PlaylistWindowTest final : public QObject {
         QVERIFY(pane->view()->actions().contains(remove));
         QCOMPARE(pane->view()->contextMenuPolicy(), Qt::ActionsContextMenu);
     }
+
+    void shuffleActionSharesQueueStateAndRefreshesNavigation() {
+        MainWindow window(true);
+        auto *queue = window.playlist();
+        queue->restoreFiles({"a.mkv", "b.mkv"}, 1);
+        auto *shuffle = window.findChild<QAction *>(QStringLiteral("shuffleAction"));
+        auto *repeat = window.findChild<QAction *>(QStringLiteral("repeatAllAction"));
+        auto *next = window.findChild<QAction *>(QStringLiteral("nextAction"));
+        auto *previous = window.findChild<QAction *>(QStringLiteral("previousAction"));
+        auto *menu = window.findChild<QMenu *>(QStringLiteral("playlistModeMenu"));
+        QVERIFY(shuffle && repeat && next && previous && menu);
+        QVERIFY(menu->actions().contains(shuffle) && window.actions().contains(shuffle));
+        QCOMPARE(shuffle->shortcut(), QKeySequence(Qt::SHIFT | Qt::Key_R));
+        QVERIFY(!shuffle->isChecked() && !next->isEnabled() && previous->isEnabled());
+        shuffle->trigger();
+        QVERIFY(queue->shuffleEnabled());
+        QVERIFY(shuffle->isChecked() && next->isEnabled() && !previous->isEnabled());
+        repeat->trigger();
+        QVERIFY(queue->shuffleEnabled() && repeat->isChecked() && shuffle->isChecked());
+        QVERIFY(menu->title().contains(shuffle->text()) && menu->title().contains(repeat->text()));
+        queue->setShuffleEnabled(false);
+        QVERIFY(!shuffle->isChecked());
+        QVERIFY(next->isEnabled() && previous->isEnabled());
+    }
 };
 
 QTEST_MAIN(PlaylistWindowTest)

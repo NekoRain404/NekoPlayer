@@ -1,5 +1,7 @@
 #pragma once
 
+#include "shuffleorder.h"
+
 #include <QObject>
 #include <QSet>
 
@@ -9,6 +11,8 @@ class PlaylistModel;
 class PlaylistController final : public QObject {
     Q_OBJECT
     Q_PROPERTY(RepeatMode repeatMode READ repeatMode WRITE setRepeatMode NOTIFY repeatModeChanged)
+    Q_PROPERTY(bool shuffleEnabled READ shuffleEnabled WRITE setShuffleEnabled NOTIFY
+                   shuffleEnabledChanged)
   public:
     enum class RepeatMode { Off, One, All };
     Q_ENUM(RepeatMode)
@@ -19,6 +23,7 @@ class PlaylistController final : public QObject {
     [[nodiscard]] bool hasNext() const;
     [[nodiscard]] bool hasPrevious() const;
     [[nodiscard]] RepeatMode repeatMode() const;
+    [[nodiscard]] bool shuffleEnabled() const;
 
   public slots:
     void addFiles(const QStringList &paths);
@@ -32,12 +37,15 @@ class PlaylistController final : public QObject {
     void clear();
     void setRepeatMode(RepeatMode mode);
     void cycleRepeatMode();
+    void setShuffleEnabled(bool enabled);
 
   signals:
     void currentChanged(int row);
     void queueFinished();
     void queueError(const QString &message);
     void repeatModeChanged(RepeatMode mode);
+    void shuffleEnabledChanged(bool enabled);
+    void navigationChanged();
 
   private slots:
     void playFinished();
@@ -46,6 +54,8 @@ class PlaylistController final : public QObject {
   private:
     enum class ScanResult { Started, Exhausted, Cancelled };
     ScanResult playFirstAvailable(int firstRow, int step = 1, bool wrap = false);
+    ScanResult playShuffled(int step);
+    void startRow(int row, int step);
     void updateFileLoop();
     void finishQueue();
     MpvController &player_;
@@ -55,5 +65,7 @@ class PlaylistController final : public QObject {
     quint64 playbackRevision_ = 0;
     int navigationStep_ = 1;
     RepeatMode repeatMode_ = RepeatMode::Off;
+    bool shuffleEnabled_ = false;
+    ShuffleOrder shuffle_;
     QSet<int> failedRows_;
 };

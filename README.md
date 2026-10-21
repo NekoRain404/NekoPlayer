@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
-ctest --test-dir build/sanitizers -R '^(decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+cmake --build --preset sanitizers --target decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
+ctest --test-dir build/sanitizers -R '^(decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -74,7 +74,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | 减慢 / 加快 0.1 倍 / 正常速度 | `[` / `]` / Backspace |
 | 字幕提前 / 延后 100 毫秒 / 归零 | `,` / `.` / `/` |
 | 音频提前 / 延后 50 毫秒 / 归零 | Shift+`,` / Shift+`.` / Shift+`/` |
-| 切换顺序播放 / 单曲循环 / 列表循环 | R |
+| 切换不循环 / 单曲循环 / 列表循环 | R |
+| 开启 / 关闭随机播放 | Shift+R |
 | 播放设置 | F5 |
 
 打开文件会替换现有队列；添加文件、拖入一个或多个本地媒体文件、或传入多个命令行位置参数会追加或创建队列。网络地址及带主机名的 file URL（含 localhost）拖放会被拒绝并显示原因；本地文件请使用普通路径或无主机名的 file URL。全屏默认隐藏菜单与控制区，移动鼠标显示控制区，闲置后收起；错误会显示可见提示。正常播放禁用用户 mpv 配置、脚本、OSC 和默认键绑定，由 NekoPlayer 统一管理交互。
@@ -83,7 +84,9 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 
 播放列表可拖动单项重排，也可通过“播放列表”菜单或列表右键菜单移除、上移和下移所选项。选中项用于编辑，粗体项表示当前播放／待播项；进度更新不会抢回选择。移动条目或删除其他条目保持当前播放、暂停和位置；移除当前项会停止，并选取后一项（末项则选前一项），按空格后才播放，不删除磁盘文件。编辑后的顺序和当前行在正常退出时保存。
 
-“播放列表 → 播放模式”与右键菜单提供顺序播放、单曲循环和列表循环，也可按 R 依次切换。默认顺序播放，循环模式只在本次运行保留。单曲循环只影响自然播完，手动上下项仍切歌；列表循环的上下项及自然播完均支持首尾衔接。单曲及只有一项的列表使用 mpv 原生循环定位，保留音轨选择与外挂字幕；给单项列表追加媒体会恢复自动进入下一项。停止、清空和加载失败不会触发单曲重播；失败队列每行最多尝试一次，全部不可播放时结束，用户可再次显式播放来重试。
+“播放列表 → 播放模式”与右键菜单提供不循环、单曲循环和列表循环，也可按 R 依次切换。默认不循环且按列表顺序播放，循环模式只在本次运行保留。单曲循环只影响自然播完，手动上下项仍切歌；顺序列表循环的上下项及自然播完均支持首尾衔接。单曲及只有一项的列表使用 mpv 原生循环定位，保留音轨选择与外挂字幕；给单项列表追加媒体会恢复自动进入下一项。停止、清空和加载失败不会触发单曲重播；失败队列每行最多尝试一次，全部不可播放时结束，用户可再次显式播放来重试。
+
+随机播放可从同一菜单或 Shift+R 独立开关，与循环模式组合，保留列表显示顺序及重复路径条目的独立身份。当前项视为本轮已访问，下一项从剩余条目中随机选择；不循环时一轮结束即停止，列表循环会开启新一轮，多项时避免轮次交界立即重复当前项。上一项沿实际访问历史回退，下一项先重走前向历史，再抽取新项；历史最多保留 1024 项。追加条目加入待播池，移动条目不打乱历史身份，删除当前项会停止并以邻项重新建立随机顺序。切换随机开关不重载媒体、不改变暂停和位置；显式选播或停止后重新播放会重新建立一轮。随机状态与历史仅在本次运行保留。
 
 正常退出会保存播放列表、当前行、音量／静音、窗口大小和最大化状态、列表面板显示状态及媒体对话框目录。再次启动只恢复队列，按空格才开始播放；命令行文件替换恢复队列。退出全屏时或在全屏下关闭，均保留之前的普通窗口状态，不在下次启动自动全屏。配置使用版本化 INI，Linux 默认位于 `$XDG_CONFIG_HOME/NekoPlayer/NekoPlayer/session.ini`（未设置时位于 `~/.config/` 下）；保存失败会提示，损坏或未知版本的配置不会被覆盖。`--no-config` 与 `--smoke-test` 均不读写配置。此阶段不保存播放进度、轨道和外挂字幕，也不提供崩溃恢复；同时运行多个实例时以最后保存的会话为准。
 

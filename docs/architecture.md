@@ -18,7 +18,7 @@
 | `TrackMenus` | 音轨、字幕菜单和外挂字幕文件入口 | 依赖控制器快照与业务接口，不接触 mpv handle |
 | `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
 | `PlaylistModeMenu` | 互斥循环模式、独立随机开关、R／Shift+R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
-| `NavigationMenu` / `TimeSeekDialog` | 章节动作、上下章及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键 |
+| `NavigationMenu` / `TimeSeekDialog` | 章节、逐帧动作及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键 |
 | `AbLoop` / `mpvcontroller_loop.cpp` | 当前媒体的 A–B 区间意图、端点校验和原生异步设置 | Qt Core 值类型与同一 mpv client，不依赖 UI |
 | `AbLoopMenu` | 共享区间菜单、当前时间端点动作和快捷键 | 只使用控制器业务 API，端点变化时刷新标题 |
 | `PlaybackSettingsDialog` | 解码方式草稿、应用／取消与实际解码状态 | 仅调用控制器业务 API，QObject 接收上下文随对话框销毁 |
@@ -51,6 +51,8 @@
 章节操作集中在 `mpvcontroller_navigation.cpp`，复用同一 client 和事件循环。观察 `chapter-list` / `chapter`，只在快照变化时发 `chaptersChanged`；章节菜单不随时间进度重建，动作更新缓存章节与可定位状态。控制器先按快照校验编号，再异步精确定位到章节起点，规避 mpv 0.41 原生选章被普通定位覆盖后章节属性不可用的竞态。待确认目标供快速连续步进累积；`chapterNavigationIndex` 与独立意图信号及时更新上下章动作的边界，章节勾选仍使用实际观察值。最新命令回复后异步查询章节，同值定位可立即确认；否则等待该命令回复后的 SEEK 和 PLAYBACK_RESTART，再查询最终章节。章节共用起点或帧对齐可能落到其他章节，此时以最终结果清除待确认目标。查询编号及完成标志共同隔离旧回复，发信号前完成状态变更，避免重入取消新请求。普通定位、停止、换片与播放重置取消待确认目标。时间对话框提交前重新检查当前路径、可定位状态及时长；精确定位使用 `absolute+exact`，帧显示遵循媒体时间戳。停止、失败或开始换片清除章节快照，不增加解码器、渲染器或持续轮询。
 
 销毁顺序：停止窗口定时器 → 删除 central widget / VideoWidget → 撤销 render 回调 → GL current 下释放 renderer → 撤销 client 回调 → 销毁 client。主窗口显式删除 central widget，避免 QMainWindow 基类析构晚于控制器成员的问题。
+
+逐帧接口与章节导航同处 `mpvcontroller_navigation.cpp`，异步提交原生 `frame-step`／`frame-back-step`，成功入队后才取消旧章节目标，立即失败先完成内部处理再报告错误。事件驱动观察 `current-tracks/video/image`：无选中视频时属性不可用，静态图片／封面为 true，仅动态视频可逐帧；后退另需 seekable。`mediaReady` 阻止显式换片和停止后的过渡期命令，渲染恢复期间也拒绝逐帧。菜单复用窗口 QAction 并缓存可用性，不随进度重建，禁用按键自动重复以免长 GOP 后退积压。mpv 负责定位、暂停和解码，暂停通知可能先于后退定位完成；不通过秒数估算帧长，不增加生产轮询、CPU 帧复制或解码器。
 
 A–B 循环复用 mpv 原生 `ab-loop-a`／`ab-loop-b`，端点必须有限、位于当前可定位媒体时长内且 A < B；未加载、换片和停止的过渡期拒绝设置。`AbLoop` 记录成功入队的端点，不宣称后端已执行；异步错误仍走现有错误信号。清除先取消 A 以禁用循环，再清 B，逐项更新提交意图，部分失败可再次清除。显式打开、停止和非恢复的播放重置清空区间，`reset-on-next-file` 同时保证后端换片重置。渲染恢复时暂存区间，并通过同次 `loadfile` 的文件选项恢复；非预期加载错误或关闭会取消保留。端点不持久化、不影响队列模式，也不增加定位轮询或帧处理。`AbLoopMenu` 复用窗口 QAction，端点信号更新标题，状态变化仅比较可用性，不随进度重建菜单。
 

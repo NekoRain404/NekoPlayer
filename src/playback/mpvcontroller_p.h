@@ -35,7 +35,8 @@ enum Property : uint64_t {
     AudioDelay,
     SubtitleDelay,
     Chapters,
-    Chapter
+    Chapter,
+    VideoImage
 };
 } // namespace MpvPrivate
 
@@ -71,7 +72,8 @@ struct MpvController::Impl {
     SubtitlePreferences subtitles;
     VideoPresentation presentation;
     AbLoop abLoop;
-    bool loopMediaReady = false;
+    bool mediaReady = false;
+    bool hasMotionVideo = false;
     uint64_t request = 0;
     struct TuningSetting {
         const char *name;
@@ -186,10 +188,12 @@ struct MpvController::Impl {
     }
 
     void resetPlayback() {
+        mediaReady = false;
         resetAbLoop();
         loading = false;
         state.active = false;
         state.seekable = false;
+        hasMotionVideo = false;
         state.position = 0;
         state.duration = 0;
         state.hardwareDecoder.clear();
@@ -299,6 +303,12 @@ struct MpvController::Impl {
 
     void updateProperty(const mpv_event &event) {
         const auto &value = *static_cast<mpv_event_property *>(event.data);
+        if (event.reply_userdata == VideoImage) {
+            hasMotionVideo =
+                value.data && (state.active || loading) && !*static_cast<int *>(value.data);
+            emit owner->stateChanged();
+            return;
+        }
         if (event.reply_userdata == Chapters) {
             updateChapters(value.data && (state.active || loading)
                                ? parseMpvChapters(*static_cast<mpv_node *>(value.data))
@@ -392,7 +402,7 @@ struct MpvController::Impl {
                 loading = false;
                 recoveringRenderer = false;
                 state.active = true;
-                loopMediaReady = true;
+                mediaReady = true;
                 error.clear();
                 restoreExternalTracks();
                 emit owner->stateChanged();

@@ -10,6 +10,25 @@ add_custom_command(OUTPUT "${TEST_MEDIA}"
         -t 4 -c:v mpeg4 -q:v 4 -c:a pcm_s16le "${TEST_MEDIA}"
     VERBATIM)
 add_custom_target(test_media DEPENDS "${TEST_MEDIA}")
+set(TEST_AUDIO_ONLY "${CMAKE_CURRENT_BINARY_DIR}/media/audio-only.mka")
+add_custom_command(OUTPUT "${TEST_AUDIO_ONLY}"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -i "${TEST_MEDIA}" -map 0:a -c copy "${TEST_AUDIO_ONLY}"
+    DEPENDS "${TEST_MEDIA}" VERBATIM)
+add_custom_target(test_audio_only DEPENDS "${TEST_AUDIO_ONLY}")
+set(TEST_STILL_IMAGE "${CMAKE_CURRENT_BINARY_DIR}/media/still.png")
+add_custom_command(OUTPUT "${TEST_STILL_IMAGE}"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -i "${TEST_MEDIA}" -frames:v 1 -update 1 "${TEST_STILL_IMAGE}"
+    DEPENDS "${TEST_MEDIA}" VERBATIM)
+add_custom_target(test_still_image DEPENDS "${TEST_STILL_IMAGE}")
+add_executable(frame_step_test frame_step_test.cpp)
+target_link_libraries(frame_step_test PRIVATE neko_playback Qt6::Test)
+target_compile_definitions(frame_step_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}"
+    TEST_AUDIO_ONLY_PATH="${TEST_AUDIO_ONLY}" TEST_STILL_IMAGE_PATH="${TEST_STILL_IMAGE}")
+add_dependencies(frame_step_test test_media test_audio_only test_still_image)
+add_test(NAME frame-step COMMAND frame_step_test)
+set_tests_properties(frame-step PROPERTIES TIMEOUT 60)
 add_executable(ab_loop_test ab_loop_test.cpp)
 target_link_libraries(ab_loop_test PRIVATE neko_playback Qt6::Test)
 target_compile_definitions(ab_loop_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
@@ -185,6 +204,13 @@ else()
     message(FATAL_ERROR "NEKOPLAYER_WINDOW_TEST_BACKEND must be wayland or x11")
 endif()
 add_executable(window_test window_test.cpp)
+add_executable(frame_step_window_test frame_step_window_test.cpp)
+target_link_libraries(frame_step_window_test PRIVATE neko_ui Qt6::Test)
+target_compile_definitions(frame_step_window_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}"
+    TEST_AUDIO_ONLY_PATH="${TEST_AUDIO_ONLY}")
+add_dependencies(frame_step_window_test test_media test_audio_only)
+add_test(NAME frame-step-window COMMAND ${WINDOW_TEST_RUNNER} $<TARGET_FILE:frame_step_window_test>)
+set_tests_properties(frame-step-window PROPERTIES TIMEOUT 30 ENVIRONMENT "${WINDOW_TEST_ENVIRONMENT}")
 add_executable(ab_loop_window_test ab_loop_window_test.cpp)
 target_link_libraries(ab_loop_window_test PRIVATE neko_ui Qt6::Test)
 target_compile_definitions(ab_loop_window_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")

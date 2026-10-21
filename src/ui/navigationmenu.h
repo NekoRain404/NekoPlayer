@@ -29,8 +29,12 @@ class NavigationMenu final : public QObject {
     QAction *seekTime_;
     QAction *previous_;
     QAction *next_;
+    QAction *previousFrame_;
+    QAction *nextFrame_;
     int presentedChapter_ = -2;
     int presentedNavigationChapter_ = -2;
     bool presentedSeekable_ = false;
     bool presentedTimeSeekable_ = false;
+    bool presentedFrameForward_ = false;
+    bool presentedFrameBackward_ = false;
 };

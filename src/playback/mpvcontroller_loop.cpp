@@ -3,7 +3,7 @@
 const AbLoop &MpvController::abLoop() const { return impl_->abLoop; }
 
 bool MpvController::setLoopStart(double seconds) {
-    if (!impl_->loopMediaReady || !state().active || !state().seekable || !std::isfinite(seconds) ||
+    if (!impl_->mediaReady || !state().active || !state().seekable || !std::isfinite(seconds) ||
         seconds < 0 || seconds >= state().duration || (abLoop().end && seconds >= *abLoop().end))
         return false;
     if (!impl_->command({"set", "ab-loop-a", QByteArray::number(seconds, 'g', 17)}))
@@ -16,7 +16,7 @@ bool MpvController::setLoopStart(double seconds) {
 }
 
 bool MpvController::setLoopEnd(double seconds) {
-    if (!impl_->loopMediaReady || !state().active || !state().seekable || !std::isfinite(seconds) ||
+    if (!impl_->mediaReady || !state().active || !state().seekable || !std::isfinite(seconds) ||
         !abLoop().start || seconds <= *abLoop().start || seconds > state().duration)
         return false;
     if (!impl_->command({"set", "ab-loop-b", QByteArray::number(seconds, 'g', 17)}))
@@ -44,7 +44,6 @@ bool MpvController::clearAbLoop() {
 }
 
 void MpvController::Impl::resetAbLoop() {
-    loopMediaReady = false;
     if (recoveringRenderer)
         return;
     if (abLoop == AbLoop{})

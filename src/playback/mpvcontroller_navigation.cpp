@@ -1,5 +1,32 @@
 #include "mpvcontroller_p.h"
 
+bool MpvController::canStepFrameForward() const {
+    return isReady() && impl_->mediaReady && !impl_->recoveringRenderer && state().active &&
+           impl_->hasMotionVideo;
+}
+
+bool MpvController::canStepFrameBackward() const {
+    return canStepFrameForward() && state().seekable;
+}
+
+void MpvController::stepFrameForward() {
+    if (!canStepFrameForward())
+        return;
+    const auto [id, status] = impl_->submitCommand({"frame-step"});
+    if (id)
+        impl_->cancelChapterRequest();
+    impl_->report(status);
+}
+
+void MpvController::stepFrameBackward() {
+    if (!canStepFrameBackward())
+        return;
+    const auto [id, status] = impl_->submitCommand({"frame-back-step"});
+    if (id)
+        impl_->cancelChapterRequest();
+    impl_->report(status);
+}
+
 int MpvController::chapterNavigationIndex() const {
     return impl_->requestedChapter.value_or(state().currentChapter);
 }

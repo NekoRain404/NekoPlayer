@@ -16,6 +16,8 @@
 
 官方 API 文档：https://mpv.io/manual/stable/ 。使用本机头文件确认可用接口；浅克隆 HEAD 不等于本机已安装发行版。
 
+逐帧参考 Haruna `src/qml/Actions.qml` 的 `onFrameStepForwardAction()`／`onFrameStepBackwardAction()`，以及 IINA `MenuController.swift` 的菜单映射。具体命令与局限对照 [mpv v0.41.0 input.rst](https://github.com/mpv-player/mpv/blob/v0.41.0/DOCS/man/input.rst) 的 `frame-step`／`frame-back-step`；前进原生播放一帧后暂停，后退执行精确定位，不能用于纯音频。结合 mpv `player/command.c` 的当前轨道属性和 `player/playloop.c` 的 `add_step_frame()`，使用事件观察区分动态视频与静态图片，保留原生定位和解码行为。NekoPlayer 独立实现类型化控制器和共享 Widgets 动作，没有复制上游代码；无界面测试核对 25 fps 素材实际 40 ms 步进，不推定 Wayland 画面或硬解已验证。
+
 A–B 循环参考 Haruna `src/qml/Actions.qml` 的端点动作与 `src/mpv/mpvitem.cpp` 的 `reset-on-next-file`，具体语义对照 [mpv v0.41.0 options.rst](https://github.com/mpv-player/mpv/blob/v0.41.0/DOCS/man/options.rst) 的 `ab-loop-a`／`ab-loop-b`：缺少任一端点禁用循环，手动定位越过 B 不强制回跳。NekoPlayer 独立实现类型化端点、异步提交、边界校验和 Qt Widgets 菜单，不采用 Haruna 的同步属性写入，也未复制其 GPL 代码。原生回跳和文件级重置／恢复以本机 libmpv 的无界面测试验证。
 
 随机播放参考 Haruna `src/playlist/playlistmodel.cpp` 的 `shuffleIndexes()`：将随机访问索引与列表显示顺序分离，并保留当前项锚点。本项目独立实现持久索引候选池、有界实际访问历史和异步失败恢复，没有复制 Haruna 的 GPL 源码或引入 KDE 依赖；移动、重复路径、轮次交界和错误重入以本项目回归测试验证。

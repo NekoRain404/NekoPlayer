@@ -26,6 +26,13 @@ NavigationMenu::NavigationMenu(MpvController &player, QWidget *window)
     previous_ =
         make(tr("上一章"), "previousChapterAction", QKeySequence(Qt::CTRL | Qt::Key_PageUp));
     next_ = make(tr("下一章"), "nextChapterAction", QKeySequence(Qt::CTRL | Qt::Key_PageDown));
+    menu_->addSeparator();
+    previousFrame_ =
+        make(tr("上一帧"), "previousFrameAction", QKeySequence(Qt::CTRL | Qt::Key_Left));
+    nextFrame_ = make(tr("下一帧"), "nextFrameAction", QKeySequence(Qt::CTRL | Qt::Key_Right));
+    // Do not accumulate expensive backward seeks while a key is held down.
+    previousFrame_->setAutoRepeat(false);
+    nextFrame_->setAutoRepeat(false);
     auto *loop = new AbLoopMenu(player_, window_);
     menu_->addSeparator();
     menu_->addMenu(loop->menu());
@@ -33,6 +40,8 @@ NavigationMenu::NavigationMenu(MpvController &player, QWidget *window)
     connect(seekTime_, &QAction::triggered, this, &NavigationMenu::chooseTime);
     connect(previous_, &QAction::triggered, &player_, &MpvController::previousChapter);
     connect(next_, &QAction::triggered, &player_, &MpvController::nextChapter);
+    connect(previousFrame_, &QAction::triggered, &player_, &MpvController::stepFrameBackward);
+    connect(nextFrame_, &QAction::triggered, &player_, &MpvController::stepFrameForward);
     connect(&player_, &MpvController::chaptersChanged, this, &NavigationMenu::rebuildChapters);
     connect(&player_, &MpvController::stateChanged, this, &NavigationMenu::updateState);
     connect(&player_, &MpvController::chapterNavigationChanged, this, &NavigationMenu::updateState);
@@ -69,13 +78,20 @@ void NavigationMenu::updateState() {
     const bool seekable = state.active && state.seekable;
     const bool timeSeekable = seekable && std::isfinite(state.duration) && state.duration > 0;
     const auto navigationIndex = player_.chapterNavigationIndex();
+    const bool frameForward = player_.canStepFrameForward();
+    const bool frameBackward = player_.canStepFrameBackward();
     if (presentedChapter_ == state.currentChapter && presentedSeekable_ == seekable &&
-        presentedTimeSeekable_ == timeSeekable && presentedNavigationChapter_ == navigationIndex)
+        presentedTimeSeekable_ == timeSeekable && presentedNavigationChapter_ == navigationIndex &&
+        presentedFrameForward_ == frameForward && presentedFrameBackward_ == frameBackward)
         return;
     presentedChapter_ = state.currentChapter;
     presentedNavigationChapter_ = navigationIndex;
     presentedSeekable_ = seekable;
     presentedTimeSeekable_ = timeSeekable;
+    presentedFrameForward_ = frameForward;
+    presentedFrameBackward_ = frameBackward;
+    nextFrame_->setEnabled(frameForward);
+    previousFrame_->setEnabled(frameBackward);
     seekTime_->setEnabled(timeSeekable);
     chaptersMenu_->setEnabled(seekable && !player_.chapters().isEmpty());
     bool hasPrevious = false;

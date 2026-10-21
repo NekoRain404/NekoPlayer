@@ -36,6 +36,7 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
                    std::tuple{Impl::Volume, "volume", MPV_FORMAT_DOUBLE},
                    std::tuple{Impl::Muted, "mute", MPV_FORMAT_FLAG},
                    std::tuple{Impl::Seekable, "seekable", MPV_FORMAT_FLAG},
+                   std::tuple{Impl::VideoImage, "current-tracks/video/image", MPV_FORMAT_FLAG},
                    std::tuple{Impl::HardwareDecoder, "hwdec-current", MPV_FORMAT_STRING},
                    std::tuple{Impl::Tracks, "track-list", MPV_FORMAT_NODE},
                    std::tuple{Impl::Chapters, "chapter-list", MPV_FORMAT_NODE},
@@ -84,6 +85,7 @@ void MpvController::setHardwareDecodingEnabled(bool enabled) {
 void MpvController::openFile(const QString &path) {
     if (!isReady() || path.isEmpty())
         return;
+    impl_->mediaReady = false;
     impl_->state.path = path;
     impl_->cancelChapterRequest();
     impl_->recovery.reset();
@@ -99,6 +101,7 @@ void MpvController::setPaused(bool paused) {
 }
 void MpvController::togglePause() { setPaused(!state().paused); }
 void MpvController::stop() {
+    impl_->mediaReady = false;
     impl_->recoveringRenderer = false;
     impl_->resetAbLoop();
     impl_->cancelChapterRequest();

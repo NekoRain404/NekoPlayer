@@ -41,6 +41,8 @@ class MpvController final : public QObject {
     [[nodiscard]] const QList<MediaChapter> &chapters() const;
     // Navigation uses the latest accepted request until the backend confirms it.
     [[nodiscard]] int chapterNavigationIndex() const;
+    [[nodiscard]] bool canStepFrameForward() const;
+    [[nodiscard]] bool canStepFrameBackward() const;
     // User preference; state().hardwareDecoder reports the decoder actually in use.
     [[nodiscard]] bool hardwareDecodingEnabled() const;
     [[nodiscard]] const SubtitlePreferences &subtitlePreferences() const;
@@ -62,6 +64,8 @@ class MpvController final : public QObject {
     void setHardwareDecodingEnabled(bool enabled);
     void seekAbsolute(double seconds);
     void seekRelative(double seconds);
+    void stepFrameForward();
+    void stepFrameBackward();
     void selectChapter(int index);
     void nextChapter();
     void previousChapter();

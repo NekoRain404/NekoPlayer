@@ -4,15 +4,19 @@
 #include "playback/videowidget.h"
 #include "session/sessionstore.h"
 #include "ui/mainwindow.h"
+#include "ui/timeseekdialog.h"
 #include <QAction>
+#include <QDialogButtonBox>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMimeData>
 #include <QProcess>
 #include <QProcessEnvironment>
+#include <QPushButton>
 #include <QSignalSpy>
 #include <QSlider>
 #include <QStatusBar>
@@ -51,6 +55,66 @@ qint64 selectedTrack(MainWindow &window, MediaTrack::Type type) {
 class WindowTest final : public QObject {
     Q_OBJECT
   private slots:
+    void chapterActionsFollowSelectionAndKeepPause() {
+        MainWindow window(true);
+        auto *jump = action(window, "seekTimeAction");
+        auto *previous = action(window, "previousChapterAction");
+        auto *next = action(window, "nextChapterAction");
+        auto *menu = window.findChild<QMenu *>(QStringLiteral("chaptersMenu"));
+        QVERIFY(jump && previous && next && menu);
+        QVERIFY(!jump->isEnabled() && !previous->isEnabled() && !next->isEnabled());
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        window.openFile(QString::fromUtf8(TEST_CHAPTER_MEDIA_PATH));
+        QTRY_VERIFY(window.controller()->state().active && window.controller()->state().seekable);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(window.controller()->state().paused);
+        QTRY_COMPARE(menu->actions().size(), 3);
+        QVERIFY(jump->isEnabled());
+        QTRY_COMPARE(window.controller()->state().currentChapter, 0);
+        next->trigger();
+        QVERIFY(previous->isEnabled());
+        previous->trigger();
+        QCOMPARE(window.controller()->chapterNavigationIndex(), 0);
+        next->trigger();
+        next->trigger();
+        QVERIFY(!next->isEnabled() && previous->isEnabled());
+        previous->trigger();
+        QVERIFY(next->isEnabled());
+        next->trigger();
+        QTRY_COMPARE(window.controller()->state().currentChapter, 2);
+        auto *last = action(window, "chapterAction2");
+        QVERIFY(last);
+        last->trigger();
+        QTRY_COMPARE(window.controller()->state().currentChapter, 2);
+        QVERIFY(last->isChecked() && previous->isEnabled() && !next->isEnabled());
+        QVERIFY(window.controller()->state().paused);
+        previous->trigger();
+        QTRY_COMPARE(window.controller()->state().currentChapter, 1);
+        QVERIFY(action(window, "chapterAction1")->isChecked());
+        QVERIFY(next->isEnabled() && window.controller()->state().paused);
+        window.controller()->stop();
+        QTRY_VERIFY(!window.controller()->state().active);
+        QVERIFY(!jump->isEnabled() && !menu->isEnabled());
+    }
+
+    void timeDialogRejectsMalformedAndOutOfRangeTargets() {
+        TimeSeekDialog dialog(1.25, 4.0);
+        auto *input = dialog.findChild<QLineEdit *>(QStringLiteral("timeSeekInput"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("timeSeekButtons"));
+        QVERIFY(input && buttons);
+        auto *accept = buttons->button(QDialogButtonBox::Ok);
+        QVERIFY(accept->isEnabled());
+        QCOMPARE(dialog.selectedSeconds().value(), 1.25);
+        input->setText(QStringLiteral("4.001"));
+        QVERIFY(!accept->isEnabled());
+        input->setText(QStringLiteral("1:60"));
+        QVERIFY(!accept->isEnabled());
+        input->setText(QStringLiteral("00:00:02.500"));
+        QVERIFY(accept->isEnabled());
+        QCOMPARE(dialog.selectedSeconds().value(), 2.5);
+    }
+
     void playlistModeActionsShareStateAndRefreshNavigation() {
         MainWindow window(true);
         auto *off = action(window, "repeatOffAction");

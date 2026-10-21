@@ -23,3 +23,5 @@
 倍速／延迟操作参考 Haruna `src/qml/Actions.qml` 的动作划分及 mpv 手册中的 `speed`、`audio-delay`、`sub-delay` 和 `audio-pitch-correction`。本机 mpv 0.41 的延迟选项仍使用 float，倍速使用 double，参见 [v0.41.0 options/options.c](https://github.com/mpv-player/mpv/blob/v0.41.0/options/options.c)；当前克隆的 master 不代表本机版本。属性观察对不变值不重复发事件，确认与数据所有权以本机 `mpv/client.h` 的异步 set/get 和观察契约为准。本项目独立实现共享 Qt Widgets 动作和异步确认，没有复制参考项目源码。
 
 播放模式参考 Haruna `src/mpv/mpvitem.cpp` 的 `endOfFileAction()`、`onEndOfFileReached()` 对重复当前项和重复队列的区分，以及 mpv `DOCS/man/options.rst` 中 `loop-file` 与 `loop-playlist` 的差异。NekoPlayer 仍由应用管理多文件队列，单文件使用异步设置的 mpv 原生循环；`player/playloop.c` 的 `handle_loop_file()` 说明该路径在自然 EOF 时定位，而非重载文件。相关行为在本机 mpv 0.41 的真实非 GUI 集成测试中验证；未复制上游实现。
+
+章节与时间定位参考 Haruna `src/qml/Actions.qml` 的上下章动作，以及 mpv `DOCS/man/input.rst` 中 `chapter-list`、`chapter` 和精确定位的契约。对照 `player/command.c` 的 `mp_property_chapter()` 与 `player/playloop.c` 的 `get_current_chapter()`，章节属性设置会先记录目标意图，越过末章可能结束播放；本项目在控制器内校验边界，并以异步确认处理连续点击。独立实现 Qt Widgets 菜单、拥有数据的章节快照和时间解析，没有复制上游源码或引入 Qt Quick。

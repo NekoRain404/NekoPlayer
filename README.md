@@ -2,7 +2,7 @@
 
 以 **C++20 / Qt 6 + libmpv** 为基础，目标是做出接近 PotPlayer 的桌面播放体验：打开即播、完整快捷键与右键菜单、灵活的字幕/音轨选择、播放列表和可理解的设置。
 
-当前为可播放的早期版本：Qt Widgets + QOpenGLWidget 嵌入 libmpv，提供深色紧凑控制区、菜单、右键菜单和本地播放列表。本地媒体可通过打开、添加、拖放或命令行进入队列；支持暂停、停止、时间定位、上一项/下一项、音量、静音、全屏、音轨切换、内嵌字幕选择、外挂字幕加载、倍速与音频／字幕延迟调整。队列、音量及窗口偏好可在正常退出后恢复；完整偏好设置界面与高级画质能力留待后续开发。
+当前为可播放的早期版本：Qt Widgets + QOpenGLWidget 嵌入 libmpv，提供深色紧凑控制区、菜单、右键菜单和本地播放列表。本地媒体可通过打开、添加、拖放或命令行进入队列；支持暂停、停止、时间定位、章节导航、上一项/下一项、音量、静音、全屏、音轨切换、内嵌字幕选择、外挂字幕加载、倍速与音频／字幕延迟调整。队列、音量及窗口偏好可在正常退出后恢复；完整偏好设置界面与高级画质能力留待后续开发。
 
 ## 构建与检查
 
@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|playlist-modes|tracks|session|tuning)$' --output-on-failure
+ctest --test-dir build/debug -R '^(code-size|backend-startup|playback|playlist|playlist-modes|tracks|session|tuning|navigation|playback-time)$' --output-on-failure
 ```
 
 内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target playback_test playlist_test playlist_modes_test tracks_test session_test tuning_test
-ctest --test-dir build/sanitizers -R '^(playback|playlist|playlist-modes|tracks|session|tuning)$' --output-on-failure
+cmake --build --preset sanitizers --target playback_test playlist_test playlist_modes_test tracks_test session_test tuning_test navigation_test playback_time_test
+ctest --test-dir build/sanitizers -R '^(playback|playlist|playlist-modes|tracks|session|tuning|navigation|playback-time)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -59,6 +59,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | 播放 / 暂停 | 空格 |
 | 上一项 / 下一项 | 多媒体上一曲 / 下一曲键 |
 | 后退 / 前进 5 秒 | ← / → |
+| 跳转到指定时间 | Ctrl+G |
+| 上一章 / 下一章 | Ctrl+PageUp / Ctrl+PageDown |
 | 音量减 / 加 | ↓ / ↑ |
 | 静音 / 停止 | M / S |
 | 全屏 / 退出全屏 | F 或双击 / Esc |
@@ -78,6 +80,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 “声音 → 音轨”和“字幕”菜单可查看轨道编号、标题、语言、编码及当前选择，也可关闭音轨或字幕；右键菜单共用这些入口。加载外挂字幕后自动选中该轨道。切换轨道无需重新打开媒体，保持暂停状态；停止或换片时清空旧轨道。图形上下文重建时恢复音轨、字幕选择和已加载的外挂字幕。外挂字幕目前通过文件对话框加载，字幕拖放和字体设置尚未实现。
 
 播放速度菜单提供 0.25–4 倍预设和自定义输入，并启用 mpv 音调修正。音频延迟范围为 ±10 秒，字幕延迟范围为 ±600 秒；正值延后、负值提前。菜单显示后端确认的值，快速连续按键累积调整。倍速和延迟在本次运行中跨停止、换片及渲染恢复保留，重新启动恢复为 1 倍和零延迟，不写入会话配置。
+
+“播放 → 定位”与右键菜单共用章节列表和时间输入。章节显示起始时间与标题，缺失标题时显示章节编号；选章及上下章保持暂停，不重新打开文件，首尾不会越界切换队列。Ctrl+G 接受秒数、分:秒或时:分:秒，可带最多三位小数；负数、非法格式与超过媒体时长的目标不可提交。时间请求精确到毫秒，最终显示帧仍由媒体时间戳决定，不承诺任意毫秒都有对应帧。不可定位的媒体会禁用这些操作。
 
 ## 工程约束与验证边界
 

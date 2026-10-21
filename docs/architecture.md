@@ -7,6 +7,8 @@
 | `MpvController` | client RAII、异步命令、属性观察、文件事件、播放状态和渲染恢复快照 | Qt Core / libmpv client API，不依赖窗口 |
 | `PlaybackState` | 只读播放快照；秒为时间单位，音量 0–100 | 控制器与展示层共用 |
 | `MediaTrack` / `mpvtracks.cpp` | 类型内唯一的轨道编号、元数据、选择状态；将 mpv node 解析为拥有数据的快照 | 领域类型不依赖 mpv；解析器只依赖 Qt Core / client API |
+| `MediaChapter` / `mpvchapters.cpp` | 章节原始编号、标题及起始秒数；复制借用的 node 为独立快照 | 领域类型不依赖 mpv，解析器不依赖 UI |
+| `playbacktime.cpp` | 时间字符串解析与格式化，校验格式、有限值及转换范围 | Qt Core，无播放或窗口状态 |
 | `PlaylistModel` | 本地文件队列与当前项；提供 Qt model 角色 | Qt Core，不直接控制播放器 |
 | `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环策略与有界失败恢复 | 仅依赖 `MpvController` 与 `PlaylistModel` |
 | `VideoWidget` | GL 上下文、物理像素 FBO、帧更新、隐藏时跳帧、资源释放 | 只处理渲染，不提交播放命令 |
@@ -15,6 +17,7 @@
 | `TrackMenus` | 音轨、字幕菜单和外挂字幕文件入口 | 依赖控制器快照与业务接口，不接触 mpv handle |
 | `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
 | `PlaylistModeMenu` | 互斥播放模式动作、R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
+| `NavigationMenu` / `TimeSeekDialog` | 章节动作、上下章及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键 |
 | `SessionState` / `SessionStore` | 音频偏好、窗口偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
 | `SessionManager` | 恢复空闲队列及音频偏好，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
 | `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调 | 通过队列和控制器接口发出业务操作 |
@@ -31,6 +34,8 @@
 轨道管理复用同一 client 的事件循环：观察 `track-list` → 在借用 node 失效前复制字符串和标志 → 快照变化时发送 `tracksChanged` → 重建共享菜单。音轨和字幕编号只在各自类型内唯一；控制器按类型校验编号，0 表示关闭，通过异步命令设置 `aid` / `sid`。外挂字幕路径作为独立 UTF-8 参数传给异步 `sub-add`，解析和文件读取交给 mpv。菜单不订阅时间进度来重建内容；播放状态更新只在 active 变化时更新可用性。停止、加载失败或开始换片会清除轨道快照，闲置状态忽略迟到的非空轨道数据。
 
 控制器公开方法和初始化位于 `mpvcontroller.cpp`，私有事件／恢复实现在 `mpvcontroller_p.h`，不向 UI 暴露内部结构。倍速与延迟通过有限值校验、范围限制和异步属性设置提交；独立 `tuningChanged` 通知避免进度更新触发菜单刷新。每项保留最新请求供连续步进累积，最新设置回复后异步查询实际值，再清除待确认状态。新设置使旧查询失效，旧回复不能清除新请求；不依赖必然出现的属性变化事件，也不比较请求值与后端浮点值来判断完成。此路径无定时轮询、同步查询或配置写盘。倍速／延迟是本次运行的全局偏好，不随媒体状态清空。
+
+章节操作集中在 `mpvcontroller_navigation.cpp`，复用同一 client 和事件循环。观察 `chapter-list` / `chapter`，只在快照变化时发 `chaptersChanged`；章节菜单不随时间进度重建，动作更新缓存章节与可定位状态。控制器先按快照校验编号，避免 mpv 的越界章节命令意外结束播放，再异步设置 `chapter`。待确认目标供快速连续步进累积；`chapterNavigationIndex` 与独立意图信号及时更新上下章动作的边界，章节勾选仍使用实际观察值。最新命令完成后异步查询章节，正确处理不发属性变化的同值设置。普通定位、停止、换片与播放重置取消待确认目标，旧查询不能覆盖新请求。时间对话框提交前重新检查当前路径、可定位状态及时长；精确定位使用 `absolute+exact`，帧显示遵循媒体时间戳。停止、失败或开始换片清除章节快照，不增加解码器、渲染器或持续轮询。
 
 销毁顺序：停止窗口定时器 → 删除 central widget / VideoWidget → 撤销 render 回调 → GL current 下释放 renderer → 撤销 client 回调 → 销毁 client。主窗口显式删除 central widget，避免 QMainWindow 基类析构晚于控制器成员的问题。
 

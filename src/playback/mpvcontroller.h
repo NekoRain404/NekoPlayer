@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mediachapter.h"
 #include "mediatrack.h"
 #include <QList>
 #include <QObject>
@@ -18,6 +19,7 @@ struct PlaybackState {
     double playbackSpeed = 1;
     double audioDelay = 0;
     double subtitleDelay = 0;
+    int currentChapter = -1;
     QString path;
     QString hardwareDecoder;
 };
@@ -33,6 +35,9 @@ class MpvController final : public QObject {
     [[nodiscard]] mpv_handle *handle() const;
     [[nodiscard]] const PlaybackState &state() const;
     [[nodiscard]] const QList<MediaTrack> &tracks() const;
+    [[nodiscard]] const QList<MediaChapter> &chapters() const;
+    // Navigation uses the latest accepted request until the backend confirms it.
+    [[nodiscard]] int chapterNavigationIndex() const;
 
   public slots:
     void openFile(const QString &path);
@@ -42,6 +47,9 @@ class MpvController final : public QObject {
     void setFileLoopEnabled(bool enabled);
     void seekAbsolute(double seconds);
     void seekRelative(double seconds);
+    void selectChapter(int index);
+    void nextChapter();
+    void previousChapter();
     void setVolume(double volume);
     void setMuted(bool muted);
     void setPlaybackSpeed(double multiplier);
@@ -62,6 +70,8 @@ class MpvController final : public QObject {
     void stateChanged();
     void tuningChanged();
     void tracksChanged();
+    void chaptersChanged();
+    void chapterNavigationChanged();
     void fileLoaded();
     void playbackFinished();
     void mediaLoadFailed(const QString &message);

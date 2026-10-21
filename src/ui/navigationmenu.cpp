@@ -1,0 +1,103 @@
+#include "navigationmenu.h"
+#include "playback/mpvcontroller.h"
+#include "playback/playbacktime.h"
+#include "timeseekdialog.h"
+
+#include <QAction>
+#include <QActionGroup>
+#include <QMenu>
+#include <QWidget>
+#include <cmath>
+
+NavigationMenu::NavigationMenu(MpvController &player, QWidget *window)
+    : QObject(window), player_(player), window_(window), menu_(new QMenu(tr("定位"), window)),
+      chaptersMenu_(menu_->addMenu(tr("章节"))), chapterGroup_(new QActionGroup(chaptersMenu_)) {
+    menu_->setObjectName(QStringLiteral("navigationMenu"));
+    chaptersMenu_->setObjectName(QStringLiteral("chaptersMenu"));
+    const auto make = [this](const QString &text, const char *name, QKeySequence shortcut) {
+        auto *action = menu_->addAction(text);
+        action->setObjectName(QString::fromLatin1(name));
+        action->setShortcut(shortcut);
+        window_->addAction(action);
+        return action;
+    };
+    seekTime_ = make(tr("跳转到指定时间…"), "seekTimeAction", QKeySequence(Qt::CTRL | Qt::Key_G));
+    previous_ =
+        make(tr("上一章"), "previousChapterAction", QKeySequence(Qt::CTRL | Qt::Key_PageUp));
+    next_ = make(tr("下一章"), "nextChapterAction", QKeySequence(Qt::CTRL | Qt::Key_PageDown));
+    connect(seekTime_, &QAction::triggered, this, &NavigationMenu::chooseTime);
+    connect(previous_, &QAction::triggered, &player_, &MpvController::previousChapter);
+    connect(next_, &QAction::triggered, &player_, &MpvController::nextChapter);
+    connect(&player_, &MpvController::chaptersChanged, this, &NavigationMenu::rebuildChapters);
+    connect(&player_, &MpvController::stateChanged, this, &NavigationMenu::updateState);
+    connect(&player_, &MpvController::chapterNavigationChanged, this, &NavigationMenu::updateState);
+    rebuildChapters();
+}
+
+QMenu *NavigationMenu::menu() const { return menu_; }
+
+void NavigationMenu::rebuildChapters() {
+    chaptersMenu_->clear();
+    for (const auto &chapter : player_.chapters()) {
+        auto title =
+            chapter.title.isEmpty() ? tr("第 %1 章").arg(chapter.index + 1) : chapter.title;
+        title.replace(QLatin1Char('&'), QStringLiteral("&&"));
+        auto *action =
+            chaptersMenu_->addAction(tr("%1  %2  %3")
+                                         .arg(chapter.index + 1)
+                                         .arg(formatPlaybackTime(chapter.start, true), title));
+        action->setObjectName(QStringLiteral("chapterAction%1").arg(chapter.index));
+        action->setCheckable(true);
+        action->setData(chapter.index);
+        chapterGroup_->addAction(action);
+        connect(action, &QAction::triggered, this,
+                [this, index = chapter.index] { player_.selectChapter(index); });
+    }
+    if (player_.chapters().isEmpty())
+        chaptersMenu_->addAction(tr("当前媒体没有章节"))->setEnabled(false);
+    presentedChapter_ = -2;
+    updateState();
+}
+
+void NavigationMenu::updateState() {
+    const auto &state = player_.state();
+    const bool seekable = state.active && state.seekable;
+    const bool timeSeekable = seekable && std::isfinite(state.duration) && state.duration > 0;
+    const auto navigationIndex = player_.chapterNavigationIndex();
+    if (presentedChapter_ == state.currentChapter && presentedSeekable_ == seekable &&
+        presentedTimeSeekable_ == timeSeekable && presentedNavigationChapter_ == navigationIndex)
+        return;
+    presentedChapter_ = state.currentChapter;
+    presentedNavigationChapter_ = navigationIndex;
+    presentedSeekable_ = seekable;
+    presentedTimeSeekable_ = timeSeekable;
+    seekTime_->setEnabled(timeSeekable);
+    chaptersMenu_->setEnabled(seekable && !player_.chapters().isEmpty());
+    bool hasPrevious = false;
+    bool hasNext = false;
+    for (auto *action : chapterGroup_->actions()) {
+        const auto index = action->data().toInt();
+        action->setChecked(index == state.currentChapter);
+        hasPrevious |= index == navigationIndex - 1;
+        hasNext |= index == navigationIndex + 1;
+    }
+    previous_->setEnabled(seekable && hasPrevious);
+    next_->setEnabled(seekable && hasNext);
+}
+
+void NavigationMenu::chooseTime() {
+    if (!seekTime_->isEnabled())
+        return;
+    const auto path = player_.state().path;
+    TimeSeekDialog dialog(player_.state().position, player_.state().duration, window_);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    const auto seconds = dialog.selectedSeconds();
+    const auto &state = player_.state();
+    if (!state.active || !state.seekable || path != state.path || !seconds ||
+        *seconds > state.duration) {
+        emit feedback(tr("媒体已改变，未执行时间跳转。"));
+        return;
+    }
+    player_.seekAbsolute(*seconds);
+}

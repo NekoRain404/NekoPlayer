@@ -10,6 +10,24 @@ add_custom_command(OUTPUT "${TEST_MEDIA}"
         -t 4 -c:v mpeg4 -q:v 4 -c:a pcm_s16le "${TEST_MEDIA}"
     VERBATIM)
 add_custom_target(test_media DEPENDS "${TEST_MEDIA}")
+set(TEST_CHAPTER_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/chapters.mkv")
+add_custom_command(OUTPUT "${TEST_CHAPTER_MEDIA}"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -i "${TEST_MEDIA}" -i "${CMAKE_CURRENT_SOURCE_DIR}/data/chapters.ffmetadata"
+        -map 0 -map_metadata 1 -map_chapters 1 -c copy "${TEST_CHAPTER_MEDIA}"
+    DEPENDS "${TEST_MEDIA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/chapters.ffmetadata" VERBATIM)
+add_custom_target(test_chapter_media DEPENDS "${TEST_CHAPTER_MEDIA}")
+add_executable(navigation_test navigation_test.cpp)
+target_link_libraries(navigation_test PRIVATE neko_playback Qt6::Test)
+target_compile_definitions(navigation_test PRIVATE TEST_CHAPTER_MEDIA_PATH="${TEST_CHAPTER_MEDIA}"
+    TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(navigation_test test_chapter_media)
+add_test(NAME navigation COMMAND navigation_test)
+set_tests_properties(navigation PROPERTIES TIMEOUT 60)
+add_executable(playback_time_test playback_time_test.cpp)
+target_link_libraries(playback_time_test PRIVATE neko_playback Qt6::Test)
+add_test(NAME playback-time COMMAND playback_time_test)
+set_tests_properties(playback-time PROPERTIES TIMEOUT 20)
 set(TEST_VIDEO_ONLY "${CMAKE_CURRENT_BINARY_DIR}/media/video-only.mkv")
 add_custom_command(OUTPUT "${TEST_VIDEO_ONLY}"
     COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
@@ -114,6 +132,8 @@ target_compile_definitions(window_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
 target_compile_definitions(window_test PRIVATE PLAYER_EXECUTABLE="$<TARGET_FILE:NekoPlayer>")
 target_compile_definitions(window_test PRIVATE TEST_VIDEO_ONLY_PATH="${TEST_VIDEO_ONLY}")
 target_compile_definitions(window_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}")
+target_compile_definitions(window_test PRIVATE TEST_CHAPTER_MEDIA_PATH="${TEST_CHAPTER_MEDIA}")
+add_dependencies(window_test test_chapter_media)
 add_dependencies(window_test test_track_media)
 add_dependencies(window_test test_video_only)
 add_dependencies(window_test NekoPlayer)

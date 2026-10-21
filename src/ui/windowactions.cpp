@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "navigationmenu.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playlistmodemenu.h"
@@ -73,6 +74,10 @@ void MainWindow::createActions() {
     playback->addActions({previousAction_, pauseAction_, nextAction_, stopAction_});
     playback->addSeparator();
     playback->addActions({back, forward});
+    auto *navigation = new NavigationMenu(*controller_, this);
+    connect(navigation, &NavigationMenu::feedback, this,
+            [this](const QString &message) { statusBar()->showMessage(message, 4000); });
+    playback->addMenu(navigation->menu());
     auto *tuning = new TuningMenus(*controller_, this);
     connect(tuning, &TuningMenus::feedback, this,
             [this](const QString &message) { statusBar()->showMessage(message, 2500); });
@@ -102,6 +107,7 @@ void MainWindow::createActions() {
     contextMenu_ = new QMenu(this);
     contextMenu_->addActions({openAction_, appendAction_, pauseAction_, stopAction_});
     contextMenu_->addSeparator();
+    contextMenu_->addMenu(navigation->menu());
     contextMenu_->addMenu(tuning->speedMenu());
     contextMenu_->addMenu(tuning->audioDelayMenu());
     contextMenu_->addMenu(modeMenu->menu());

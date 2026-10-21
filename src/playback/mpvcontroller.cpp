@@ -37,6 +37,8 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
                    std::tuple{Impl::Seekable, "seekable", MPV_FORMAT_FLAG},
                    std::tuple{Impl::HardwareDecoder, "hwdec-current", MPV_FORMAT_STRING},
                    std::tuple{Impl::Tracks, "track-list", MPV_FORMAT_NODE},
+                   std::tuple{Impl::Chapters, "chapter-list", MPV_FORMAT_NODE},
+                   std::tuple{Impl::Chapter, "chapter", MPV_FORMAT_INT64},
                    std::tuple{Impl::Speed, "speed", MPV_FORMAT_DOUBLE},
                    std::tuple{Impl::AudioDelay, "audio-delay", MPV_FORMAT_DOUBLE},
                    std::tuple{Impl::SubtitleDelay, "sub-delay", MPV_FORMAT_DOUBLE}};
@@ -64,11 +66,13 @@ QString MpvController::errorString() const { return impl_->error; }
 mpv_handle *MpvController::handle() const { return impl_->client.get(); }
 const PlaybackState &MpvController::state() const { return impl_->state; }
 const QList<MediaTrack> &MpvController::tracks() const { return impl_->tracks; }
+const QList<MediaChapter> &MpvController::chapters() const { return impl_->chapters; }
 
 void MpvController::openFile(const QString &path) {
     if (!isReady() || path.isEmpty())
         return;
     impl_->state.path = path;
+    impl_->cancelChapterRequest();
     impl_->recovery.reset();
     impl_->cancelTrackRestore();
     impl_->recoveringRenderer = false;
@@ -81,6 +85,7 @@ void MpvController::setPaused(bool paused) {
 }
 void MpvController::togglePause() { setPaused(!state().paused); }
 void MpvController::stop() {
+    impl_->cancelChapterRequest();
     impl_->recovery.reset();
     impl_->cancelTrackRestore();
     impl_->command({"stop"});
@@ -92,11 +97,13 @@ void MpvController::seekAbsolute(double seconds) {
     if (!state().seekable || !std::isfinite(seconds))
         return;
     const double target = std::clamp(seconds, 0.0, state().duration);
+    impl_->cancelChapterRequest();
     impl_->command({"seek", QByteArray::number(target, 'f', 3), "absolute+exact"});
 }
 void MpvController::seekRelative(double seconds) {
     if (!state().seekable || !std::isfinite(seconds))
         return;
+    impl_->cancelChapterRequest();
     impl_->command({"seek", QByteArray::number(seconds, 'f', 3), "relative+exact"});
 }
 void MpvController::setVolume(double volume) {

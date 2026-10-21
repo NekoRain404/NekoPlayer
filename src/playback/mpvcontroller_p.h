@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mpvchapters.h"
 #include "mpvcontroller.h"
 #include "mpvtracks.h"
 
@@ -9,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <climits>
 #include <cmath>
 #include <initializer_list>
 #include <optional>
@@ -31,7 +33,9 @@ enum Property : uint64_t {
     Tracks,
     Speed,
     AudioDelay,
-    SubtitleDelay
+    SubtitleDelay,
+    Chapters,
+    Chapter
 };
 } // namespace MpvPrivate
 
@@ -45,6 +49,10 @@ struct MpvController::Impl {
     std::unique_ptr<mpv_handle, MpvPrivate::MpvDeleter> client;
     PlaybackState state;
     QList<MediaTrack> tracks;
+    QList<MediaChapter> chapters;
+    std::optional<int> requestedChapter;
+    uint64_t chapterCommand = 0;
+    uint64_t chapterQuery = 0;
     bool loading = false;
     std::optional<RecoveryState> recovery;
     QList<MediaTrack> tracksToRestore;
@@ -170,8 +178,28 @@ struct MpvController::Impl {
         state.position = 0;
         state.duration = 0;
         state.hardwareDecoder.clear();
+        state.currentChapter = -1;
+        cancelChapterRequest();
+        updateChapters({});
         updateTracks({});
     }
+
+    void updateChapters(QList<MediaChapter> snapshot) {
+        if (chapters == snapshot)
+            return;
+        chapters = std::move(snapshot);
+        emit owner->chaptersChanged();
+    }
+
+    void cancelChapterRequest();
+    void observeChapter(int64_t index) {
+        state.currentChapter = (state.active || loading) && index >= 0 && index < INT_MAX
+                                   ? static_cast<int>(index)
+                                   : -1;
+    }
+    void selectChapter(int index);
+    void confirmChapterRequest(const mpv_event &event);
+    bool finishChapterQuery(const mpv_event &event);
 
     void updateTracks(QList<MediaTrack> snapshot) {
         if (applyingRestoredSelections && trackSelectionRestored(tracksToRestore, snapshot))
@@ -258,6 +286,12 @@ struct MpvController::Impl {
 
     void updateProperty(const mpv_event &event) {
         const auto &value = *static_cast<mpv_event_property *>(event.data);
+        if (event.reply_userdata == Chapters) {
+            updateChapters(value.data && (state.active || loading)
+                               ? parseMpvChapters(*static_cast<mpv_node *>(value.data))
+                               : QList<MediaChapter>{});
+            return;
+        }
         if (event.reply_userdata == Tracks) {
             updateTracks(value.data && (state.active || loading)
                              ? parseMpvTracks(*static_cast<mpv_node *>(value.data))
@@ -278,6 +312,9 @@ struct MpvController::Impl {
             case HardwareDecoder:
                 state.hardwareDecoder.clear();
                 break;
+            case Chapter:
+                state.currentChapter = -1;
+                break;
             default:
                 return;
             }
@@ -285,6 +322,9 @@ struct MpvController::Impl {
             return;
         }
         switch (event.reply_userdata) {
+        case Chapter:
+            observeChapter(*static_cast<int64_t *>(value.data));
+            break;
         case Speed:
             observeTuning(speed, *static_cast<double *>(value.data));
             return;
@@ -362,6 +402,7 @@ struct MpvController::Impl {
                 updateProperty(*event);
                 break;
             case MPV_EVENT_COMMAND_REPLY:
+                confirmChapterRequest(*event);
                 if (canceledRestoreRequests.remove(event->reply_userdata))
                     break;
                 if (event->reply_userdata == restoreCommand && restoreCommand) {
@@ -371,6 +412,8 @@ struct MpvController::Impl {
                 report(event->error);
                 break;
             case MPV_EVENT_GET_PROPERTY_REPLY:
+                if (finishChapterQuery(*event))
+                    break;
                 if (finishTuningQuery(*event))
                     break;
                 if (canceledRestoreRequests.remove(event->reply_userdata))

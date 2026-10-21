@@ -18,6 +18,7 @@ class PlaylistController final : public QObject {
   public slots:
     void addFiles(const QStringList &paths);
     void playAt(int row);
+    void playOrPause();
     void playNext();
     void playPrevious();
     void clear();
@@ -32,7 +33,10 @@ class PlaylistController final : public QObject {
     void mediaLoadFailed(const QString &message);
 
   private:
-    bool playFirstAvailable(int firstRow);
+    bool playFirstAvailable(int firstRow, int step = 1);
+    void finishQueue();
     MpvController &player_;
     PlaylistModel *model_;
+    bool exhausted_ = false;
+    int navigationStep_ = 1;
 };

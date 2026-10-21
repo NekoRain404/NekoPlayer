@@ -1,4 +1,6 @@
 #include "playback/mpvcontroller.h"
+#include "playback/playlistcontroller.h"
+#include "playback/playlistmodel.h"
 #include "playback/videowidget.h"
 #include "ui/mainwindow.h"
 #include <QAction>
@@ -99,7 +101,7 @@ class WindowTest final : public QObject {
         window.close();
     }
 
-    void rejectsDropsAndRecovers() {
+    void appendsLocalDropsAndRecoversFromInvalidInput() {
         MainWindow window(true);
         window.show();
         QTRY_VERIFY(window.videoWidget()->isReady());
@@ -121,18 +123,37 @@ class WindowTest final : public QObject {
         window.openFile(mediaPath());
         QTRY_VERIFY(window.controller()->state().active);
         drop({QUrl::fromLocalFile(mediaPath()), QUrl::fromLocalFile(mediaPath())});
-        QTRY_COMPARE(errors.count(), 1);
+        QCOMPARE(window.playlist()->model()->rowCount(), 3);
+        QVERIFY(errors.isEmpty());
         QVERIFY(window.controller()->state().active);
         drop({QUrl(QStringLiteral("https://example.com/movie.mkv"))});
-        QTRY_COMPARE(errors.count(), 2);
+        QTRY_COMPARE(errors.count(), 1);
         action(window, "fullscreenAction")->trigger();
         QTRY_VERIFY(window.isFullScreen());
         window.openFile(QStringLiteral("/no-such-neko-file.mkv"));
-        QTRY_COMPARE(errors.count(), 3);
+        QTRY_COMPARE(errors.count(), 2);
         QTRY_VERIFY_WITH_TIMEOUT(!window.statusBar()->currentMessage().isEmpty(), 3000);
         QTRY_VERIFY(!window.controller()->state().active);
         drop({QUrl::fromLocalFile(mediaPath())});
         QTRY_VERIFY(window.controller()->state().active);
+    }
+
+    void pausedAppendUpdatesNavigationImmediately() {
+        MainWindow window(true);
+        window.show();
+        window.openFile(mediaPath());
+        QTRY_VERIFY(window.controller()->state().active);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(window.controller()->state().paused);
+        QVERIFY(!action(window, "nextAction")->isEnabled());
+        window.appendFiles({mediaPath()});
+        // No mpv property event is needed to publish a queue-only change.
+        QVERIFY(action(window, "nextAction")->isEnabled());
+        QVERIFY(window.controller()->state().paused);
+        QCOMPARE(window.playlist()->model()->currentIndex(), 0);
+        action(window, "clearPlaylistAction")->trigger();
+        QVERIFY(!action(window, "clearPlaylistAction")->isEnabled());
+        QVERIFY(!action(window, "nextAction")->isEnabled());
     }
 
     void commandLineMultipleFilesStartsPlaylist() {

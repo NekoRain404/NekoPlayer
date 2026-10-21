@@ -25,7 +25,7 @@ void MainWindow::createActions() {
     appendAction_->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
     connect(appendAction_, &QAction::triggered, this, &MainWindow::chooseFilesToAppend);
     pauseAction_ = make(tr("暂停"), "pauseAction", QKeySequence(Qt::Key_Space));
-    connect(pauseAction_, &QAction::triggered, controller_.get(), &MpvController::togglePause);
+    connect(pauseAction_, &QAction::triggered, playlist_.get(), &PlaylistController::playOrPause);
     stopAction_ = make(tr("停止"), "stopAction", QKeySequence(Qt::Key_S));
     stopAction_->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
     connect(stopAction_, &QAction::triggered, controller_.get(), &MpvController::stop);

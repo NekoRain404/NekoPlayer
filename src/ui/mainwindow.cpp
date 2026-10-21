@@ -81,6 +81,9 @@ MainWindow::MainWindow(bool silentAudio)
             [this] { statusBar()->showMessage(tr("播放列表已结束")); });
     connect(playlist_.get(), &PlaylistController::queueError, this, &MainWindow::showError);
     connect(playlist_.get(), &PlaylistController::currentChanged, this, &MainWindow::updateState);
+    connect(playlist_->model(), &PlaylistModel::rowsInserted, this, &MainWindow::updateState);
+    connect(playlist_->model(), &PlaylistModel::rowsRemoved, this, &MainWindow::updateState);
+    connect(playlist_->model(), &PlaylistModel::modelReset, this, &MainWindow::updateState);
     connect(playlistPane_, &PlaylistPane::playRequested, playlist_.get(),
             &PlaylistController::playAt);
     connect(video_, &VideoWidget::renderError, this, [this](const QString &message) {
@@ -178,11 +181,12 @@ void MainWindow::chooseFilesToAppend() {
 
 void MainWindow::updateState() {
     const auto &state = controller_->state();
-    pauseAction_->setEnabled(state.active);
+    pauseAction_->setEnabled(state.active || playlist_->model()->rowCount() > 0);
     stopAction_->setEnabled(state.active);
-    pauseAction_->setText(state.paused ? tr("播放") : tr("暂停"));
+    const bool canPlay = !state.active || state.paused;
+    pauseAction_->setText(canPlay ? tr("播放") : tr("暂停"));
     pauseAction_->setIcon(
-        style()->standardIcon(state.paused ? QStyle::SP_MediaPlay : QStyle::SP_MediaPause));
+        style()->standardIcon(canPlay ? QStyle::SP_MediaPlay : QStyle::SP_MediaPause));
     muteAction_->setChecked(state.muted);
     muteAction_->setIcon(
         style()->standardIcon(state.muted ? QStyle::SP_MediaVolumeMuted : QStyle::SP_MediaVolume));

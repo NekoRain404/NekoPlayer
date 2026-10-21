@@ -24,11 +24,18 @@ void PlaylistController::addFiles(const QStringList &paths) {
     const auto firstNewRow = model_->rowCount();
     if (model_->addFiles(paths) == 0)
         return;
-    if (model_->currentIndex() < 0)
-        playFirstAvailable(firstNewRow);
+    if ((model_->currentIndex() < 0 || exhausted_) && !playFirstAvailable(firstNewRow))
+        finishQueue();
 }
 
 void PlaylistController::playAt(int row) { playFirstAvailable(row); }
+
+void PlaylistController::playOrPause() {
+    if (player_.state().active)
+        player_.togglePause();
+    else
+        playFirstAvailable(qMax(0, model_->currentIndex()));
+}
 
 void PlaylistController::playNext() {
     if (hasNext())
@@ -37,36 +44,42 @@ void PlaylistController::playNext() {
 
 void PlaylistController::playPrevious() {
     if (hasPrevious())
-        playFirstAvailable(model_->currentIndex() - 1);
+        playFirstAvailable(model_->currentIndex() - 1, -1);
 }
 
 void PlaylistController::clear() {
+    exhausted_ = false;
+    navigationStep_ = 1;
     player_.stop();
     model_->clear();
     emit currentChanged(-1);
 }
 
 void PlaylistController::playFinished() {
-    if (hasNext())
-        playNext();
-    else
-        emit queueFinished();
+    if (!playFirstAvailable(model_->currentIndex() + 1))
+        finishQueue();
 }
 
 void PlaylistController::mediaLoadFailed(const QString &message) {
-    if (!hasNext())
-        return;
     emit queueError(message);
-    playNext();
+    if (!playFirstAvailable(model_->currentIndex() + navigationStep_, navigationStep_))
+        finishQueue();
 }
 
-bool PlaylistController::playFirstAvailable(int firstRow) {
-    for (auto row = firstRow; row < model_->rowCount(); ++row) {
+void PlaylistController::finishQueue() {
+    exhausted_ = true;
+    emit queueFinished();
+}
+
+bool PlaylistController::playFirstAvailable(int firstRow, int step) {
+    for (auto row = firstRow; row >= 0 && row < model_->rowCount(); row += step) {
         const auto path = model_->pathAt(row);
         if (!QFileInfo(path).isFile()) {
             emit queueError(tr("文件不存在：%1").arg(path));
             continue;
         }
+        exhausted_ = false;
+        navigationStep_ = step;
         model_->setCurrentIndex(row);
         player_.openFile(path);
         emit currentChanged(row);

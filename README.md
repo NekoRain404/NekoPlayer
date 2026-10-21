@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time)$' --output-on-failure
+ctest --test-dir build/debug -R '^(code-size|backend-startup|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time|file-drop)$' --output-on-failure
 ```
 
 内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test tracks_test session_test tuning_test navigation_test playback_time_test
-ctest --test-dir build/sanitizers -R '^(decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time)$' --output-on-failure
+cmake --build --preset sanitizers --target decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test
+ctest --test-dir build/sanitizers -R '^(decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|tracks|session|tuning|navigation|playback-time|file-drop)$' --output-on-failure
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -76,7 +76,7 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | 切换顺序播放 / 单曲循环 / 列表循环 | R |
 | 播放设置 | F5 |
 
-打开文件会替换现有队列；添加文件、拖入一个或多个本地文件、或传入多个命令行位置参数会追加或创建队列。网络地址拖放会被拒绝并显示原因。全屏默认隐藏菜单与控制区，移动鼠标显示控制区，闲置后收起；错误会显示可见提示。正常播放禁用用户 mpv 配置、脚本、OSC 和默认键绑定，由 NekoPlayer 统一管理交互。
+打开文件会替换现有队列；添加文件、拖入一个或多个本地媒体文件、或传入多个命令行位置参数会追加或创建队列。网络地址及带主机名的 file URL（含 localhost）拖放会被拒绝并显示原因；本地文件请使用普通路径或无主机名的 file URL。全屏默认隐藏菜单与控制区，移动鼠标显示控制区，闲置后收起；错误会显示可见提示。正常播放禁用用户 mpv 配置、脚本、OSC 和默认键绑定，由 NekoPlayer 统一管理交互。
 
 播放结束后自动进入下一项并跳过缺失文件；上一项按逆序跳过缺失文件。队列播完后追加媒体会启动新增项，暂停期间追加则保留当前播放。停止或播完后按空格可重新播放当前项。
 
@@ -86,7 +86,7 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 
 正常退出会保存播放列表、当前行、音量／静音、窗口大小和最大化状态、列表面板显示状态及媒体对话框目录。再次启动只恢复队列，按空格才开始播放；命令行文件替换恢复队列。退出全屏时或在全屏下关闭，均保留之前的普通窗口状态，不在下次启动自动全屏。配置使用版本化 INI，Linux 默认位于 `$XDG_CONFIG_HOME/NekoPlayer/NekoPlayer/session.ini`（未设置时位于 `~/.config/` 下）；保存失败会提示，损坏或未知版本的配置不会被覆盖。`--no-config` 与 `--smoke-test` 均不读写配置。此阶段不保存播放进度、轨道和外挂字幕，也不提供崩溃恢复；同时运行多个实例时以最后保存的会话为准。
 
-“声音 → 音轨”和“字幕”菜单可查看轨道编号、标题、语言、编码及当前选择，也可关闭音轨或字幕；右键菜单共用这些入口。加载外挂字幕后自动选中该轨道。切换轨道无需重新打开媒体，保持暂停状态；停止或换片时清空旧轨道。图形上下文重建时恢复音轨、字幕选择和已加载的外挂字幕。外挂字幕目前通过文件对话框加载，字幕拖放尚未实现。
+“声音 → 音轨”和“字幕”菜单可查看轨道编号、标题、语言、编码及当前选择，也可关闭音轨或字幕；右键菜单共用这些入口。加载外挂字幕后自动选中该轨道。切换轨道无需重新打开媒体，保持暂停状态；停止或换片时清空旧轨道。图形上下文重建时恢复音轨、字幕选择和已加载的外挂字幕。外挂字幕可通过文件对话框或单文件拖放加载，拖放识别 srt、ass、ssa、sub、vtt、sup、idx、mks（扩展名不区分大小写）。请先播放媒体，再单独拖入一个字幕文件；空闲时、一次拖入多个字幕或混合媒体与字幕会整体拒绝并提示，不修改播放列表。VobSub 的 idx/sub 配对请选择 idx，伴随文件交给 mpv 读取。其他扩展名沿用媒体追加行为，文件能否解析由 mpv 判断。
 
 “字幕 → 字幕显示”提供显示开关、缩放与上下移动；隐藏仅控制可见性，保留轨道选择。F6 或“设置 → 字幕显示设置”在未播放时也可打开，提供 0.25–4 倍缩放、0–100% 垂直位置和默认字体；100% 指原始位置，数值越小越靠上。对话框编辑为草稿，应用／确定才提交，恢复默认也需应用，取消保留已应用的修改。默认字体用于未指定字体的文本字幕，ASS 保留原样式，缩放／移动可能影响排版；位图字幕的效果取决于格式及 mpv 支持。偏好跨换片、停止及渲染恢复保留，正常退出保存，下次加载媒体前恢复。旧配置缺失或非法字段使用独立默认值，`--no-config` 不持久保存。字幕像素和真实字体效果尚待 Wayland 实机验收。
 

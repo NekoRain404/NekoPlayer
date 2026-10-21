@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "input/localfiledrop.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
@@ -31,6 +32,9 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     resize(1100, 680);
     setMinimumSize(560, 360);
     setAcceptDrops(true);
+    fileDrop_ = new LocalFileDrop(*controller_, this);
+    connect(fileDrop_, &LocalFileDrop::mediaFilesDropped, this, &MainWindow::appendFiles);
+    connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
     setStyleSheet(QStringLiteral(
         "QMainWindow, QWidget#transportBar { background: #202126; color: #e3e4e9; }"
         "QMenuBar, QMenu, QStatusBar { background: #26282e; color: #d7d9e0; }"
@@ -238,23 +242,10 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
 }
 
 void MainWindow::dropEvent(QDropEvent *event) {
-    const auto urls = event->mimeData()->urls();
-    QStringList paths;
-    for (const auto &url : urls) {
-        if (!url.isLocalFile()) {
-            showError(tr("播放列表仅支持本地媒体文件"));
-            event->ignore();
-            return;
-        }
-        paths.append(url.toLocalFile());
-    }
-    if (paths.isEmpty()) {
-        showError(tr("请拖入本地媒体文件"));
+    if (fileDrop_->handleUrls(event->mimeData()->urls()))
+        event->acceptProposedAction();
+    else
         event->ignore();
-        return;
-    }
-    appendFiles(paths);
-    event->acceptProposedAction();
 }
 
 void MainWindow::setFullscreen(bool enabled) {

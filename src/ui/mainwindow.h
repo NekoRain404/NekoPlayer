@@ -14,6 +14,7 @@ class PlaylistPane;
 class QAction;
 class QMenu;
 class QLabel;
+class LocalFileDrop;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -55,6 +56,7 @@ class MainWindow final : public QMainWindow {
     TransportBar *transport_ = nullptr;
     TrackMenus *trackMenus_ = nullptr;
     PlaylistPane *playlistPane_ = nullptr;
+    LocalFileDrop *fileDrop_ = nullptr;
     QLabel *emptyHint_ = nullptr;
     QAction *openAction_ = nullptr;
     QAction *pauseAction_ = nullptr;

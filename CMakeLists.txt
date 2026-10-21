@@ -39,12 +39,15 @@ target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV
 add_library(neko_session src/session/sessionstore.cpp src/session/sessionmanager.cpp)
 target_link_libraries(neko_session PUBLIC neko_playback)
 
+add_library(neko_input src/input/localfiledrop.cpp)
+target_link_libraries(neko_input PUBLIC neko_playback)
+
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
     src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/trackmenus.cpp
     src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp
     src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp
     src/ui/subtitledisplaymenu.cpp src/ui/subtitlesettingsdialog.cpp)
-target_link_libraries(neko_ui PUBLIC neko_playback neko_session Qt6::Widgets Qt6::OpenGLWidgets)
+target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input Qt6::Widgets Qt6::OpenGLWidgets)
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)

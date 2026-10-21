@@ -33,3 +33,5 @@
 字幕显示参考 Haruna `src/qml/Settings/SubtitlesSettings.qml` 的字体选择与恢复默认入口，以及 `src/settings/subtitlessettings.kcfg` 的独立字幕偏好。具体选项以 [mpv v0.41.0 options.rst](https://github.com/mpv-player/mpv/blob/v0.41.0/DOCS/man/options.rst) 中 `sub-visibility`、`sub-scale`、`sub-pos`、`sub-font` 和 `sub-ass-override` 为准：隐藏保留选择与解码，100 是原始位置而非绝对屏幕底部，默认字体通常不覆盖 ASS，缩放／移动可能影响 ASS 排版。本项目独立实现 Qt Widgets 菜单、草稿对话框和类型化偏好，没有复制 Haruna 的 GPL 源码或引入 Qt Quick／KDE 依赖；保留 mpv 默认 ASS 样式策略。
 
 列表编辑参考 Haruna `src/playlist/playlistproxymodel.cpp` 与 `playlistfilterproxymodel.cpp` 的移动／删除职责划分。原生拖放对照 [Qt 6.5.3 qlistview.cpp](https://github.com/qt/qtbase/blob/v6.5.3/src/widgets/itemviews/qlistview.cpp) 的 `dropEvent()` 和 [qabstractitemview.cpp](https://github.com/qt/qtbase/blob/v6.5.3/src/widgets/itemviews/qabstractitemview.cpp) 的 `startDrag()`：InternalMove 优先调用 model 的 moveRow，已移动的拖放不会再次删除源项。本项目独立实现单层队列移动、持久索引与共享编辑动作，没有复制 Haruna 源码或引入代理模型依赖。
+
+字幕拖放参考 mpv.net `src/MpvNet/Player.cs` 的 `LoadFiles` 中按扩展名选择 `sub-add` 或 `loadfile` 的分流，以及 `FileTypes.cs` 的字幕扩展名列表。本项目独立实现 Qt Core 拖放路由；扩展名与已有字幕对话框保持一致，并在发出操作前校验整批 URL。为避免将字幕挂到旧影片，本阶段明确拒绝混合媒体与字幕或多个字幕的拖放，没有复制 mpv.net 源码。

@@ -38,6 +38,8 @@ class MpvController final : public QObject {
     [[nodiscard]] const QList<MediaChapter> &chapters() const;
     // Navigation uses the latest accepted request until the backend confirms it.
     [[nodiscard]] int chapterNavigationIndex() const;
+    // User preference; state().hardwareDecoder reports the decoder actually in use.
+    [[nodiscard]] bool hardwareDecodingEnabled() const;
 
   public slots:
     void openFile(const QString &path);
@@ -45,6 +47,7 @@ class MpvController final : public QObject {
     void togglePause();
     void stop();
     void setFileLoopEnabled(bool enabled);
+    void setHardwareDecodingEnabled(bool enabled);
     void seekAbsolute(double seconds);
     void seekRelative(double seconds);
     void selectChapter(int index);
@@ -67,6 +70,7 @@ class MpvController final : public QObject {
   signals:
     void volumeRequested(double volume);
     void muteRequested(bool muted);
+    void hardwareDecodingPreferenceChanged(bool enabled);
     void stateChanged();
     void tuningChanged();
     void tracksChanged();

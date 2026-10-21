@@ -26,6 +26,7 @@ SessionLoadResult SessionManager::restore() {
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex);
     player_.setVolume(audio_.volume);
     player_.setMuted(audio_.muted);
+    player_.setHardwareDecodingEnabled(loaded.state.hardwareDecodingEnabled);
     return loaded;
 }
 
@@ -34,7 +35,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
         return loadError_;
     window.mediaDirectory = mediaDirectory_;
     return store_.save({audio_, std::move(window), playlist_.model()->paths() + pendingPaths,
-                        playlist_.model()->currentIndex()});
+                        playlist_.model()->currentIndex(), player_.hardwareDecodingEnabled()});
 }
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }
 void SessionManager::rememberMedia(const QString &path) {

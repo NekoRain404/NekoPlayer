@@ -80,6 +80,41 @@ class NavigationTest final : public QObject {
         QTRY_COMPARE(player.state().currentChapter, 1);
     }
 
+    void ordinarySeekSupersedesQueuedChapterSelection() {
+        MpvController player(true, true);
+        player.openFile(QString::fromUtf8(TEST_CHAPTER_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active && player.state().seekable);
+        player.setPaused(true);
+        QTRY_VERIFY(player.state().paused);
+        for (int attempt = 0; attempt < 6; ++attempt) {
+            player.selectChapter(1);
+            QTRY_COMPARE(player.state().currentChapter, 1);
+            player.selectChapter(2);
+            player.seekAbsolute(0);
+            QTRY_VERIFY(player.state().position < 0.08 && player.state().currentChapter == 0);
+            int64_t chapter = -1;
+            QVERIFY(mpv_get_property(player.handle(), "chapter", MPV_FORMAT_INT64, &chapter) >= 0);
+            QCOMPARE(chapter, 0);
+            QCOMPARE(player.chapterNavigationIndex(), 0);
+        }
+        QVERIFY(player.state().active && player.state().paused);
+    }
+
+    void sharedChapterStartConfirmsActualDestination() {
+        MpvController player(true, true);
+        player.openFile(QString::fromUtf8(TEST_OVERLAPPING_CHAPTER_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active && player.state().seekable);
+        player.setPaused(true);
+        QTRY_VERIFY(player.state().paused);
+        QTRY_COMPARE(player.chapters().size(), 4);
+        player.selectChapter(1);
+        QTRY_COMPARE(player.state().currentChapter, 2);
+        QTRY_COMPARE(player.chapterNavigationIndex(), 2);
+        player.nextChapter();
+        QTRY_COMPARE(player.state().currentChapter, 3);
+        QVERIFY(player.state().active && player.state().paused);
+    }
+
     void chapterMetadataIsOwnedAndClearedOnReplacement() {
         MpvController player(true, true);
         QSignalSpy changes(&player, &MpvController::chaptersChanged);

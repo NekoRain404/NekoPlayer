@@ -14,6 +14,7 @@ void MpvController::Impl::cancelChapterRequest() {
     const bool pending = requestedChapter.has_value();
     requestedChapter.reset();
     chapterCommand = chapterQuery = 0;
+    chapterSeekStarted = chapterQuerySettled = false;
     if (pending)
         emit owner->chapterNavigationChanged();
 }
@@ -21,16 +22,20 @@ void MpvController::Impl::cancelChapterRequest() {
 void MpvController::Impl::selectChapter(int index) {
     if (!state.active || !state.seekable)
         return;
-    const bool valid =
-        std::any_of(chapters.cbegin(), chapters.cend(),
-                    [index](const MediaChapter &chapter) { return chapter.index == index; });
-    if (!valid)
+    const auto chapter =
+        std::find_if(chapters.cbegin(), chapters.cend(),
+                     [index](const MediaChapter &chapter) { return chapter.index == index; });
+    if (chapter == chapters.cend())
         return;
-    const auto id = command({"set", "chapter", QByteArray::number(index)});
+    // mpv 0.41 can leave chapter unavailable if an ordinary seek supersedes
+    // a queued native chapter seek. Use the owned chapter timestamp instead.
+    const auto id =
+        command({"seek", QByteArray::number(chapter->start, 'g', 17), "absolute+exact"});
     if (id) {
         requestedChapter = index;
         chapterCommand = id;
         chapterQuery = 0;
+        chapterSeekStarted = chapterQuerySettled = false;
         emit owner->chapterNavigationChanged();
     }
 }
@@ -43,9 +48,16 @@ void MpvController::Impl::confirmChapterRequest(const mpv_event &event) {
         cancelChapterRequest();
         return;
     }
-    // Setting mpv's chapter property updates its seek intent immediately. Query
-    // after the latest command: observers can omit no-ops or coalesce fast clicks.
+    queryChapterRequest();
+}
+
+void MpvController::Impl::queryChapterRequest(bool settled) {
+    if (!requestedChapter || chapterCommand)
+        return;
+    // A seek reply only acknowledges queueing. Confirm no-ops now, and query
+    // again after playback restarts if the seek has not reached its target yet.
     chapterQuery = ++request;
+    chapterQuerySettled = settled;
     const int status =
         mpv_get_property_async(client.get(), chapterQuery, "chapter", MPV_FORMAT_INT64);
     if (status < 0)
@@ -56,12 +68,24 @@ void MpvController::Impl::confirmChapterRequest(const mpv_event &event) {
 bool MpvController::Impl::finishChapterQuery(const mpv_event &event) {
     if (!chapterQuery || event.reply_userdata != chapterQuery)
         return false;
+    const bool settled = chapterQuerySettled;
+    chapterQuery = 0;
+    chapterQuerySettled = false;
     const auto &value = *static_cast<mpv_event_property *>(event.data);
     if (event.error >= 0 && value.format == MPV_FORMAT_INT64 && value.data)
-        observeChapter(*static_cast<int64_t *>(value.data));
-    // Finish mutations before signals: a receiver may issue the next request.
-    cancelChapterRequest();
+        observeChapter(*static_cast<int64_t *>(value.data), settled);
+    if (event.error < 0)
+        cancelChapterRequest();
     emit owner->stateChanged();
     report(event.error);
     return true;
+}
+
+void MpvController::Impl::observeChapter(int64_t index, bool settled) {
+    state.currentChapter =
+        (state.active || loading) && index >= 0 && index < INT_MAX ? static_cast<int>(index) : -1;
+    // Shared timestamps or frame alignment can land in a different chapter.
+    // A restart after this command's SEEK confirms that actual destination.
+    if (settled || (!chapterCommand && requestedChapter == state.currentChapter))
+        cancelChapterRequest();
 }

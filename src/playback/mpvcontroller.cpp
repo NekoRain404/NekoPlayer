@@ -67,6 +67,18 @@ mpv_handle *MpvController::handle() const { return impl_->client.get(); }
 const PlaybackState &MpvController::state() const { return impl_->state; }
 const QList<MediaTrack> &MpvController::tracks() const { return impl_->tracks; }
 const QList<MediaChapter> &MpvController::chapters() const { return impl_->chapters; }
+bool MpvController::hardwareDecodingEnabled() const { return impl_->hardwareDecodingEnabled; }
+
+void MpvController::setHardwareDecodingEnabled(bool enabled) {
+    if (enabled == impl_->hardwareDecodingEnabled)
+        return;
+    if (impl_->command({"set", "hwdec", enabled ? "auto-safe" : "no"})) {
+        // Keep accepted intent before asynchronous observations or an immediate save.
+        // Decoder fallback is separate and reported by hwdec-current.
+        impl_->hardwareDecodingEnabled = enabled;
+        emit hardwareDecodingPreferenceChanged(enabled);
+    }
+}
 
 void MpvController::openFile(const QString &path) {
     if (!isReady() || path.isEmpty())

@@ -19,6 +19,7 @@ struct SessionState {
     WindowPreferences window;
     QStringList paths;
     int currentIndex = -1;
+    bool hardwareDecodingEnabled = true;
 };
 
 struct SessionLoadResult {

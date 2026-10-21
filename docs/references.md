@@ -25,3 +25,7 @@
 播放模式参考 Haruna `src/mpv/mpvitem.cpp` 的 `endOfFileAction()`、`onEndOfFileReached()` 对重复当前项和重复队列的区分，以及 mpv `DOCS/man/options.rst` 中 `loop-file` 与 `loop-playlist` 的差异。NekoPlayer 仍由应用管理多文件队列，单文件使用异步设置的 mpv 原生循环；`player/playloop.c` 的 `handle_loop_file()` 说明该路径在自然 EOF 时定位，而非重载文件。相关行为在本机 mpv 0.41 的真实非 GUI 集成测试中验证；未复制上游实现。
 
 章节与时间定位参考 Haruna `src/qml/Actions.qml` 的上下章动作，以及 mpv `DOCS/man/input.rst` 中 `chapter-list`、`chapter` 和精确定位的契约。对照 `player/command.c` 的 `mp_property_chapter()` 与 `player/playloop.c` 的 `get_current_chapter()`，章节属性设置会先记录目标意图，越过末章可能结束播放；本项目在控制器内校验边界，并以异步确认处理连续点击。独立实现 Qt Widgets 菜单、拥有数据的章节快照和时间解析，没有复制上游源码或引入 Qt Quick。
+
+兼容性复核对照了 [mpv v0.41.0 的 playloop.c](https://github.com/mpv-player/mpv/blob/v0.41.0/player/playloop.c) 与忽略目录中的上游 master：0.41 在普通定位覆盖待执行原生选章时可能留下 `last_chapter_flag=true` 和 `last_chapter_seek=-2`，暂停时 `chapter` 持续不可用；master 已将相关重置移到 `queue_seek()`。NekoPlayer 不修改系统 mpv，改为使用章节快照中的起点提交精确定位，通过命令回复、SEEK／PLAYBACK_RESTART 和异步查询确认实际章节；真实回归覆盖覆盖定位及相同章节起点。
+
+硬解设置参考 Haruna `src/qml/Settings/PlaybackSettings.qml` 和 `src/settings/playbacksettings.kcfg` 的解码选项与回退提示，以及 mpv `DOCS/man/input.rst` 的 `hwdec`／`hwdec-current` 区分。前者是可写偏好，后者才是实际使用方式；写入可能重建解码器并定位刷新。NekoPlayer 保留安全自动模式与软件模式两个常用入口，独立实现 Qt Widgets 应用／取消和 schema 1 可选字段，未复制参考源码。测试以本机 mpv 0.41 行为为准，null 视频输出不能验证 GPU 解码互操作。

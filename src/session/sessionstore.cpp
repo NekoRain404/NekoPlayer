@@ -42,9 +42,13 @@ QString checkFile(const QString &path) {
     return {};
 }
 
-bool readBool(QSettings &settings, const QString &key) {
+bool readBool(QSettings &settings, const QString &key, bool fallback = false) {
     const auto value = settings.value(key).toString().toLower();
-    return value == QLatin1String("true") || value == QLatin1String("1");
+    if (value == QLatin1String("true") || value == QLatin1String("1"))
+        return true;
+    if (value == QLatin1String("false") || value == QLatin1String("0"))
+        return false;
+    return fallback;
 }
 
 SessionState normalized(SessionState state) {
@@ -83,6 +87,8 @@ SessionLoadResult SessionStore::load() const {
     const auto volume = settings.value(QStringLiteral("audio/volume"), 100).toDouble(&valid);
     state.audio.volume = valid ? volume : 100;
     state.audio.muted = readBool(settings, QStringLiteral("audio/muted"));
+    state.hardwareDecodingEnabled =
+        readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
     state.paths = settings.value(QStringLiteral("playlist/paths")).toStringList();
     state.currentIndex = settings.value(QStringLiteral("playlist/currentIndex"), -1).toInt(&valid);
     if (!valid)
@@ -108,6 +114,7 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("schemaVersion"), 1);
     settings.setValue(QStringLiteral("audio/volume"), saved.audio.volume);
     settings.setValue(QStringLiteral("audio/muted"), saved.audio.muted);
+    settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
     settings.setValue(QStringLiteral("playlist/paths"), saved.paths);
     settings.setValue(QStringLiteral("playlist/currentIndex"), saved.currentIndex);
     settings.setValue(QStringLiteral("window/geometry"), saved.window.geometry);

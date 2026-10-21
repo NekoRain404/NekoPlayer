@@ -10,6 +10,13 @@ add_custom_command(OUTPUT "${TEST_MEDIA}"
         -t 4 -c:v mpeg4 -q:v 4 -c:a pcm_s16le "${TEST_MEDIA}"
     VERBATIM)
 add_custom_target(test_media DEPENDS "${TEST_MEDIA}")
+add_executable(decoding_test decoding_test.cpp)
+target_link_libraries(decoding_test PRIVATE neko_session Qt6::Test)
+target_compile_definitions(decoding_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}"
+    TEST_EXTERNAL_SUBTITLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt")
+add_dependencies(decoding_test test_media)
+add_test(NAME decoding COMMAND decoding_test)
+set_tests_properties(decoding PROPERTIES TIMEOUT 60)
 set(TEST_CHAPTER_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/chapters.mkv")
 add_custom_command(OUTPUT "${TEST_CHAPTER_MEDIA}"
     COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
@@ -17,11 +24,20 @@ add_custom_command(OUTPUT "${TEST_CHAPTER_MEDIA}"
         -map 0 -map_metadata 1 -map_chapters 1 -c copy "${TEST_CHAPTER_MEDIA}"
     DEPENDS "${TEST_MEDIA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/chapters.ffmetadata" VERBATIM)
 add_custom_target(test_chapter_media DEPENDS "${TEST_CHAPTER_MEDIA}")
+set(TEST_OVERLAPPING_CHAPTER_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/overlapping-chapters.mkv")
+add_custom_command(OUTPUT "${TEST_OVERLAPPING_CHAPTER_MEDIA}"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -i "${TEST_MEDIA}" -i "${CMAKE_CURRENT_SOURCE_DIR}/data/overlapping-chapters.ffmetadata"
+        -map 0 -map_metadata 1 -map_chapters 1 -c copy "${TEST_OVERLAPPING_CHAPTER_MEDIA}"
+    DEPENDS "${TEST_MEDIA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/overlapping-chapters.ffmetadata"
+    VERBATIM)
+add_custom_target(test_overlapping_chapter_media DEPENDS "${TEST_OVERLAPPING_CHAPTER_MEDIA}")
 add_executable(navigation_test navigation_test.cpp)
 target_link_libraries(navigation_test PRIVATE neko_playback Qt6::Test)
 target_compile_definitions(navigation_test PRIVATE TEST_CHAPTER_MEDIA_PATH="${TEST_CHAPTER_MEDIA}"
-    TEST_MEDIA_PATH="${TEST_MEDIA}")
-add_dependencies(navigation_test test_chapter_media)
+    TEST_MEDIA_PATH="${TEST_MEDIA}"
+    TEST_OVERLAPPING_CHAPTER_MEDIA_PATH="${TEST_OVERLAPPING_CHAPTER_MEDIA}")
+add_dependencies(navigation_test test_chapter_media test_overlapping_chapter_media)
 add_test(NAME navigation COMMAND navigation_test)
 set_tests_properties(navigation PROPERTIES TIMEOUT 60)
 add_executable(playback_time_test playback_time_test.cpp)

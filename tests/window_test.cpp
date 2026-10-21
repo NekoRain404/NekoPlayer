@@ -4,8 +4,10 @@
 #include "playback/videowidget.h"
 #include "session/sessionstore.h"
 #include "ui/mainwindow.h"
+#include "ui/playbacksettingsdialog.h"
 #include "ui/timeseekdialog.h"
 #include <QAction>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -55,6 +57,62 @@ qint64 selectedTrack(MainWindow &window, MediaTrack::Type type) {
 class WindowTest final : public QObject {
     Q_OBJECT
   private slots:
+    void playbackSettingsApplyAndCancelPreserveIntent() {
+        MpvController player(true, true);
+        {
+            PlaybackSettingsDialog dialog(player);
+            auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
+            auto *buttons =
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+            auto *actual = dialog.findChild<QLabel *>(QStringLiteral("actualDecoder"));
+            QVERIFY(choice && buttons && actual);
+            QVERIFY(choice->currentData().toBool());
+            QCOMPARE(actual->text(), QStringLiteral("未播放"));
+            QVERIFY(!buttons->button(QDialogButtonBox::Apply)->isEnabled());
+            choice->setCurrentIndex(1);
+            QVERIFY(buttons->button(QDialogButtonBox::Apply)->isEnabled());
+            QVERIFY(player.hardwareDecodingEnabled());
+            buttons->button(QDialogButtonBox::Cancel)->click();
+            QVERIFY(player.hardwareDecodingEnabled());
+        }
+        {
+            PlaybackSettingsDialog dialog(player);
+            auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
+            auto *buttons =
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+            QVERIFY(choice && buttons);
+            choice->setCurrentIndex(1);
+            buttons->button(QDialogButtonBox::Apply)->click();
+            QVERIFY(!player.hardwareDecodingEnabled());
+            QVERIFY(!buttons->button(QDialogButtonBox::Apply)->isEnabled());
+            choice->setCurrentIndex(0);
+            buttons->button(QDialogButtonBox::Cancel)->click();
+            QVERIFY(!player.hardwareDecodingEnabled());
+        }
+        {
+            PlaybackSettingsDialog dialog(player);
+            auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
+            auto *buttons =
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+            QVERIFY(choice && buttons);
+            QVERIFY(!choice->currentData().toBool());
+            choice->setCurrentIndex(0);
+            buttons->button(QDialogButtonBox::Ok)->click();
+            QVERIFY(player.hardwareDecodingEnabled());
+            QCOMPARE(dialog.result(), QDialog::Accepted);
+        }
+        MainWindow window(true);
+        auto *settings = action(window, "playbackSettingsAction");
+        QVERIFY(settings);
+        QCOMPARE(settings->shortcut(), QKeySequence(Qt::Key_F5));
+        int containers = 0;
+        for (auto *menu : window.findChildren<QMenu *>()) {
+            if (menu->actions().contains(settings))
+                ++containers;
+        }
+        QCOMPARE(containers, 2); // Menu bar and context menu share the same action.
+    }
+
     void chapterActionsFollowSelectionAndKeepPause() {
         MainWindow window(true);
         auto *jump = action(window, "seekTimeAction");

@@ -53,6 +53,8 @@ struct MpvController::Impl {
     std::optional<int> requestedChapter;
     uint64_t chapterCommand = 0;
     uint64_t chapterQuery = 0;
+    bool chapterSeekStarted = false;
+    bool chapterQuerySettled = false;
     bool loading = false;
     std::optional<RecoveryState> recovery;
     QList<MediaTrack> tracksToRestore;
@@ -65,6 +67,7 @@ struct MpvController::Impl {
     QString error;
     std::atomic_bool shuttingDown{false};
     bool ready = false;
+    bool hardwareDecodingEnabled = true;
     uint64_t request = 0;
     struct TuningSetting {
         const char *name;
@@ -192,12 +195,9 @@ struct MpvController::Impl {
     }
 
     void cancelChapterRequest();
-    void observeChapter(int64_t index) {
-        state.currentChapter = (state.active || loading) && index >= 0 && index < INT_MAX
-                                   ? static_cast<int>(index)
-                                   : -1;
-    }
+    void observeChapter(int64_t index, bool settled = false);
     void selectChapter(int index);
+    void queryChapterRequest(bool settled = false);
     void confirmChapterRequest(const mpv_event &event);
     bool finishChapterQuery(const mpv_event &event);
 
@@ -400,6 +400,12 @@ struct MpvController::Impl {
             }
             case MPV_EVENT_PROPERTY_CHANGE:
                 updateProperty(*event);
+                break;
+            case MPV_EVENT_SEEK:
+                chapterSeekStarted = requestedChapter.has_value() && !chapterCommand;
+                break;
+            case MPV_EVENT_PLAYBACK_RESTART:
+                queryChapterRequest(chapterSeekStarted);
                 break;
             case MPV_EVENT_COMMAND_REPLY:
                 confirmChapterRequest(*event);

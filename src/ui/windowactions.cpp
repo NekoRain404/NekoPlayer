@@ -2,6 +2,7 @@
 #include "navigationmenu.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
+#include "playbacksettingsdialog.h"
 #include "playlistmodemenu.h"
 #include "playlistpane.h"
 #include "trackmenus.h"
@@ -104,6 +105,14 @@ void MainWindow::createActions() {
     connect(showPlaylistAction_, &QAction::toggled, this,
             [this](bool visible) { playlistPane_->setVisible(visible); });
     view->addAction(showPlaylistAction_);
+    auto *settings = menuBar()->addMenu(tr("设置(&S)"));
+    auto *playbackSettings =
+        make(tr("播放设置…"), "playbackSettingsAction", QKeySequence(Qt::Key_F5));
+    connect(playbackSettings, &QAction::triggered, this, [this] {
+        PlaybackSettingsDialog dialog(*controller_, this);
+        dialog.exec();
+    });
+    settings->addAction(playbackSettings);
     contextMenu_ = new QMenu(this);
     contextMenu_->addActions({openAction_, appendAction_, pauseAction_, stopAction_});
     contextMenu_->addSeparator();
@@ -116,6 +125,8 @@ void MainWindow::createActions() {
     contextMenu_->addSeparator();
     contextMenu_->addMenu(trackMenus_->audioMenu());
     contextMenu_->addMenu(trackMenus_->subtitleMenu());
+    contextMenu_->addSeparator();
+    contextMenu_->addAction(playbackSettings);
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this,
             [this](const QPoint &point) { contextMenu_->popup(mapToGlobal(point)); });

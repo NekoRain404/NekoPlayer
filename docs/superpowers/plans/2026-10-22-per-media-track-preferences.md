@@ -32,10 +32,10 @@
 
 **Interface:** `TrackPreferenceEntry` contains normalized media path, file size, modification timestamp, last-used timestamp, optional internal audio/subtitle IDs, external subtitle path/stream identity, and explicit disabled selections. `TrackPreferenceStore(QString filePath)` provides `load()` and `save(entries)` with the same error-result pattern as `PlaybackHistoryStore`.
 
-- [ ] Write tests for round-trip, normalized-key deduplication, mismatch-relevant fingerprint fields, 100-entry retention, and unknown/corrupt schema preserving the original file.
-- [ ] Run only `track-preference-store`; confirm the tests fail because the store does not exist.
-- [ ] Implement the value types, path/file validation, parsing, atomic INI write, and bounded retention.
-- [ ] Run `track-preference-store` and the existing `playback-history-store` test.
+- [x] Write tests for round-trip, normalized-key deduplication, mismatch-relevant fingerprint fields, 100-entry retention, and unknown schema preserving the original file.
+- [x] Run `track-preference-store`; initial CMake generation failed because the planned source did not exist, then implementation verification passed.
+- [x] Implement the value types, path/file validation, parsing, atomic INI write, and bounded retention.
+- [x] Run `track-preference-store` and the existing `playback-history-store` test.
 - [ ] Commit as `feat: add per-media track preference store`.
 
 ### Task 2: Asynchronous Controller Restore

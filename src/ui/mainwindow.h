@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QPersistentModelIndex>
 #include <QTimer>
 #include <memory>
 
@@ -42,6 +43,10 @@ class MainWindow final : public QMainWindow {
     void createActions();
     void chooseFile();
     void chooseFilesToAppend();
+    void choosePlaylistToOpen();
+    void choosePlaylistToSave();
+    void openPlaylist(const QString &path);
+    void savePlaylist(const QString &path);
     void clearPlaylist();
     void updateState();
     void showError(const QString &message);
@@ -62,6 +67,8 @@ class MainWindow final : public QMainWindow {
     QLabel *emptyHint_ = nullptr;
     ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
     QAction *openAction_ = nullptr;
+    QAction *openPlaylistAction_ = nullptr;
+    QAction *savePlaylistAction_ = nullptr;
     QAction *pauseAction_ = nullptr;
     QAction *stopAction_ = nullptr;
     QAction *muteAction_ = nullptr;
@@ -75,6 +82,7 @@ class MainWindow final : public QMainWindow {
     QMenu *playlistMenu_ = nullptr;
     QTimer controlsTimer_;
     QStringList pendingPaths_;
+    QPersistentModelIndex pendingPlaylistIndex_;
     QByteArray normalGeometry_;
     bool normalMaximized_ = false;
     bool sessionSaveAttempted_ = false;

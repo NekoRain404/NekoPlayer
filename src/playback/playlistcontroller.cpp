@@ -5,7 +5,22 @@
 
 #include <QFileInfo>
 #include <QPersistentModelIndex>
+#include <QUrl>
 #include <cmath>
+
+namespace {
+bool isPlayablePath(const QString &path) {
+    if (QFileInfo(path).isFile())
+        return true;
+
+    const QUrl url(path, QUrl::StrictMode);
+    if (!url.isValid() || url.scheme().isEmpty())
+        return false;
+    if (url.scheme().compare(QStringLiteral("file"), Qt::CaseInsensitive) == 0)
+        return QFileInfo(url.toLocalFile()).isFile();
+    return true;
+}
+} // namespace
 
 PlaylistController::PlaylistController(MpvController &player, QObject *parent)
     : QObject(parent), player_(player), model_(new PlaylistModel(this)) {
@@ -297,7 +312,7 @@ PlaylistController::ScanResult PlaylistController::playFirstAvailable(int firstR
         if (failedRows_.contains(row))
             continue;
         const auto path = model_->pathAt(row);
-        if (!QFileInfo(path).isFile()) {
+        if (!isPlayablePath(path)) {
             if (resumeEntry_.isValid() && resumeEntry_.row() == row)
                 resumeEntry_ = QPersistentModelIndex{};
             // Only the error path needs identity snapshots. Callbacks may edit
@@ -357,7 +372,7 @@ PlaylistController::ScanResult PlaylistController::playShuffled(int step) {
             continue;
         }
         const auto path = model_->pathAt(entry.row());
-        if (!QFileInfo(path).isFile()) {
+        if (!isPlayablePath(path)) {
             if (resumeEntry_ == entry)
                 resumeEntry_ = QPersistentModelIndex{};
             failedRows_.insert(entry.row());

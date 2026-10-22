@@ -3,6 +3,7 @@
 #include <QFileInfo>
 #include <QMimeData>
 #include <QPersistentModelIndex>
+#include <QUrl>
 
 namespace {
 constexpr auto playlistMimeType = "application/x-nekoplayer-playlist-entry";
@@ -109,7 +110,10 @@ QStringList PlaylistModel::paths() const { return paths_; }
 int PlaylistModel::addFiles(const QStringList &paths) {
     QStringList additions;
     for (const auto &path : paths) {
-        const auto absolute = QFileInfo(path).absoluteFilePath();
+        const QUrl url(path, QUrl::StrictMode);
+        const auto absolute = url.isValid() && !url.scheme().isEmpty()
+                                  ? path
+                                  : QFileInfo(path).absoluteFilePath();
         if (!absolute.isEmpty())
             additions.append(absolute);
     }

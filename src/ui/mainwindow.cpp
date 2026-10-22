@@ -6,6 +6,7 @@
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 #include "playback/videowidget.h"
+#include "playlist/m3u8store.h"
 #include "playlistpane.h"
 #include "session/sessionmanager.h"
 #include "transportbar.h"
@@ -114,10 +115,14 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
             &MpvController::prepareForRendererReset);
     connect(video_, &VideoWidget::doubleClicked, fullscreenAction_, &QAction::trigger);
     connect(video_, &VideoWidget::ready, this, [this] {
+        const auto pendingPlaylistIndex =
+            std::exchange(pendingPlaylistIndex_, QPersistentModelIndex{});
+        if (pendingPlaylistIndex.isValid())
+            playlist_->playAt(pendingPlaylistIndex.row());
         if (!pendingPaths_.isEmpty()) {
             const auto paths = std::exchange(pendingPaths_, {});
             playlist_->addFiles(paths);
-        } else
+        } else if (!pendingPlaylistIndex.isValid())
             controller_->resumeAfterRendererReset();
         updateState();
     });
@@ -195,8 +200,55 @@ void MainWindow::appendFiles(const QStringList &paths) {
 }
 
 void MainWindow::clearPlaylist() {
+    pendingPlaylistIndex_ = QPersistentModelIndex{};
     pendingPaths_.clear();
     playlist_->clear();
+}
+
+void MainWindow::choosePlaylistToOpen() {
+    const auto path = QFileDialog::getOpenFileName(this, tr("打开播放列表"), mediaDirectory(),
+                                                   tr("M3U8 播放列表 (*.m3u8);;所有文件 (*)"));
+    if (!path.isEmpty())
+        openPlaylist(path);
+}
+
+void MainWindow::choosePlaylistToSave() {
+    auto path = QFileDialog::getSaveFileName(this, tr("保存播放列表"), mediaDirectory(),
+                                             tr("M3U8 播放列表 (*.m3u8)"));
+    if (path.isEmpty())
+        return;
+    if (QFileInfo(path).suffix().isEmpty())
+        path += QStringLiteral(".m3u8");
+    savePlaylist(path);
+}
+
+void MainWindow::openPlaylist(const QString &path) {
+    if (video_->hasFailed()) {
+        showError(tr("OpenGL 初始化失败，无法打开播放列表"));
+        return;
+    }
+    const auto loaded = M3u8Store::load(path);
+    if (!loaded.error.isEmpty()) {
+        showError(loaded.error);
+        return;
+    }
+    pendingPaths_.clear();
+    pendingPlaylistIndex_ = QPersistentModelIndex{};
+    playlist_->restoreFiles(loaded.paths, loaded.currentIndex);
+    if (video_->isReady() && loaded.currentIndex >= 0)
+        playlist_->playAt(loaded.currentIndex);
+    else if (loaded.currentIndex >= 0)
+        pendingPlaylistIndex_ = playlist_->model()->index(loaded.currentIndex);
+    updateState();
+}
+
+void MainWindow::savePlaylist(const QString &path) {
+    const auto error = M3u8Store::save(path, playlist_->model()->paths(),
+                                       playlist_->model()->currentIndex());
+    if (!error.isEmpty())
+        showError(error);
+    else
+        showActionFeedback(tr("播放列表已保存"));
 }
 
 void MainWindow::chooseFile() {

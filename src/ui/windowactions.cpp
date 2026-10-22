@@ -31,6 +31,10 @@ void MainWindow::createActions() {
     openAction_ = make(tr("打开文件…"), "openAction", QKeySequence::Open);
     openAction_->setIcon(style()->standardIcon(QStyle::SP_DialogOpenButton));
     connect(openAction_, &QAction::triggered, this, &MainWindow::chooseFile);
+    openPlaylistAction_ = make(tr("打开播放列表…"), "openPlaylistAction", {});
+    connect(openPlaylistAction_, &QAction::triggered, this, &MainWindow::choosePlaylistToOpen);
+    savePlaylistAction_ = make(tr("保存播放列表…"), "savePlaylistAction", {});
+    connect(savePlaylistAction_, &QAction::triggered, this, &MainWindow::choosePlaylistToSave);
     appendAction_ =
         make(tr("添加文件…"), "appendAction", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
     appendAction_->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
@@ -106,6 +110,8 @@ void MainWindow::createActions() {
     file->addAction(openAction_);
     file->addAction(appendAction_);
     file->addSeparator();
+    file->addActions({openPlaylistAction_, savePlaylistAction_});
+    file->addSeparator();
     file->addAction(information);
     file->addSeparator();
     file->addAction(quit);
@@ -139,6 +145,8 @@ void MainWindow::createActions() {
     playlistMenu_ = menuBar()->addMenu(tr("播放列表(&L)"));
     playlistMenu_->setObjectName(QStringLiteral("playlistMenu"));
     playlistMenu_->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
+    playlistMenu_->addSeparator();
+    playlistMenu_->addActions({openPlaylistAction_, savePlaylistAction_});
     auto *modeMenu = new PlaylistModeMenu(*playlist_, this);
     connect(modeMenu, &PlaylistModeMenu::feedback, this,
             [this](const QString &message) { showActionFeedback(message, 2500); });

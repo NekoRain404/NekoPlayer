@@ -54,6 +54,22 @@ class PlaylistTest final : public QObject {
         QCOMPARE(model.data(model.index(0)).toString(), QStringLiteral("a.mkv"));
     }
 
+    void modelPreservesUrlEntriesForPlaylistRoundTrips() {
+        PlaylistModel model;
+        const auto url = QStringLiteral("https://example.test/media/movie.mkv");
+        QCOMPARE(model.addFiles({url}), 1);
+        QCOMPARE(model.pathAt(0), url);
+    }
+
+    void controllerDoesNotSkipUrlEntries() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        const auto url = QStringLiteral("http://127.0.0.1:1/unavailable.mkv");
+        queue.addFiles({url, QString::fromUtf8(TEST_MEDIA_PATH)});
+        QCOMPARE(queue.model()->currentIndex(), 0);
+        QCOMPARE(queue.model()->currentPath(), url);
+    }
+
     void previousSkipsMissingItemsInReverse() {
         MpvController player(true, true);
         PlaylistController queue(player);

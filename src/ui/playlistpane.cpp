@@ -31,6 +31,13 @@ QToolButton *actionButton(QAction *action, QWidget *parent) {
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setAutoRaise(true);
     button->setIconSize(QSize(18, 18));
+    button->setFocusPolicy(Qt::StrongFocus);
+    const auto updateDescription = [button, action] {
+        button->setAccessibleName(action->text());
+        button->setToolTip(action->text());
+    };
+    updateDescription();
+    QObject::connect(action, &QAction::changed, button, updateDescription);
     return button;
 }
 } // namespace
@@ -58,6 +65,10 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     moveUp_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Up));
     moveDown_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Down));
     remove_->setIcon(style()->standardIcon(QStyle::SP_DialogDiscardButton));
+    moveUp_->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
+    moveDown_->setIcon(style()->standardIcon(QStyle::SP_ArrowDown));
+    view_->setAccessibleName(tr("播放列表"));
+    view_->setToolTip(tr("双击播放；可拖动排序"));
     for (auto *action : editingActions()) {
         action->setShortcutContext(Qt::WidgetShortcut);
         view_->addAction(action);
@@ -80,7 +91,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     connect(model, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateEditingActions);
     connect(model, &PlaylistModel::rowsMoved, this, &PlaylistPane::updateEditingActions);
     connect(model, &PlaylistModel::modelReset, this, &PlaylistPane::updateEditingActions);
-    view_->setAlternatingRowColors(true);
+    view_->setAlternatingRowColors(false);
     view_->setUniformItemSizes(true);
     view_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     auto *layout = new QVBoxLayout(this);
@@ -113,6 +124,8 @@ void PlaylistPane::changeEvent(QEvent *event) {
     remove_->setText(tr("从列表移除"));
     moveUp_->setText(tr("上移所选项"));
     moveDown_->setText(tr("下移所选项"));
+    view_->setAccessibleName(tr("播放列表"));
+    view_->setToolTip(tr("双击播放；可拖动排序"));
 }
 
 void PlaylistPane::synchronizeCurrent() {

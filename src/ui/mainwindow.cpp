@@ -323,6 +323,8 @@ void MainWindow::updateState() {
     stopAction_->setEnabled(state.active);
     const bool canPlay = !state.active || state.paused;
     pauseAction_->setText(canPlay ? tr("播放") : tr("暂停"));
+    pauseAction_->setToolTip(pauseAction_->text());
+    pauseAction_->setStatusTip(pauseAction_->text());
     pauseAction_->setIcon(
         style()->standardIcon(canPlay ? QStyle::SP_MediaPlay : QStyle::SP_MediaPause));
     muteAction_->setChecked(state.muted);
@@ -388,6 +390,7 @@ void MainWindow::setFullscreen(bool enabled) {
         showPlaylistAction_->setEnabled(false);
         showFullScreen();
         video_->setCursor(Qt::BlankCursor);
+        revealControls();
     } else {
         controlsTimer_.stop();
         fullscreenControls_->leave();
@@ -402,6 +405,11 @@ void MainWindow::setFullscreen(bool enabled) {
         playlistPane_->setVisible(showPlaylistAction_->isChecked());
     }
     fullscreenAction_->setChecked(enabled);
+    fullscreenAction_->setText(enabled ? tr("退出全屏") : tr("全屏"));
+    fullscreenAction_->setToolTip(fullscreenAction_->text());
+    fullscreenAction_->setStatusTip(fullscreenAction_->text());
+    fullscreenAction_->setIcon(style()->standardIcon(enabled ? QStyle::SP_TitleBarNormalButton
+                                                             : QStyle::SP_TitleBarMaxButton));
 }
 
 void MainWindow::revealControls() {

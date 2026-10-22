@@ -1,5 +1,12 @@
 # Verification Record
 
+Content-first UI refinement stage (2026-10-22):
+
+- Dark and light themes now share deliberate hover, pressed, checked, focus, and disabled feedback for controls; playlist-specific row styling is scoped to `playlistView`, and timeline seek handles have a more legible hover target. Playlist row striping no longer competes with selection styling.
+- Transport icon buttons are keyboard-focusable and expose their current QAction text as a live tooltip and accessible name. High-frequency file/network, playlist, seek, volume, and information actions now use Qt standard icons and status tips; playlist editing actions have directional icons and the list has an accessible name.
+- Fullscreen entry reveals the floating controls immediately and starts the existing fade timer, without changing video layout or renderer behavior. Runtime fullscreen action text and icon track the window state.
+- Full Debug build passed, including compile-only window behavior suites. `appearance-preferences` and `code-size` passed; window behavior tests were compiled but not run as requested. `git diff --check` passed. No CPU frame copies, renderer changes, or polling were introduced.
+
 Folder drag-and-drop stage (2026-10-22):
 
 - Local drag routing now distinguishes files, subtitles, and one or more folders before emitting any side effect. Folder batches are scanned by the existing QtConcurrent worker and emitted as one naturally sorted result; mixed folder/media/subtitle drops are rejected atomically.

@@ -62,6 +62,18 @@ class FullscreenFeedbackWindowTest final : public QObject {
         QVERIFY(!info->isVisible());
     }
 
+    void fullscreenEntryRevealsTransportBeforeItFades() {
+        MainWindow window(true);
+        window.show();
+        auto *fullscreen = window.findChild<QAction *>(QStringLiteral("fullscreenAction"));
+        auto *transport = window.findChild<QWidget *>(QStringLiteral("transportBar"));
+        QVERIFY(fullscreen && transport);
+
+        fullscreen->trigger();
+        QTRY_VERIFY(window.isFullScreen());
+        QVERIFY(transport->isVisible());
+    }
+
     void windowedActionsKeepUsingTheStatusBar() {
         MainWindow window(true);
         auto *forward = window.findChild<QAction *>(QStringLiteral("seekForwardAction"));

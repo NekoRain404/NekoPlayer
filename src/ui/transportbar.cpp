@@ -108,7 +108,13 @@ QToolButton *button(QAction *action, QWidget *parent) {
     result->setToolButtonStyle(Qt::ToolButtonIconOnly);
     result->setIconSize(QSize(22, 22));
     result->setMinimumSize(36, 32);
-    result->setFocusPolicy(Qt::NoFocus);
+    result->setFocusPolicy(Qt::StrongFocus);
+    const auto updateDescription = [result, action] {
+        result->setAccessibleName(action->text());
+        result->setToolTip(action->text());
+    };
+    updateDescription();
+    QObject::connect(action, &QAction::changed, result, updateDescription);
     return result;
 }
 } // namespace

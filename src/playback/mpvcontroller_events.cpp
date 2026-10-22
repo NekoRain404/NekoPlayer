@@ -160,7 +160,7 @@ void MpvController::Impl::drainEvents() {
                 break;
             if (event->reply_userdata == restoreCommand && restoreCommand) {
                 restoreCommand = 0;
-                restoreNextSubtitle();
+                restoreNextExternalTrack();
             }
             report(event->error);
             break;

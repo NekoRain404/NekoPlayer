@@ -81,7 +81,7 @@ struct MpvController::Impl {
     };
     struct TrackPreferenceRestore {
         TrackSelectionPreference preference;
-        QStringList paths;
+        QList<std::pair<MediaTrack::Type, QString>> paths;
         uint64_t generation = 0;
         uint64_t command = 0;
         uint64_t query = 0;
@@ -107,9 +107,11 @@ struct MpvController::Impl {
     bool loading = false;
     std::optional<RecoveryState> recovery;
     QList<MediaTrack> tracksToRestore;
-    QStringList subtitlePathsToRestore;
+    QList<std::pair<MediaTrack::Type, QString>> externalPathsToRestore;
     uint64_t restoreCommand = 0;
     uint64_t restoreQuery = 0;
+    uint64_t restoreGeneration = 0;
+    uint64_t restoreIdentity = 0;
     QSet<uint64_t> canceledRestoreRequests;
     bool applyingRestoredSelections = false;
     std::optional<TrackPreferenceRestore> preferenceRestore;
@@ -334,64 +336,25 @@ struct MpvController::Impl {
             canceledRestoreRequests.insert(restoreQuery);
         applyingRestoredSelections = false;
         tracksToRestore.clear();
-        subtitlePathsToRestore.clear();
+        externalPathsToRestore.clear();
+        ++restoreIdentity;
         restoreCommand = restoreQuery = 0;
         cancelPreferenceRestore();
     }
 
+    void addExternalTrack(MediaTrack::Type type, const QString &path);
     void cancelPreferenceRestore();
-    void startPreferenceSubtitleLoad();
+    void startPreferenceExternalLoad();
     void queryPreferenceTracks();
     void applyPreferenceTracks(const QList<MediaTrack> &snapshot);
     void startPreferenceSelection();
     bool finishPreferenceCommand(const mpv_event &event);
     bool finishPreferenceQuery(const mpv_event &event);
 
-    void queryRestoredTracks() {
-        restoreQuery = ++request;
-        const int status =
-            mpv_get_property_async(client.get(), restoreQuery, "track-list", MPV_FORMAT_NODE);
-        report(status);
-        if (status < 0) {
-            restoreQuery = 0;
-            cancelTrackRestore();
-        }
-    }
-
-    void restoreExternalTracks() {
-        if (tracksToRestore.isEmpty())
-            return;
-        QSet<QString> paths;
-        for (const auto &track : tracksToRestore) {
-            if (track.type == MediaTrack::Type::Subtitle && track.external &&
-                !track.externalPath.isEmpty() && !paths.contains(track.externalPath)) {
-                paths.insert(track.externalPath);
-                subtitlePathsToRestore.append(track.externalPath);
-            }
-        }
-        restoreNextSubtitle();
-    }
-
-    void restoreNextSubtitle() {
-        // sub-add spawns backend workers. Chain replies so the final query sees all files.
-        while (!subtitlePathsToRestore.isEmpty()) {
-            const auto path = subtitlePathsToRestore.takeFirst();
-            restoreCommand = command({"sub-add", path.toUtf8(), "auto"});
-            if (restoreCommand)
-                return;
-        }
-        queryRestoredTracks();
-    }
-
-    void restoreSelections(const QList<MediaTrack> &current) {
-        for (const auto type : {MediaTrack::Type::Audio, MediaTrack::Type::Subtitle}) {
-            const auto id = trackIdForRestore(tracksToRestore, current, type);
-            command({"set", type == MediaTrack::Type::Audio ? "aid" : "sid",
-                     id ? QByteArray::number(id) : QByteArray("no")});
-        }
-        applyingRestoredSelections = true;
-        updateTracks(current);
-    }
+    void queryRestoredTracks();
+    void restoreExternalTracks();
+    void restoreNextExternalTrack();
+    void restoreSelections(const QList<MediaTrack> &current);
 
     void updateProperty(const mpv_event &event);
     void requestAudioDevice(const QString &name, bool persistPreference);

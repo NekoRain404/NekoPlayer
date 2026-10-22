@@ -97,6 +97,7 @@ class MpvController final : public QObject {
     void adjustSubtitleDelay(double seconds);
     void selectAudioTrack(qint64 id);
     void selectSubtitleTrack(qint64 id);
+    void addAudio(const QString &path);
     void addSubtitle(const QString &path);
     void setSubtitleVisible(bool visible);
     void setSubtitleScale(double scale);
@@ -126,6 +127,7 @@ class MpvController final : public QObject {
     void tuningChanged();
     void tracksChanged();
     void trackSelectionRequested(MediaTrack::Type type, qint64 id);
+    void audioLoadRequested();
     void subtitleLoadRequested();
     void trackPreferenceRestoreFinished(bool canceled);
     void audioDevicesChanged();

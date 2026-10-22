@@ -21,7 +21,7 @@ class TrackMenus final : public QObject {
     void rebuild();
     void populate(QMenu *menu, QActionGroup *group, MediaTrack::Type type);
     void updateAvailability();
-    void chooseSubtitle();
+    void chooseExternalTrack(MediaTrack::Type type);
     MpvController &controller_;
     QWidget *window_;
     QMenu *audioMenu_;
@@ -30,6 +30,8 @@ class TrackMenus final : public QObject {
     QMenu *subtitleDisplayMenu_;
     QActionGroup *audioGroup_;
     QActionGroup *subtitleGroup_;
+    QAction *loadAudioAction_;
     QAction *loadSubtitleAction_;
+    quint64 sourceRevision_ = 0;
     bool active_ = false;
 };

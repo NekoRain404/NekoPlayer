@@ -381,19 +381,6 @@ void MpvController::selectSubtitleTrack(qint64 id) {
     impl_->selectTrack(MediaTrack::Type::Subtitle, id);
 }
 
-void MpvController::addSubtitle(const QString &path) {
-    if (state().active && !path.isEmpty()) {
-        const auto generation = impl_->openGeneration;
-        impl_->cancelTrackRestore();
-        if (generation != impl_->openGeneration || !state().active)
-            return;
-        emit subtitleLoadRequested();
-        if (generation != impl_->openGeneration || !state().active)
-            return;
-        impl_->command({"sub-add", QFileInfo(path).absoluteFilePath().toUtf8(), "select"});
-    }
-}
-
 void MpvController::prepareForRendererReset() {
     if (state().active) {
         impl_->recovery = Impl::RecoveryState{
@@ -409,7 +396,11 @@ void MpvController::resumeAfterRendererReset() {
         return;
     const auto saved = std::move(*impl_->recovery);
     impl_->recovery.reset();
+    const auto generation = impl_->openGeneration;
+    const auto identity = impl_->restoreIdentity + 1;
     impl_->cancelTrackRestore();
+    if (generation != impl_->openGeneration || identity != impl_->restoreIdentity)
+        return;
     const auto selectedInternal = [&saved](MediaTrack::Type type) {
         for (const auto &track : saved.tracks) {
             if (track.type == type && track.selected && !track.external)
@@ -426,12 +417,12 @@ void MpvController::resumeAfterRendererReset() {
     const auto position = MediaSource::isNetwork(saved.playback.path) && !saved.playback.seekable
                               ? 0.0
                               : saved.playback.position;
-    const auto options = QByteArray("start=") + QByteArray::number(position, 'f', 3) +
-                         ",pause=" + (saved.playback.paused ? "yes" : "no") +
-                         ",aid=" + selectedInternal(MediaTrack::Type::Audio) +
-                         ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no" +
-                         ",ab-loop-a=" + loopPoint(abLoop().start) +
-                         ",ab-loop-b=" + loopPoint(abLoop().end);
+    const auto options =
+        QByteArray("start=") + QByteArray::number(position, 'f', 3) +
+        ",pause=" + (saved.playback.paused ? "yes" : "no") +
+        ",aid=" + selectedInternal(MediaTrack::Type::Audio) +
+        ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no,audio-file-auto=no" +
+        ",ab-loop-a=" + loopPoint(abLoop().start) + ",ab-loop-b=" + loopPoint(abLoop().end);
     impl_->tracksToRestore = saved.tracks;
     impl_->state.path = saved.playback.path;
     impl_->playingPath = saved.playback.path;
@@ -439,6 +430,8 @@ void MpvController::resumeAfterRendererReset() {
     impl_->openingEntry = -1;
     impl_->resetPlayback();
     emit stateChanged();
+    if (generation != impl_->openGeneration || identity != impl_->restoreIdentity)
+        return;
     const auto [id, status] =
         impl_->submitCommand({"loadfile", saved.playback.path.toUtf8(), "replace", "-1", options});
     impl_->openingCommand = id;

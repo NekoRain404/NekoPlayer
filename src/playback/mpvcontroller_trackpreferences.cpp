@@ -13,7 +13,7 @@ void MpvController::Impl::cancelPreferenceRestore() {
     emit owner->trackPreferenceRestoreFinished(true);
 }
 
-void MpvController::Impl::startPreferenceSubtitleLoad() {
+void MpvController::Impl::startPreferenceExternalLoad() {
     if (preferenceRestore && (!mediaReady || !state.active || pendingPlayback ||
                               preferenceRestore->generation != openGeneration)) {
         cancelPreferenceRestore();
@@ -22,8 +22,9 @@ void MpvController::Impl::startPreferenceSubtitleLoad() {
     while (preferenceRestore && preferenceRestore->generation == openGeneration &&
            !preferenceRestore->paths.isEmpty()) {
         const auto identity = preferenceRestore->identity;
-        const auto path = preferenceRestore->paths.takeFirst();
-        const auto [id, status] = submitCommand({"sub-add", path.toUtf8(), "auto"});
+        const auto [type, path] = preferenceRestore->paths.takeFirst();
+        const auto [id, status] = submitCommand(
+            {type == MediaTrack::Type::Audio ? "audio-add" : "sub-add", path.toUtf8(), "auto"});
         preferenceRestore->command = id;
         report(status);
         if (!preferenceRestore || preferenceRestore->identity != identity || id)
@@ -73,13 +74,13 @@ bool MpvController::Impl::finishPreferenceCommand(const mpv_event &event) {
         report(event.error);
         return true;
     }
-    // An unreadable subtitle must not prevent loading the rest or restoring audio.
+    // An unreadable external file must not prevent loading the rest or restoring selections.
     report(event.error);
     if (preferenceRestore && preferenceRestore->identity == identity) {
         if (preferenceRestore->selecting)
             startPreferenceSelection();
         else
-            startPreferenceSubtitleLoad();
+            startPreferenceExternalLoad();
     }
     return true;
 }
@@ -123,37 +124,40 @@ void MpvController::Impl::applyPreferenceTracks(const QList<MediaTrack> &snapsho
     const auto select = [this](MediaTrack::Type type, qint64 id) {
         preferenceRestore->selections.append({type, id});
     };
-    if (preference.audioTrackId) {
-        const auto id = *preference.audioTrackId;
-        const bool exists =
-            id == 0 || std::any_of(snapshot.cbegin(), snapshot.cend(), [id](const auto &track) {
-                return track.type == MediaTrack::Type::Audio && !track.external && track.id == id;
-            });
-        if (exists)
-            select(MediaTrack::Type::Audio, id);
-    }
-    if (preference.subtitleTrackId) {
-        const auto id = *preference.subtitleTrackId;
-        const bool exists =
-            id == 0 || std::any_of(snapshot.cbegin(), snapshot.cend(), [id](const auto &track) {
-                return track.type == MediaTrack::Type::Subtitle && !track.external &&
-                       track.id == id;
-            });
-        if (exists)
-            select(MediaTrack::Type::Subtitle, id);
-    } else if (!preference.selectedExternalSubtitlePath.isEmpty() &&
-               preference.selectedExternalSubtitleStream >= 0) {
+    const auto selectPreference = [&](MediaTrack::Type type, std::optional<qint64> internalId,
+                                      const QString &path, int stream) {
+        if (internalId) {
+            const auto id = *internalId;
+            const bool exists =
+                id == 0 ||
+                std::any_of(snapshot.cbegin(), snapshot.cend(), [type, id](const auto &track) {
+                    return track.type == type && !track.external && track.id == id;
+                });
+            if (exists)
+                select(type, id);
+            return;
+        }
+        if (path.isEmpty() || stream < 0)
+            return;
+        const auto canonical = QFileInfo(path).canonicalFilePath();
+        if (canonical.isEmpty())
+            return;
         int ordinal = 0;
         for (const auto &track : snapshot) {
-            if (track.type != MediaTrack::Type::Subtitle || !track.external ||
-                track.externalPath != preference.selectedExternalSubtitlePath)
+            if (track.type != type || !track.external ||
+                QFileInfo(track.externalPath).canonicalFilePath() != canonical)
                 continue;
-            if (ordinal++ == preference.selectedExternalSubtitleStream) {
-                select(MediaTrack::Type::Subtitle, track.id);
+            if (ordinal++ == stream) {
+                select(type, track.id);
                 break;
             }
         }
-    }
+    };
+    selectPreference(MediaTrack::Type::Audio, preference.audioTrackId,
+                     preference.selectedExternalAudioPath, preference.selectedExternalAudioStream);
+    selectPreference(MediaTrack::Type::Subtitle, preference.subtitleTrackId,
+                     preference.selectedExternalSubtitlePath,
+                     preference.selectedExternalSubtitleStream);
     preferenceRestore->selecting = true;
     startPreferenceSelection();
 }
@@ -176,29 +180,38 @@ void MpvController::restoreTrackPreference(const TrackSelectionPreference &prefe
         if (track.external && !track.externalPath.isEmpty())
             uniquePaths.insert(QFileInfo(track.externalPath).canonicalFilePath());
     }
-    QStringList unavailablePaths;
-    auto paths = preference.externalSubtitlePaths;
-    if (!preference.selectedExternalSubtitlePath.isEmpty())
-        paths.append(preference.selectedExternalSubtitlePath);
-    for (const auto &path : paths) {
-        const QFileInfo info(path);
-        const auto canonical = info.canonicalFilePath();
-        if (!info.exists() || !info.isFile() || canonical.isEmpty()) {
-            unavailablePaths.append(path);
-            continue;
+    QList<std::pair<MediaTrack::Type, QString>> unavailablePaths;
+    const auto appendPaths = [&](MediaTrack::Type type, QStringList paths,
+                                 const QString &selected) {
+        if (!selected.isEmpty())
+            paths.append(selected);
+        for (const auto &path : paths) {
+            const QFileInfo info(path);
+            const auto canonical = info.canonicalFilePath();
+            if (!info.exists() || !info.isFile() || canonical.isEmpty()) {
+                if (!unavailablePaths.contains({type, path}))
+                    unavailablePaths.append({type, path});
+                continue;
+            }
+            if (uniquePaths.contains(canonical))
+                continue;
+            uniquePaths.insert(canonical);
+            restore.paths.append({type, canonical});
         }
-        if (uniquePaths.contains(canonical))
-            continue;
-        uniquePaths.insert(canonical);
-        restore.paths.append(canonical);
-    }
+    };
+    appendPaths(MediaTrack::Type::Audio, preference.externalAudioPaths,
+                preference.selectedExternalAudioPath);
+    appendPaths(MediaTrack::Type::Subtitle, preference.externalSubtitlePaths,
+                preference.selectedExternalSubtitlePath);
     impl_->preferenceRestore = std::move(restore);
-    for (const auto &path : unavailablePaths) {
-        emit errorOccurred(tr("外挂字幕文件不可用：%1").arg(path));
+    for (const auto &[type, path] : unavailablePaths) {
+        emit errorOccurred((type == MediaTrack::Type::Audio ? tr("外挂音轨文件不可用：%1")
+                                                            : tr("外挂字幕文件不可用：%1"))
+                               .arg(path));
         if (!impl_->preferenceRestore || impl_->preferenceRestore->identity != identity)
             return;
     }
-    impl_->startPreferenceSubtitleLoad();
+    impl_->startPreferenceExternalLoad();
 }
 
 bool MpvController::trackRestorationPending() const {

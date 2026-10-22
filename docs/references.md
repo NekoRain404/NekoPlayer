@@ -1,5 +1,7 @@
 # 参考项目
 
+外挂音轨参考 KikoPlay `Play/Video/mpvplayer.cpp` 的 `addAudioTrack()` 和 mpv.net `src/MpvNet.Windows/GuiCommand.cs` 的 `LoadAudio()` 文件入口。NekoPlayer 独立实现异步 `audio-add`、共享 Widgets 动作、媒体指纹记忆与类型／路径／流序号恢复；未复制上游源码。恢复选项依据安装的 mpv 0.41 手册。
+
 当前媒体操作参考 Haruna `src/playlist/PlaylistItemContextMenu.qml` 的本地文件夹入口和本地路径／网络 URL 复制区分，以及 `playlistfilterproxymodel.cpp` 的剪贴板用途。NekoPlayer 独立实现面向当前播放快照的 Widgets 共享动作，时间文本复用既有毫秒格式化；文件夹使用 Qt 桌面打开接口，没有复制上游代码或引入 KDE 文件管理依赖。
 
 最近播放参考 Haruna `src/qml/Menus/FileMenu.qml` 的独立最近文件子菜单、打开时构建条目、清空入口与重新打开最后媒体动作。NekoPlayer 独立实现 Qt Widgets 共享菜单、仅成功加载时记录、20 项有界去重与独立 JSON 保存，没有复制上游代码或引入 KDE 依赖。

@@ -36,6 +36,10 @@ class TrackPreferenceStoreTest final : public QObject {
 
         TrackPreferenceStore store(temporary.filePath(QStringLiteral("session.ini.tracks.ini")));
         auto saved = entry(media, 1700000000001LL);
+        saved.selection.audioTrackId.reset();
+        saved.selection.externalAudioPaths = {media + QStringLiteral(".mka")};
+        saved.selection.selectedExternalAudioPath = saved.selection.externalAudioPaths.front();
+        saved.selection.selectedExternalAudioStream = 1;
         const auto result = store.save({saved});
         QVERIFY2(result.isEmpty(), qPrintable(result));
         const auto loaded = store.load();
@@ -43,7 +47,12 @@ class TrackPreferenceStoreTest final : public QObject {
         QCOMPARE(loaded.entries.size(), 1);
         QCOMPARE(loaded.entries.front().mediaPath, QFileInfo(media).canonicalFilePath());
         QCOMPARE(loaded.entries.front().fileSize, qint64(5));
-        QCOMPARE(loaded.entries.front().selection.audioTrackId, std::optional<qint64>(2));
+        QVERIFY(!loaded.entries.front().selection.audioTrackId.has_value());
+        QCOMPARE(loaded.entries.front().selection.externalAudioPaths,
+                 saved.selection.externalAudioPaths);
+        QCOMPARE(loaded.entries.front().selection.selectedExternalAudioPath,
+                 saved.selection.selectedExternalAudioPath);
+        QCOMPARE(loaded.entries.front().selection.selectedExternalAudioStream, 1);
         QCOMPARE(loaded.entries.front().selection.subtitleTrackId, std::optional<qint64>(4));
         QCOMPARE(loaded.entries.front().selection.externalSubtitlePaths,
                  QStringList{media + QStringLiteral(".srt")});
@@ -134,6 +143,26 @@ class TrackPreferenceStoreTest final : public QObject {
             << QStringLiteral("audioTrack/present") << QVariant(QStringLiteral("garbage"));
         QTest::newRow("subtitle-presence")
             << QStringLiteral("subtitleTrack/present") << QVariant(QStringLiteral("garbage"));
+        QTest::newRow("audio-stream-text")
+            << QStringLiteral("selectedExternalAudioStream") << QVariant(QStringLiteral("x"));
+        QTest::newRow("audio-stream-negative")
+            << QStringLiteral("selectedExternalAudioStream") << QVariant(-2);
+        QTest::newRow("audio-stream-large")
+            << QStringLiteral("selectedExternalAudioStream") << QVariant(65536);
+        QTest::newRow("audio-path-relative")
+            << QStringLiteral("selectedExternalAudioPath") << QVariant(QStringLiteral("song.flac"));
+        QTest::newRow("audio-path-long")
+            << QStringLiteral("selectedExternalAudioPath")
+            << QVariant(QStringLiteral("/") + QString(8192, QLatin1Char('a')));
+        QTest::newRow("audio-path-null")
+            << QStringLiteral("selectedExternalAudioPath")
+            << QVariant(QStringLiteral("/audio") + QChar::Null + QStringLiteral(".flac"));
+        QTest::newRow("audio-count-text")
+            << QStringLiteral("externalAudioCount") << QVariant(QStringLiteral("x"));
+        QTest::newRow("audio-count-negative")
+            << QStringLiteral("externalAudioCount") << QVariant(-1);
+        QTest::newRow("audio-count-large") << QStringLiteral("externalAudioCount") << QVariant(65);
+        QTest::newRow("audio-path-missing") << QStringLiteral("externalAudioCount") << QVariant(1);
     }
 
     void malformedSelectionFieldsArePreserved() {
@@ -187,6 +216,64 @@ class TrackPreferenceStoreTest final : public QObject {
         QCOMPARE(loaded.entries.size(), 1);
         QCOMPARE(loaded.entries.front().mediaPath, retained);
         QVERIFY(store.save(loaded.entries).isEmpty());
+    }
+
+    void legacySelectionWithoutAudioFieldsLoadsAndRetainsInternalChoice() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        QFile file(media);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write("v"), qint64(1));
+        file.close();
+        const auto path = temporary.filePath(QStringLiteral("tracks.ini"));
+        TrackPreferenceStore store(path);
+        QVERIFY(store.save({entry(media, 1)}).isEmpty());
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            for (const auto &key :
+                 {QStringLiteral("selectedExternalAudioPath"),
+                  QStringLiteral("selectedExternalAudioStream"),
+                  QStringLiteral("externalAudioCount"), QStringLiteral("externalAudio")})
+                settings.remove(QStringLiteral("entries/0/") + key);
+            settings.sync();
+        }
+        const auto loaded = store.load();
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.entries.size(), 1);
+        const auto &selection = loaded.entries.front().selection;
+        QCOMPARE(selection.audioTrackId, std::optional<qint64>(2));
+        QVERIFY(selection.selectedExternalAudioPath.isEmpty());
+        QCOMPARE(selection.selectedExternalAudioStream, -1);
+        QVERIFY(selection.externalAudioPaths.isEmpty());
+    }
+
+    void invalidExternalAudioSaveDoesNotOverwriteExistingSelection() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        QFile file(media);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write("v"), qint64(1));
+        file.close();
+        TrackPreferenceStore store(temporary.filePath(QStringLiteral("tracks.ini")));
+        auto saved = entry(media, 1);
+        saved.selection.audioTrackId = 0;
+        QVERIFY(store.save({saved}).isEmpty());
+        auto invalid = saved;
+        invalid.selection.externalAudioPaths = {QStringLiteral("relative.flac")};
+        QVERIFY(!store.save({invalid}).isEmpty());
+        invalid = saved;
+        invalid.selection.selectedExternalAudioStream = 65536;
+        QVERIFY(!store.save({invalid}).isEmpty());
+        invalid = saved;
+        for (int index = 0; index < 65; ++index)
+            invalid.selection.externalAudioPaths.append(media + QString::number(index));
+        QVERIFY(!store.save({invalid}).isEmpty());
+        const auto loaded = store.load();
+        QVERIFY(loaded.error.isEmpty());
+        QCOMPARE(loaded.entries.size(), 1);
+        QCOMPARE(loaded.entries.front().selection.audioTrackId, std::optional<qint64>(0));
     }
 
     void savingPrunesStaleEntries() {

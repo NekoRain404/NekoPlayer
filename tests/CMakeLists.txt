@@ -260,6 +260,26 @@ add_custom_command(OUTPUT "${TEST_TRACK_MEDIA}"
         "${TEST_TRACK_MEDIA}"
     DEPENDS "${TEST_MEDIA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt" VERBATIM)
 add_custom_target(test_track_media DEPENDS "${TEST_TRACK_MEDIA}")
+set(TEST_EXTERNAL_AUDIO "${CMAKE_CURRENT_BINARY_DIR}/media/外挂 audio [2].mka")
+add_custom_command(OUTPUT "${TEST_EXTERNAL_AUDIO}"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -i "${TEST_TRACK_MEDIA}" -map 0:a -c copy "${TEST_EXTERNAL_AUDIO}"
+    DEPENDS "${TEST_TRACK_MEDIA}" VERBATIM)
+add_custom_target(test_external_audio DEPENDS "${TEST_EXTERNAL_AUDIO}")
+add_executable(external_audio_test external_audio_test.cpp)
+target_link_libraries(external_audio_test PRIVATE neko_playback Qt6::Test)
+add_dependencies(external_audio_test test_track_media test_external_audio test_video_only)
+add_test(NAME external-audio COMMAND external_audio_test
+    "${TEST_TRACK_MEDIA}" "${TEST_EXTERNAL_AUDIO}" "${TEST_VIDEO_ONLY}")
+set_tests_properties(external-audio PROPERTIES TIMEOUT 60)
+add_executable(external_audio_session_test external_audio_session_test.cpp)
+target_link_libraries(external_audio_session_test PRIVATE neko_session Qt6::Test)
+target_compile_definitions(external_audio_session_test PRIVATE
+    TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"
+    TEST_EXTERNAL_AUDIO_PATH="${TEST_EXTERNAL_AUDIO}")
+add_dependencies(external_audio_session_test test_track_media test_external_audio)
+add_test(NAME external-audio-session COMMAND external_audio_session_test)
+set_tests_properties(external-audio-session PROPERTIES TIMEOUT 60)
 target_compile_definitions(screenshot_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}")
 add_dependencies(screenshot_test test_track_media)
 add_executable(subtitles_test subtitles_test.cpp)

@@ -22,7 +22,8 @@
 | `TransportBar` | 展示时间/进度/音量，拖动预览，发出定位和音量意图 | 状态快照和 QAction，不操作 mpv |
 | `PlaybackOverlay` / `playbackoverlaytext.cpp` | Tab 常驻播放信息与独立、自动隐藏的定位进度 | 只读取控制器快照；纯文本格式化与 Qt Widgets 分离，不调用 mpv |
 | `PlaylistPane` | 队列视图、独立编辑选择、当前项标识及编辑动作入口 | 通过队列业务 API 和共享 QAction 操作，不接触 mpv |
-| `TrackMenus` | 音轨、字幕菜单和外挂字幕文件入口 | 依赖控制器快照与业务接口，不接触 mpv handle |
+| `TrackMenus` | 音轨、字幕菜单和外挂音轨／字幕文件入口；文件选择期间检查媒体代次 | 依赖控制器快照与业务接口，不接触 mpv handle |
+| `mpvcontroller_externaltracks.cpp` | 类型化外挂加载与渲染恢复队列，按规范化文件路径去重、按类型恢复流序号 | 同一 client 的异步命令，不依赖 UI 或增加解码器 |
 | `AudioDeviceMenu` | 当前输出设备选择；菜单栏与右键菜单复用同一菜单 | 只读取拥有数据的设备快照并调用控制器业务 API |
 | `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
 | `PlaylistModeMenu` | 互斥循环模式、独立随机开关、R／Shift+R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |

@@ -57,6 +57,8 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
             });
     connect(&player_, &MpvController::subtitleLoadRequested, this,
             [this] { requestedSubtitleTrackId_.reset(); });
+    connect(&player_, &MpvController::audioLoadRequested, this,
+            [this] { requestedAudioTrackId_.reset(); });
     connect(&player_, &MpvController::fileLoaded, this, &SessionManager::restoreTrackPreference);
     connect(&player_, &MpvController::tracksChanged, this, &SessionManager::observeTrackPreference);
     connect(&player_, &MpvController::trackPreferenceRestoreFinished, this, [this](bool canceled) {
@@ -226,8 +228,6 @@ void SessionManager::rememberTrackPreference() {
         return;
     auto entry = *loadedMediaFingerprint_;
     entry.lastUsedUtcMs = QDateTime::currentMSecsSinceEpoch();
-    QSet<QString> externalPaths;
-    int selectedExternalOrdinal = -1;
     const auto &tracks = player_.tracks();
     const auto requestedTrack = [&tracks](MediaTrack::Type type, const std::optional<qint64> &id) {
         const auto selected =
@@ -239,7 +239,7 @@ void SessionManager::rememberTrackPreference() {
     };
     const auto audioId = requestedTrack(MediaTrack::Type::Audio, requestedAudioTrackId_);
     const auto subtitleId = requestedTrack(MediaTrack::Type::Subtitle, requestedSubtitleTrackId_);
-    const auto subtitlePath = [](const MediaTrack &track) {
+    const auto externalTrackPath = [](const MediaTrack &track) {
         const QFileInfo info(track.externalPath);
         const auto canonical = info.canonicalFilePath();
         return canonical.isEmpty() ? info.absoluteFilePath() : canonical;
@@ -247,32 +247,42 @@ void SessionManager::rememberTrackPreference() {
     // A populated track snapshot with no selected track represents explicit off.
     entry.selection.audioTrackId = audioId;
     entry.selection.subtitleTrackId = subtitleId;
-    for (const auto &track : player_.tracks()) {
-        if (track.type != MediaTrack::Type::Subtitle)
-            continue;
-        if (track.external && !track.externalPath.isEmpty()) {
-            const auto externalPath = subtitlePath(track);
+    const auto rememberExternalTracks = [&](MediaTrack::Type type, qint64 selectedId,
+                                            std::optional<qint64> &internalId, QStringList &paths,
+                                            QString &selectedPath, int &selectedOrdinal) {
+        QSet<QString> externalPaths;
+        for (const auto &track : tracks) {
+            if (track.type != type || !track.external || track.externalPath.isEmpty())
+                continue;
+            const auto externalPath = externalTrackPath(track);
             if (externalPath.isEmpty())
                 continue;
             if (!externalPaths.contains(externalPath)) {
                 externalPaths.insert(externalPath);
-                entry.selection.externalSubtitlePaths.append(externalPath);
+                paths.append(externalPath);
             }
-            if (track.id == subtitleId) {
-                entry.selection.subtitleTrackId.reset();
-                entry.selection.selectedExternalSubtitlePath = externalPath;
-                selectedExternalOrdinal = 0;
-                for (const auto &prior : player_.tracks()) {
+            if (track.id == selectedId) {
+                internalId.reset();
+                selectedPath = externalPath;
+                selectedOrdinal = 0;
+                for (const auto &prior : tracks) {
                     if (&prior == &track)
                         break;
-                    if (prior.type == MediaTrack::Type::Subtitle && prior.external &&
-                        subtitlePath(prior) == externalPath)
-                        ++selectedExternalOrdinal;
+                    if (prior.type == type && prior.external &&
+                        externalTrackPath(prior) == externalPath)
+                        ++selectedOrdinal;
                 }
             }
         }
-    }
-    entry.selection.selectedExternalSubtitleStream = selectedExternalOrdinal;
+    };
+    rememberExternalTracks(MediaTrack::Type::Audio, audioId, entry.selection.audioTrackId,
+                           entry.selection.externalAudioPaths,
+                           entry.selection.selectedExternalAudioPath,
+                           entry.selection.selectedExternalAudioStream);
+    rememberExternalTracks(MediaTrack::Type::Subtitle, subtitleId, entry.selection.subtitleTrackId,
+                           entry.selection.externalSubtitlePaths,
+                           entry.selection.selectedExternalSubtitlePath,
+                           entry.selection.selectedExternalSubtitleStream);
     const auto old = std::find_if(trackPreferences_.begin(), trackPreferences_.end(),
                                   [&path](const auto &item) { return item.mediaPath == path; });
     if (old == trackPreferences_.end())

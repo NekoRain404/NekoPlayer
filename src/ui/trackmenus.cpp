@@ -6,7 +6,6 @@
 #include <QFileDialog>
 #include <QMenu>
 #include <QWidget>
-#include <algorithm>
 
 namespace {
 QString trackLabel(const MediaTrack &track) {
@@ -32,13 +31,22 @@ TrackMenus::TrackMenus(MpvController &controller, QWidget *window, QMenu *subtit
       audioMenu_(new QMenu(tr("音轨"), window)), subtitleMenu_(new QMenu(tr("字幕(&S)"), window)),
       subtitleDelayMenu_(subtitleDelayMenu), subtitleDisplayMenu_(subtitleDisplayMenu),
       audioGroup_(new QActionGroup(audioMenu_)), subtitleGroup_(new QActionGroup(subtitleMenu_)),
+      loadAudioAction_(new QAction(tr("加载外挂音轨…"), this)),
       loadSubtitleAction_(new QAction(tr("加载外挂字幕…"), this)) {
     audioMenu_->setObjectName(QStringLiteral("audioTracksMenu"));
     subtitleMenu_->setObjectName(QStringLiteral("subtitleTracksMenu"));
+    loadAudioAction_->setObjectName(QStringLiteral("loadAudioAction"));
+    loadAudioAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
+    window->addAction(loadAudioAction_);
     loadSubtitleAction_->setObjectName(QStringLiteral("loadSubtitleAction"));
     loadSubtitleAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S));
     window->addAction(loadSubtitleAction_);
-    connect(loadSubtitleAction_, &QAction::triggered, this, &TrackMenus::chooseSubtitle);
+    connect(loadAudioAction_, &QAction::triggered, this,
+            [this] { chooseExternalTrack(MediaTrack::Type::Audio); });
+    connect(loadSubtitleAction_, &QAction::triggered, this,
+            [this] { chooseExternalTrack(MediaTrack::Type::Subtitle); });
+    connect(&controller_, &MpvController::fileOpenRequested, this, [this] { ++sourceRevision_; });
+    connect(&controller_, &MpvController::stopRequested, this, [this] { ++sourceRevision_; });
     connect(audioGroup_, &QActionGroup::triggered, this,
             [this](QAction *action) { controller_.selectAudioTrack(action->data().toLongLong()); });
     connect(subtitleGroup_, &QActionGroup::triggered, this, [this](QAction *action) {
@@ -81,6 +89,8 @@ void TrackMenus::populate(QMenu *menu, QActionGroup *group, MediaTrack::Type typ
 void TrackMenus::rebuild() {
     audioMenu_->clear();
     subtitleMenu_->clear();
+    audioMenu_->addAction(loadAudioAction_);
+    audioMenu_->addSeparator();
     populate(audioMenu_, audioGroup_, MediaTrack::Type::Audio);
     subtitleMenu_->addAction(loadSubtitleAction_);
     subtitleMenu_->addSeparator();
@@ -93,18 +103,28 @@ void TrackMenus::rebuild() {
 
 void TrackMenus::updateAvailability() {
     active_ = controller_.state().active;
-    audioMenu_->setEnabled(
-        active_ &&
-        std::any_of(controller_.tracks().cbegin(), controller_.tracks().cend(),
-                    [](const MediaTrack &track) { return track.type == MediaTrack::Type::Audio; }));
+    audioMenu_->setEnabled(active_);
+    loadAudioAction_->setEnabled(active_);
     subtitleMenu_->setEnabled(active_);
     loadSubtitleAction_->setEnabled(active_);
 }
 
-void TrackMenus::chooseSubtitle() {
+void TrackMenus::chooseExternalTrack(MediaTrack::Type type) {
+    if (!controller_.state().active)
+        return;
+    const auto revision = sourceRevision_;
+    const auto source = controller_.state().path;
+    const bool audio = type == MediaTrack::Type::Audio;
     const auto path = QFileDialog::getOpenFileName(
-        window_, tr("加载外挂字幕"), {},
-        tr("字幕文件 (*.srt *.ass *.ssa *.sub *.vtt *.sup *.idx *.mks);;所有文件 (*)"));
-    if (!path.isEmpty())
+        window_, audio ? tr("加载外挂音轨") : tr("加载外挂字幕"), {},
+        audio ? tr("音频文件 (*.mka *.aac *.ac3 *.eac3 *.dts *.dtshd *.flac *.mp3 *.ogg *.opus "
+                   "*.wav *.m4a *.mp4 *.mkv);;所有文件 (*)")
+              : tr("字幕文件 (*.srt *.ass *.ssa *.sub *.vtt *.sup *.idx *.mks);;所有文件 (*)"));
+    if (path.isEmpty() || revision != sourceRevision_ || !controller_.state().active ||
+        source != controller_.state().path)
+        return;
+    if (audio)
+        controller_.addAudio(path);
+    else
         controller_.addSubtitle(path);
 }

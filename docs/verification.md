@@ -1,5 +1,13 @@
 # Verification Record
 
+Playlist source validation stage (2026-10-22):
+
+- M3U8 import previously checked URL syntax without applying the playback source policy, and export could overwrite a playlist with unsupported or malformed sources. Both paths now use `MediaSource` validation. Import resolves relative paths against the playlist directory, converts file URLs to absolute local paths, and preserves network spelling and signed escapes. Any invalid entry rejects the whole import before publishing entries; export validates before opening `QSaveFile`, preserving an existing file on validation failure.
+- The initial regression run reproduced 13 failures before implementation. The final `m3u8_store_test` passed **26 QtTest cases**, covering hostless/unsupported URLs, invalid ports/escapes, encoded NUL, relative file URLs, file queries, duplicate-row selection and signed network round trips.
+- `cmake --build --preset debug -j 4` succeeded, including compile-only desktop targets. The final `ctest --test-dir build/debug -R '^(code-size|m3u8-store|media-source|network-session|network-playback)$' --output-on-failure` passed **5/5** in **3.36 seconds**. The corresponding sanitizer targets built successfully and the same selection under `build/sanitizers` passed **5/5** in **3.87 seconds**, without sanitizer reports.
+- Independent review reported no new must-fix findings. It noted a pre-existing edge: scheme-less strings beginning with `://` are treated as relative local paths by the playlist loader. This stage does not change relative-path interpretation. `git diff --check`, changed-source `clang-format --dry-run --Werror`, and the 500/800-line checker passed; the store and its test are 116 and 218 lines, respectively.
+- No window behavior tests were run. Validation performs string processing without network or file-existence probes; this stage does not establish public network protocol interoperability, physical audio, GPU decoding, HDR or rendered Wayland video.
+
 Network media opening stage (2026-10-22):
 
 - Added shared source validation/normalization, a Ctrl+U network address dialog, shared File/context-menu action, and mixed local/network command-line queues. Accepted network schemes are HTTP(S), RTSP(S) and RTMP(S). Whole-batch validation precedes queue replacement; signed path/query escape bytes survive normalization. Network items persist in the queue, restore idle, and do not contribute local history, track fingerprints, chooser directories or persisted resume positions. Renderer recovery preserves an in-memory position only for seekable network media.

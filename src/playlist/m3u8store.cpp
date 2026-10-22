@@ -1,4 +1,5 @@
 #include "m3u8store.h"
+#include "playback/mediasource.h"
 
 #include <QDir>
 #include <QFile>
@@ -12,11 +13,6 @@ constexpr auto CurrentPrefix = "#NEKOPLAYER-CURRENT:";
 
 QString ioError(const QString &path) {
     return QStringLiteral("Unable to read or write playlist: %1").arg(path);
-}
-
-bool isUrl(const QString &entry) {
-    const QUrl url(entry, QUrl::StrictMode);
-    return url.isValid() && !url.scheme().isEmpty();
 }
 
 bool hasUrlScheme(const QString &entry) {
@@ -73,10 +69,15 @@ M3u8LoadResult M3u8Store::load(const QString &filePath) {
             continue;
         if (!validEntry(line))
             return {{}, -1, QStringLiteral("Invalid playlist entry: %1").arg(filePath)};
-        if (hasUrlScheme(line) && !isUrl(line))
-            return {{}, -1, QStringLiteral("Invalid playlist URL: %1").arg(filePath)};
-        if (!isUrl(line) && !QFileInfo(line).isAbsolute())
-            line = QDir::cleanPath(QDir(base).absoluteFilePath(line));
+        if (!QDir::isAbsolutePath(line) && !hasUrlScheme(line))
+            line = QDir(base).absoluteFilePath(line);
+        const auto source = MediaSource::normalize(line);
+        if (source.isEmpty())
+            return {{}, -1, QStringLiteral("Invalid playlist source: %1").arg(filePath)};
+        // Decode file URLs into the same absolute paths used by local opening
+        // and history. Retain network spelling, including signed escape bytes.
+        if (QDir::isAbsolutePath(source))
+            line = source;
         paths.append(line);
     }
 
@@ -95,7 +96,7 @@ QString M3u8Store::save(const QString &filePath, const QStringList &paths, int c
         (!paths.isEmpty() && (currentIndex < 0 || currentIndex >= paths.size())))
         return QStringLiteral("Invalid current index: %1").arg(filePath);
     for (const auto &path : paths) {
-        if (!validEntry(path) || path.trimmed() != path)
+        if (!validEntry(path) || path.trimmed() != path || MediaSource::normalize(path).isEmpty())
             return QStringLiteral("Invalid playlist entry: %1").arg(filePath);
     }
 
@@ -106,7 +107,8 @@ QString M3u8Store::save(const QString &filePath, const QStringList &paths, int c
         contents += path.toUtf8() + '\n';
 
     QSaveFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly) || file.write(contents) != contents.size() || !file.commit()) {
+    if (!file.open(QIODevice::WriteOnly) || file.write(contents) != contents.size() ||
+        !file.commit()) {
         file.cancelWriting();
         return ioError(filePath);
     }

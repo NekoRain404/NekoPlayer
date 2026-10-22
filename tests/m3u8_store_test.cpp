@@ -38,7 +38,8 @@ class M3u8StoreTest final : public QObject {
         const auto loaded = M3u8Store::load(file);
         QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
         QCOMPARE(loaded.paths.size(), 2);
-        QCOMPARE(loaded.paths.at(0), QDir(temporary.path()).absoluteFilePath(QStringLiteral("猫.mkv")));
+        QCOMPARE(loaded.paths.at(0),
+                 QDir(temporary.path()).absoluteFilePath(QStringLiteral("猫.mkv")));
         QCOMPARE(loaded.paths.at(1), QStringLiteral("https://example.test/a.mkv"));
         QCOMPARE(loaded.currentIndex, 0);
     }
@@ -58,9 +59,9 @@ class M3u8StoreTest final : public QObject {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());
         const auto file = temporary.filePath(QStringLiteral("invalid.m3u8"));
-        for (const auto &marker : {QByteArray("#NEKOPLAYER-CURRENT:x\n"),
-                                   QByteArray("#NEKOPLAYER-CURRENT:2\na.mkv\n"),
-                                   QByteArray("#NEKOPLAYER-CURRENT:0\n")}) {
+        for (const auto &marker :
+             {QByteArray("#NEKOPLAYER-CURRENT:x\n"), QByteArray("#NEKOPLAYER-CURRENT:2\na.mkv\n"),
+              QByteArray("#NEKOPLAYER-CURRENT:0\n")}) {
             QFile output(file);
             QVERIFY(output.open(QIODevice::WriteOnly | QIODevice::Truncate));
             QCOMPARE(output.write(marker), marker.size());
@@ -89,7 +90,8 @@ class M3u8StoreTest final : public QObject {
     void readFailureAndInvalidUtf8ReturnErrors() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());
-        QVERIFY(!M3u8Store::load(temporary.filePath(QStringLiteral("missing.m3u8"))).error.isEmpty());
+        QVERIFY(
+            !M3u8Store::load(temporary.filePath(QStringLiteral("missing.m3u8"))).error.isEmpty());
         const auto file = temporary.filePath(QStringLiteral("bad.m3u8"));
         QFile output(file);
         QVERIFY(output.open(QIODevice::WriteOnly));
@@ -125,6 +127,90 @@ class M3u8StoreTest final : public QObject {
         QVERIFY(!M3u8Store::save(file, {QStringLiteral("bad\nentry")}, 0).isEmpty());
         QVERIFY(output.open(QIODevice::ReadOnly));
         QCOMPARE(output.readAll(), original);
+    }
+
+    void rejectsUnplayableSourcesBeforePublishingAnyEntries_data() {
+        QTest::addColumn<QString>("entry");
+        QTest::newRow("hostless") << QStringLiteral("https:///movie.mkv");
+        QTest::newRow("unsupported") << QStringLiteral("ftp://example.test/movie.mkv");
+        QTest::newRow("bad-port") << QStringLiteral("http://example.test:99999/movie.mkv");
+        QTest::newRow("bad-escape") << QStringLiteral("https://example.test/%zz");
+        QTest::newRow("encoded-nul") << QStringLiteral("file:///tmp/%00movie.mkv");
+        QTest::newRow("relative-file-url") << QStringLiteral("file:relative.mkv");
+        QTest::newRow("file-query") << QStringLiteral("file:///tmp/movie.mkv?x=1");
+    }
+
+    void rejectsUnplayableSourcesBeforePublishingAnyEntries() {
+        QFETCH(QString, entry);
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("mixed.m3u8"));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        const auto contents = QByteArray("#EXTM3U\n#NEKOPLAYER-CURRENT:1\nvalid.mkv\n") +
+                              entry.toUtf8() + "\nother.mkv\n";
+        QCOMPARE(file.write(contents), contents.size());
+        file.close();
+
+        const auto loaded = M3u8Store::load(path);
+        QVERIFY(!loaded.error.isEmpty());
+        QVERIFY(loaded.paths.isEmpty());
+        QCOMPARE(loaded.currentIndex, -1);
+    }
+
+    void invalidSourceSaveKeepsExistingFile_data() {
+        rejectsUnplayableSourcesBeforePublishingAnyEntries_data();
+    }
+
+    void invalidSourceSaveKeepsExistingFile() {
+        QFETCH(QString, entry);
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("existing.m3u8"));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        const QByteArray contents("#EXTM3U\noriginal.mkv\n");
+        QCOMPARE(file.write(contents), contents.size());
+        file.close();
+        QVERIFY(!M3u8Store::save(path, {QStringLiteral("/tmp/valid.mkv"), entry}, 1).isEmpty());
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), contents);
+    }
+
+    void fileUrlsDecodeBeforeEnteringTheQueueAndKeepDuplicateSelection() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("local.m3u8"));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        const QByteArray contents("#EXTM3U\n#NEKOPLAYER-CURRENT:2\n"
+                                  "file:///tmp/%E7%8C%AB%20clip.mkv\n../other.mkv\n"
+                                  "file:///tmp/%E7%8C%AB%20clip.mkv\n");
+        QCOMPARE(file.write(contents), contents.size());
+        file.close();
+
+        const auto loaded = M3u8Store::load(path);
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.paths,
+                 QStringList({QStringLiteral("/tmp/猫 clip.mkv"),
+                              QDir::cleanPath(temporary.filePath(QStringLiteral("../other.mkv"))),
+                              QStringLiteral("/tmp/猫 clip.mkv")}));
+        QCOMPARE(loaded.currentIndex, 2);
+    }
+
+    void signedNetworkEntriesSurviveRoundTripByteForByte() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("signed.m3u8"));
+        const QStringList entries{
+            QStringLiteral("https://example.test/%7e/%E7%8C%AB.mkv?sig=a%2fb%41&x=1&x=2"),
+            QStringLiteral("rtsp://[::1]:8554/live?token=a%2fb"),
+            QStringLiteral("rtmps://example.test/live/key")};
+        QVERIFY(M3u8Store::save(path, entries, 1).isEmpty());
+        const auto loaded = M3u8Store::load(path);
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.paths, entries);
+        QCOMPARE(loaded.currentIndex, 1);
     }
 };
 

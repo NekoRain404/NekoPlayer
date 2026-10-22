@@ -49,7 +49,7 @@ set_tests_properties(track-preference-store PROPERTIES TIMEOUT 20)
 
 add_executable(m3u8_store_test m3u8_store_test.cpp ../src/playlist/m3u8store.cpp)
 target_include_directories(m3u8_store_test PRIVATE ../src)
-target_link_libraries(m3u8_store_test PRIVATE Qt6::Core Qt6::Test neko_options)
+target_link_libraries(m3u8_store_test PRIVATE neko_playback Qt6::Test)
 add_test(NAME m3u8-store COMMAND m3u8_store_test)
 set_tests_properties(m3u8-store PROPERTIES TIMEOUT 20)
 

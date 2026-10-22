@@ -1,6 +1,9 @@
 #include "mpvcontroller_p.h"
 
-const AbLoop &MpvController::abLoop() const { return impl_->abLoop; }
+const AbLoop &MpvController::abLoop() const {
+    static const AbLoop empty;
+    return impl_->pendingPlayback ? empty : impl_->abLoop;
+}
 
 bool MpvController::setLoopStart(double seconds) {
     if (!impl_->mediaReady || !state().active || !state().seekable || !std::isfinite(seconds) ||

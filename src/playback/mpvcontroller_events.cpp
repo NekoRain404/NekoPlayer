@@ -102,40 +102,16 @@ void MpvController::Impl::drainEvents() {
             commitPendingOpen(playingEntry);
             resetPlayback();
             loading = true;
+            if (openGenerationsByEntry.value(playingEntry) == openGeneration)
+                pendingPlayback.reset();
             emit owner->stateChanged();
             break;
         case MPV_EVENT_FILE_LOADED:
-            loading = false;
-            recoveringRenderer = false;
-            state.active = true;
-            mediaReady = true;
-            error.clear();
-            scheduleInformationRefresh();
-            restoreExternalTracks();
-            emit owner->stateChanged();
-            emit owner->fileLoaded();
+            handleFileLoaded();
             break;
         case MPV_EVENT_END_FILE: {
             const auto &end = *static_cast<mpv_event_end_file *>(event->data);
-            if (end.playlist_entry_id == openingEntry)
-                openingPosition.reset();
-            const bool staleOpen =
-                openGenerationsByEntry.contains(end.playlist_entry_id) &&
-                openGenerationsByEntry.value(end.playlist_entry_id) != openGeneration;
-            openGenerationsByEntry.remove(end.playlist_entry_id);
-            const bool expectedReset = recoveringRenderer && end.error == MPV_ERROR_VO_INIT_FAILED;
-            if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset && !staleOpen) {
-                recoveringRenderer = false;
-                recovery.reset();
-            }
-            resetPlayback();
-            emit owner->stateChanged();
-            if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
-                emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(end.error)));
-                report(end.error);
-            }
-            if (end.reason == MPV_END_FILE_REASON_EOF)
-                emit owner->playbackFinished();
+            handleEndFile(end);
             break;
         }
         case MPV_EVENT_PROPERTY_CHANGE:
@@ -197,4 +173,69 @@ void MpvController::Impl::drainEvents() {
             break;
         }
     }
+}
+
+void MpvController::Impl::handleEndFile(const mpv_event_end_file &end) {
+    if (!openGenerationsByEntry.contains(end.playlist_entry_id) &&
+        startedEntries.contains(end.playlist_entry_id)) {
+        endedEntries.insert(end.playlist_entry_id, end);
+        return;
+    }
+    const bool staleOpen = openGenerationsByEntry.contains(end.playlist_entry_id) &&
+                           openGenerationsByEntry.value(end.playlist_entry_id) != openGeneration;
+    if (staleOpen) {
+        openGenerationsByEntry.remove(end.playlist_entry_id);
+        startedEntries.remove(end.playlist_entry_id);
+        loadedEntries.remove(end.playlist_entry_id);
+        return;
+    }
+    const auto generation = openGenerationsByEntry.value(end.playlist_entry_id, openGeneration);
+    if (end.playlist_entry_id == openingEntry)
+        openingPosition.reset();
+    openGenerationsByEntry.remove(end.playlist_entry_id);
+    startedEntries.remove(end.playlist_entry_id);
+    loadedEntries.remove(end.playlist_entry_id);
+    const bool expectedReset = recoveringRenderer && end.error == MPV_ERROR_VO_INIT_FAILED;
+    if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
+        recoveringRenderer = false;
+        recovery.reset();
+    }
+    resetPlayback();
+    pendingPlayback.reset();
+    if (generation != openGeneration)
+        return;
+    emit owner->stateChanged();
+    if (generation != openGeneration)
+        return;
+    if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
+        emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(end.error)));
+        if (generation != openGeneration)
+            return;
+        report(end.error);
+    }
+    if (end.reason == MPV_END_FILE_REASON_EOF)
+        emit owner->playbackFinished();
+}
+
+void MpvController::Impl::handleFileLoaded() {
+    if (startedEntries.contains(playingEntry) && !openGenerationsByEntry.contains(playingEntry)) {
+        loadedEntries.insert(playingEntry);
+        return;
+    }
+    if (openGenerationsByEntry.contains(playingEntry) &&
+        openGenerationsByEntry.value(playingEntry) != openGeneration)
+        return;
+    const auto generation = openGeneration;
+    loading = false;
+    recoveringRenderer = false;
+    state.active = true;
+    mediaReady = true;
+    error.clear();
+    scheduleInformationRefresh();
+    restoreExternalTracks();
+    emit owner->stateChanged();
+    if (generation != openGeneration || (openGenerationsByEntry.contains(playingEntry) &&
+                                         openGenerationsByEntry.value(playingEntry) != generation))
+        return;
+    emit owner->fileLoaded();
 }

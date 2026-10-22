@@ -80,6 +80,7 @@ struct MpvController::Impl {
     MpvController *owner;
     std::unique_ptr<mpv_handle, MpvPrivate::MpvDeleter> client;
     PlaybackState state;
+    std::optional<PlaybackState> pendingPlayback;
     MediaInformation information;
     // Zero marks a canceled query; retain its id until its reply is consumed.
     QHash<uint64_t, uint64_t> informationQueries;
@@ -110,6 +111,8 @@ struct MpvController::Impl {
     bool mediaReady = false;
     QList<PendingOpen> pendingOpens;
     QSet<int64_t> startedEntries;
+    QSet<int64_t> loadedEntries;
+    QHash<int64_t, mpv_event_end_file> endedEntries;
     QHash<int64_t, uint64_t> openGenerationsByEntry;
     QString playingPath;
     uint64_t openGeneration = 0;
@@ -358,6 +361,8 @@ struct MpvController::Impl {
     void cancelInformationQueries();
     bool finishInformationQuery(const mpv_event &event);
     void drainEvents();
+    void handleEndFile(const mpv_event_end_file &end);
+    void handleFileLoaded();
 
     static void wakeup(void *userdata) {
         auto *self = static_cast<Impl *>(userdata);
@@ -367,7 +372,7 @@ struct MpvController::Impl {
         }
     }
 
-    void commitPendingOpen(int64_t entry);
+    void commitPendingOpen(int64_t entry, bool alreadyStarted = false);
     void rejectPendingOpen(uint64_t command, int status);
     void notifySynchronousOpenFailure(uint64_t generation, int status);
     bool handleOpeningCommandReply(const mpv_event &event);

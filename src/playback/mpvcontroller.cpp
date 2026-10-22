@@ -72,7 +72,9 @@ MpvController::~MpvController() {
 bool MpvController::isReady() const { return impl_->ready; }
 QString MpvController::errorString() const { return impl_->error; }
 mpv_handle *MpvController::handle() const { return impl_->client.get(); }
-const PlaybackState &MpvController::state() const { return impl_->state; }
+const PlaybackState &MpvController::state() const {
+    return impl_->pendingPlayback ? *impl_->pendingPlayback : impl_->state;
+}
 double MpvController::resumePosition() const {
     if (impl_->openingPosition)
         return *impl_->openingPosition;
@@ -82,12 +84,21 @@ double MpvController::resumePosition() const {
         return 0;
     return state.position;
 }
-const MediaInformation &MpvController::mediaInformation() const { return impl_->information; }
-const QList<MediaTrack> &MpvController::tracks() const { return impl_->tracks; }
-const QList<MediaChapter> &MpvController::chapters() const { return impl_->chapters; }
+const MediaInformation &MpvController::mediaInformation() const {
+    static const MediaInformation empty;
+    return impl_->pendingPlayback ? empty : impl_->information;
+}
+const QList<MediaTrack> &MpvController::tracks() const {
+    static const QList<MediaTrack> empty;
+    return impl_->pendingPlayback ? empty : impl_->tracks;
+}
+const QList<MediaChapter> &MpvController::chapters() const {
+    static const QList<MediaChapter> empty;
+    return impl_->pendingPlayback ? empty : impl_->chapters;
+}
 bool MpvController::hardwareDecodingEnabled() const { return impl_->hardwareDecodingEnabled; }
 
-void MpvController::Impl::commitPendingOpen(int64_t entry) {
+void MpvController::Impl::commitPendingOpen(int64_t entry, bool alreadyStarted) {
     auto found = std::find_if(pendingOpens.begin(), pendingOpens.end(),
                               [entry](const PendingOpen &open) { return open.entry == entry; });
     if (found == pendingOpens.end()) {
@@ -104,6 +115,8 @@ void MpvController::Impl::commitPendingOpen(int64_t entry) {
     }
     playingPath = opened.path;
     openGenerationsByEntry.insert(entry, opened.generation);
+    if (alreadyStarted)
+        return;
     mediaReady = false;
     cancelInformationQueries();
     const bool informationChanged = information != MediaInformation{};
@@ -132,6 +145,26 @@ void MpvController::Impl::rejectPendingOpen(uint64_t command, int status) {
         state.path = playingPath;
         openingPosition.reset();
         openingEntry = -1;
+        pendingPlayback.reset();
+        emit owner->stateChanged();
+        if (generation != openGeneration)
+            return;
+        if (information != MediaInformation{})
+            emit owner->mediaInformationChanged();
+        if (generation != openGeneration)
+            return;
+        if (!tracks.isEmpty())
+            emit owner->tracksChanged();
+        if (generation != openGeneration)
+            return;
+        if (!chapters.isEmpty())
+            emit owner->chaptersChanged();
+        if (generation != openGeneration)
+            return;
+        if (abLoop != AbLoop{})
+            emit owner->abLoopChanged();
+        if (generation != openGeneration)
+            return;
         emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(status)));
     }
 }
@@ -169,8 +202,24 @@ bool MpvController::Impl::handleOpeningCommandReply(const mpv_event &event) {
                     if (found != pendingOpens.end()) {
                         found->entry = entry;
                         found->replyReceived = true;
-                        if (startedEntries.remove(entry))
-                            commitPendingOpen(entry);
+                        if (startedEntries.remove(entry)) {
+                            const auto generation = found->generation;
+                            commitPendingOpen(entry, true);
+                            if (generation == openGeneration) {
+                                pendingPlayback.reset();
+                                emit owner->stateChanged();
+                                if (endedEntries.contains(entry)) {
+                                    loadedEntries.remove(entry);
+                                    const auto end = endedEntries.take(entry);
+                                    handleEndFile(end);
+                                } else if (loadedEntries.remove(entry)) {
+                                    handleFileLoaded();
+                                }
+                            } else {
+                                loadedEntries.remove(entry);
+                                endedEntries.remove(entry);
+                            }
+                        }
                     } else {
                         openingEntry = entry;
                     }
@@ -209,8 +258,28 @@ void MpvController::openFileAtPosition(const QString &path, double seconds) {
     if (id) {
         impl_->pendingOpens.append({id, generation, path});
         impl_->state.path = path;
+        auto pending = impl_->state;
+        pending.active = false;
+        pending.seekable = false;
+        pending.position = 0;
+        pending.duration = 0;
+        pending.currentChapter = -1;
+        pending.hardwareDecoder.clear();
+        pending.path = path;
+        impl_->pendingPlayback = std::move(pending);
     }
     emit fileOpenRequested();
+    if (id) {
+        emit stateChanged();
+        if (impl_->information != MediaInformation{})
+            emit mediaInformationChanged();
+        if (!impl_->tracks.isEmpty())
+            emit tracksChanged();
+        if (!impl_->chapters.isEmpty())
+            emit chaptersChanged();
+        if (impl_->abLoop != AbLoop{})
+            emit abLoopChanged();
+    }
     if (!id)
         impl_->notifySynchronousOpenFailure(generation, status);
     impl_->report(status);
@@ -227,10 +296,13 @@ void MpvController::stop() {
     if (!impl_->pendingOpens.isEmpty())
         impl_->state.path = impl_->playingPath;
     ++impl_->openGeneration;
+    impl_->pendingPlayback.reset();
     impl_->openingCommand = 0;
     impl_->openingEntry = -1;
     impl_->pendingOpens.clear();
     impl_->startedEntries.clear();
+    impl_->loadedEntries.clear();
+    impl_->endedEntries.clear();
     impl_->openGenerationsByEntry.clear();
     impl_->cancelInformationQueries();
     const bool informationChanged = impl_->information != MediaInformation{};

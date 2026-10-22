@@ -1,8 +1,8 @@
 #include "mpvcontroller_p.h"
 
 bool MpvController::canStepFrameForward() const {
-    return isReady() && impl_->mediaReady && !impl_->recoveringRenderer && state().active &&
-           impl_->hasMotionVideo;
+    return isReady() && !impl_->pendingPlayback && impl_->mediaReady &&
+           !impl_->recoveringRenderer && state().active && impl_->hasMotionVideo;
 }
 
 bool MpvController::canStepFrameBackward() const {

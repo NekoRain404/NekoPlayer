@@ -1,5 +1,14 @@
 # Verification Record
 
+Pending-open state and event ordering stage (2026-10-22):
+
+- A successful asynchronous `loadfile` request now exposes its target as pending playback immediately, while hiding metadata, tracks, chapters, A–B endpoints and frame-step capability from the previous file. A rejected command restores the previous playback path and media state.
+- Added regression coverage for `START_FILE`, `FILE_LOADED`, `END_FILE` and command replies arriving in either order, stale-generation END_FILE reasons, and synchronous signal handlers that re-enter with a newer open. Terminal notifications from an older generation are suppressed after reentrancy.
+- `cmake --build --preset debug -j 4` succeeded. The selected non-window CTest set passed 27/27 in 43.88 seconds. Window interaction tests were skipped as requested.
+- The ASan/UBSan targets for open failure/order, media information, frame stepping, A–B looping, playback and navigation built successfully; the selected sanitizer CTest set passed 6/6 in 16.50 seconds without sanitizer errors.
+- `clang-format --dry-run --Werror`, `git diff --check`, and the 500/800-line check passed. The touched controller and test files remain below 500 lines.
+- No interactive Wayland rendering, shortcut delivery, or physical hardware-decoding test was run.
+
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
 Static analysis review (2026-10-22):

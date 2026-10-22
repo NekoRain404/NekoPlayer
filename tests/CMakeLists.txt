@@ -1,6 +1,13 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Test)
 find_program(FFMPEG_EXECUTABLE ffmpeg REQUIRED)
 
+add_executable(playback_history_store_test playback_history_store_test.cpp
+    ../src/session/playbackhistorystore.cpp)
+target_include_directories(playback_history_store_test PRIVATE ../src)
+target_link_libraries(playback_history_store_test PRIVATE Qt6::Core Qt6::Test neko_options)
+add_test(NAME playback-history-store COMMAND playback_history_store_test)
+set_tests_properties(playback-history-store PROPERTIES TIMEOUT 20)
+
 set(TEST_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/猫 sample [1].mkv")
 add_custom_command(OUTPUT "${TEST_MEDIA}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/media"
@@ -135,6 +142,13 @@ target_compile_definitions(resume_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
 add_dependencies(resume_test test_media)
 add_test(NAME resume COMMAND resume_test)
 set_tests_properties(resume PROPERTIES TIMEOUT 60)
+
+add_executable(playback_history_session_test playback_history_session_test.cpp)
+target_link_libraries(playback_history_session_test PRIVATE neko_session Qt6::Test)
+target_compile_definitions(playback_history_session_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(playback_history_session_test test_media)
+add_test(NAME playback-history-session COMMAND playback_history_session_test)
+set_tests_properties(playback-history-session PROPERTIES TIMEOUT 60)
 
 add_executable(session_test session_test.cpp)
 target_link_libraries(session_test PRIVATE neko_session Qt6::Test)

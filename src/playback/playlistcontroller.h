@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QPersistentModelIndex>
 #include <QSet>
+#include <functional>
 
 class MpvController;
 class PlaylistModel;
@@ -26,6 +27,7 @@ class PlaylistController final : public QObject {
     [[nodiscard]] RepeatMode repeatMode() const;
     [[nodiscard]] bool shuffleEnabled() const;
     [[nodiscard]] double pendingResumePosition() const;
+    void setResumePositionResolver(std::function<double(const QString &)> resolver);
 
   public slots:
     void addFiles(const QStringList &paths);
@@ -48,6 +50,8 @@ class PlaylistController final : public QObject {
     void repeatModeChanged(RepeatMode mode);
     void shuffleEnabledChanged(bool enabled);
     void navigationChanged();
+    void playbackPositionSnapshot(const QString &path, double position, double duration);
+    void mediaPlaybackFinished(const QString &path);
 
   private slots:
     void playFinished();
@@ -58,6 +62,7 @@ class PlaylistController final : public QObject {
     ScanResult playFirstAvailable(int firstRow, int step = 1, bool wrap = false);
     ScanResult playShuffled(int step);
     void startRow(int row, int step);
+    void snapshotCurrentPlayback();
     void updateFileLoop();
     void finishQueue();
     MpvController &player_;
@@ -72,4 +77,5 @@ class PlaylistController final : public QObject {
     QSet<int> failedRows_;
     QPersistentModelIndex resumeEntry_;
     double resumePosition_ = 0;
+    std::function<double(const QString &)> resumePositionResolver_;
 };

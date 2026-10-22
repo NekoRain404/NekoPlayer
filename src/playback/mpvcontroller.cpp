@@ -133,6 +133,7 @@ void MpvController::setPaused(bool paused) {
 }
 void MpvController::togglePause() { setPaused(!state().paused); }
 void MpvController::stop() {
+    emit stopRequested();
     impl_->mediaReady = false;
     impl_->openingPosition.reset();
     impl_->openingCommand = 0;
@@ -146,7 +147,6 @@ void MpvController::stop() {
     impl_->recovery.reset();
     impl_->cancelTrackRestore();
     impl_->command({"stop"});
-    emit stopRequested();
     if (informationChanged)
         emit mediaInformationChanged();
 }

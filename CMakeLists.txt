@@ -39,7 +39,8 @@ add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.
 target_include_directories(neko_playback PUBLIC src)
 target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV)
 
-add_library(neko_session src/session/sessionstore.cpp src/session/sessionmanager.cpp)
+add_library(neko_session src/session/sessionstore.cpp src/session/sessionmanager.cpp
+    src/session/playbackhistorystore.cpp)
 target_link_libraries(neko_session PUBLIC neko_playback)
 
 add_library(neko_input src/input/localfiledrop.cpp)

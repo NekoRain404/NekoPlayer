@@ -1,6 +1,8 @@
 #pragma once
 
+#include "playbackhistorystore.h"
 #include "sessionstore.h"
+#include <QHash>
 #include <QObject>
 
 class MpvController;
@@ -20,7 +22,14 @@ class SessionManager final : public QObject {
     MpvController &player_;
     PlaylistController &playlist_;
     SessionStore store_;
+    PlaybackHistoryStore historyStore_;
+    QHash<QString, double> resumePositions_;
+    QHash<QString, PlaybackHistoryEntry> historyEntries_;
     AudioPreferences audio_;
     QString mediaDirectory_;
     QString loadError_;
+    QString historyError_;
+    bool stopRequested_ = false;
+    void rememberPlaybackPosition(const QString &path, double position, double duration);
+    QString savePlaybackHistory() const;
 };

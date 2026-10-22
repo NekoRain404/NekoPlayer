@@ -11,6 +11,8 @@ PlaylistController::PlaylistController(MpvController &player, QObject *parent)
     : QObject(parent), player_(player), model_(new PlaylistModel(this)) {
     connect(&player_, &MpvController::playbackFinished, this, &PlaylistController::playFinished);
     connect(&player_, &MpvController::mediaLoadFailed, this, &PlaylistController::mediaLoadFailed);
+    connect(&player_, &MpvController::stopRequested, this,
+            &PlaylistController::snapshotCurrentPlayback, Qt::DirectConnection);
     const auto cancelResume = [this] { resumeEntry_ = QPersistentModelIndex{}; };
     connect(&player_, &MpvController::stopRequested, this, cancelResume);
     connect(&player_, &MpvController::fileOpenRequested, this, cancelResume);
@@ -67,6 +69,18 @@ bool PlaylistController::shuffleEnabled() const { return shuffleEnabled_; }
 double PlaylistController::pendingResumePosition() const {
     return resumeEntry_.isValid() && resumeEntry_.row() == model_->currentIndex() ? resumePosition_
                                                                                   : 0;
+}
+
+void PlaylistController::setResumePositionResolver(
+    std::function<double(const QString &)> resolver) {
+    resumePositionResolver_ = std::move(resolver);
+}
+
+void PlaylistController::snapshotCurrentPlayback() {
+    const auto path = model_->currentPath();
+    const auto &state = player_.state();
+    if (!path.isEmpty() && state.active && state.seekable && state.path == path)
+        emit playbackPositionSnapshot(path, player_.resumePosition(), state.duration);
 }
 
 void PlaylistController::setShuffleEnabled(bool enabled) {
@@ -220,6 +234,7 @@ void PlaylistController::removeAt(int row) {
 void PlaylistController::playFinished() {
     if (!playbackQueued_)
         return;
+    emit mediaPlaybackFinished(model_->currentPath());
     failedRows_.clear();
     if (shuffleEnabled_ && repeatMode_ != RepeatMode::One) {
         if (playShuffled(1) == ScanResult::Exhausted)
@@ -311,8 +326,11 @@ PlaylistController::ScanResult PlaylistController::playFirstAvailable(int firstR
 }
 
 void PlaylistController::startRow(int row, int step) {
+    snapshotCurrentPlayback();
     const auto startPosition =
-        resumeEntry_.isValid() && resumeEntry_.row() == row ? resumePosition_ : 0;
+        resumeEntry_.isValid() && resumeEntry_.row() == row
+            ? resumePosition_
+            : (resumePositionResolver_ ? resumePositionResolver_(model_->pathAt(row)) : 0);
     resumeEntry_ = QPersistentModelIndex{};
     exhausted_ = false;
     playbackQueued_ = true;

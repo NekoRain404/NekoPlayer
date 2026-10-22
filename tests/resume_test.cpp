@@ -306,6 +306,9 @@ class ResumeTest final : public QObject {
         QSettings settings(file, QSettings::IniFormat);
         QVERIFY(std::abs(settings.value(QStringLiteral("playlist/resumePosition"), 0).toDouble() -
                          1.24) < 0.08);
+        const auto history = PlaybackHistoryStore(file + QStringLiteral(".history.ini")).load();
+        QCOMPARE(history.entries.size(), 1);
+        QVERIFY(std::abs(history.entries.front().position - 1.24) < 0.08);
     }
 
     void restoredSelectionLoadsAtSavedPositionOnce() {
@@ -338,6 +341,132 @@ class ResumeTest final : public QObject {
         QTRY_COMPARE(loaded.count(), 2);
         QTRY_VERIFY(player.state().paused);
         QTRY_VERIFY(player.state().position < 0.08);
+    }
+
+    void switchingBetweenFilesRestoresEachFilesLastPosition() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("settings.ini"));
+        const auto firstMedia = QString::fromUtf8(TEST_MEDIA_PATH);
+        const auto secondMedia = temporary.filePath(QStringLiteral("second.mkv"));
+        QVERIFY(QFile::copy(firstMedia, secondMedia));
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, file);
+        QVERIFY(session.restore().error.isEmpty());
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        connect(&player, &MpvController::fileLoaded, &player, [&] { player.setPaused(true); });
+
+        queue.addFiles({firstMedia, secondMedia});
+        QTRY_VERIFY(player.state().active && player.state().paused && player.state().seekable);
+        player.seekAbsolute(1.24);
+        QTRY_VERIFY(std::abs(player.state().position - 1.24) < 0.08);
+        queue.playAt(1);
+        QTRY_COMPARE(loaded.count(), 2);
+        QTRY_VERIFY(player.state().active && player.state().paused);
+        QVERIFY(player.state().position < 0.08);
+
+        queue.playAt(0);
+        QTRY_COMPARE(loaded.count(), 3);
+        QTRY_VERIFY(player.state().active && player.state().paused);
+        QTRY_VERIFY_WITH_TIMEOUT(std::abs(player.state().position - 1.24) < 0.08, 1500);
+    }
+
+    void perFileHistoryRestoresInNewSessionWithoutSessionBookmark() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("settings.ini"));
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        {
+            MpvController player(true, true);
+            PlaylistController queue(player);
+            SessionManager session(player, queue, file);
+            QVERIFY(session.restore().error.isEmpty());
+            QSignalSpy snapshots(&queue, &PlaylistController::playbackPositionSnapshot);
+            queue.addFiles({media});
+            QTRY_VERIFY(player.state().active && player.state().seekable);
+            player.setPaused(true);
+            QTRY_VERIFY(player.state().paused);
+            player.seekAbsolute(1.24);
+            QTRY_VERIFY(std::abs(player.state().position - 1.24) < 0.08);
+            player.stop();
+            QCOMPARE(snapshots.count(), 1);
+            QVERIFY(snapshots.front().at(1).toDouble() > 1.0);
+            QVERIFY(snapshots.front().at(2).toDouble() > 1.0);
+            QVERIFY(session.save({}).isEmpty());
+            QCOMPARE(SessionStore(file).load().state.resumePosition, 0.0);
+            QCOMPARE(
+                PlaybackHistoryStore(file + QStringLiteral(".history.ini")).load().entries.size(),
+                1);
+        }
+
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, file);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        connect(&player, &MpvController::fileLoaded, &player, [&] { player.setPaused(true); });
+        QVERIFY(session.restore().error.isEmpty());
+        queue.playOrPause();
+        QTRY_COMPARE(loaded.count(), 1);
+        QTRY_VERIFY(player.state().paused);
+        QTRY_VERIFY_WITH_TIMEOUT(std::abs(player.state().position - 1.24) < 0.08, 1500);
+    }
+
+    void closingAtBeginningClearsPerFileResumePosition() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("settings.ini"));
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        SessionState saved;
+        saved.paths = {media};
+        saved.currentIndex = 0;
+        QVERIFY(SessionStore(file).save(saved).isEmpty());
+        PlaybackHistoryStore history(file + QStringLiteral(".history.ini"));
+        QVERIFY(history.save({{media, 1.24, 4.0, 100}}).isEmpty());
+
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, file);
+        QVERIFY(session.restore().error.isEmpty());
+        connect(&player, &MpvController::fileLoaded, &player, [&] { player.setPaused(true); });
+        queue.playOrPause();
+        QTRY_VERIFY(player.state().active && player.state().paused);
+        QTRY_VERIFY(std::abs(player.state().position - 1.24) < 0.08);
+        player.seekAbsolute(0.0);
+        QTRY_VERIFY(player.state().position < 0.08);
+
+        QVERIFY(session.save({}).isEmpty());
+        QVERIFY(history.load().entries.isEmpty());
+    }
+
+    void eofRemovesHistoryForEndedMediaBeforeAdvancing() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("settings.ini"));
+        const auto firstMedia = QString::fromUtf8(TEST_MEDIA_PATH);
+        const auto secondMedia = temporary.filePath(QStringLiteral("second.mkv"));
+        QVERIFY(QFile::copy(firstMedia, secondMedia));
+        PlaybackHistoryStore history(file + QStringLiteral(".history.ini"));
+        QVERIFY(
+            history.save({{firstMedia, 1.0, 4.0, 100}, {secondMedia, 2.24, 4.0, 200}}).isEmpty());
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, file);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        connect(&player, &MpvController::fileLoaded, &player, [&] { player.setPaused(true); });
+        QVERIFY(session.restore().error.isEmpty());
+        queue.addFiles({firstMedia, secondMedia});
+        QTRY_COMPARE(loaded.count(), 1);
+        QTRY_VERIFY(player.state().paused);
+        player.seekAbsolute(3.5);
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().position > 3.4, 1500);
+        player.setPaused(false);
+        QTRY_COMPARE(loaded.count(), 2);
+        QTRY_VERIFY_WITH_TIMEOUT(std::abs(player.state().position - 2.24) < 0.08, 1500);
+        const auto entries = history.load().entries;
+        QCOMPARE(entries.size(), 1);
+        QCOMPARE(entries.front().path, PlaybackHistoryStore::normalizedPath(secondMedia));
+        QVERIFY(std::abs(entries.front().position - 2.24) < 0.08);
     }
 };
 

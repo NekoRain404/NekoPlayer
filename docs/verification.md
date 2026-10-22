@@ -142,6 +142,12 @@ Audio/subtitle track stage:
 - Recovery tests cover internal/external/disabled selection, repeated recovery without duplicated external streams, preservation of a selected second stream from a single external file, and a second reset while restoration is pending. The external-subtitle loss and overlapping-reset failures were reproduced before their fixes. An intermediate failure also confirmed that mpv can reset audio selection when reloading with a different external track layout; final selection is restored after external loading completes.
 - GUI wiring assertions now check backend selections in addition to QAction checks. They compile but have not been executed, so actual menu presentation, file-dialog behavior and subtitle pixels remain unverified.
 
+Per-file playback history stage:
+
+- `cmake --build --preset debug` succeeded, including NekoPlayer and compile-only window targets. `ctest --preset debug -R 'playback-history-store|resume|session|code-size' --output-on-failure` passed 5/5 after integration.
+- Headless tests cover versioned history persistence, path cleanup, duplicate replacement, 100-entry retention, invalid/corrupt file preservation, switching between files, stop behavior and restoration in a new session when the session bookmark is zero. The complete headless CTest collection passed 24/24 in Debug and 24/24 with ASan/UBSan; no sanitizer errors were reported. GUI/window tests were not run, per the user's request.
+- This stage's history is isolated at `<session path>.history.ini`; it is saved on media switch, stop, normal session save and EOF cleanup, not on position observations. Window-specific Wayland behavior remains unverified.
+
 Previous debug verification (playlist navigation and completion):
 
 - `cmake --build --preset debug` succeeded.

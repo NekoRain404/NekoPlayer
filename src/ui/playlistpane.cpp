@@ -4,6 +4,7 @@
 #include "playback/playlistmodel.h"
 
 #include <QAction>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QListView>
 #include <QStyle>
@@ -104,6 +105,15 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
 QListView *PlaylistPane::view() const { return view_; }
 
 QList<QAction *> PlaylistPane::editingActions() const { return {remove_, moveUp_, moveDown_}; }
+
+void PlaylistPane::changeEvent(QEvent *event) {
+    QWidget::changeEvent(event);
+    if (event->type() != QEvent::LanguageChange)
+        return;
+    remove_->setText(tr("从列表移除"));
+    moveUp_->setText(tr("上移所选项"));
+    moveDown_->setText(tr("下移所选项"));
+}
 
 void PlaylistPane::synchronizeCurrent() {
     const auto current = queue_.model()->index(queue_.model()->currentIndex());

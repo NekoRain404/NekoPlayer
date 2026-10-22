@@ -2,6 +2,29 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>ActionFeedbackText</name>
+    <message><source>前进 %1 秒</source><translation>Seek Forward %1 Seconds</translation></message>
+    <message><source>后退 %1 秒</source><translation>Seek Back %1 Seconds</translation></message>
+    <message><source>跳转至 %1</source><translation>Seek to %1</translation></message>
+    <message><source>音量 %1%</source><translation>Volume %1%</translation></message>
+    <message><source>已静音</source><translation>Muted</translation></message>
+    <message><source>取消静音</source><translation>Unmuted</translation></message>
+    <message><source>已暂停</source><translation>Paused</translation></message>
+    <message><source>继续播放</source><translation>Resumed</translation></message>
+</context>
+<context>
+    <name>PlaylistPane</name>
+    <message><source>从列表移除</source><translation>Remove from Playlist</translation></message>
+    <message><source>上移所选项</source><translation>Move Selected Up</translation></message>
+    <message><source>下移所选项</source><translation>Move Selected Down</translation></message>
+</context>
+<context>
+    <name>MediaInformationDialog</name>
+    <message><source>媒体信息</source><translation>Media Information</translation></message>
+    <message><source>当前媒体信息</source><translation>Current Media Information</translation></message>
+    <message><source>复制</source><translation>Copy</translation></message>
+</context>
+<context>
     <name>LocalFileDrop</name>
     <message><source>请拖入本地媒体或字幕文件</source><translation>Drop a local media or subtitle file</translation></message>
     <message><source>拖放仅支持本地媒体或字幕文件</source><translation>Only local media or subtitle files can be dropped</translation></message>
@@ -20,6 +43,7 @@
     <message><source>添加文件夹…</source><translation>Add Folder…</translation></message>
     <message><source>文件夹中没有找到支持的音视频文件</source><translation>No supported audio or video files found in the folder</translation></message>
     <message><source>添加文件夹</source><translation>Add Folder</translation></message>
+    <message><source>取消</source><translation>Cancel</translation></message>
 </context>
 <context>
     <name>MainWindow</name>
@@ -79,6 +103,14 @@
     <message><source>简体中文</source><translation>简体中文</translation></message>
     <message><source>关于 NekoPlayer…</source><translation>About NekoPlayer…</translation></message>
     <message><source>更改语言将在重新启动后生效。</source><translation>Language changes take effect after restarting the application.</translation></message>
+    <message><source>NekoPlayer
+
+拖入视频，或按 Ctrl+O 打开文件
+Ctrl+U 打开网络地址</source><translation>NekoPlayer
+
+Drop a video, or press Ctrl+O to open a file
+Ctrl+U to open a network URL</translation></message>
+    <message><source>无法播放：%1</source><translation>Could not play: %1</translation></message>
 </context>
 <context>
     <name>QObject</name>
@@ -96,6 +128,8 @@ libmpv client API: %2.%3</translation></message>
 </context>
 <context>
     <name>PlaybackOverlay</name>
+    <message><source>当前播放信息</source><translation>Current Playback Information</translation></message>
+    <message><source>定位播放进度</source><translation>Seek Playback Position</translation></message>
     <message><source>未播放媒体</source><translation>No media playing</translation></message>
     <message><source>未知</source><translation>Unknown</translation></message>
     <message><source>软件解码</source><translation>Software decoding</translation></message>
@@ -151,9 +185,25 @@ libmpv client API: %2.%3</translation></message>
 </context>
 <context>
     <name>MediaInformation</name>
+    <message><source>未播放媒体</source><translation>No media playing</translation></message>
+    <message><source>未知</source><translation>Unknown</translation></message>
+    <message><source>文件</source><translation>File</translation></message>
+    <message><source>容器格式</source><translation>Container format</translation></message>
+    <message><source>文件大小</source><translation>File size</translation></message>
+    <message><source>%1（%2 字节）</source><translation>%1 (%2 bytes)</translation></message>
+    <message><source>视频编码</source><translation>Video codec</translation></message>
+    <message><source>视频尺寸</source><translation>Video resolution</translation></message>
+    <message><source>像素格式</source><translation>Pixel format</translation></message>
     <message><source>视频色彩</source><translation>Video color</translation></message>
     <message><source>视频原色</source><translation>Video primaries</translation></message>
     <message><source>HDR · %1</source><translation>HDR · %1</translation></message>
     <message><source>SDR</source><translation>SDR</translation></message>
+    <message><source>容器帧率（估计值）</source><translation>Container frame rate (estimated)</translation></message>
+    <message><source>实际视频解码</source><translation>Active video decoder</translation></message>
+    <message><source>软件解码</source><translation>Software decoding</translation></message>
+    <message><source>音频编码</source><translation>Audio codec</translation></message>
+    <message><source>采样率</source><translation>Sample rate</translation></message>
+    <message><source>声道</source><translation>Channels</translation></message>
+    <message><source>采样格式</source><translation>Sample format</translation></message>
 </context>
 </TS>

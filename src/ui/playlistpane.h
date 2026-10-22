@@ -6,6 +6,7 @@
 class QAction;
 class PlaylistController;
 class QListView;
+class QEvent;
 
 class PlaylistPane final : public QWidget {
     Q_OBJECT
@@ -15,6 +16,9 @@ class PlaylistPane final : public QWidget {
 
     [[nodiscard]] QListView *view() const;
     [[nodiscard]] QList<QAction *> editingActions() const;
+
+  protected:
+    void changeEvent(QEvent *event) override;
 
   signals:
     void playRequested(int row);

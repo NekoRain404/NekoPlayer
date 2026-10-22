@@ -25,6 +25,11 @@ Appearance and language settings stage (2026-10-22):
 - `appearance-preferences` verifies all three theme modes and loads the bundled `.qm` resource. Full Debug build and `QT_QPA_PLATFORM=offscreen ./build/debug/NekoPlayer --no-config --smoke-test` passed. The non-window collection passed **44/44** before the last localized-resource test addition, and that updated `appearance-preferences` test passed again afterward. No window behavior test was run.
 - `clang-format --dry-run --Werror`, code-size checks, and `git diff --check` passed; no new source exceeds 500 lines.
 
+Runtime language refresh follow-up (2026-10-22):
+- Expanded the English catalog for high-frequency action feedback, empty/error playback states, media reports, playlist editing, overlay accessibility labels, transport accessibility/tooltips and the media information dialog.
+- On `LanguageChange`, the empty-state hint, playback/seek overlays, transport labels/tooltips, playlist editing actions, and an open media-information dialog refresh their translated content without replacing playback state or shared QAction objects. Main-window primary menu/action labels continue to refresh in place.
+- Full Debug build and the non-window test collection passed **45/45**. The catalog/resource check `language-manager` passed; UI behavior targets were built but not run per request. Nested legacy menus still need broader retranslation coverage, and visible feedback already on screen is not reconstructed in the new language.
+
 Video framing, playback overlay, and timeline stage (2026-10-22):
 
 - Added PotPlayer-style video zoom/pan (25–800%, horizontal/vertical offsets, presets, keyboard shortcuts and reset) using mpv's native `video-zoom`/`video-pan-*` properties. Runtime intent survives stop/reload and renderer recovery; Stretch mode disables framing operations while preserving the values for later use.

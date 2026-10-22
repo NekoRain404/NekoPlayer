@@ -7,6 +7,7 @@ class MpvController;
 class QLabel;
 class QFrame;
 class QProgressBar;
+class QEvent;
 
 // Event-driven presentation only; owns no playback or graphics resources.
 class PlaybackOverlay final : public QWidget {
@@ -19,6 +20,7 @@ class PlaybackOverlay final : public QWidget {
 
   protected:
     void resizeEvent(QResizeEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
   private:
     void present();

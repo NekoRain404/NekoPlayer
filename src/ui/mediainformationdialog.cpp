@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QDialogButtonBox>
+#include <QEvent>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -21,9 +22,9 @@ MediaInformationDialog::MediaInformationDialog(MpvController &player, QWidget *p
     report_->setLineWrapMode(QPlainTextEdit::NoWrap);
     layout->addWidget(report_);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
-    auto *copy = buttons->addButton(tr("复制"), QDialogButtonBox::ActionRole);
-    copy->setObjectName(QStringLiteral("copyMediaInformationButton"));
-    connect(copy, &QPushButton::clicked, this,
+    copy_ = buttons->addButton(tr("复制"), QDialogButtonBox::ActionRole);
+    copy_->setObjectName(QStringLiteral("copyMediaInformationButton"));
+    connect(copy_, &QPushButton::clicked, this,
             [this] { QApplication::clipboard()->setText(report_->toPlainText()); });
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::close);
     layout->addWidget(buttons);
@@ -32,6 +33,16 @@ MediaInformationDialog::MediaInformationDialog(MpvController &player, QWidget *p
     connect(&player_, &MpvController::stateChanged, this, &MediaInformationDialog::updateState);
     updateReport();
     resize(640, 480);
+}
+
+void MediaInformationDialog::changeEvent(QEvent *event) {
+    QDialog::changeEvent(event);
+    if (event->type() != QEvent::LanguageChange)
+        return;
+    setWindowTitle(tr("媒体信息"));
+    report_->setAccessibleName(tr("当前媒体信息"));
+    copy_->setText(tr("复制"));
+    updateReport();
 }
 
 void MediaInformationDialog::updateState() {

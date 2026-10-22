@@ -3,6 +3,7 @@
 #include "seekslidergeometry.h"
 
 #include <QAction>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMouseEvent>
@@ -181,4 +182,13 @@ void TransportBar::present(const PlaybackState &state) {
                               ? duration_ * timeline_->sliderPosition() / 10000.0
                               : state.position;
     time_->setText(timeText(position) + QStringLiteral(" / ") + timeText(duration_));
+}
+
+void TransportBar::changeEvent(QEvent *event) {
+    QWidget::changeEvent(event);
+    if (event->type() != QEvent::LanguageChange)
+        return;
+    timeline_->setAccessibleName(tr("播放进度"));
+    volume_->setAccessibleName(tr("音量"));
+    volume_->setToolTip(tr("音量 %1%").arg(volume_->value()));
 }

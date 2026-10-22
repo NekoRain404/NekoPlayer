@@ -2,6 +2,7 @@
 #include "playback/mpvcontroller.h"
 #include "playbackoverlaytext.h"
 
+#include <QEvent>
 #include <QFrame>
 #include <QLabel>
 #include <QProgressBar>
@@ -122,4 +123,13 @@ void PlaybackOverlay::arrangePanels() {
 void PlaybackOverlay::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
     arrangePanels();
+}
+
+void PlaybackOverlay::changeEvent(QEvent *event) {
+    QWidget::changeEvent(event);
+    if (event->type() != QEvent::LanguageChange)
+        return;
+    information_->setAccessibleName(tr("当前播放信息"));
+    progress_->setAccessibleName(tr("定位播放进度"));
+    present();
 }

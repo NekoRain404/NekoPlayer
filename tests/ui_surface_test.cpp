@@ -53,6 +53,10 @@ class UiSurfaceTest final : public QObject {
         QVERIFY(!heading->isHidden());
         QVERIFY(first->text().contains(QStringLiteral("Film One")));
         QVERIFY(second->text().contains(QStringLiteral("episode")));
+        QVERIFY(!first->icon().isNull());
+        QVERIFY(!second->icon().isNull());
+        QCOMPARE(first->iconSize(), QSize(16, 16));
+        QVERIFY(second->accessibleName().contains(QStringLiteral("episode")));
         QVERIFY(!second->toolTip().contains(QStringLiteral("?")));
         QVERIFY(second->property("welcomeRecentAction").toBool());
 
@@ -134,6 +138,9 @@ class UiSurfaceTest final : public QObject {
                  QStringLiteral("Start Playing"));
         QCOMPARE(panel.findChild<QLabel *>(QStringLiteral("welcomeRecentHeading"))->text(),
                  QStringLiteral("Recently Played"));
+        QVERIFY(panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1"))
+                    ->accessibleName()
+                    .startsWith(QStringLiteral("Local media:")));
         qApp->removeTranslator(&translator);
     }
 };

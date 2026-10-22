@@ -1,5 +1,12 @@
 # Verification Record
 
+Welcome panel icon and interaction stage (2026-10-23):
+
+- Recent local and network entries now use distinct Qt standard icons, a consistent 16 px icon size, a pointing-hand cursor, and keyboard-friendly focus behavior without changing the existing click signal.
+- Accessible names identify the media type and retain the sanitized location; runtime language changes update these names along with the visible heading. Tooltips remain free of network credentials, queries and fragments.
+- The red/green UI regression covers icon presence, size, sanitized network metadata and English runtime retranslation. `ui-surface_test` passed **8/8** in Debug; formatting and `git diff --check` passed. Window behavior tests were not run, so native Wayland icon rasterization and pointer/focus visuals remain desktop verification work.
+- No libmpv commands, decoder settings, GPU render path, CPU frame copies, HDR handling or playback polling changed in this stage.
+
 Welcome panel recent-history stage (2026-10-23):
 
 - The welcome surface now shows up to three recent local or network sources, keeps network credentials, query strings and fragments out of labels/tooltips, and emits the original source when a history action is selected.

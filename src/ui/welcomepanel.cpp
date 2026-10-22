@@ -11,6 +11,7 @@
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSizePolicy>
+#include <QStyle>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <algorithm>
@@ -144,13 +145,19 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
         button->setProperty("welcomeRecentAction", true);
         button->setMinimumHeight(34);
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        const auto networkSource = MediaSource::isNetwork(source);
         const auto location =
-            MediaSource::isNetwork(source)
-                ? QUrl(source).toDisplayString(QUrl::RemoveUserInfo | QUrl::RemoveQuery |
-                                               QUrl::RemoveFragment)
-                : source;
-        button->setToolTip(location.toHtmlEscaped());
-        button->setAccessibleName(location);
+            networkSource ? QUrl(source).toDisplayString(QUrl::RemoveUserInfo | QUrl::RemoveQuery |
+                                                         QUrl::RemoveFragment)
+                          : source;
+        button->setIcon(
+            style()->standardIcon(networkSource ? QStyle::SP_DriveNetIcon : QStyle::SP_FileIcon));
+        button->setIconSize(QSize(16, 16));
+        button->setCursor(Qt::PointingHandCursor);
+        button->setProperty("welcomeRecentNetwork", networkSource);
+        button->setToolTip(location);
+        button->setAccessibleName(
+            tr(networkSource ? "网络媒体：%1" : "本地媒体：%1").arg(location));
         connect(button, &QPushButton::clicked, this,
                 [this, source] { emit recentSourceRequested(source); });
         recentLayout_->addWidget(button);
@@ -170,6 +177,14 @@ void WelcomePanel::updateRecentButtonLabels() {
             label = tr("未命名媒体");
         label.replace(QLatin1Char('&'), QStringLiteral("&&"));
         button->setText(metrics.elidedText(label, Qt::ElideMiddle, availableWidth));
+        const auto networkSource = button->property("welcomeRecentNetwork").toBool();
+        const auto location = networkSource
+                                  ? QUrl(recentSources_.at(index))
+                                        .toDisplayString(QUrl::RemoveUserInfo | QUrl::RemoveQuery |
+                                                         QUrl::RemoveFragment)
+                                  : recentSources_.at(index);
+        button->setAccessibleName(
+            tr(networkSource ? "网络媒体：%1" : "本地媒体：%1").arg(location));
     }
 }
 

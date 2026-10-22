@@ -1,5 +1,6 @@
 #include "playbackoverlay.h"
 #include "playback/mpvcontroller.h"
+#include "playbackoverlaygeometry.h"
 #include "playbackoverlaytext.h"
 
 #include <QEvent>
@@ -110,14 +111,13 @@ void PlaybackOverlay::updateVisibility() {
 }
 
 void PlaybackOverlay::arrangePanels() {
-    const int panelWidth = qMax(1, qMin(680, width() - 40));
-    information_->setFixedWidth(panelWidth);
-    const int infoHeight = information_->heightForWidth(panelWidth);
-    information_->setGeometry(20, 20, panelWidth,
-                              qMin(qMax(1, height() - 40), qMax(1, infoHeight)));
-    const int seekHeight = seekPanel_->sizeHint().height();
-    seekPanel_->setGeometry((width() - panelWidth) / 2, qMax(0, height() - seekHeight - 32),
-                            panelWidth, seekHeight);
+    const int requestedWidth = qMax(1, qMin(680, width() - 40));
+    const int informationHeight = qMax(1, information_->heightForWidth(requestedWidth));
+    const auto layout = PlaybackOverlayGeometry::arrange(
+        size(), QSize(requestedWidth, informationHeight), seekPanel_->sizeHint());
+    information_->setFixedWidth(layout.information.width());
+    information_->setGeometry(layout.information);
+    seekPanel_->setGeometry(layout.seek);
 }
 
 void PlaybackOverlay::resizeEvent(QResizeEvent *event) {

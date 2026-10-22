@@ -1,5 +1,11 @@
 # Verification Record
 
+Playback overlay boundary stage (2026-10-22):
+
+- Extracted overlay panel placement into a small geometry helper. Information and seek panels retain the 20/32 px breathing room at normal sizes, while their extents and insets contract for tiny viewports so fullscreen overlays remain fully contained and the seek panel stays centered.
+- `playback-overlay-text`, `appearance-preferences`, `preferences-dialog`, `media-information`, and `code-size` passed **5/5**. The focused sanitizer run of `playback-overlay-text` passed **20/20** without ASan/UBSan reports. Window behavior targets were compiled but not run as requested; native Wayland visual centering and fade behavior remain desktop verification work.
+- `clang-format --dry-run --Werror` and `git diff --check` passed. The helper and production arrangement do not alter libmpv GPU rendering, hardware decoding, or video geometry.
+
 Content-first UI refinement stage (2026-10-22):
 
 - Dark and light themes now share deliberate hover, pressed, checked, focus, and disabled feedback for controls; playlist-specific row styling is scoped to `playlistView`, and timeline seek handles have a more legible hover target. Playlist row striping no longer competes with selection styling.

@@ -1,4 +1,5 @@
 #include "playback/mpvcontroller.h"
+#include "ui/playbackoverlaygeometry.h"
 #include "ui/playbackoverlaytext.h"
 
 #include <QtTest>
@@ -191,6 +192,21 @@ class PlaybackOverlayTextTest final : public QObject {
         QVERIFY(!text.contains(QChar(0x1b)));
         QVERIFY(!text.contains(QStringLiteral("Live\ncommentary")));
         QVERIFY(text.contains(QStringLiteral("Live commentary")));
+    }
+
+    void overlayPanelsStayInsideTinyViewport() {
+        const auto layout =
+            PlaybackOverlayGeometry::arrange(QSize(20, 12), QSize(500, 200), QSize(500, 100));
+        const QRect viewport(QPoint(0, 0), QSize(20, 12));
+        QVERIFY(viewport.contains(layout.information));
+        QVERIFY(viewport.contains(layout.seek));
+    }
+
+    void seekPanelRemainsCenteredWithComfortableMargins() {
+        const auto layout =
+            PlaybackOverlayGeometry::arrange(QSize(1920, 1080), QSize(400, 300), QSize(400, 90));
+        QCOMPARE(layout.information, QRect(20, 20, 400, 300));
+        QCOMPARE(layout.seek, QRect(760, 958, 400, 90));
     }
 
     void informationHidesNetworkSecretsAndBoundsHostileNames() {

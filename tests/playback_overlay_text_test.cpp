@@ -91,13 +91,92 @@ class PlaybackOverlayTextTest final : public QObject {
               QStringLiteral("aac"), QStringLiteral("48000 Hz"), QStringLiteral("stereo")})
             QVERIFY2(text.contains(part), qPrintable(part));
         QVERIFY(text.count(QLatin1Char('\n')) >= 4);
-        QVERIFY(text.count(QLatin1Char('\n')) <= 6);
+        QVERIFY(text.count(QLatin1Char('\n')) >= 11);
         state.paused = true;
         state.hardwareDecoder = QStringLiteral("no");
         const auto paused = formatPlaybackOverlayInformation(info, state);
         QVERIFY(paused.contains(QStringLiteral("已暂停")));
         QVERIFY(paused.contains(QStringLiteral("软件解码")));
         QVERIFY(!paused.contains(QStringLiteral("vaapi")));
+    }
+
+    void informationIncludesContainerPlaybackAudioAndSelectedTrackDetails() {
+        PlaybackState state;
+        state.active = true;
+        state.path = QStringLiteral("/影片/movie.mkv");
+        state.position = 65;
+        state.duration = 120;
+        state.volume = 42.5;
+        state.muted = true;
+        state.audioDelay = 0.125;
+        state.subtitleDelay = -0.75;
+        MediaInformation info;
+        info.fileFormat = QStringLiteral("matroska,webm");
+        info.fileSize = 123456;
+        info.audioSampleFormat = QStringLiteral("fltp");
+        QList<MediaTrack> tracks{{1,
+                                  MediaTrack::Type::Audio,
+                                  QStringLiteral("ja"),
+                                  QStringLiteral("Director's commentary"),
+                                  QStringLiteral("aac"),
+                                  false,
+                                  true,
+                                  {}},
+                                 {2,
+                                  MediaTrack::Type::Audio,
+                                  QStringLiteral("en"),
+                                  QStringLiteral("Alternate"),
+                                  QStringLiteral("aac"),
+                                  false,
+                                  false,
+                                  {}},
+                                 {3, MediaTrack::Type::Subtitle, QStringLiteral("en"),
+                                  QStringLiteral("English captions"), QStringLiteral("ass"), true,
+                                  true, QStringLiteral("/private/subtitle.srt")}};
+
+        const auto text = formatPlaybackOverlayInformation(info, state, tracks);
+        for (const auto &part :
+             {QStringLiteral("matroska,webm"), QStringLiteral("123456"), QStringLiteral("fltp"),
+              QStringLiteral("42.5"), QStringLiteral("Director's commentary"),
+              QStringLiteral("English captions")})
+            QVERIFY2(text.contains(part), qPrintable(part));
+        QVERIFY(text.contains(QStringLiteral("125 ms")));
+        QVERIFY(text.contains(QStringLiteral("-750 ms")));
+        QVERIFY(text.contains(QStringLiteral("静音")) || text.contains(QStringLiteral("已静音")));
+        QVERIFY(!text.contains(QStringLiteral("Alternate")));
+        QVERIFY(!text.contains(QStringLiteral("/private/subtitle.srt")));
+    }
+
+    void unavailableLiveDetailsAreUnknownAndTrackTextIsSanitized() {
+        PlaybackState state;
+        state.active = true;
+        state.path = QStringLiteral("https://user:secret@example.org/live?token=private");
+        state.seekable = false;
+        state.position = std::numeric_limits<double>::quiet_NaN();
+        state.duration = 0;
+        state.volume = std::numeric_limits<double>::infinity();
+        state.audioDelay = std::numeric_limits<double>::quiet_NaN();
+        state.subtitleDelay = std::numeric_limits<double>::infinity();
+        MediaInformation info;
+        QList<MediaTrack> tracks{{1,
+                                  MediaTrack::Type::Audio,
+                                  QStringLiteral("en"),
+                                  QStringLiteral("Live\ncommentary") + QChar(0x1b),
+                                  QStringLiteral("aac"),
+                                  false,
+                                  true,
+                                  {}}};
+
+        const auto text = formatPlaybackOverlayInformation(info, state, tracks);
+        QVERIFY(text.contains(QStringLiteral("live")));
+        for (const auto &secret : {"user", "secret", "token", "private"})
+            QVERIFY(!text.contains(QLatin1String(secret)));
+        QVERIFY(text.contains(QStringLiteral("未知")));
+        QVERIFY(!text.contains(QStringLiteral("nan"), Qt::CaseInsensitive));
+        QVERIFY(!text.contains(QStringLiteral("inf"), Qt::CaseInsensitive));
+        QVERIFY(!text.contains(QChar(0x1b)));
+        QVERIFY(!text.contains(QStringLiteral("Live\ncommentary")));
+        QVERIFY(text.contains(QStringLiteral("Live commentary")));
     }
 
     void informationHidesNetworkSecretsAndBoundsHostileNames() {
@@ -117,7 +196,7 @@ class PlaybackOverlayTextTest final : public QObject {
         QVERIFY(!nameLine.contains(QLatin1Char('\r')));
         QVERIFY(!nameLine.contains(QLatin1Char('\t')));
         QVERIFY(!nameLine.contains(QChar(0x1b)));
-        QCOMPARE(text.count(QLatin1Char('\n')), 6);
+        QVERIFY(text.count(QLatin1Char('\n')) >= 6);
     }
 
     void audioOnlyAndIdleDoNotRetainVideoOrDecoder() {

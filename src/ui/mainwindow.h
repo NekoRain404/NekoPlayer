@@ -20,6 +20,8 @@ class ActionFeedbackOverlay;
 class PlaybackOverlay;
 class FolderMenu;
 class RecentMediaHistory;
+class FullscreenControls;
+class QVBoxLayout;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -68,6 +70,8 @@ class MainWindow final : public QMainWindow {
     std::unique_ptr<RecentMediaHistory> recentMedia_;
     VideoWidget *video_ = nullptr;
     TransportBar *transport_ = nullptr;
+    FullscreenControls *fullscreenControls_ = nullptr;
+    QVBoxLayout *centralLayout_ = nullptr;
     TrackMenus *trackMenus_ = nullptr;
     PlaylistPane *playlistPane_ = nullptr;
     LocalFileDrop *fileDrop_ = nullptr;

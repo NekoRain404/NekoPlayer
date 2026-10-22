@@ -48,6 +48,7 @@ PlaybackOverlay::PlaybackOverlay(MpvController &controller, QWidget *parent)
     connect(&controller_, &MpvController::stateChanged, this, &PlaybackOverlay::present);
     connect(&controller_, &MpvController::mediaInformationChanged, this, &PlaybackOverlay::present);
     connect(&controller_, &MpvController::tuningChanged, this, &PlaybackOverlay::present);
+    connect(&controller_, &MpvController::tracksChanged, this, &PlaybackOverlay::present);
     // A new load/stop must not retain the preceding media's transient progress.
     connect(&controller_, &MpvController::fileOpenRequested, this, &PlaybackOverlay::clearSeek);
     connect(&controller_, &MpvController::stopRequested, this, &PlaybackOverlay::clearSeek);
@@ -82,8 +83,8 @@ void PlaybackOverlay::clearSeek() {
 
 void PlaybackOverlay::present() {
     if (informationVisible_) {
-        information_->setText(
-            formatPlaybackOverlayInformation(controller_.mediaInformation(), controller_.state()));
+        information_->setText(formatPlaybackOverlayInformation(
+            controller_.mediaInformation(), controller_.state(), controller_.tracks()));
     }
     if (seekVisible_) {
         const auto progress = formatSeekProgress(controller_.state());

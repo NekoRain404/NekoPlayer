@@ -1,8 +1,10 @@
 #pragma once
 
+#include <QList>
 #include <QString>
 
 struct MediaInformation;
+struct MediaTrack;
 struct PlaybackState;
 
 struct SeekProgressPresentation {
@@ -12,4 +14,5 @@ struct SeekProgressPresentation {
 };
 
 SeekProgressPresentation formatSeekProgress(const PlaybackState &state);
-QString formatPlaybackOverlayInformation(const MediaInformation &info, const PlaybackState &state);
+QString formatPlaybackOverlayInformation(const MediaInformation &info, const PlaybackState &state,
+                                         const QList<MediaTrack> &tracks = {});

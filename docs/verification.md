@@ -1,5 +1,13 @@
 # Verification Record
 
+Video framing, playback overlay, and timeline stage (2026-10-22):
+
+- Added PotPlayer-style video zoom/pan (25–800%, horizontal/vertical offsets, presets, keyboard shortcuts and reset) using mpv's native `video-zoom`/`video-pan-*` properties. Runtime intent survives stop/reload and renderer recovery; Stretch mode disables framing operations while preserving the values for later use.
+- The Tab overlay now reports container and byte size, progress/remaining duration, volume/mute, audio/subtitle delays, sample format and selected audio/subtitle tracks. Track metadata is bounded and sanitized; network credentials/query secrets and external subtitle paths are never displayed.
+- Fullscreen controls now float over the video with a fade and no layout contribution; the playlist hides while fullscreen and restores its checked preference on exit. Timeline track clicks seek immediately to the mapped location, while handle dragging and keyboard step behavior remain available.
+- Full Debug build completed. The non-window suite `ctest --test-dir build/debug --output-on-failure -E 'window|startup'` passed **43/43** in **61.99 seconds**. `video-framing`, `playback-overlay-text`, and `seek-slider-geometry` are included. Window behavior tests were compiled but not run as requested; fullscreen geometry/fade, physical pointer interaction and actual video centering still need native-Wayland visual verification.
+- Changed UI sources and tests were formatted; `git diff --check` passed. No new >500-line source was added; specialized tests remain below 800 lines. No new polling, GPU readback, or video-frame copy was introduced.
+
 External audio tracks stage (2026-10-22):
 
 - Added shared Audio/context-menu loading with Ctrl+Shift+A, including silent video and multi-stream audio containers. Loading uses asynchronous native `audio-add`; audio and subtitle attachments share typed loading/restoration logic. Local media preferences retain external paths, the selected stream ordinal, and explicit disabled/internal selection across reopening. Renderer recovery restores each canonical external file once, including containers with both audio and subtitle streams. Source changes while the chooser is open invalidate its result.

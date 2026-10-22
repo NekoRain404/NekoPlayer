@@ -2,6 +2,7 @@
 #include "actionfeedbackoverlay.h"
 #include "actionfeedbacktext.h"
 #include "foldermenu.h"
+#include "fullscreencontrols.h"
 #include "input/localfiledrop.h"
 #include "networkopendialog.h"
 #include "playback/mediasource.h"
@@ -73,6 +74,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     createActions();
     auto *content = new QWidget(this);
     auto *layout = new QVBoxLayout(content);
+    centralLayout_ = layout;
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     video_ = new VideoWidget(*controller_, content);
@@ -101,6 +103,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     bodyLayout->addWidget(playlistPane_);
     transport_ = new TransportBar(openAction_, previousAction_, pauseAction_, nextAction_,
                                   stopAction_, muteAction_, fullscreenAction_, content);
+    fullscreenControls_ = new FullscreenControls(*transport_, *video_, *centralLayout_, this);
     layout->addWidget(body, 1);
     layout->addWidget(transport_);
     setCentralWidget(content);
@@ -162,8 +165,9 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     controlsTimer_.setSingleShot(true);
     controlsTimer_.setInterval(2200);
     connect(&controlsTimer_, &QTimer::timeout, this, [this] {
-        if (isFullScreen() && !transport_->underMouse() && !contextMenu_->isVisible()) {
-            transport_->hide();
+        if (isFullScreen() && !fullscreenControls_->interactionActive() &&
+            !contextMenu_->isVisible()) {
+            fullscreenControls_->fadeOut();
             statusBar()->hide();
             video_->setCursor(Qt::BlankCursor);
         } else if (isFullScreen())
@@ -189,6 +193,7 @@ MainWindow::~MainWindow() {
             qWarning().noquote() << error;
     }
     // QMainWindow deletes children after members. GPU resources must go first.
+    delete fullscreenControls_;
     delete takeCentralWidget();
 }
 MpvController *MainWindow::controller() const { return controller_.get(); }
@@ -349,7 +354,7 @@ void MainWindow::showError(const QString &message) {
     statusBar()->showMessage(tr("无法播放：%1").arg(message));
     if (isFullScreen()) {
         revealControls();
-        statusBar()->show();
+        feedbackOverlay_->showMessage(tr("无法播放：%1").arg(message), 5000);
     }
     emit userError(message);
 }
@@ -388,11 +393,14 @@ void MainWindow::setFullscreen(bool enabled) {
         normalMaximized_ = isMaximized();
         menuBar()->hide();
         statusBar()->hide();
-        transport_->hide();
+        fullscreenControls_->enter();
+        playlistPane_->hide();
+        showPlaylistAction_->setEnabled(false);
         showFullScreen();
         video_->setCursor(Qt::BlankCursor);
     } else {
         controlsTimer_.stop();
+        fullscreenControls_->leave();
         video_->unsetCursor();
         showNormal();
         restoreGeometry(normalGeometry_);
@@ -400,7 +408,8 @@ void MainWindow::setFullscreen(bool enabled) {
             showMaximized();
         menuBar()->show();
         statusBar()->show();
-        transport_->show();
+        showPlaylistAction_->setEnabled(true);
+        playlistPane_->setVisible(showPlaylistAction_->isChecked());
     }
     fullscreenAction_->setChecked(enabled);
 }
@@ -408,7 +417,7 @@ void MainWindow::setFullscreen(bool enabled) {
 void MainWindow::revealControls() {
     if (!isFullScreen())
         return;
-    transport_->show();
+    fullscreenControls_->reveal();
     video_->unsetCursor();
     controlsTimer_.start();
 }

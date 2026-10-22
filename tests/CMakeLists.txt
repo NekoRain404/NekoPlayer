@@ -1,4 +1,10 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Test Network)
+add_executable(seek_slider_geometry_test seek_slider_geometry_test.cpp)
+target_include_directories(seek_slider_geometry_test PRIVATE ../src)
+target_link_libraries(seek_slider_geometry_test PRIVATE Qt6::Widgets Qt6::Test)
+add_test(NAME seek-slider-geometry COMMAND seek_slider_geometry_test)
+set_tests_properties(seek-slider-geometry PROPERTIES TIMEOUT 20)
+
 find_program(FFMPEG_EXECUTABLE ffmpeg REQUIRED)
 
 add_executable(recent_media_history_test recent_media_history_test.cpp)

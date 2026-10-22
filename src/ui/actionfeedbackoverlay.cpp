@@ -1,4 +1,5 @@
 #include "actionfeedbackoverlay.h"
+#include "actionfeedbackgeometry.h"
 
 #include <QFontMetrics>
 #include <QPaintEvent>
@@ -46,22 +47,19 @@ void ActionFeedbackOverlay::paintEvent(QPaintEvent *event) {
     QFont font = this->font();
     font.setPixelSize(18);
     const QFontMetrics metrics(font);
-    const int maxTextWidth = qMax(80, width() - 64);
+    const int maxTextWidth = qMax(1, width() - 64);
     const QRect textBounds = metrics.boundingRect(QRect(0, 0, maxTextWidth, height()),
                                                   Qt::AlignCenter | Qt::TextWordWrap, message_);
-    const QSize panelSize(textBounds.width() + 36, textBounds.height() + 24);
-    const QPoint panelTopLeft((width() - panelSize.width()) / 2,
-                              qBound(16, qRound(height() * 0.68) - panelSize.height() / 2,
-                                     qMax(16, height() - panelSize.height() - 16)));
-    const QRect panel(panelTopLeft, panelSize);
+    const auto layout = ActionFeedbackGeometry::arrange(size(), textBounds.size());
+    if (!layout.panel.isValid())
+        return;
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setFont(font);
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor(24, 26, 31, 218));
-    painter.drawRoundedRect(panel, 6, 6);
+    painter.drawRoundedRect(layout.panel, 6, 6);
     painter.setPen(QColor(245, 246, 249));
-    painter.drawText(panel.adjusted(18, 10, -18, -10), Qt::AlignCenter | Qt::TextWordWrap,
-                     message_);
+    painter.drawText(layout.text, Qt::AlignCenter | Qt::TextWordWrap, message_);
 }

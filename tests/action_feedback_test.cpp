@@ -1,3 +1,4 @@
+#include "ui/actionfeedbackgeometry.h"
 #include "ui/actionfeedbacktext.h"
 
 #include <QtTest>
@@ -27,6 +28,19 @@ class ActionFeedbackTest final : public QObject {
         QCOMPARE(ActionFeedbackText::mute(false), QStringLiteral("取消静音"));
         QCOMPARE(ActionFeedbackText::playback(true), QStringLiteral("已暂停"));
         QCOMPARE(ActionFeedbackText::playback(false), QStringLiteral("继续播放"));
+    }
+
+    void feedbackPanelStaysInsideTinyViewport() {
+        const auto layout = ActionFeedbackGeometry::arrange(QSize(20, 12), QSize(180, 48));
+        const QRect viewport(QPoint(0, 0), QSize(20, 12));
+        QVERIFY(viewport.contains(layout.panel));
+        QVERIFY(viewport.contains(layout.text));
+    }
+
+    void feedbackPanelUsesCenteredPositionAtNormalSize() {
+        const auto layout = ActionFeedbackGeometry::arrange(QSize(1920, 1080), QSize(240, 48));
+        QCOMPARE(layout.panel, QRect(822, 700, 276, 68));
+        QCOMPARE(layout.text, QRect(840, 710, 240, 48));
     }
 };
 

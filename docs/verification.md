@@ -1,5 +1,11 @@
 # Verification Record
 
+Action feedback compactness stage (2026-10-22):
+
+- Action feedback geometry now clamps both the panel and its text area to the overlay viewport. Normal surfaces retain the centered, lower-third presentation; tiny fullscreen surfaces collapse padding instead of painting outside the video.
+- `action-feedback` passed **8/8** in Debug and ASan/UBSan builds. The new pure geometry checks cover a 20×12 viewport and the normal 1920×1080 placement. Window behavior targets were not run; native Wayland visual fade and text rendering remain desktop verification work.
+- Formatting and `git diff --check` passed. This is a UI-only change with no playback, decoder, or GPU render-path impact.
+
 Playback overlay boundary stage (2026-10-22):
 
 - Extracted overlay panel placement into a small geometry helper. Information and seek panels retain the 20/32 px breathing room at normal sizes, while their extents and insets contract for tiny viewports so fullscreen overlays remain fully contained and the seek panel stays centered.

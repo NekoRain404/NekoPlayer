@@ -1,5 +1,11 @@
 # Verification Record
 
+Control-state styling stage (2026-10-22):
+
+- Dark and light themes now give disabled slider handles an explicit muted track color and border, so an unavailable seek control is visibly distinct from a focused/hovered one while retaining the existing opacity treatment.
+- `code-size`, `appearance-preferences`, and `preferences-dialog` passed **3/3**. The updated appearance suite passed **9/9** under ASan/UBSan with leak detection disabled. Window behavior tests were not run; native Wayland focus-ring contrast remains desktop verification work.
+- Formatting and `git diff --check` passed. No playback, decoding, or GPU rendering code changed.
+
 Responsive transport stage (2026-10-22):
 
 - TransportBar now selects compact metrics from its live width. At 560 px it keeps time and volume controls with smaller footprints; below 480 px it hides the optional time label and shrinks volume; below 360 px it hides volume as a final narrow-surface fallback. Button sizing, timeline interaction, and shared QAction wiring are unchanged.

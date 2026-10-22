@@ -52,6 +52,7 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(style.contains(QStringLiteral("QPushButton:pressed")));
         QVERIFY(style.contains(QStringLiteral("QSlider:focus")));
         QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:pressed")));
+        QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:disabled")));
         QVERIFY(style.contains(QStringLiteral("QMenu::item:disabled")));
         QVERIFY(style.contains(QStringLiteral("QFocusFrame")));
 
@@ -62,6 +63,7 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider#timelineSlider")));
         QVERIFY(lightStyle.contains(QStringLiteral("QPushButton:pressed")));
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider::handle:horizontal:pressed")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QSlider::handle:horizontal:disabled")));
     }
 
     void transportButtonsAreKeyboardAndScreenReaderAccessible() {

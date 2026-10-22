@@ -39,6 +39,7 @@
 | `PlaybackHistoryStore` | 独立版本化 INI 文件；按规范化绝对路径保存最近 100 个媒体位置 | Qt Core，不依赖队列、播放控制器或 UI |
 | `RecentMediaHistory` | 独立版本化 JSON；保留最近成功播放的 20 个来源、去重、清空与原子保存 | Qt Core / MediaSource；不查找媒体文件、不联网，与续播位置分离 |
 | `RecentMediaMenu` | 文件／右键共享最近播放菜单及重开快捷键 | 只读取历史并发出打开意图，复用 MainWindow 原有入口；菜单打开时才构建条目 |
+| `CurrentMediaMenu` | 共享当前媒体来源／时间复制与本地文件夹入口 | 只读取控制器快照；Qt 剪贴板与 QDesktopServices，不调用 mpv、不拼接 shell 命令 |
 | `SessionManager` | 恢复空闲队列、播放偏好、逐文件位置及媒体级轨道选择，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
 | `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调 | 通过队列和控制器接口发出业务操作 |
 | `LocalFileDrop` | 完整校验一批本地拖放；区分单字幕和媒体队列意图 | Qt Core；通过类型化控制器加载字幕，通过信号请求媒体追加 |

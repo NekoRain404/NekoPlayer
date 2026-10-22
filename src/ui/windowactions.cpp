@@ -1,5 +1,6 @@
 #include "actionfeedbacktext.h"
 #include "audiodevicemenu.h"
+#include "currentmediamenu.h"
 #include "foldermenu.h"
 #include "mainwindow.h"
 #include "mediainformationdialog.h"
@@ -138,12 +139,17 @@ void MainWindow::createActions() {
     connect(recent, &RecentMediaMenu::openRequested, this, &MainWindow::openFile);
     connect(recent, &RecentMediaMenu::feedback, this,
             [this](const QString &message) { showActionFeedback(message); });
+    auto *currentMedia = new CurrentMediaMenu(*controller_, this);
+    connect(currentMedia, &CurrentMediaMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message); });
+    connect(currentMedia, &CurrentMediaMenu::errorOccurred, this, &MainWindow::showError);
     auto *file = menuBar()->addMenu(tr("文件(&F)"));
     file->addAction(openAction_);
     file->addAction(openNetworkAction_);
     file->addAction(appendAction_);
     file->addMenu(folderMenu_->menu());
     file->addMenu(recent->menu());
+    file->addMenu(currentMedia->menu());
     file->addSeparator();
     file->addActions({openPlaylistAction_, savePlaylistAction_});
     file->addSeparator();
@@ -223,6 +229,7 @@ void MainWindow::createActions() {
         {openAction_, openNetworkAction_, appendAction_, pauseAction_, stopAction_});
     contextMenu_->addMenu(folderMenu_->menu());
     contextMenu_->addMenu(recent->menu());
+    contextMenu_->addMenu(currentMedia->menu());
     contextMenu_->addSeparator();
     contextMenu_->addMenu(navigation->menu());
     contextMenu_->addMenu(tuning->speedMenu());

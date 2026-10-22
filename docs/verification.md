@@ -1,5 +1,11 @@
 # Verification Record
 
+Current media utilities stage (2026-10-22):
+
+- Added a shared File/context submenu for copying the complete local path or network URL (Ctrl+Alt+C), copying the current playback time including milliseconds (Ctrl+Shift+C), and opening a local media directory through QDesktopServices. Actions recheck active state when triggered; the folder action is disabled for network sources. Clipboard copying retains full signed URLs; the actions introduce no shell command, filesystem probing on progress events, playback polling or decoder/render changes.
+- Full Debug build and ASan/UBSan NekoPlayer build passed. Debug `code-size|backend-startup|playback-time|action-feedback` passed **4/4** in **0.82 seconds**; sanitizer `code-size|backend-startup|playback-time` passed **3/3** in **1.07 seconds**, without reports. These existing non-window checks cover the reused time formatting and startup, not clipboard, menu wiring or file-manager launching. No window behavior tests were run and no additional tests were added for this desktop forwarding logic. Real Wayland clipboard and desktop-handler integration remains unverified.
+- Read-only review found no issues; changed-source formatting and diff checks passed. The new menu implementation/header are 69/27 lines, with no size exception.
+
 Recent media stage (2026-10-22):
 
 - File and context menus share a recent-media submenu. Only successful file-loaded events update its newest-first, normalized, distinct 20-source list. Ctrl+Shift+T reopens the most recent source through the existing validated opening path. Clearing is independent of queue and resume history. Labels escape menu mnemonics; tooltips omit network user info, queries and fragments while stored signed URLs remain usable.

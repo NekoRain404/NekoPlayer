@@ -1,4 +1,5 @@
 #include "actionfeedbacktext.h"
+#include "audiodevicemenu.h"
 #include "mainwindow.h"
 #include "mediainformationdialog.h"
 #include "navigationmenu.h"
@@ -134,7 +135,9 @@ void MainWindow::createActions() {
             [this](const QString &message) { showActionFeedback(message, 2500); });
     trackMenus_ =
         new TrackMenus(*controller_, this, tuning->subtitleDelayMenu(), subtitleDisplay->menu());
+    auto *audioDevices = new AudioDeviceMenu(*controller_, this);
     audio->addSeparator();
+    audio->addMenu(audioDevices->menu());
     audio->addMenu(trackMenus_->audioMenu());
     audio->addMenu(tuning->audioDelayMenu());
     menuBar()->addMenu(trackMenus_->subtitleMenu());
@@ -179,6 +182,7 @@ void MainWindow::createActions() {
     contextMenu_->addActions(
         {previousAction_, nextAction_, showPlaylistAction_, muteAction_, fullscreenAction_});
     contextMenu_->addSeparator();
+    contextMenu_->addMenu(audioDevices->menu());
     contextMenu_->addMenu(trackMenus_->audioMenu());
     contextMenu_->addMenu(trackMenus_->subtitleMenu());
     contextMenu_->addMenu(video->menu());

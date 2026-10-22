@@ -21,6 +21,24 @@ class PlaybackTest final : public QObject {
         QCOMPARE(QByteArray(hardwareDecode.get()), QByteArray("auto-safe"));
     }
 
+    void exposesAutomaticAudioDevice() {
+        MpvController player(true, true);
+        QTRY_VERIFY_WITH_TIMEOUT(!player.audioDevices().isEmpty(), 5000);
+        QCOMPARE(player.audioDevices().constFirst().name, QStringLiteral("auto"));
+        QTRY_COMPARE_WITH_TIMEOUT(player.selectedAudioDevice(), QStringLiteral("auto"), 5000);
+    }
+
+    void rejectsUnavailableAudioDeviceWithoutChangingSelection() {
+        MpvController player(true, true);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        QTRY_VERIFY_WITH_TIMEOUT(!player.audioDevices().isEmpty(), 5000);
+
+        player.setAudioDevice(QStringLiteral("neko-test/unavailable"));
+
+        QCOMPARE(errors.count(), 1);
+        QCOMPARE(player.selectedAudioDevice(), QStringLiteral("auto"));
+    }
+
     void transport() {
         MpvController player(true, true);
         QSignalSpy loaded(&player, &MpvController::fileLoaded);

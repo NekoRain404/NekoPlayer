@@ -48,7 +48,9 @@ enum Property : uint64_t {
     AudioCodec,
     AudioSampleRate,
     AudioChannels,
-    AudioSampleFormat
+    AudioSampleFormat,
+    AudioDevices,
+    SelectedAudioDevice
 };
 inline constexpr auto informationProperties =
     std::array{std::tuple{FileFormat, "file-format", MPV_FORMAT_STRING},
@@ -107,6 +109,11 @@ struct MpvController::Impl {
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
     VideoPresentation presentation;
+    QList<AudioDevice> audioDevices;
+    QString selectedAudioDevice = QStringLiteral("auto");
+    uint64_t audioDeviceRequest = 0;
+    QString requestedAudioDevice;
+    bool persistAudioDeviceRequest = false;
     AbLoop abLoop;
     bool mediaReady = false;
     QList<PendingOpen> pendingOpens;
@@ -358,6 +365,8 @@ struct MpvController::Impl {
     }
 
     void updateProperty(const mpv_event &event);
+    void requestAudioDevice(const QString &name, bool persistPreference);
+    void confirmAudioDevice(const mpv_event &event);
     bool updateMediaInformation(const mpv_event &event);
     void refreshMediaInformation();
     void scheduleInformationRefresh();

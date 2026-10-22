@@ -1,6 +1,7 @@
 #pragma once
 
 #include "abloop.h"
+#include "audiodevice.h"
 #include "mediachapter.h"
 #include "mediainformation.h"
 #include "mediatrack.h"
@@ -42,6 +43,8 @@ class MpvController final : public QObject {
     [[nodiscard]] const MediaInformation &mediaInformation() const;
     [[nodiscard]] const QList<MediaTrack> &tracks() const;
     [[nodiscard]] const QList<MediaChapter> &chapters() const;
+    [[nodiscard]] const QList<AudioDevice> &audioDevices() const;
+    [[nodiscard]] QString selectedAudioDevice() const;
     // Navigation uses the latest accepted request until the backend confirms it.
     [[nodiscard]] int chapterNavigationIndex() const;
     [[nodiscard]] bool canStepFrameForward() const;
@@ -50,6 +53,7 @@ class MpvController final : public QObject {
     [[nodiscard]] bool hardwareDecodingEnabled() const;
     [[nodiscard]] const SubtitlePreferences &subtitlePreferences() const;
     void setSubtitlePreferences(const SubtitlePreferences &preferences);
+    void applyAudioDevicePreference(const QString &name);
     // Session-only accepted intent; asynchronous errors are reported separately.
     [[nodiscard]] const VideoPresentation &videoPresentation() const;
     void setVideoAspect(VideoAspect aspect);
@@ -75,6 +79,7 @@ class MpvController final : public QObject {
     void previousChapter();
     void setVolume(double volume);
     void setMuted(bool muted);
+    void setAudioDevice(const QString &name);
     void setPlaybackSpeed(double multiplier);
     void adjustPlaybackSpeed(double delta);
     void setAudioDelay(double seconds);
@@ -110,6 +115,8 @@ class MpvController final : public QObject {
     void mediaInformationChanged();
     void tuningChanged();
     void tracksChanged();
+    void audioDevicesChanged();
+    void audioDevicePreferenceChanged(const QString &name);
     void chaptersChanged();
     void chapterNavigationChanged();
     void fileLoaded();

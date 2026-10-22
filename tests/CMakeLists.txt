@@ -26,6 +26,12 @@ target_link_libraries(m3u8_store_test PRIVATE Qt6::Core Qt6::Test neko_options)
 add_test(NAME m3u8-store COMMAND m3u8_store_test)
 set_tests_properties(m3u8-store PROPERTIES TIMEOUT 20)
 
+add_executable(audio_device_test audio_device_test.cpp ../src/playback/audiodevice.cpp)
+target_include_directories(audio_device_test PRIVATE ../src)
+target_link_libraries(audio_device_test PRIVATE Qt6::Core Qt6::Test neko_options)
+add_test(NAME audio-device COMMAND audio_device_test)
+set_tests_properties(audio-device PROPERTIES TIMEOUT 20)
+
 set(TEST_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/猫 sample [1].mkv")
 add_custom_command(OUTPUT "${TEST_MEDIA}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/media"

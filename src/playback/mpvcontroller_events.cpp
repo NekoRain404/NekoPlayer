@@ -22,6 +22,27 @@ void MpvController::Impl::updateProperty(const mpv_event &event) {
                          : QList<MediaTrack>{});
         return;
     }
+    if (event.reply_userdata == AudioDevices) {
+        QList<AudioDevice> snapshot;
+        if (value.data)
+            snapshot = parseMpvAudioDevices(*static_cast<mpv_node *>(value.data));
+        else
+            snapshot.append({QStringLiteral("auto"), owner->tr("自动选择")});
+        if (audioDevices == snapshot)
+            return;
+        audioDevices = snapshot;
+        emit owner->audioDevicesChanged();
+        return;
+    }
+    if (event.reply_userdata == SelectedAudioDevice) {
+        const auto selected = value.data ? QString::fromUtf8(*static_cast<char **>(value.data))
+                                         : QStringLiteral("auto");
+        if (selectedAudioDevice == selected)
+            return;
+        selectedAudioDevice = selected;
+        emit owner->stateChanged();
+        return;
+    }
     if (!value.data) {
         switch (event.reply_userdata) {
         case Position:
@@ -158,6 +179,7 @@ void MpvController::Impl::drainEvents() {
             report(event->error);
             break;
         case MPV_EVENT_SET_PROPERTY_REPLY:
+            confirmAudioDevice(*event);
             confirmTuning(*event);
             report(event->error);
             break;

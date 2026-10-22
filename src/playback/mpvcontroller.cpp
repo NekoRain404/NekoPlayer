@@ -39,6 +39,8 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
                    std::tuple{Impl::VideoImage, "current-tracks/video/image", MPV_FORMAT_FLAG},
                    std::tuple{Impl::HardwareDecoder, "hwdec-current", MPV_FORMAT_STRING},
                    std::tuple{Impl::Tracks, "track-list", MPV_FORMAT_NODE},
+                   std::tuple{Impl::AudioDevices, "audio-device-list", MPV_FORMAT_NODE},
+                   std::tuple{Impl::SelectedAudioDevice, "audio-device", MPV_FORMAT_STRING},
                    std::tuple{Impl::Chapters, "chapter-list", MPV_FORMAT_NODE},
                    std::tuple{Impl::Chapter, "chapter", MPV_FORMAT_INT64},
                    std::tuple{Impl::Speed, "speed", MPV_FORMAT_DOUBLE},

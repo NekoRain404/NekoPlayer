@@ -7,6 +7,7 @@
 struct AudioPreferences {
     double volume = 100;
     bool muted = false;
+    QString outputDevice = QStringLiteral("auto");
 };
 
 struct TuningPreferences {

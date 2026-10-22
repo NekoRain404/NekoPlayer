@@ -18,6 +18,10 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
             [this](double volume) { audio_.volume = volume; });
     connect(&player_, &MpvController::muteRequested, this,
             [this](bool muted) { audio_.muted = muted; });
+    connect(&player_, &MpvController::audioDevicePreferenceChanged, this,
+            [this](const QString &name) { audio_.outputDevice = name; });
+    connect(&player_, &MpvController::audioDevicesChanged, this,
+            [this] { player_.applyAudioDevicePreference(audio_.outputDevice); });
     connect(&player_, &MpvController::tuningRequested, this,
             [this](double speed, double audioDelay, double subtitleDelay) {
                 tuning_ = {speed, audioDelay, subtitleDelay};
@@ -51,6 +55,7 @@ SessionLoadResult SessionManager::restore() {
     if (!loadError_.isEmpty())
         return loaded;
     audio_ = loaded.state.audio;
+    player_.applyAudioDevicePreference(audio_.outputDevice);
     tuning_ = loaded.state.tuning;
     const auto restoredTuning = tuning_;
     const auto history = historyStore_.load();

@@ -1,5 +1,12 @@
 # Verification Record
 
+Audio output device selection stage (2026-10-22):
+
+- The controller parses `audio-device-list` into owned Qt snapshots, asynchronously applies a selected device, and leaves the observed selection unchanged when the backend rejects a request. Session preferences retain an unavailable device ID while using `auto` at runtime, then reapply it when it returns. Menu-bar and context-menu entries share one `AudioDeviceMenu`.
+- `cmake --build --preset debug -j4` succeeded, including NekoPlayer and compile-only window targets. `ctest --test-dir build/debug -R '^(code-size|audio-device|playback|session)$' --output-on-failure` passed 4/4 in 4.09 seconds.
+- `cmake --build --preset sanitizers --target audio_device_test playback_test session_test -j4` succeeded. `ctest --test-dir build/sanitizers -R '^(audio-device|playback|session)$' --output-on-failure` passed 3/3 in 4.60 seconds without sanitizer errors. `clang-format --dry-run --Werror`, `git diff --check` and `cmake -DNEKO_SOURCE_DIR="$PWD" -P cmake/CheckCodeSize.cmake` passed.
+- `window_test` was compiled but not run. No GUI/Wayland interaction, physical output-device switching, or audible audio-quality test was performed; null audio integration is not evidence of real device output.
+
 Pending-open state and event ordering stage (2026-10-22):
 
 - A successful asynchronous `loadfile` request now exposes its target as pending playback immediately, while hiding metadata, tracks, chapters, A–B endpoints and frame-step capability from the previous file. A rejected command restores the previous playback path and media state.

@@ -56,6 +56,8 @@ SessionState normalized(SessionState state) {
     state.tuning = state.tuning.normalized();
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
+    if (state.audio.outputDevice.isEmpty() || state.audio.outputDevice.contains(QChar::Null))
+        state.audio.outputDevice = QStringLiteral("auto");
     QStringList paths;
     int current = -1;
     for (qsizetype row = 0; row < state.paths.size(); ++row) {
@@ -99,6 +101,8 @@ SessionLoadResult SessionStore::load() const {
     const auto volume = settings.value(QStringLiteral("audio/volume"), 100).toDouble(&valid);
     state.audio.volume = valid ? volume : 100;
     state.audio.muted = readBool(settings, QStringLiteral("audio/muted"));
+    state.audio.outputDevice =
+        settings.value(QStringLiteral("audio/outputDevice"), QStringLiteral("auto")).toString();
     state.hardwareDecodingEnabled =
         readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
     state.subtitles.visible = readBool(settings, QStringLiteral("subtitles/visible"), true);
@@ -145,6 +149,7 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("schemaVersion"), 1);
     settings.setValue(QStringLiteral("audio/volume"), saved.audio.volume);
     settings.setValue(QStringLiteral("audio/muted"), saved.audio.muted);
+    settings.setValue(QStringLiteral("audio/outputDevice"), saved.audio.outputDevice);
     settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
     settings.setValue(QStringLiteral("subtitles/visible"), saved.subtitles.visible);
     settings.setValue(QStringLiteral("subtitles/scale"), saved.subtitles.scale);

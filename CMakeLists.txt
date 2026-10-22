@@ -29,6 +29,7 @@ if(NEKOPLAYER_SANITIZERS)
 endif()
 
 add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.cpp
+    src/playback/audiodevice.cpp src/playback/mpvcontroller_audio.cpp
     src/playback/mpvcontroller_events.cpp src/playback/mpvcontroller_information.cpp
     src/playback/mpvcontroller_navigation.cpp
     src/playback/mpvcontroller_loop.cpp
@@ -53,7 +54,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
     src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
     src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp
-    src/ui/abloopmenu.cpp
+    src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp
     src/ui/subtitledisplaymenu.cpp src/ui/subtitlesettingsdialog.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input Qt6::Widgets Qt6::OpenGLWidgets)
 

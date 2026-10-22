@@ -105,6 +105,62 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
     }
 
+    void audioOutputDeviceIsPersisted() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionStore store(path);
+
+        SessionState saved;
+        saved.audio.outputDevice = QStringLiteral("pipewire/primary");
+        QVERIFY(store.save(saved).isEmpty());
+        QCOMPARE(store.load().state.audio.outputDevice, QStringLiteral("pipewire/primary"));
+
+        saved.audio.outputDevice = QStringLiteral("auto");
+        QVERIFY(store.save(saved).isEmpty());
+        QCOMPARE(store.load().state.audio.outputDevice, QStringLiteral("auto"));
+    }
+
+    void schemaOneAudioOutputDeviceDefaultsForMissingOrMalformedValues() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        QSettings settings(path, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("schemaVersion"), 1);
+        settings.sync();
+
+        QCOMPARE(SessionStore(path).load().state.audio.outputDevice, QStringLiteral("auto"));
+
+        settings.setValue(QStringLiteral("audio/outputDevice"), QString{});
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.audio.outputDevice, QStringLiteral("auto"));
+
+        settings.setValue(QStringLiteral("audio/outputDevice"),
+                          QStringLiteral("pipewire") + QChar::Null + QStringLiteral("/primary"));
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.audio.outputDevice, QStringLiteral("auto"));
+    }
+
+    void unavailableOutputDeviceFallsBackWithoutReplacingPreference() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionState saved;
+        saved.audio.outputDevice = QStringLiteral("pipewire/primary");
+        QVERIFY(SessionStore(path).save(saved).isEmpty());
+
+        MpvController player(true, true);
+        PlaylistController playlist(player);
+        SessionManager manager(player, playlist, path);
+        QVERIFY(manager.restore().error.isEmpty());
+        QTRY_VERIFY_WITH_TIMEOUT(!player.audioDevices().isEmpty(), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(player.selectedAudioDevice(), QStringLiteral("auto"), 5000);
+
+        QVERIFY(manager.save({}).isEmpty());
+        QCOMPARE(SessionStore(path).load().state.audio.outputDevice,
+                 QStringLiteral("pipewire/primary"));
+    }
+
     void emptyQueueReplacesPreviousSession() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

@@ -1,6 +1,11 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Test)
 find_program(FFMPEG_EXECUTABLE ffmpeg REQUIRED)
 
+add_executable(preferences_dialog_test preferences_dialog_test.cpp)
+target_link_libraries(preferences_dialog_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME preferences-dialog COMMAND preferences_dialog_test)
+set_tests_properties(preferences-dialog PROPERTIES TIMEOUT 20)
+
 add_executable(commandlinearguments_test commandlinearguments_test.cpp)
 target_include_directories(commandlinearguments_test PRIVATE ../src)
 target_link_libraries(commandlinearguments_test PRIVATE neko_options Qt6::Core Qt6::Test)

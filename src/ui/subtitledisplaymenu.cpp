@@ -1,6 +1,6 @@
 #include "subtitledisplaymenu.h"
 #include "playback/mpvcontroller.h"
-#include "subtitlesettingsdialog.h"
+#include "preferencesdialog.h"
 
 #include <QAction>
 #include <QMenu>
@@ -35,7 +35,8 @@ SubtitleDisplayMenu::SubtitleDisplayMenu(MpvController &controller, QWidget *win
     menu_->addSeparator();
     settings_ = make(tr("字幕显示设置…"), "subtitleSettingsAction", QKeySequence(Qt::Key_F6));
     connect(settings_, &QAction::triggered, this, [this, window] {
-        SubtitleSettingsDialog dialog(controller_, window);
+        PreferencesDialog dialog(controller_, window);
+        dialog.selectCategory(PreferencesDialog::Category::Subtitles);
         dialog.exec();
     });
     connect(&controller_, &MpvController::subtitlePreferencesChanged, this, [this] {

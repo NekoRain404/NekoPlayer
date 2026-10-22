@@ -1,0 +1,206 @@
+#include "preferencesdialog.h"
+#include "playback/mpvcontroller.h"
+
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDialogButtonBox>
+#include <QDoubleSpinBox>
+#include <QFontComboBox>
+#include <QFormLayout>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QSignalBlocker>
+#include <QTabWidget>
+#include <QVBoxLayout>
+
+PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
+    : QDialog(parent), player_(player), tabs_(new QTabWidget(this)),
+      hardwareDecoding_(new QComboBox(this)), actualDecoder_(new QLabel(this)),
+      audioDevice_(new QComboBox(this)), subtitleVisible_(new QCheckBox(tr("显示字幕"), this)),
+      subtitleScale_(new QDoubleSpinBox(this)), subtitlePosition_(new QDoubleSpinBox(this)),
+      subtitleFont_(new QFontComboBox(this)) {
+    setObjectName(QStringLiteral("preferencesDialog"));
+    setWindowTitle(tr("偏好设置"));
+    tabs_->setObjectName(QStringLiteral("preferencesCategories"));
+    auto *playback = new QWidget(tabs_);
+    auto *playbackForm = new QFormLayout(playback);
+    hardwareDecoding_->setObjectName(QStringLiteral("hardwareDecodingChoice"));
+    hardwareDecoding_->setAccessibleName(tr("视频解码方式"));
+    hardwareDecoding_->addItem(tr("自动（安全）"), true);
+    hardwareDecoding_->addItem(tr("软件解码"), false);
+    hardwareDecoding_->setCurrentIndex(player_.hardwareDecodingEnabled() ? 0 : 1);
+    playbackForm->addRow(tr("视频解码方式(&D)："), hardwareDecoding_);
+    actualDecoder_->setObjectName(QStringLiteral("actualDecoder"));
+    actualDecoder_->setTextFormat(Qt::PlainText);
+    actualDecoder_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    playbackForm->addRow(tr("实际解码器："), actualDecoder_);
+    auto *decodeHelp = new QLabel(tr("自动模式优先尝试安全的硬件解码方式，不可用时回退到软件解码。"
+                                     "实际使用方式取决于视频格式与显卡驱动。"),
+                                  playback);
+    decodeHelp->setWordWrap(true);
+    playbackForm->addRow(decodeHelp);
+    tabs_->addTab(playback, tr("播放"));
+
+    auto *audio = new QWidget(tabs_);
+    auto *audioForm = new QFormLayout(audio);
+    audioDevice_->setObjectName(QStringLiteral("audioOutputDeviceChoice"));
+    audioForm->addRow(tr("输出设备："), audioDevice_);
+    auto *audioHelp =
+        new QLabel(tr("输出设备切换会立即生效；设备不可用时将回退到自动选择。"), audio);
+    audioHelp->setWordWrap(true);
+    audioForm->addRow(audioHelp);
+    tabs_->addTab(audio, tr("音频"));
+
+    auto *subtitles = new QWidget(tabs_);
+    auto *subtitleForm = new QFormLayout(subtitles);
+    subtitleVisible_->setObjectName(QStringLiteral("subtitleVisibleChoice"));
+    subtitleScale_->setObjectName(QStringLiteral("subtitleScaleChoice"));
+    subtitleScale_->setRange(0.25, 4.0);
+    subtitleScale_->setSingleStep(0.1);
+    subtitleScale_->setDecimals(2);
+    subtitleScale_->setSuffix(tr(" 倍"));
+    subtitlePosition_->setObjectName(QStringLiteral("subtitlePositionChoice"));
+    subtitlePosition_->setRange(0, 100);
+    subtitlePosition_->setSingleStep(2);
+    subtitlePosition_->setDecimals(1);
+    subtitlePosition_->setSuffix(QStringLiteral(" %"));
+    subtitleFont_->setObjectName(QStringLiteral("subtitleFontChoice"));
+    subtitleFont_->setEditable(true);
+    subtitleFont_->lineEdit()->setMaxLength(256);
+    subtitleForm->addRow(subtitleVisible_);
+    subtitleForm->addRow(tr("缩放(&S)："), subtitleScale_);
+    subtitleForm->addRow(tr("垂直位置(&P)："), subtitlePosition_);
+    subtitleForm->addRow(tr("默认字体(&F)："), subtitleFont_);
+    auto *subtitleHelp =
+        new QLabel(tr("隐藏字幕会保留轨道选择。位置越小越靠上，100% "
+                      "为原始位置。默认字体仅用于未指定字体的文本字幕；ASS 保留自带样式。"),
+                   subtitles);
+    subtitleHelp->setWordWrap(true);
+    subtitleForm->addRow(subtitleHelp);
+    tabs_->addTab(subtitles, tr("字幕"));
+
+    auto *layout = new QVBoxLayout(this);
+    layout->addWidget(tabs_);
+    auto *buttons =
+        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel |
+                                 QDialogButtonBox::Apply | QDialogButtonBox::RestoreDefaults,
+                             this);
+    buttons->setObjectName(QStringLiteral("preferencesButtons"));
+    applyButton_ = buttons->button(QDialogButtonBox::Apply);
+    restoreDefaultsButton_ = buttons->button(QDialogButtonBox::RestoreDefaults);
+    restoreDefaultsButton_->setVisible(false);
+    layout->addWidget(buttons);
+    connect(tabs_, &QTabWidget::currentChanged, this, [this](int index) {
+        restoreDefaultsButton_->setVisible(index == static_cast<int>(Category::Subtitles));
+    });
+
+    refreshAudioDevices();
+    displaySubtitlePreferences();
+    connect(audioDevice_, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (index >= 0)
+            player_.setAudioDevice(audioDevice_->itemData(index).toString());
+    });
+    connect(&player_, &MpvController::audioDevicesChanged, this,
+            &PreferencesDialog::refreshAudioDevices);
+    connect(hardwareDecoding_, &QComboBox::currentIndexChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(subtitleVisible_, &QCheckBox::toggled, this, &PreferencesDialog::updateApplyButton);
+    connect(subtitleScale_, &QDoubleSpinBox::valueChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(subtitlePosition_, &QDoubleSpinBox::valueChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(subtitleFont_, &QFontComboBox::currentTextChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(&player_, &MpvController::hardwareDecodingPreferenceChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(&player_, &MpvController::subtitlePreferencesChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(&player_, &MpvController::stateChanged, this, [this] {
+        updateApplyButton();
+        updateActualDecoder();
+    });
+    connect(applyButton_, &QPushButton::clicked, this, &PreferencesDialog::apply);
+    connect(buttons, &QDialogButtonBox::accepted, this, [this] {
+        apply();
+        accept();
+    });
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(restoreDefaultsButton_, &QPushButton::clicked, this, [this] {
+        subtitleVisible_->setChecked(true);
+        subtitleScale_->setValue(1.0);
+        subtitlePosition_->setValue(100.0);
+        subtitleFont_->setEditText(QString());
+    });
+    updateApplyButton();
+    updateActualDecoder();
+    resize(560, sizeHint().height());
+}
+
+void PreferencesDialog::selectCategory(Category category) {
+    tabs_->setCurrentIndex(static_cast<int>(category));
+}
+
+void PreferencesDialog::apply() {
+    const bool decodingChanged =
+        hardwareDecoding_->currentData().toBool() != player_.hardwareDecodingEnabled();
+    if (decodingChanged)
+        player_.setHardwareDecodingEnabled(hardwareDecoding_->currentData().toBool());
+    subtitleScale_->interpretText();
+    subtitlePosition_->interpretText();
+    const SubtitlePreferences draft{subtitleVisible_->isChecked(), subtitleScale_->value(),
+                                    subtitlePosition_->value(), subtitleFont_->currentText()};
+    if (draft.normalized() != player_.subtitlePreferences())
+        player_.setSubtitlePreferences(draft);
+    displaySubtitlePreferences();
+    updateApplyButton();
+}
+
+void PreferencesDialog::updateApplyButton() {
+    const bool decodingChanged =
+        hardwareDecoding_->currentData().toBool() != player_.hardwareDecodingEnabled();
+    const SubtitlePreferences draft{subtitleVisible_->isChecked(), subtitleScale_->value(),
+                                    subtitlePosition_->value(), subtitleFont_->currentText()};
+    applyButton_->setEnabled(
+        player_.isReady() &&
+        (decodingChanged || draft.normalized() != player_.subtitlePreferences()));
+}
+
+void PreferencesDialog::updateActualDecoder() {
+    const auto &state = player_.state();
+    if (lastActive_ == state.active && lastDecoder_ == state.hardwareDecoder &&
+        !actualDecoder_->text().isEmpty())
+        return;
+    lastActive_ = state.active;
+    lastDecoder_ = state.hardwareDecoder;
+    if (!state.active)
+        actualDecoder_->setText(tr("未播放"));
+    else if (state.hardwareDecoder.isEmpty())
+        actualDecoder_->setText(tr("未检测到视频解码器"));
+    else if (state.hardwareDecoder == QLatin1String("no"))
+        actualDecoder_->setText(tr("软件解码"));
+    else
+        actualDecoder_->setText(state.hardwareDecoder);
+}
+
+void PreferencesDialog::refreshAudioDevices() {
+    const auto selected = player_.selectedAudioDevice();
+    const QSignalBlocker blocker(audioDevice_);
+    audioDevice_->clear();
+    for (const auto &device : player_.audioDevices()) {
+        const auto label = device.description.isEmpty() ? device.name : device.description;
+        audioDevice_->addItem(label, device.name);
+    }
+    const int index = audioDevice_->findData(selected);
+    if (index >= 0)
+        audioDevice_->setCurrentIndex(index);
+    audioDevice_->setEnabled(audioDevice_->count() > 0);
+}
+
+void PreferencesDialog::displaySubtitlePreferences() {
+    const auto &preferences = player_.subtitlePreferences();
+    subtitleVisible_->setChecked(preferences.visible);
+    subtitleScale_->setValue(preferences.scale);
+    subtitlePosition_->setValue(preferences.position);
+    subtitleFont_->setEditText(preferences.font);
+}

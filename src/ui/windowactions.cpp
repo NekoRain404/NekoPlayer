@@ -5,9 +5,9 @@
 #include "navigationmenu.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
-#include "playbacksettingsdialog.h"
 #include "playlistmodemenu.h"
 #include "playlistpane.h"
+#include "preferencesdialog.h"
 #include "subtitledisplaymenu.h"
 #include "trackmenus.h"
 #include "tuningmenus.h"
@@ -167,7 +167,8 @@ void MainWindow::createActions() {
     auto *playbackSettings =
         make(tr("播放设置…"), "playbackSettingsAction", QKeySequence(Qt::Key_F5));
     connect(playbackSettings, &QAction::triggered, this, [this] {
-        PlaybackSettingsDialog dialog(*controller_, this);
+        PreferencesDialog dialog(*controller_, this);
+        dialog.selectCategory(PreferencesDialog::Category::Playback);
         dialog.exec();
     });
     settings->addAction(playbackSettings);

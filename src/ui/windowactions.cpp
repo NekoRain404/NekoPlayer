@@ -218,6 +218,12 @@ void MainWindow::createActions() {
     playlistMenu_->addMenu(modeMenu->menu());
     auto *view = menuBar()->addMenu(tr("视图(&V)"));
     view->addAction(fullscreenAction_);
+    auto *miniPlayer =
+        make(tr("小窗播放"), "miniPlayerAction", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
+    miniPlayer->setCheckable(true);
+    miniPlayer->setIcon(style()->standardIcon(QStyle::SP_TitleBarNormalButton));
+    connect(miniPlayer, &QAction::toggled, this, &MainWindow::setMiniPlayer);
+    view->addAction(miniPlayer);
     auto *playbackInformation =
         make(tr("显示当前播放信息"), "playbackInformationAction", QKeySequence(Qt::Key_Tab));
     playbackInformation->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
@@ -322,8 +328,8 @@ void MainWindow::createActions() {
     contextMenu_->addMenu(tuning->speedMenu());
     contextMenu_->addMenu(tuning->audioDelayMenu());
     contextMenu_->addMenu(modeMenu->menu());
-    contextMenu_->addActions(
-        {previousAction_, nextAction_, showPlaylistAction_, muteAction_, fullscreenAction_});
+    contextMenu_->addActions({previousAction_, nextAction_, showPlaylistAction_, muteAction_,
+                              fullscreenAction_, miniPlayer});
     contextMenu_->addSeparator();
     contextMenu_->addMenu(audioDevices->menu());
     contextMenu_->addMenu(trackMenus_->audioMenu());
@@ -362,6 +368,7 @@ void MainWindow::changeEvent(QEvent *event) {
     setActionText("clearPlaylistAction", tr("清空播放列表"));
     setActionText("muteAction", tr("静音"));
     setActionText("fullscreenAction", isFullScreen() ? tr("退出全屏") : tr("全屏"));
+    setActionText("miniPlayerAction", miniPlayerActive_ ? tr("退出小窗") : tr("小窗播放"));
     const auto menus = menuBar()->actions();
     const QStringList titles{tr("文件(&F)"), tr("播放(&P)"),     tr("声音(&A)"), tr("字幕(&U)"),
                              tr("视频(&I)"), tr("播放列表(&L)"), tr("视图(&V)"), tr("设置(&S)")};

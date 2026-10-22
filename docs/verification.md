@@ -1,5 +1,12 @@
 # Verification Record
 
+Mini-player window mode stage (2026-10-23):
+
+- Added a shared `Ctrl+Shift+M` action in View and the video context menu. It reuses the existing main window, libmpv instance and GPU-rendered video widget; mini mode hides menus/status/playlist, uses a 480×320 tool window with a stay-on-top hint, and restores the saved normal geometry, maximized state and playlist visibility on exit.
+- Entering from fullscreen exits fullscreen first. The action remains checkable, changes to “Exit Mini Player” while active, and is translated at runtime. No extra decoder, frame copy, or polling path is introduced.
+- The new Qt window-state regression passed under the offscreen plugin, including action state, hidden chrome, flags and size restoration. This environment reports that `QOpenGLWidget` and native raise are unsupported, so it does not verify video pixels, actual stacking, or compositor policy. Wayland may ignore or constrain always-on-top requests; that remains native desktop verification.
+- Full Debug build, focused `ui-surface`, `appearance-preferences`, `code-size`, formatting and `git diff --check` passed. No native Wayland window test was run.
+
 Welcome panel icon and interaction stage (2026-10-23):
 
 - Recent local and network entries now use distinct Qt standard icons, a consistent 16 px icon size, a pointing-hand cursor, and keyboard-friendly focus behavior without changing the existing click signal.

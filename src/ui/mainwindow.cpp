@@ -417,6 +417,48 @@ void MainWindow::setFullscreen(bool enabled) {
                                                              : QStyle::SP_TitleBarMaxButton));
 }
 
+void MainWindow::setMiniPlayer(bool enabled) {
+    auto *action = findChild<QAction *>(QStringLiteral("miniPlayerAction"));
+    if (enabled == miniPlayerActive_)
+        return;
+    if (enabled) {
+        if (isFullScreen())
+            setFullscreen(false);
+        miniPlayerActive_ = true;
+        miniPlayerGeometry_ = isMaximized() ? normalGeometry() : geometry();
+        miniPlayerMaximized_ = isMaximized();
+        showPlaylistAction_->setEnabled(false);
+        playlistPane_->hide();
+        menuBar()->hide();
+        statusBar()->hide();
+        setWindowFlag(Qt::Tool, true);
+        setWindowFlag(Qt::WindowStaysOnTopHint, true);
+        setWindowState(windowState() & ~Qt::WindowMaximized);
+        resize(480, 320);
+        show();
+    } else {
+        miniPlayerActive_ = false;
+        menuBar()->show();
+        statusBar()->show();
+        showPlaylistAction_->setEnabled(true);
+        setWindowFlag(Qt::Tool, false);
+        setWindowFlag(Qt::WindowStaysOnTopHint, false);
+        show();
+        if (miniPlayerGeometry_.isValid())
+            setGeometry(miniPlayerGeometry_);
+        if (miniPlayerMaximized_)
+            showMaximized();
+        playlistPane_->setVisible(showPlaylistAction_->isChecked());
+    }
+    if (action) {
+        action->setText(enabled ? tr("退出小窗") : tr("小窗播放"));
+        action->setToolTip(action->text());
+        action->setStatusTip(action->text());
+        action->setIcon(style()->standardIcon(enabled ? QStyle::SP_TitleBarCloseButton
+                                                      : QStyle::SP_TitleBarNormalButton));
+    }
+}
+
 void MainWindow::revealControls() {
     if (!isFullScreen())
         return;

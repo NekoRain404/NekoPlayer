@@ -90,6 +90,8 @@
     <message><source>未命名媒体</source><translation>Untitled Media</translation></message>
     <message><source>网络媒体：%1</source><translation>Network media: %1</translation></message>
     <message><source>本地媒体：%1</source><translation>Local media: %1</translation></message>
+    <message><source>小窗播放</source><translation>Mini Player</translation></message>
+    <message><source>退出小窗</source><translation>Exit Mini Player</translation></message>
 </context>
 <context>
     <name>MediaInformationDialog</name>

@@ -62,6 +62,7 @@ class MainWindow final : public QMainWindow {
     void showActionFeedback(const QString &message, int durationMs = 2500);
     void showSeekFeedback(const QString &message);
     void setFullscreen(bool enabled);
+    void setMiniPlayer(bool enabled);
     void revealControls();
     void restoreSession(const QString &path);
     QString saveSession();
@@ -101,5 +102,8 @@ class MainWindow final : public QMainWindow {
     QPersistentModelIndex pendingPlaylistIndex_;
     QByteArray normalGeometry_;
     bool normalMaximized_ = false;
+    QRect miniPlayerGeometry_;
+    bool miniPlayerMaximized_ = false;
+    bool miniPlayerActive_ = false;
     bool sessionSaveAttempted_ = false;
 };

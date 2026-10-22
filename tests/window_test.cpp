@@ -113,6 +113,33 @@ class WindowTest final : public QObject {
         QCOMPARE(containers, 2); // Menu bar and context menu share the same action.
     }
 
+    void miniPlayerTogglesWindowPresentation() {
+        MainWindow window(true);
+        auto *mini = action(window, "miniPlayerAction");
+        QVERIFY(mini);
+        QCOMPARE(mini->shortcut(), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
+        QVERIFY(!mini->isChecked());
+
+        const auto normalSize = window.size();
+        mini->trigger();
+        QVERIFY(mini->isChecked());
+        QCOMPARE(mini->text(), QStringLiteral("退出小窗"));
+        QVERIFY(window.menuBar()->isHidden());
+        QVERIFY(window.statusBar()->isHidden());
+        QVERIFY(window.windowFlags().testFlag(Qt::Tool));
+        QVERIFY(window.windowFlags().testFlag(Qt::WindowStaysOnTopHint));
+        QVERIFY(!window.findChild<QWidget *>(QStringLiteral("playlistPane"))->isVisible());
+
+        mini->trigger();
+        QVERIFY(!mini->isChecked());
+        QCOMPARE(mini->text(), QStringLiteral("小窗播放"));
+        QVERIFY(!window.menuBar()->isHidden());
+        QVERIFY(!window.statusBar()->isHidden());
+        QVERIFY(!window.windowFlags().testFlag(Qt::Tool));
+        QVERIFY(!window.windowFlags().testFlag(Qt::WindowStaysOnTopHint));
+        QCOMPARE(window.size(), normalSize);
+    }
+
     void chapterActionsFollowSelectionAndKeepPause() {
         MainWindow window(true);
         auto *jump = action(window, "seekTimeAction");

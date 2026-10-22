@@ -1,7 +1,10 @@
 #include "playback/mpvcontroller.h"
 #include "ui/preferencesdialog.h"
 
+#include <QCheckBox>
 #include <QComboBox>
+#include <QDoubleSpinBox>
+#include <QFontComboBox>
 #include <QTabWidget>
 #include <QtTest>
 
@@ -29,6 +32,26 @@ class PreferencesDialogTest final : public QObject {
         auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
         QVERIFY(tabs);
         QCOMPARE(tabs->currentIndex(), 2);
+    }
+
+    void namesEveryPreferenceControlForAssistiveTechnology() {
+        MpvController player(true, true);
+        PreferencesDialog dialog(player);
+        QCOMPARE(dialog.findChild<QComboBox *>(QStringLiteral("audioOutputDeviceChoice"))
+                     ->accessibleName(),
+                 QStringLiteral("音频输出设备"));
+        QCOMPARE(dialog.findChild<QCheckBox *>(QStringLiteral("subtitleVisibleChoice"))
+                     ->accessibleName(),
+                 QStringLiteral("显示字幕"));
+        QCOMPARE(dialog.findChild<QDoubleSpinBox *>(QStringLiteral("subtitleScaleChoice"))
+                     ->accessibleName(),
+                 QStringLiteral("字幕缩放"));
+        QCOMPARE(dialog.findChild<QDoubleSpinBox *>(QStringLiteral("subtitlePositionChoice"))
+                     ->accessibleName(),
+                 QStringLiteral("字幕垂直位置"));
+        QCOMPARE(dialog.findChild<QFontComboBox *>(QStringLiteral("subtitleFontChoice"))
+                     ->accessibleName(),
+                 QStringLiteral("默认字幕字体"));
     }
 };
 

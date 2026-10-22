@@ -15,6 +15,7 @@ NetworkOpenDialog::NetworkOpenDialog(QWidget *parent) : QDialog(parent) {
     auto *label = new QLabel(tr("媒体地址："), this);
     address_ = new QLineEdit(this);
     address_->setObjectName(QStringLiteral("networkAddress"));
+    address_->setAccessibleName(tr("媒体网络地址"));
     address_->setPlaceholderText(QStringLiteral("https://… / rtsp://… / rtmp://…"));
     address_->setClearButtonEnabled(true);
     label->setBuddy(address_);
@@ -23,6 +24,8 @@ NetworkOpenDialog::NetworkOpenDialog(QWidget *parent) : QDialog(parent) {
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Open | QDialogButtonBox::Cancel, this);
     auto *open = buttons->button(QDialogButtonBox::Open);
     open->setText(tr("播放"));
+    open->setAccessibleName(tr("播放网络媒体"));
+    open->setToolTip(tr("输入有效的 HTTP(S)、RTSP(S) 或 RTMP(S) 地址后播放"));
     open->setEnabled(false);
     connect(address_, &QLineEdit::textChanged, this,
             [this, open] { open->setEnabled(!mediaUrl().isEmpty()); });

@@ -31,6 +31,7 @@ PlaybackSettingsDialog::PlaybackSettingsDialog(MpvController &player, QWidget *p
                                "偏好将在正常退出时保存。"),
                             this);
     help->setWordWrap(true);
+    help->setAccessibleName(tr("硬件解码说明"));
     layout->addWidget(help);
     auto *buttons = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::Apply, this);

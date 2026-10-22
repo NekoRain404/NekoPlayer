@@ -7,6 +7,12 @@ Content-first UI refinement stage (2026-10-22):
 - Fullscreen entry reveals the floating controls immediately and starts the existing fade timer, without changing video layout or renderer behavior. Runtime fullscreen action text and icon track the window state.
 - Full Debug build passed, including compile-only window behavior suites. `appearance-preferences` and `code-size` passed; window behavior tests were compiled but not run as requested. `git diff --check` passed. No CPU frame copies, renderer changes, or polling were introduced.
 
+UI feedback and accessibility polish stage (2026-10-22):
+
+- The timeline now exposes and updates a `position / duration` tooltip and accessible description for backend updates, keyboard/drag changes, and pointer hover. Tooltip updates are value-coalesced and disappear when the pointer leaves the slider; no preview decoder or frame copy is involved yet.
+- Network, playback, subtitle, and preference controls now expose explicit accessible names. Media information copy has a standard icon, tooltip, accessible name, and a copied confirmation tooltip.
+- Debug build passed. `appearance-preferences`, `preferences-dialog`, `media-information`, and `code-size` passed; all window behavior targets were compiled but not run as requested. Formatting and `git diff --check` passed. No libmpv rendering or playback path changed.
+
 Folder drag-and-drop stage (2026-10-22):
 
 - Local drag routing now distinguishes files, subtitles, and one or more folders before emitting any side effect. Folder batches are scanned by the existing QtConcurrent worker and emitted as one naturally sorted result; mixed folder/media/subtitle drops are rejected atomically.

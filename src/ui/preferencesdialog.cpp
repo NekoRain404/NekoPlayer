@@ -45,6 +45,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
     auto *audio = new QWidget(tabs_);
     auto *audioForm = new QFormLayout(audio);
     audioDevice_->setObjectName(QStringLiteral("audioOutputDeviceChoice"));
+    audioDevice_->setAccessibleName(tr("音频输出设备"));
     audioForm->addRow(tr("输出设备："), audioDevice_);
     auto *audioHelp =
         new QLabel(tr("输出设备切换会立即生效；设备不可用时将回退到自动选择。"), audio);
@@ -55,17 +56,21 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
     auto *subtitles = new QWidget(tabs_);
     auto *subtitleForm = new QFormLayout(subtitles);
     subtitleVisible_->setObjectName(QStringLiteral("subtitleVisibleChoice"));
+    subtitleVisible_->setAccessibleName(tr("显示字幕"));
     subtitleScale_->setObjectName(QStringLiteral("subtitleScaleChoice"));
+    subtitleScale_->setAccessibleName(tr("字幕缩放"));
     subtitleScale_->setRange(0.25, 4.0);
     subtitleScale_->setSingleStep(0.1);
     subtitleScale_->setDecimals(2);
     subtitleScale_->setSuffix(tr(" 倍"));
     subtitlePosition_->setObjectName(QStringLiteral("subtitlePositionChoice"));
+    subtitlePosition_->setAccessibleName(tr("字幕垂直位置"));
     subtitlePosition_->setRange(0, 100);
     subtitlePosition_->setSingleStep(2);
     subtitlePosition_->setDecimals(1);
     subtitlePosition_->setSuffix(QStringLiteral(" %"));
     subtitleFont_->setObjectName(QStringLiteral("subtitleFontChoice"));
+    subtitleFont_->setAccessibleName(tr("默认字幕字体"));
     subtitleFont_->setEditable(true);
     subtitleFont_->lineEdit()->setMaxLength(256);
     subtitleForm->addRow(subtitleVisible_);

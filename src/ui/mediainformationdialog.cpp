@@ -8,6 +8,7 @@
 #include <QEvent>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QStyle>
 #include <QVBoxLayout>
 
 MediaInformationDialog::MediaInformationDialog(MpvController &player, QWidget *parent)
@@ -24,8 +25,13 @@ MediaInformationDialog::MediaInformationDialog(MpvController &player, QWidget *p
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, this);
     copy_ = buttons->addButton(tr("复制"), QDialogButtonBox::ActionRole);
     copy_->setObjectName(QStringLiteral("copyMediaInformationButton"));
-    connect(copy_, &QPushButton::clicked, this,
-            [this] { QApplication::clipboard()->setText(report_->toPlainText()); });
+    copy_->setAccessibleName(tr("复制媒体信息"));
+    copy_->setToolTip(tr("复制当前媒体信息到剪贴板"));
+    copy_->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
+    connect(copy_, &QPushButton::clicked, this, [this] {
+        QApplication::clipboard()->setText(report_->toPlainText());
+        copy_->setToolTip(tr("已复制媒体信息"));
+    });
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::close);
     layout->addWidget(buttons);
     connect(&player_, &MpvController::mediaInformationChanged, this,
@@ -42,6 +48,8 @@ void MediaInformationDialog::changeEvent(QEvent *event) {
     setWindowTitle(tr("媒体信息"));
     report_->setAccessibleName(tr("当前媒体信息"));
     copy_->setText(tr("复制"));
+    copy_->setAccessibleName(tr("复制媒体信息"));
+    copy_->setToolTip(tr("复制当前媒体信息到剪贴板"));
     updateReport();
 }
 

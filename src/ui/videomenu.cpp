@@ -1,5 +1,6 @@
 #include "videomenu.h"
 #include "playback/mpvcontroller.h"
+#include "videocolordialog.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -49,6 +50,13 @@ VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
     connect(counterClockwise, &QAction::triggered, &controller_,
             &MpvController::rotateVideoCounterClockwise);
     connect(resetRotation_, &QAction::triggered, this, [this] { controller_.setVideoRotation(0); });
+    menu_->addSeparator();
+    auto *colorAdjustment = make(tr("色彩调整…"), "videoColorAdjustmentAction");
+    menu_->addAction(colorAdjustment);
+    connect(colorAdjustment, &QAction::triggered, this, [this, window] {
+        VideoColorDialog dialog(controller_, window);
+        dialog.exec();
+    });
     connect(&controller_, &MpvController::videoPresentationChanged, this, [this] {
         update();
         emit feedback(tr("画面比例：%1 · 旋转：%2°")
@@ -60,6 +68,7 @@ VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
     for (auto *action : {clockwise, counterClockwise})
         action->setEnabled(controller_.isReady());
     aspects_->setEnabled(controller_.isReady());
+    colorAdjustment->setEnabled(controller_.isReady());
     menu_->setEnabled(controller_.isReady());
     update();
 }

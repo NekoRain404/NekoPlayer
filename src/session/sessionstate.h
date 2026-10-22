@@ -1,6 +1,7 @@
 #pragma once
 
 #include "playback/subtitlepreferences.h"
+#include "playback/videocoloradjustment.h"
 #include <QByteArray>
 #include <QStringList>
 
@@ -33,6 +34,7 @@ struct SessionState {
     SubtitlePreferences subtitles;
     double resumePosition = 0;
     TuningPreferences tuning;
+    VideoColorAdjustment videoColor;
 };
 
 struct SessionLoadResult {

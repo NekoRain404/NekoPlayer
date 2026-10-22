@@ -247,6 +247,16 @@ add_dependencies(video_presentation_test test_track_media)
 add_test(NAME video-presentation COMMAND video_presentation_test)
 set_tests_properties(video-presentation PROPERTIES TIMEOUT 60)
 
+add_executable(video_color_test video_color_test.cpp)
+target_link_libraries(video_color_test PRIVATE neko_session Qt6::Test)
+add_test(NAME video-color COMMAND video_color_test)
+set_tests_properties(video-color PROPERTIES TIMEOUT 60)
+
+add_executable(video_color_dialog_test video_color_dialog_test.cpp)
+target_link_libraries(video_color_dialog_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME video-color-dialog COMMAND video_color_dialog_test)
+set_tests_properties(video-color-dialog PROPERTIES TIMEOUT 30)
+
 set(NEKOPLAYER_WINDOW_TEST_BACKEND "wayland" CACHE STRING
     "Desktop backend for GUI integration tests (wayland or x11)")
 set_property(CACHE NEKOPLAYER_WINDOW_TEST_BACKEND PROPERTY STRINGS wayland x11)

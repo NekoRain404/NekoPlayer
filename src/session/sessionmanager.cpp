@@ -75,6 +75,7 @@ SessionLoadResult SessionManager::restore() {
     player_.setPlaybackSpeed(restoredTuning.playbackSpeed);
     player_.setAudioDelay(restoredTuning.audioDelay);
     player_.setSubtitleDelay(restoredTuning.subtitleDelay);
+    player_.setVideoColorAdjustment(loaded.state.videoColor);
     return loaded;
 }
 
@@ -100,6 +101,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.subtitles = player_.subtitlePreferences();
     saved.resumePosition = position;
     saved.tuning = tuning_;
+    saved.videoColor = player_.videoColorAdjustment();
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     return !sessionError.isEmpty() ? sessionError : historyError;

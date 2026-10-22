@@ -1,5 +1,12 @@
 # Verification Record
 
+Video color adjustment stage (2026-10-22):
+
+- Added brightness, contrast, saturation, hue and gamma adjustment through mpv's native video properties, with finite-value normalization and the documented -100 to 100 range. The modal dialog previews changes, treats Apply as the new Cancel rollback point, and restores that point on Cancel. Values are saved in the session configuration and restored before subsequent playback.
+- `cmake --build --preset debug -j 4` succeeded. The complete non-window Debug CTest set passed 29/29 in 43.32 seconds, including backend startup, session and video-color integration. The video-color dialog test target compiled but was deliberately not run; window behavior tests were skipped at the user's request.
+- `cmake --build --preset sanitizers --target video_color_test session_test -j 4` succeeded, and the ASan/UBSan CTest selection `video-color|session` passed 2/2 in 1.25 seconds without sanitizer reports. `git diff --check`, `clang-format --dry-run --Werror` on touched C++ files, and the 500/800-line checker passed.
+- This stage does not establish rendered color output, HDR behavior, Wayland presentation, or hardware-decoder interoperability; the normal libmpv GPU render path and hardware-decoding preference are unchanged, and no decoded frames are copied to CPU memory. The dialog test target compiled but was deliberately not run; window behavior tests were skipped at the user's request.
+
 Unified preferences dialog stage (2026-10-22):
 
 - Added one modal preferences window with playback, audio and subtitle categories. F5 opens the playback category and F6 opens subtitles; audio output remains an immediate action while decoding and subtitle settings use Apply/OK.

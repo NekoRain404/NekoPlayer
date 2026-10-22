@@ -6,6 +6,7 @@
 #include "mediainformation.h"
 #include "mediatrack.h"
 #include "subtitlepreferences.h"
+#include "videocoloradjustment.h"
 #include "videopresentation.h"
 #include <QList>
 #include <QObject>
@@ -56,6 +57,8 @@ class MpvController final : public QObject {
     void applyAudioDevicePreference(const QString &name);
     // Session-only accepted intent; asynchronous errors are reported separately.
     [[nodiscard]] const VideoPresentation &videoPresentation() const;
+    [[nodiscard]] const VideoColorAdjustment &videoColorAdjustment() const;
+    void setVideoColorAdjustment(const VideoColorAdjustment &adjustment);
     void setVideoAspect(VideoAspect aspect);
     [[nodiscard]] const AbLoop &abLoop() const;
     bool setLoopStart(double seconds);
@@ -110,6 +113,7 @@ class MpvController final : public QObject {
     void hardwareDecodingPreferenceChanged(bool enabled);
     void subtitlePreferencesChanged();
     void videoPresentationChanged();
+    void videoColorAdjustmentChanged();
     void abLoopChanged();
     void stateChanged();
     void mediaInformationChanged();

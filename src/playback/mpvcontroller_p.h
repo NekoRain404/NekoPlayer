@@ -109,6 +109,7 @@ struct MpvController::Impl {
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
     VideoPresentation presentation;
+    VideoColorAdjustment videoColor;
     QList<AudioDevice> audioDevices;
     QString selectedAudioDevice = QStringLiteral("auto");
     uint64_t audioDeviceRequest = 0;

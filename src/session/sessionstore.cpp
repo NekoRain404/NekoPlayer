@@ -54,6 +54,7 @@ bool readBool(QSettings &settings, const QString &key, bool fallback = false) {
 SessionState normalized(SessionState state) {
     state.subtitles = state.subtitles.normalized();
     state.tuning = state.tuning.normalized();
+    state.videoColor = state.videoColor.normalized();
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
     if (state.audio.outputDevice.isEmpty() || state.audio.outputDevice.contains(QChar::Null))
@@ -132,6 +133,16 @@ SessionLoadResult SessionStore::load() const {
     const auto subtitleDelay =
         settings.value(QStringLiteral("playback/subtitleDelay"), 0).toDouble(&valid);
     state.tuning.subtitleDelay = valid ? subtitleDelay : 0;
+    const auto colorValue = [&settings](const QString &key) {
+        bool valid = false;
+        const double value = settings.value(key, 0).toDouble(&valid);
+        return valid ? value : 0.0;
+    };
+    state.videoColor = {colorValue(QStringLiteral("video/brightness")),
+                        colorValue(QStringLiteral("video/contrast")),
+                        colorValue(QStringLiteral("video/saturation")),
+                        colorValue(QStringLiteral("video/hue")),
+                        colorValue(QStringLiteral("video/gamma"))};
     return {normalized(std::move(state)), {}};
 }
 
@@ -164,6 +175,11 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("playback/speed"), saved.tuning.playbackSpeed);
     settings.setValue(QStringLiteral("playback/audioDelay"), saved.tuning.audioDelay);
     settings.setValue(QStringLiteral("playback/subtitleDelay"), saved.tuning.subtitleDelay);
+    settings.setValue(QStringLiteral("video/brightness"), saved.videoColor.brightness);
+    settings.setValue(QStringLiteral("video/contrast"), saved.videoColor.contrast);
+    settings.setValue(QStringLiteral("video/saturation"), saved.videoColor.saturation);
+    settings.setValue(QStringLiteral("video/hue"), saved.videoColor.hue);
+    settings.setValue(QStringLiteral("video/gamma"), saved.videoColor.gamma);
     settings.sync();
     return settings.status() == QSettings::NoError ? QString{} : configurationError(filePath_);
 }

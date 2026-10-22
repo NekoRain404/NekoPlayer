@@ -3,7 +3,7 @@
 Unified preferences dialog stage (2026-10-22):
 
 - Added one modal preferences window with playback, audio and subtitle categories. F5 opens the playback category and F6 opens subtitles; audio output remains an immediate action while decoding and subtitle settings use Apply/OK.
-- `cmake --build --preset debug -j 4` succeeded. The full selected non-window set excluding `file-drop` and `preferences-dialog` passed 28/28 in 45.33 seconds. The `file-drop` test was run separately and failed three pause-state assertions in `localhost-authority`, `empty-local-path` and `multiple-subtitles` at `tests/file_drop_test.cpp:85`; this stage does not modify the drop handler. `window`, `preferences-dialog` and other window behavior tests were not run, per the user's request.
+- `cmake --build --preset debug -j 4` succeeded. The selected non-window set excluding `file-drop` and `preferences-dialog` passed 28/28 in 45.33 seconds. An initial `file-drop` run failed three pause assertions because the test could observe `track-list` before `FILE_LOADED`, then request pause while the player was still inactive. The test now waits for active playback before pausing; the nine invalid-drop data cases and complete `file-drop` suite passed. `window`, `preferences-dialog` and other window behavior tests were not run, per the user's request.
 - `clang-format --dry-run --Werror` passed for the changed C++ files; `git diff --check` and `cmake -DNEKO_SOURCE_DIR="$PWD" -P cmake/CheckCodeSize.cmake` passed. New dialog sources are 206 and 41 lines; its test is 36 lines.
 - The dialog test is compile-only in this stage. Interactive category navigation, Apply/Cancel behavior, real audio-device selection and Wayland rendering/behavior remain unverified.
 

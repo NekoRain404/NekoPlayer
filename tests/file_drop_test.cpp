@@ -81,6 +81,7 @@ class FileDropTest final : public QObject {
         MpvController player(true, true);
         player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
         QTRY_COMPARE(player.tracks().size(), 3);
+        QTRY_VERIFY(player.state().active);
         player.setPaused(true);
         QTRY_VERIFY(player.state().paused);
         LocalFileDrop drop(player);

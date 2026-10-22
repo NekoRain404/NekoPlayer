@@ -24,7 +24,9 @@ class VideoMenu final : public QObject {
     QMenu *menu_;
     QMenu *aspectMenu_;
     QMenu *hdrToneMappingMenu_;
+    QMenu *deinterlaceMenu_;
     QActionGroup *aspects_;
     QActionGroup *hdrToneMappings_;
+    QActionGroup *deinterlaceModes_;
     QAction *resetRotation_;
 };

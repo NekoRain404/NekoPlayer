@@ -29,6 +29,18 @@ QString readTextProperty(MpvController &player, const char *name) {
 class VideoColorTest final : public QObject {
     Q_OBJECT
   private slots:
+    void deinterlaceModeUsesNativeMpvProperty() {
+        MpvController player(true, true);
+        QCOMPARE(player.deinterlaceMode(), DeinterlaceMode::Auto);
+        QTRY_COMPARE(readTextProperty(player, "deinterlace"), QStringLiteral("auto"));
+        player.setDeinterlaceMode(DeinterlaceMode::On);
+        QCOMPARE(player.deinterlaceMode(), DeinterlaceMode::On);
+        QTRY_COMPARE(readTextProperty(player, "deinterlace"), QStringLiteral("yes"));
+        player.setDeinterlaceMode(DeinterlaceMode::Off);
+        QCOMPARE(player.deinterlaceMode(), DeinterlaceMode::Off);
+        QTRY_COMPARE(readTextProperty(player, "deinterlace"), QStringLiteral("no"));
+    }
+
     void toneMappingUsesGpuLibplaceboProperty() {
         MpvController player(true, true);
         QCOMPARE(player.hdrToneMapping(), HdrToneMapping::Auto);

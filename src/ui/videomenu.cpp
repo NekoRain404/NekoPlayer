@@ -11,11 +11,12 @@
 
 VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
     : QObject(window), controller_(controller), menu_(new QMenu(window)), aspectMenu_(nullptr),
-      hdrToneMappingMenu_(nullptr), aspects_(new QActionGroup(this)),
-      hdrToneMappings_(new QActionGroup(this)) {
+      hdrToneMappingMenu_(nullptr), deinterlaceMenu_(nullptr), aspects_(new QActionGroup(this)),
+      hdrToneMappings_(new QActionGroup(this)), deinterlaceModes_(new QActionGroup(this)) {
     menu_->setObjectName(QStringLiteral("videoMenu"));
     aspects_->setExclusive(true);
     hdrToneMappings_->setExclusive(true);
+    deinterlaceModes_->setExclusive(true);
     const auto make = [this, window](const QString &text, const char *name,
                                      QKeySequence shortcut = {}) {
         auto *action = new QAction(text, this);
@@ -86,6 +87,24 @@ VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
     addToneMapping(tr("BT.2390"), "hdrToneMappingBt2390Action", HdrToneMapping::Bt2390);
     addToneMapping(tr("剪裁"), "hdrToneMappingClipAction", HdrToneMapping::Clip);
     menu_->addSeparator();
+    deinterlaceMenu_ = menu_->addMenu(tr("去隔行"));
+    deinterlaceMenu_->setObjectName(QStringLiteral("deinterlaceMenu"));
+    const auto addDeinterlace = [this, &make](const QString &text, const char *name,
+                                              DeinterlaceMode mode) {
+        auto *action = make(text, name);
+        action->setCheckable(true);
+        action->setData(static_cast<int>(mode));
+        deinterlaceModes_->addAction(action);
+        deinterlaceMenu_->addAction(action);
+        connect(action, &QAction::triggered, this, [this, mode] {
+            controller_.setDeinterlaceMode(mode);
+            update();
+        });
+    };
+    addDeinterlace(tr("关闭"), "deinterlaceOffAction", DeinterlaceMode::Off);
+    addDeinterlace(tr("自动"), "deinterlaceAutoAction", DeinterlaceMode::Auto);
+    addDeinterlace(tr("开启"), "deinterlaceOnAction", DeinterlaceMode::On);
+    menu_->addSeparator();
     auto *screenshots = new ScreenshotMenu(controller_, window);
     menu_->addMenu(screenshots->menu());
     connect(screenshots, &ScreenshotMenu::feedback, this, &VideoMenu::feedback);
@@ -96,6 +115,7 @@ VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
                           .arg(controller_.videoPresentation().rotation));
     });
     connect(&controller_, &MpvController::hdrToneMappingChanged, this, &VideoMenu::update);
+    connect(&controller_, &MpvController::deinterlaceModeChanged, this, &VideoMenu::update);
     // Menu actions also live on the window for shortcuts, so disable them all
     // independently if backend startup failed.
     for (auto *action : {clockwise, counterClockwise})
@@ -103,6 +123,7 @@ VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
     aspects_->setEnabled(controller_.isReady());
     colorAdjustment->setEnabled(controller_.isReady());
     hdrToneMappings_->setEnabled(controller_.isReady());
+    deinterlaceModes_->setEnabled(controller_.isReady());
     menu_->setEnabled(controller_.isReady());
     update();
 }
@@ -123,7 +144,12 @@ void VideoMenu::retranslate() {
     setActionText("videoColorAdjustmentAction", tr("色彩调整…"));
     hdrToneMappingMenu_->setTitle(tr("HDR 色调映射"));
     setActionText("hdrToneMappingAutoAction", tr("自动"));
+    setActionText("hdrToneMappingBt2390Action", tr("BT.2390"));
     setActionText("hdrToneMappingClipAction", tr("剪裁"));
+    deinterlaceMenu_->setTitle(tr("去隔行"));
+    setActionText("deinterlaceOffAction", tr("关闭"));
+    setActionText("deinterlaceAutoAction", tr("自动"));
+    setActionText("deinterlaceOnAction", tr("开启"));
     update();
 }
 
@@ -134,6 +160,9 @@ void VideoMenu::update() {
     for (auto *action : hdrToneMappings_->actions())
         action->setChecked(action->data().toInt() ==
                            static_cast<int>(controller_.hdrToneMapping()));
+    for (auto *action : deinterlaceModes_->actions())
+        action->setChecked(action->data().toInt() ==
+                           static_cast<int>(controller_.deinterlaceMode()));
     resetRotation_->setEnabled(controller_.isReady() && presentation.rotation != 0);
     menu_->setTitle(tr("视频(&I) · %1 · %2°")
                         .arg(aspects_->checkedAction()->text())

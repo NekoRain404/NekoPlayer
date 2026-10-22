@@ -141,7 +141,11 @@ libmpv client API: %2.%3</translation></message>
     <message><source>色彩调整…</source><translation>Color Adjustment…</translation></message>
     <message><source>HDR 色调映射</source><translation>HDR Tone Mapping</translation></message>
     <message><source>自动</source><translation>Auto</translation></message>
+    <message><source>BT.2390</source><translation>BT.2390</translation></message>
     <message><source>剪裁</source><translation>Clip</translation></message>
+    <message><source>去隔行</source><translation>Deinterlace</translation></message>
+    <message><source>关闭</source><translation>Off</translation></message>
+    <message><source>开启</source><translation>On</translation></message>
     <message><source>视频(&amp;I) · %1 · %2°</source><translation>&amp;Video · %1 · %2°</translation></message>
     <message><source>画面比例：%1 · 旋转：%2°</source><translation>Aspect ratio: %1 · Rotation: %2°</translation></message>
 </context>

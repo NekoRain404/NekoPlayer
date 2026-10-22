@@ -8,6 +8,7 @@
 #include "subtitlepreferences.h"
 #include "trackselectionpreference.h"
 #include "videocoloradjustment.h"
+#include "videodeinterlace.h"
 #include "videoframing.h"
 #include "videohdr.h"
 #include "videopresentation.h"
@@ -68,8 +69,10 @@ class MpvController final : public QObject {
     [[nodiscard]] const VideoFraming &videoFraming() const;
     [[nodiscard]] const VideoColorAdjustment &videoColorAdjustment() const;
     [[nodiscard]] HdrToneMapping hdrToneMapping() const;
+    [[nodiscard]] DeinterlaceMode deinterlaceMode() const;
     void setVideoColorAdjustment(const VideoColorAdjustment &adjustment);
     void setHdrToneMapping(HdrToneMapping mapping);
+    void setDeinterlaceMode(DeinterlaceMode mode);
     void setVideoAspect(VideoAspect aspect);
     [[nodiscard]] const AbLoop &abLoop() const;
     bool setLoopStart(double seconds);
@@ -135,6 +138,7 @@ class MpvController final : public QObject {
     void videoFramingChanged();
     void videoColorAdjustmentChanged();
     void hdrToneMappingChanged();
+    void deinterlaceModeChanged();
     void abLoopChanged();
     void stateChanged();
     void mediaInformationChanged();

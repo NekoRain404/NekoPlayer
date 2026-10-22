@@ -129,6 +129,7 @@ struct MpvController::Impl {
     VideoFraming framing;
     VideoColorAdjustment videoColor;
     HdrToneMapping hdrToneMapping = HdrToneMapping::Auto;
+    DeinterlaceMode deinterlaceMode = DeinterlaceMode::Auto;
     QList<AudioDevice> audioDevices;
     QString selectedAudioDevice = QStringLiteral("auto");
     uint64_t audioDeviceRequest = 0;

@@ -16,6 +16,7 @@
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 #include "transportbar.h"
+#include "welcomepanel.h"
 
 #include <QAction>
 #include <QDragEnterEvent>
@@ -73,13 +74,13 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     feedbackOverlay_->setGeometry(video_->rect());
     playbackOverlay_ = new PlaybackOverlay(*controller_, video_);
     playbackOverlay_->setGeometry(video_->rect());
-    emptyHint_ =
-        new QLabel(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件\nCtrl+U 打开网络地址"), video_);
-    emptyHint_->setAlignment(Qt::AlignCenter);
-    emptyHint_->setAttribute(Qt::WA_TransparentForMouseEvents);
-    emptyHint_->setStyleSheet(QStringLiteral("font-size: 18px; background: transparent;"));
+    welcomePanel_ = new WelcomePanel(openAction_, openNetworkAction_, video_);
     auto *videoLayout = new QVBoxLayout(video_);
-    videoLayout->addWidget(emptyHint_);
+    videoLayout->setContentsMargins(24, 24, 24, 24);
+    videoLayout->setSpacing(0);
+    videoLayout->addStretch(1);
+    videoLayout->addWidget(welcomePanel_, 0, Qt::AlignHCenter);
+    videoLayout->addStretch(1);
     playlistPane_ = new PlaylistPane(*playlist_, appendAction_, previousAction_, nextAction_,
                                      clearPlaylistAction_, content);
     playlistMenu_->addSeparator();
@@ -335,7 +336,7 @@ void MainWindow::updateState() {
     clearPlaylistAction_->setEnabled(playlist_->model()->rowCount() > 0 ||
                                      !pendingPaths_.isEmpty());
     transport_->present(state);
-    emptyHint_->setVisible(!state.active);
+    welcomePanel_->setVisible(!state.active);
     setWindowTitle(state.path.isEmpty()
                        ? QStringLiteral("NekoPlayer")
                        : MediaSource::displayName(state.path) + QStringLiteral(" — NekoPlayer"));

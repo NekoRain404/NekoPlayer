@@ -15,6 +15,7 @@ class PlaylistPane;
 class QAction;
 class QMenu;
 class QLabel;
+class WelcomePanel;
 class LocalFileDrop;
 class ActionFeedbackOverlay;
 class PlaybackOverlay;
@@ -76,7 +77,7 @@ class MainWindow final : public QMainWindow {
     TrackMenus *trackMenus_ = nullptr;
     PlaylistPane *playlistPane_ = nullptr;
     LocalFileDrop *fileDrop_ = nullptr;
-    QLabel *emptyHint_ = nullptr;
+    WelcomePanel *welcomePanel_ = nullptr;
     ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
     PlaybackOverlay *playbackOverlay_ = nullptr;
     FolderMenu *folderMenu_ = nullptr;

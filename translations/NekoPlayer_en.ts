@@ -78,6 +78,14 @@
     <message><source>从列表移除</source><translation>Remove from Playlist</translation></message>
     <message><source>上移所选项</source><translation>Move Selected Up</translation></message>
     <message><source>下移所选项</source><translation>Move Selected Down</translation></message>
+    <message><source>播放列表</source><translation>Playlist</translation></message>
+    <message><source>%1 项</source><translation>%1 items</translation></message>
+</context>
+<context>
+    <name>WelcomePanel</name>
+    <message><source>开始播放</source><translation>Start Playing</translation></message>
+    <message><source>打开本地媒体或连接网络地址，享受流畅播放体验</source><translation>Open local media or connect to a network address for smooth playback</translation></message>
+    <message><source>也可以将视频拖到这里 · Ctrl+O 打开文件 · Ctrl+U 打开网络地址</source><translation>You can also drop a video here · Ctrl+O to open a file · Ctrl+U to open a network URL</translation></message>
 </context>
 <context>
     <name>MediaInformationDialog</name>

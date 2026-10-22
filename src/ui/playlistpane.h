@@ -6,6 +6,7 @@
 class QAction;
 class PlaylistController;
 class QListView;
+class QLabel;
 class QEvent;
 
 class PlaylistPane final : public QWidget {
@@ -25,6 +26,7 @@ class PlaylistPane final : public QWidget {
 
   private:
     void synchronizeCurrent();
+    void updateItemCount();
     void updateEditingActions();
     PlaylistController &queue_;
     QListView *view_;

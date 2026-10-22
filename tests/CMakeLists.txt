@@ -44,6 +44,13 @@ qt_add_translations(appearance_preferences_test TS_FILES ../translations/NekoPla
 add_test(NAME appearance-preferences COMMAND appearance_preferences_test)
 set_tests_properties(appearance-preferences PROPERTIES TIMEOUT 20)
 
+add_executable(ui_surface_test ui_surface_test.cpp)
+target_link_libraries(ui_surface_test PRIVATE neko_ui Qt6::Test)
+qt_add_translations(ui_surface_test TS_FILES ../translations/NekoPlayer_en.ts
+    RESOURCE_PREFIX "/i18n")
+add_test(NAME ui-surface COMMAND ui_surface_test)
+set_tests_properties(ui-surface PROPERTIES TIMEOUT 20 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(languagemanager_test languagemanager_test.cpp ../src/ui/languagemanager.cpp)
 target_include_directories(languagemanager_test PRIVATE ../src)
 target_link_libraries(languagemanager_test PRIVATE Qt6::Widgets Qt6::Test neko_options)

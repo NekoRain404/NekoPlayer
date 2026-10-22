@@ -57,6 +57,7 @@ add_library(neko_input src/input/localfiledrop.cpp src/input/mediafolderscan.cpp
 target_link_libraries(neko_input PUBLIC neko_playback Qt6::Concurrent)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
+    src/ui/welcomepanel.cpp
     src/playlist/m3u8store.cpp
     src/ui/mediainformationtext.cpp src/ui/mediainformationdialog.cpp
     src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp

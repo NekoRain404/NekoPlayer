@@ -367,7 +367,6 @@ void MainWindow::changeEvent(QEvent *event) {
                              tr("视频(&I)"), tr("播放列表(&L)"), tr("视图(&V)"), tr("设置(&S)")};
     for (int index = 0; index < qMin(menus.size(), titles.size()); ++index)
         menus.at(index)->setText(titles.at(index));
-    emptyHint_->setText(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件\nCtrl+U 打开网络地址"));
     if (auto *theme = findChild<QAction *>(QStringLiteral("themeMenuAction")))
         theme->setText(tr("主题"));
     if (auto *language = findChild<QAction *>(QStringLiteral("languageMenuAction")))

@@ -6,6 +6,7 @@
 #include <QAction>
 #include <QEvent>
 #include <QHBoxLayout>
+#include <QLabel>
 #include <QListView>
 #include <QStyle>
 #include <QStyledItemDelegate>
@@ -91,12 +92,30 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     connect(model, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateEditingActions);
     connect(model, &PlaylistModel::rowsMoved, this, &PlaylistPane::updateEditingActions);
     connect(model, &PlaylistModel::modelReset, this, &PlaylistPane::updateEditingActions);
+    connect(model, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateItemCount);
+    connect(model, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateItemCount);
+    connect(model, &PlaylistModel::modelReset, this, &PlaylistPane::updateItemCount);
     view_->setAlternatingRowColors(false);
     view_->setUniformItemSizes(true);
     view_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(8, 8, 8, 8);
     layout->setSpacing(6);
+    auto *header = new QWidget(this);
+    header->setObjectName(QStringLiteral("playlistHeader"));
+    auto *headerLayout = new QHBoxLayout(header);
+    headerLayout->setContentsMargins(4, 2, 4, 2);
+    headerLayout->setSpacing(6);
+    auto *title = new QLabel(header);
+    title->setObjectName(QStringLiteral("playlistTitle"));
+    title->setText(tr("播放列表"));
+    auto *count = new QLabel(header);
+    count->setObjectName(QStringLiteral("playlistCount"));
+    count->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    headerLayout->addWidget(title);
+    headerLayout->addStretch();
+    headerLayout->addWidget(count);
+    layout->addWidget(header);
     layout->addWidget(view_, 1);
     auto *buttons = new QHBoxLayout;
     buttons->setContentsMargins(0, 0, 0, 0);
@@ -110,6 +129,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     connect(view_, &QListView::activated, this,
             [this](const QModelIndex &index) { emit playRequested(index.row()); });
     synchronizeCurrent();
+    updateItemCount();
     updateEditingActions();
 }
 
@@ -124,8 +144,16 @@ void PlaylistPane::changeEvent(QEvent *event) {
     remove_->setText(tr("从列表移除"));
     moveUp_->setText(tr("上移所选项"));
     moveDown_->setText(tr("下移所选项"));
+    if (auto *title = findChild<QLabel *>(QStringLiteral("playlistTitle")))
+        title->setText(tr("播放列表"));
     view_->setAccessibleName(tr("播放列表"));
     view_->setToolTip(tr("双击播放；可拖动排序"));
+    updateItemCount();
+}
+
+void PlaylistPane::updateItemCount() {
+    if (auto *count = findChild<QLabel *>(QStringLiteral("playlistCount")))
+        count->setText(tr("%1 项").arg(queue_.model()->rowCount()));
 }
 
 void PlaylistPane::synchronizeCurrent() {

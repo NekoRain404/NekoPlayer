@@ -8,6 +8,7 @@
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 #include "playback/videowidget.h"
+#include "playbackoverlay.h"
 #include "playlist/m3u8store.h"
 #include "playlistpane.h"
 #include "session/sessionmanager.h"
@@ -74,6 +75,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     video_ = new VideoWidget(*controller_, content);
     feedbackOverlay_ = new ActionFeedbackOverlay(video_);
     feedbackOverlay_->setGeometry(video_->rect());
+    playbackOverlay_ = new PlaybackOverlay(*controller_, video_);
+    playbackOverlay_->setGeometry(video_->rect());
     emptyHint_ =
         new QLabel(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件\nCtrl+U 打开网络地址"), video_);
     emptyHint_->setAlignment(Qt::AlignCenter);
@@ -145,7 +148,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     });
     connect(transport_, &TransportBar::seekRequested, this, [this](double seconds) {
         controller_->seekAbsolute(seconds);
-        showActionFeedback(ActionFeedbackText::seekTo(seconds));
+        showSeekFeedback(ActionFeedbackText::seekTo(seconds));
     });
     connect(transport_, &TransportBar::volumeRequested, this, [this](double volume) {
         controller_->setVolume(volume);
@@ -336,6 +339,13 @@ void MainWindow::showActionFeedback(const QString &message, int durationMs) {
         statusBar()->showMessage(message, durationMs);
 }
 
+void MainWindow::showSeekFeedback(const QString &message) {
+    if (playbackOverlay_->showSeek(message))
+        feedbackOverlay_->clearMessage();
+    else
+        showActionFeedback(message);
+}
+
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
     if (event->mimeData()->hasUrls())
         event->acceptProposedAction();
@@ -382,8 +392,10 @@ void MainWindow::revealControls() {
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
-    if (watched == video_ && event->type() == QEvent::Resize)
+    if (watched == video_ && event->type() == QEvent::Resize) {
         feedbackOverlay_->setGeometry(video_->rect());
+        playbackOverlay_->setGeometry(video_->rect());
+    }
     if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress)
         revealControls();
     return QMainWindow::eventFilter(watched, event);

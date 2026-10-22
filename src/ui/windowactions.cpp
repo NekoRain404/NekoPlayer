@@ -5,6 +5,7 @@
 #include "navigationmenu.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
+#include "playbackoverlay.h"
 #include "playlistmodemenu.h"
 #include "playlistpane.h"
 #include "preferencesdialog.h"
@@ -80,11 +81,11 @@ void MainWindow::createActions() {
     auto *forward = make(tr("前进 5 秒"), "seekForwardAction", QKeySequence(Qt::Key_Right));
     connect(back, &QAction::triggered, this, [this] {
         controller_->seekRelative(-5);
-        showActionFeedback(ActionFeedbackText::seek(-5));
+        showSeekFeedback(ActionFeedbackText::seek(-5));
     });
     connect(forward, &QAction::triggered, this, [this] {
         controller_->seekRelative(5);
-        showActionFeedback(ActionFeedbackText::seek(5));
+        showSeekFeedback(ActionFeedbackText::seek(5));
     });
     auto *louder = make(tr("增加音量"), "volumeUpAction", QKeySequence(Qt::Key_Up));
     auto *quieter = make(tr("降低音量"), "volumeDownAction", QKeySequence(Qt::Key_Down));
@@ -160,6 +161,15 @@ void MainWindow::createActions() {
     playlistMenu_->addMenu(modeMenu->menu());
     auto *view = menuBar()->addMenu(tr("视图(&V)"));
     view->addAction(fullscreenAction_);
+    auto *playbackInformation =
+        make(tr("显示当前播放信息"), "playbackInformationAction", QKeySequence(Qt::Key_Tab));
+    playbackInformation->setCheckable(true);
+    playbackInformation->setAutoRepeat(false);
+    connect(playbackInformation, &QAction::toggled, this, [this](bool visible) {
+        if (playbackOverlay_)
+            playbackOverlay_->setInformationVisible(visible);
+    });
+    view->addAction(playbackInformation);
     showPlaylistAction_ =
         make(tr("显示播放列表"), "showPlaylistAction", QKeySequence(Qt::CTRL | Qt::Key_L));
     showPlaylistAction_->setCheckable(true);
@@ -194,6 +204,7 @@ void MainWindow::createActions() {
     contextMenu_->addMenu(video->menu());
     contextMenu_->addSeparator();
     contextMenu_->addAction(information);
+    contextMenu_->addAction(playbackInformation);
     contextMenu_->addAction(playbackSettings);
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this,

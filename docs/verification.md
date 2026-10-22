@@ -1,5 +1,11 @@
 # Verification Record
 
+Playback information and independent seek overlay stage (2026-10-22):
+
+- Tab toggles a persistent plaintext information panel. Left/right actions and transport seeking show a separate progress panel for 1.8 seconds; repeated seeks restart its timer. Information remains independent of the timer and fullscreen transport visibility. Progress uses observed mpv position, with finite/seekable/positive-duration guards. Metadata strings are bounded and control-cleaned; network titles omit authentication and query data.
+- Full Debug build succeeded, including the updated compile-only fullscreen test. The relevant ASan/UBSan targets, application and fullscreen test also built. Debug selection `^(code-size|playback-overlay-text|action-feedback|media-information|media-report|playback-time)$` passed **6/6** in **3.45 seconds**; the same sanitizer selection passed **6/6** in **3.92 seconds** without sanitizer reports. The formatter suite contains 15 QtTest cases; its implementer reproduced four missing-feature failures before implementation.
+- Independent review found no blocking defects. New window tests cover action wiring and fullscreen progress independently of transport, but were deliberately not run. They trigger QActions directly; physical Tab/arrow dispatch and actual Wayland overlay composition remain unverified. No polling, render-path changes or CPU frame copies were introduced. Formatting and diff checks passed after formatting the new formatter/test sources; no code-size exception was added.
+
 Playlist source validation stage (2026-10-22):
 
 - M3U8 import previously checked URL syntax without applying the playback source policy, and export could overwrite a playlist with unsupported or malformed sources. Both paths now use `MediaSource` validation. Import resolves relative paths against the playlist directory, converts file URLs to absolute local paths, and preserves network spelling and signed escapes. Any invalid entry rejects the whole import before publishing entries; export validates before opening `QSaveFile`, preserving an existing file on validation failure.

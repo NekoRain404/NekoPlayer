@@ -15,11 +15,34 @@ double readProperty(MpvController &player, const char *name) {
         return std::numeric_limits<double>::quiet_NaN();
     return value;
 }
+
+QString readTextProperty(MpvController &player, const char *name) {
+    char *value = nullptr;
+    if (mpv_get_property(player.handle(), name, MPV_FORMAT_STRING, &value) < 0 || !value)
+        return {};
+    const auto result = QString::fromUtf8(value);
+    mpv_free(value);
+    return result;
+}
 } // namespace
 
 class VideoColorTest final : public QObject {
     Q_OBJECT
   private slots:
+    void toneMappingUsesGpuLibplaceboProperty() {
+        MpvController player(true, true);
+        QCOMPARE(player.hdrToneMapping(), HdrToneMapping::Auto);
+        player.setHdrToneMapping(HdrToneMapping::Bt2390);
+        QCOMPARE(player.hdrToneMapping(), HdrToneMapping::Bt2390);
+        QTRY_COMPARE(readTextProperty(player, "tone-mapping"), QStringLiteral("bt.2390"));
+        player.setHdrToneMapping(HdrToneMapping::Clip);
+        QCOMPARE(player.hdrToneMapping(), HdrToneMapping::Clip);
+        QTRY_COMPARE(readTextProperty(player, "tone-mapping"), QStringLiteral("clip"));
+        player.setHdrToneMapping(HdrToneMapping::Auto);
+        QCOMPARE(player.hdrToneMapping(), HdrToneMapping::Auto);
+        QTRY_COMPARE(readTextProperty(player, "tone-mapping"), QStringLiteral("auto"));
+    }
+
     void clampsColorAdjustmentsAndRejectsNonFiniteValues() {
         MpvController player(true, true);
         player.setVideoColorAdjustment({120, -120, 45, 20, -10});

@@ -352,4 +352,6 @@ void MainWindow::changeEvent(QEvent *event) {
         english->setText(QStringLiteral("English"));
     if (auto *chinese = findChild<QAction *>(QStringLiteral("languageChineseAction")))
         chinese->setText(tr("简体中文"));
+    if (auto *video = findChild<VideoMenu *>())
+        video->retranslate();
 }

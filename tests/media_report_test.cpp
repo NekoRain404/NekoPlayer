@@ -19,6 +19,8 @@ class MediaReportTest final : public QObject {
         info.videoWidth = 320;
         info.videoHeight = 180;
         info.videoPixelFormat = QStringLiteral("yuv420p");
+        info.videoPrimaries = QStringLiteral("bt.2020");
+        info.videoTransfer = QStringLiteral("pq");
         info.containerFrameRate = 25;
         info.audioCodec = QStringLiteral("pcm_s16le");
         info.audioSampleRate = 48000;
@@ -28,8 +30,8 @@ class MediaReportTest final : public QObject {
         for (const auto &text :
              {state.path, info.fileFormat, QStringLiteral("123456"), QStringLiteral("320 × 180"),
               QStringLiteral("25.000"), QStringLiteral("48000 Hz"), QStringLiteral("vaapi"),
-              info.videoCodec, info.videoPixelFormat, info.audioCodec, info.audioChannels,
-              info.audioSampleFormat})
+              info.videoCodec, info.videoPixelFormat, info.videoPrimaries, QStringLiteral("HDR"),
+              info.audioCodec, info.audioChannels, info.audioSampleFormat})
             QVERIFY2(report.contains(text), qPrintable(text));
         state.hardwareDecoder = QStringLiteral("no");
         QVERIFY(formatMediaInformation(info, state).contains(QStringLiteral("软件解码")));

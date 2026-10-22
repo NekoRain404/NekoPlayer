@@ -44,6 +44,8 @@ enum Property : uint64_t {
     VideoWidth,
     VideoHeight,
     VideoPixelFormat,
+    VideoPrimaries,
+    VideoTransfer,
     ContainerFrameRate,
     AudioCodec,
     AudioSampleRate,
@@ -59,6 +61,8 @@ inline constexpr auto informationProperties =
                std::tuple{VideoWidth, "video-params/w", MPV_FORMAT_INT64},
                std::tuple{VideoHeight, "video-params/h", MPV_FORMAT_INT64},
                std::tuple{VideoPixelFormat, "video-params/pixelformat", MPV_FORMAT_STRING},
+               std::tuple{VideoPrimaries, "video-params/primaries", MPV_FORMAT_STRING},
+               std::tuple{VideoTransfer, "video-params/gamma", MPV_FORMAT_STRING},
                std::tuple{ContainerFrameRate, "container-fps", MPV_FORMAT_DOUBLE},
                std::tuple{AudioCodec, "current-tracks/audio/codec", MPV_FORMAT_STRING},
                std::tuple{AudioSampleRate, "audio-params/samplerate", MPV_FORMAT_INT64},
@@ -124,6 +128,7 @@ struct MpvController::Impl {
     VideoPresentation presentation;
     VideoFraming framing;
     VideoColorAdjustment videoColor;
+    HdrToneMapping hdrToneMapping = HdrToneMapping::Auto;
     QList<AudioDevice> audioDevices;
     QString selectedAudioDevice = QStringLiteral("auto");
     uint64_t audioDeviceRequest = 0;

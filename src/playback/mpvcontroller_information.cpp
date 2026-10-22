@@ -92,6 +92,12 @@ bool MpvController::Impl::updateMediaInformation(const mpv_event &event) {
     case VideoPixelFormat:
         information.videoPixelFormat = text();
         break;
+    case VideoPrimaries:
+        information.videoPrimaries = text();
+        break;
+    case VideoTransfer:
+        information.videoTransfer = text();
+        break;
     case ContainerFrameRate: {
         const double fps = property.data && property.format == MPV_FORMAT_DOUBLE
                                ? *static_cast<double *>(property.data)

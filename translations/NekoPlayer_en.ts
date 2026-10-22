@@ -88,6 +88,8 @@ libmpv client API: %2.%3</translation></message>
     <message><source>视频: %1 · %2 · %3</source><translation>Video: %1 · %2 · %3</translation></message>
     <message><source>容器帧率（估计）: %1</source><translation>Container frame rate (estimated): %1</translation></message>
     <message><source>实际视频解码: %1</source><translation>Active video decoder: %1</translation></message>
+    <message><source>SDR</source><translation>SDR</translation></message>
+    <message><source>视频色彩: %1 · 原色: %2</source><translation>Video color: %1 · Primaries: %2</translation></message>
     <message><source>容器: %1 · 文件大小: %2</source><translation>Container: %1 · File size: %2</translation></message>
     <message><source>进度: %1 · 剩余: %2</source><translation>Progress: %1 · Remaining: %2</translation></message>
     <message><source>不可定位</source><translation>Not seekable</translation></message>
@@ -107,5 +109,27 @@ libmpv client API: %2.%3</translation></message>
     <message><source>播放进度</source><translation>Playback position</translation></message>
     <message><source>音量</source><translation>Volume</translation></message>
     <message><source>音量 %1%</source><translation>Volume %1%</translation></message>
+</context>
+<context>
+    <name>VideoMenu</name>
+    <message><source>宽高比</source><translation>Aspect Ratio</translation></message>
+    <message><source>原始比例</source><translation>Source</translation></message>
+    <message><source>拉伸填满</source><translation>Stretch to Fill</translation></message>
+    <message><source>向右旋转 90°</source><translation>Rotate Right 90°</translation></message>
+    <message><source>向左旋转 90°</source><translation>Rotate Left 90°</translation></message>
+    <message><source>重置旋转</source><translation>Reset Rotation</translation></message>
+    <message><source>色彩调整…</source><translation>Color Adjustment…</translation></message>
+    <message><source>HDR 色调映射</source><translation>HDR Tone Mapping</translation></message>
+    <message><source>自动</source><translation>Auto</translation></message>
+    <message><source>剪裁</source><translation>Clip</translation></message>
+    <message><source>视频(&amp;I) · %1 · %2°</source><translation>&amp;Video · %1 · %2°</translation></message>
+    <message><source>画面比例：%1 · 旋转：%2°</source><translation>Aspect ratio: %1 · Rotation: %2°</translation></message>
+</context>
+<context>
+    <name>MediaInformation</name>
+    <message><source>视频色彩</source><translation>Video color</translation></message>
+    <message><source>视频原色</source><translation>Video primaries</translation></message>
+    <message><source>HDR · %1</source><translation>HDR · %1</translation></message>
+    <message><source>SDR</source><translation>SDR</translation></message>
 </context>
 </TS>

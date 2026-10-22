@@ -95,6 +95,8 @@ QString formatPlaybackOverlayInformation(const MediaInformation &info, const Pla
     const auto decoder = state.hardwareDecoder == QLatin1String("no")
                              ? tr("软件解码")
                              : displayText(state.hardwareDecoder);
+    const auto dynamicRange =
+        info.isHdr() ? QStringLiteral("HDR · %1").arg(info.videoTransfer.toUpper()) : tr("SDR");
     const auto sampleRate =
         info.audioSampleRate > 0 ? QStringLiteral("%1 Hz").arg(info.audioSampleRate) : unknown;
     const auto progress = formatSeekProgress(state);
@@ -126,6 +128,9 @@ QString formatPlaybackOverlayInformation(const MediaInformation &info, const Pla
                      : tr("视频: 无视频"))
         << tr("容器帧率（估计）: %1").arg(hasVideo ? frameRate : tr("无视频"))
         << tr("实际视频解码: %1").arg(hasVideo ? decoder : tr("无视频"))
+        << tr("视频色彩: %1 · 原色: %2")
+               .arg(hasVideo ? dynamicRange : tr("无视频"),
+                    hasVideo ? displayText(info.videoPrimaries) : tr("无视频"))
         << tr("容器: %1 · 文件大小: %2").arg(displayText(info.fileFormat), byteSize(info.fileSize))
         << tr("进度: %1 · 剩余: %2")
                .arg(progress.available ? progress.text : tr("不可定位"), remaining)

@@ -147,6 +147,20 @@ class PlaybackOverlayTextTest final : public QObject {
         QVERIFY(!text.contains(QStringLiteral("/private/subtitle.srt")));
     }
 
+    void informationLabelsHdrTransferAndPrimaries() {
+        MediaInformation info;
+        info.videoCodec = QStringLiteral("hevc");
+        info.videoPrimaries = QStringLiteral("bt.2020");
+        info.videoTransfer = QStringLiteral("pq");
+        PlaybackState state;
+        state.active = true;
+        state.path = QStringLiteral("hdr.mkv");
+
+        const auto text = formatPlaybackOverlayInformation(info, state);
+        QVERIFY(text.contains(QStringLiteral("HDR · PQ")));
+        QVERIFY(text.contains(QStringLiteral("bt.2020")));
+    }
+
     void unavailableLiveDetailsAreUnknownAndTrackTextIsSanitized() {
         PlaybackState state;
         state.active = true;

@@ -34,6 +34,10 @@ QString formatMediaInformation(const MediaInformation &info, const PlaybackState
                               ? QStringLiteral("%1 × %2").arg(info.videoWidth).arg(info.videoHeight)
                               : unknown);
     field(tr("像素格式"), text(info.videoPixelFormat));
+    const auto dynamicRange =
+        info.isHdr() ? tr("HDR · %1").arg(info.videoTransfer.toUpper()) : tr("SDR");
+    field(tr("视频色彩"), dynamicRange);
+    field(tr("视频原色"), text(info.videoPrimaries));
     field(tr("容器帧率（估计值）"),
           info.containerFrameRate > 0
               ? QStringLiteral("%1 fps").arg(info.containerFrameRate, 0, 'f', 3)

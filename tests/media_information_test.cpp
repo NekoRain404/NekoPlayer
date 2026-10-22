@@ -55,6 +55,15 @@ class MediaInformationTest final : public QObject {
         QVERIFY(errors.isEmpty());
     }
 
+    void identifiesHdrTransferAndPrimaries() {
+        MpvController player(true, true);
+        player.openFile(QString::fromUtf8(TEST_HDR_MEDIA_PATH));
+        QTRY_COMPARE(player.mediaInformation().videoWidth, 64);
+        QTRY_COMPARE(player.mediaInformation().videoPrimaries, QStringLiteral("bt.2020"));
+        QTRY_COMPARE(player.mediaInformation().videoTransfer, QStringLiteral("pq"));
+        QVERIFY(player.mediaInformation().isHdr());
+    }
+
     void replacementStopAndFailureClearPreviousInformation() {
         MpvController player(true, true);
         player.openFile(QString::fromUtf8(TEST_MEDIA_PATH));

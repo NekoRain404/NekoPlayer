@@ -13,6 +13,7 @@ class VideoMenu final : public QObject {
   public:
     explicit VideoMenu(MpvController &controller, QWidget *window);
     [[nodiscard]] QMenu *menu() const;
+    void retranslate();
 
   signals:
     void feedback(const QString &message);
@@ -21,6 +22,9 @@ class VideoMenu final : public QObject {
     void update();
     MpvController &controller_;
     QMenu *menu_;
+    QMenu *aspectMenu_;
+    QMenu *hdrToneMappingMenu_;
     QActionGroup *aspects_;
+    QActionGroup *hdrToneMappings_;
     QAction *resetRotation_;
 };

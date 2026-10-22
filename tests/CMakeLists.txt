@@ -115,6 +115,14 @@ add_custom_command(OUTPUT "${TEST_AUDIO_ONLY}"
         -i "${TEST_MEDIA}" -map 0:a -c copy "${TEST_AUDIO_ONLY}"
     DEPENDS "${TEST_MEDIA}" VERBATIM)
 add_custom_target(test_audio_only DEPENDS "${TEST_AUDIO_ONLY}")
+set(TEST_HDR_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/hdr-pq.mp4")
+add_custom_command(OUTPUT "${TEST_HDR_MEDIA}"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -f lavfi -i testsrc2=size=64x64:rate=1 -t 1 -vf format=yuv420p10le
+        -c:v libx265 -x265-params log-level=error:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc
+        "${TEST_HDR_MEDIA}"
+    VERBATIM)
+add_custom_target(test_hdr_media DEPENDS "${TEST_HDR_MEDIA}")
 add_executable(screenshot_test screenshot_test.cpp)
 target_link_libraries(screenshot_test PRIVATE neko_playback Qt6::Test Qt6::Gui)
 target_compile_definitions(screenshot_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}"
@@ -131,8 +139,8 @@ add_custom_target(test_still_image DEPENDS "${TEST_STILL_IMAGE}")
 add_executable(media_information_test media_information_test.cpp)
 target_link_libraries(media_information_test PRIVATE neko_playback Qt6::Test)
 target_compile_definitions(media_information_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}"
-    TEST_AUDIO_ONLY_PATH="${TEST_AUDIO_ONLY}")
-add_dependencies(media_information_test test_media test_audio_only)
+    TEST_AUDIO_ONLY_PATH="${TEST_AUDIO_ONLY}" TEST_HDR_MEDIA_PATH="${TEST_HDR_MEDIA}")
+add_dependencies(media_information_test test_media test_audio_only test_hdr_media)
 add_test(NAME media-information COMMAND media_information_test)
 set_tests_properties(media-information PROPERTIES TIMEOUT 60)
 add_executable(media_report_test media_report_test.cpp)

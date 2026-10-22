@@ -1,5 +1,12 @@
 # Verification Record
 
+HDR detection and GPU tone-mapping stage (2026-10-22):
+
+- libmpv media properties now identify PQ/HLG transfer functions and video primaries; the Tab overlay and media report expose HDR color information.
+- The Video menu exposes `auto`, `bt.2390`, and `clip` tone-mapping intents, submitted asynchronously to mpv/libplacebo without CPU frame copies. A headless real-libmpv test verifies the property changes and accepted controller state.
+- Full Debug build passed. `playback-overlay-text`, `media-information`, and `video-color` passed. Window behavior tests were compiled but skipped as requested. This stage does not establish native Wayland HDR output, monitor HDR metadata, compositor color management, or hardware-specific presentation.
+- `clang-format --dry-run --Werror`, `git diff --check`, and the code-size check are required before commit; no new source exceeds 500 lines.
+
 Appearance and language settings stage (2026-10-22):
 
 - Added persisted Dark, Light, and Follow System themes with immediate palette/style updates, plus a Settings → About dialog showing NekoPlayer, Qt runtime, and libmpv client API versions (no license claim).

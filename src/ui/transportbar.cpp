@@ -1,17 +1,123 @@
 #include "transportbar.h"
 #include "playback/mpvcontroller.h"
+#include "seekslidergeometry.h"
+#include "transportbarmetrics.h"
 
 #include <QAction>
+#include <QCursor>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
+#include <QResizeEvent>
 #include <QSignalBlocker>
 #include <QSlider>
+#include <QStyle>
+#include <QStyleOptionSlider>
 #include <QToolButton>
+#include <QToolTip>
 #include <QVBoxLayout>
 #include <algorithm>
 #include <cmath>
+#include <functional>
+#include <utility>
 
 namespace {
+class SeekSlider final : public QSlider {
+  public:
+    explicit SeekSlider(QWidget *parent) : QSlider(Qt::Horizontal, parent) {}
+
+    std::function<void(int)> onDirectSeek;
+    std::function<void(int)> onHover;
+
+  protected:
+    void mousePressEvent(QMouseEvent *event) override {
+        const auto option = sliderOption();
+        if (event->button() != Qt::LeftButton ||
+            style()->hitTestComplexControl(QStyle::CC_Slider, &option, event->pos(), this) ==
+                QStyle::SC_SliderHandle) {
+            QSlider::mousePressEvent(event);
+            return;
+        }
+
+        event->accept();
+        absoluteSeekActive_ = true;
+        movedAfterClick_ = false;
+        setSliderDown(true);
+        seekAt(event->pos());
+        if (onDirectSeek)
+            onDirectSeek(value());
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override {
+        if (!absoluteSeekActive_) {
+            QSlider::mouseMoveEvent(event);
+            const int hoverValue = valueAtPosition(event->pos());
+            if (onHover && hoverValue != lastHoverValue_) {
+                lastHoverValue_ = hoverValue;
+                onHover(hoverValue);
+            }
+            return;
+        }
+        event->accept();
+        const int previous = sliderPosition();
+        seekAt(event->pos());
+        movedAfterClick_ = movedAfterClick_ || sliderPosition() != previous;
+        if (onHover)
+            onHover(value());
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override {
+        if (!absoluteSeekActive_) {
+            QSlider::mouseReleaseEvent(event);
+            return;
+        }
+        event->accept();
+        absoluteSeekActive_ = false;
+        suppressReleaseSeek_ = !movedAfterClick_;
+        setSliderDown(false);
+        // A press already seeks immediately; only a subsequent drag needs a release seek.
+    }
+
+    void leaveEvent(QEvent *event) override {
+        QToolTip::hideText();
+        lastHoverValue_ = -1;
+        QSlider::leaveEvent(event);
+    }
+
+  public:
+    bool takeSuppressedReleaseSeek() { return std::exchange(suppressReleaseSeek_, false); }
+
+  private:
+    QStyleOptionSlider sliderOption() const {
+        QStyleOptionSlider option;
+        initStyleOption(&option);
+        return option;
+    }
+
+    void seekAt(const QPoint &point) {
+        const int target = valueAtPosition(point);
+        setSliderPosition(target);
+        setValue(target);
+    }
+
+    int valueAtPosition(const QPoint &point) const {
+        const auto option = sliderOption();
+        const auto groove =
+            style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderGroove, this);
+        const auto handle =
+            style()
+                ->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderHandle, this)
+                .size();
+        return SeekSliderGeometry::valueAtPosition(option, groove, handle, point);
+    }
+
+    bool absoluteSeekActive_ = false;
+    bool movedAfterClick_ = false;
+    bool suppressReleaseSeek_ = false;
+    int lastHoverValue_ = -1;
+};
+
 QString timeText(double seconds) {
     const auto total = static_cast<qint64>(std::max(0.0, seconds));
     return QStringLiteral("%1:%2:%3")
@@ -25,19 +131,26 @@ QToolButton *button(QAction *action, QWidget *parent) {
     result->setToolButtonStyle(Qt::ToolButtonIconOnly);
     result->setIconSize(QSize(22, 22));
     result->setMinimumSize(36, 32);
-    result->setFocusPolicy(Qt::NoFocus);
+    result->setFocusPolicy(Qt::StrongFocus);
+    const auto updateDescription = [result, action] {
+        result->setAccessibleName(action->text());
+        result->setToolTip(action->text());
+    };
+    updateDescription();
+    QObject::connect(action, &QAction::changed, result, updateDescription);
     return result;
 }
 } // namespace
 
 TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAction *next,
                            QAction *stop, QAction *mute, QAction *fullscreen, QWidget *parent)
-    : QWidget(parent), timeline_(new QSlider(Qt::Horizontal, this)),
-      volume_(new QSlider(Qt::Horizontal, this)), time_(new QLabel(this)) {
+    : QWidget(parent), timeline_(new SeekSlider(this)), volume_(new QSlider(Qt::Horizontal, this)),
+      time_(new QLabel(this)) {
     setObjectName(QStringLiteral("transportBar"));
     timeline_->setObjectName(QStringLiteral("timelineSlider"));
     timeline_->setRange(0, 10000);
     timeline_->setAccessibleName(tr("播放进度"));
+    timeline_->setMouseTracking(true);
     volume_->setObjectName(QStringLiteral("volumeSlider"));
     volume_->setRange(0, 100);
     volume_->setValue(100);
@@ -45,7 +158,9 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     volume_->setAccessibleName(tr("音量"));
     time_->setMinimumWidth(155);
     time_->setObjectName(QStringLiteral("timeLabel"));
+    time_->setAccessibleName(tr("播放时间"));
     auto *layout = new QVBoxLayout(this);
+    layout->setSizeConstraint(QLayout::SetNoConstraint);
     layout->setContentsMargins(12, 4, 12, 8);
     layout->setSpacing(4);
     layout->addWidget(timeline_);
@@ -64,8 +179,15 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     row->addSpacing(8);
     row->addWidget(button(fullscreen, this));
     layout->addLayout(row);
-    connect(timeline_, &QSlider::sliderReleased, this,
-            [this] { emit seekRequested(duration_ * timeline_->value() / 10000.0); });
+    setMinimumSize(0, 0);
+    connect(timeline_, &QSlider::sliderReleased, this, [this] {
+        auto *seekSlider = static_cast<SeekSlider *>(timeline_);
+        if (!seekSlider->takeSuppressedReleaseSeek())
+            emit seekRequested(duration_ * timeline_->value() / 10000.0);
+    });
+    static_cast<SeekSlider *>(timeline_)->onDirectSeek = [this](int value) {
+        emit seekRequested(duration_ * value / 10000.0);
+    };
     connect(timeline_, &QSlider::actionTriggered, this, [this](int action) {
         if (action != QAbstractSlider::SliderMove)
             emit seekRequested(duration_ * timeline_->sliderPosition() / 10000.0);
@@ -73,9 +195,40 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     connect(volume_, &QSlider::valueChanged, this,
             [this](int value) { emit volumeRequested(value); });
     connect(timeline_, &QSlider::sliderMoved, this, [this](int value) {
-        time_->setText(timeText(duration_ * value / 10000.0) + QStringLiteral(" / ") +
-                       timeText(duration_));
+        const auto text =
+            timeText(duration_ * value / 10000.0) + QStringLiteral(" / ") + timeText(duration_);
+        time_->setText(text);
+        timeline_->setToolTip(text);
+        timeline_->setAccessibleDescription(text);
     });
+    static_cast<SeekSlider *>(timeline_)->onHover = [this](int value) {
+        if (duration_ <= 0)
+            return;
+        const auto text =
+            timeText(duration_ * value / 10000.0) + QStringLiteral(" / ") + timeText(duration_);
+        timeline_->setToolTip(text);
+        timeline_->setAccessibleDescription(text);
+        QToolTip::showText(QCursor::pos(), text, timeline_);
+    };
+    applyResponsiveMetrics();
+}
+
+void TransportBar::resizeEvent(QResizeEvent *event) {
+    QWidget::resizeEvent(event);
+    applyResponsiveMetrics();
+}
+
+void TransportBar::applyResponsiveMetrics() {
+    const auto metrics = TransportBarMetrics::forWidth(width());
+    const int buttonHeight = metrics.buttonExtent == 36 ? 32 : metrics.buttonExtent;
+    for (auto *toolButton : findChildren<QToolButton *>(QString(), Qt::FindDirectChildrenOnly))
+        toolButton->setFixedSize(metrics.buttonExtent, buttonHeight);
+
+    volume_->setVisible(metrics.showVolume);
+    volume_->setFixedWidth(metrics.showVolume ? metrics.volumeWidth : 0);
+    time_->setVisible(metrics.showTime);
+    time_->setMinimumWidth(metrics.showTime ? metrics.timeWidth : 0);
+    time_->setMaximumWidth(metrics.showTime ? metrics.timeWidth : 0);
 }
 
 void TransportBar::present(const PlaybackState &state) {
@@ -93,4 +246,17 @@ void TransportBar::present(const PlaybackState &state) {
                               ? duration_ * timeline_->sliderPosition() / 10000.0
                               : state.position;
     time_->setText(timeText(position) + QStringLiteral(" / ") + timeText(duration_));
+    const auto timelineText = timeText(position) + QStringLiteral(" / ") + timeText(duration_);
+    timeline_->setToolTip(timelineText);
+    timeline_->setAccessibleDescription(timelineText);
+}
+
+void TransportBar::changeEvent(QEvent *event) {
+    QWidget::changeEvent(event);
+    if (event->type() != QEvent::LanguageChange)
+        return;
+    timeline_->setAccessibleName(tr("播放进度"));
+    volume_->setAccessibleName(tr("音量"));
+    time_->setAccessibleName(tr("播放时间"));
+    volume_->setToolTip(tr("音量 %1%").arg(volume_->value()));
 }

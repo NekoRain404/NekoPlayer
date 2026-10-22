@@ -1,80 +1,233 @@
+#include "abloopmenu.h"
+#include "actionfeedbacktext.h"
+#include "appearancepreferences.h"
+#include "audiodevicemenu.h"
+#include "currentmediamenu.h"
+#include "foldermenu.h"
+#include "languagemanager.h"
 #include "mainwindow.h"
+#include "mediainformationdialog.h"
+#include "navigationmenu.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
+#include "playback/playlistmodel.h"
+#include "playbackoverlay.h"
+#include "playlistmodemenu.h"
 #include "playlistpane.h"
+#include "preferencesdialog.h"
+#include "recentmediamenu.h"
+#include "subtitledisplaymenu.h"
+#include "trackmenus.h"
+#include "tuningmenus.h"
+#include "videomenu.h"
 
 #include <QAction>
+#include <QActionGroup>
+#include <QApplication>
+#include <QEvent>
 #include <QKeySequence>
+#include <QLabel>
 #include <QMenu>
 #include <QMenuBar>
+#include <QSettings>
+#include <QStatusBar>
 #include <QStyle>
+#include <QtGlobal>
 
 void MainWindow::createActions() {
     const auto make = [this](const QString &text, const char *name, QKeySequence shortcut) {
         auto *action = new QAction(text, this);
         action->setObjectName(QString::fromLatin1(name));
         action->setShortcut(shortcut);
+        action->setToolTip(text);
+        action->setStatusTip(text);
         addAction(action);
         return action;
     };
     openAction_ = make(tr("打开文件…"), "openAction", QKeySequence::Open);
     openAction_->setIcon(style()->standardIcon(QStyle::SP_DialogOpenButton));
     connect(openAction_, &QAction::triggered, this, &MainWindow::chooseFile);
+    openNetworkAction_ =
+        make(tr("打开网络地址…"), "openNetworkAction", QKeySequence(Qt::CTRL | Qt::Key_U));
+    openNetworkAction_->setIcon(style()->standardIcon(QStyle::SP_DriveNetIcon));
+    connect(openNetworkAction_, &QAction::triggered, this, &MainWindow::chooseNetworkUrl);
+    openPlaylistAction_ = make(tr("打开播放列表…"), "openPlaylistAction", {});
+    openPlaylistAction_->setIcon(style()->standardIcon(QStyle::SP_FileDialogContentsView));
+    connect(openPlaylistAction_, &QAction::triggered, this, &MainWindow::choosePlaylistToOpen);
+    savePlaylistAction_ = make(tr("保存播放列表…"), "savePlaylistAction", {});
+    savePlaylistAction_->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+    connect(savePlaylistAction_, &QAction::triggered, this, &MainWindow::choosePlaylistToSave);
     appendAction_ =
         make(tr("添加文件…"), "appendAction", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
     appendAction_->setIcon(style()->standardIcon(QStyle::SP_FileDialogNewFolder));
     connect(appendAction_, &QAction::triggered, this, &MainWindow::chooseFilesToAppend);
     pauseAction_ = make(tr("暂停"), "pauseAction", QKeySequence(Qt::Key_Space));
-    connect(pauseAction_, &QAction::triggered, controller_.get(), &MpvController::togglePause);
+    connect(pauseAction_, &QAction::triggered, playlist_.get(), &PlaylistController::playOrPause);
+    connect(pauseAction_, &QAction::triggered, this, [this] {
+        showActionFeedback(ActionFeedbackText::playback(pauseAction_->text() == tr("暂停")));
+    });
     stopAction_ = make(tr("停止"), "stopAction", QKeySequence(Qt::Key_S));
     stopAction_->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
     connect(stopAction_, &QAction::triggered, controller_.get(), &MpvController::stop);
+    connect(stopAction_, &QAction::triggered, this, [this] { showActionFeedback(tr("已停止")); });
     previousAction_ = make(tr("上一个"), "previousAction", QKeySequence(Qt::Key_MediaPrevious));
     previousAction_->setIcon(style()->standardIcon(QStyle::SP_MediaSkipBackward));
     connect(previousAction_, &QAction::triggered, playlist_.get(),
             &PlaylistController::playPrevious);
+    connect(previousAction_, &QAction::triggered, this,
+            [this] { showActionFeedback(tr("上一个")); });
     nextAction_ = make(tr("下一个"), "nextAction", QKeySequence(Qt::Key_MediaNext));
     nextAction_->setIcon(style()->standardIcon(QStyle::SP_MediaSkipForward));
     connect(nextAction_, &QAction::triggered, playlist_.get(), &PlaylistController::playNext);
+    connect(nextAction_, &QAction::triggered, this, [this] { showActionFeedback(tr("下一个")); });
     clearPlaylistAction_ = make(tr("清空播放列表"), "clearPlaylistAction", {});
     clearPlaylistAction_->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
-    connect(clearPlaylistAction_, &QAction::triggered, playlist_.get(), &PlaylistController::clear);
+    connect(clearPlaylistAction_, &QAction::triggered, this, &MainWindow::clearPlaylist);
     muteAction_ = make(tr("静音"), "muteAction", QKeySequence(Qt::Key_M));
     muteAction_->setCheckable(true);
     connect(muteAction_, &QAction::triggered, controller_.get(), &MpvController::setMuted);
+    connect(muteAction_, &QAction::triggered, this,
+            [this](bool muted) { showActionFeedback(ActionFeedbackText::mute(muted)); });
     fullscreenAction_ = make(tr("全屏"), "fullscreenAction", QKeySequence(Qt::Key_F));
     fullscreenAction_->setCheckable(true);
     fullscreenAction_->setIcon(style()->standardIcon(QStyle::SP_TitleBarMaxButton));
     connect(fullscreenAction_, &QAction::triggered, this, &MainWindow::setFullscreen);
     auto *escape = make(tr("退出全屏"), "exitFullscreenAction", QKeySequence(Qt::Key_Escape));
+    escape->setIcon(style()->standardIcon(QStyle::SP_TitleBarNormalButton));
     connect(escape, &QAction::triggered, this, [this] { setFullscreen(false); });
     auto *back = make(tr("后退 5 秒"), "seekBackAction", QKeySequence(Qt::Key_Left));
     auto *forward = make(tr("前进 5 秒"), "seekForwardAction", QKeySequence(Qt::Key_Right));
-    connect(back, &QAction::triggered, this, [this] { controller_->seekRelative(-5); });
-    connect(forward, &QAction::triggered, this, [this] { controller_->seekRelative(5); });
+    back->setIcon(style()->standardIcon(QStyle::SP_MediaSeekBackward));
+    forward->setIcon(style()->standardIcon(QStyle::SP_MediaSeekForward));
+    connect(back, &QAction::triggered, this, [this] {
+        controller_->seekRelative(-5);
+        showSeekFeedback(ActionFeedbackText::seek(-5));
+    });
+    connect(forward, &QAction::triggered, this, [this] {
+        controller_->seekRelative(5);
+        showSeekFeedback(ActionFeedbackText::seek(5));
+    });
     auto *louder = make(tr("增加音量"), "volumeUpAction", QKeySequence(Qt::Key_Up));
     auto *quieter = make(tr("降低音量"), "volumeDownAction", QKeySequence(Qt::Key_Down));
-    connect(louder, &QAction::triggered, this,
-            [this] { controller_->setVolume(controller_->state().volume + 5); });
-    connect(quieter, &QAction::triggered, this,
-            [this] { controller_->setVolume(controller_->state().volume - 5); });
+    louder->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
+    quieter->setIcon(style()->standardIcon(QStyle::SP_ArrowDown));
+    connect(louder, &QAction::triggered, this, [this] {
+        const auto volume = qBound(0.0, controller_->state().volume + 5.0, 100.0);
+        controller_->setVolume(volume);
+        showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
+    connect(quieter, &QAction::triggered, this, [this] {
+        const auto volume = qBound(0.0, controller_->state().volume - 5.0, 100.0);
+        controller_->setVolume(volume);
+        showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
     auto *quit = make(tr("退出"), "quitAction", QKeySequence::Quit);
+    quit->setIcon(style()->standardIcon(QStyle::SP_TitleBarCloseButton));
     connect(quit, &QAction::triggered, this, &QWidget::close);
+    auto *information =
+        make(tr("媒体信息…"), "mediaInformationAction", QKeySequence(Qt::CTRL | Qt::Key_F1));
+    information->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+    connect(information, &QAction::triggered, this, [this] {
+        auto *dialog = findChild<MediaInformationDialog *>();
+        if (!dialog)
+            dialog = new MediaInformationDialog(*controller_, this);
+        dialog->show();
+        dialog->raise();
+        dialog->activateWindow();
+    });
+    folderMenu_ = new FolderMenu(this, [this] { return mediaDirectory(); });
+    connect(folderMenu_, &FolderMenu::filesReady, this,
+            [this](const QStringList &paths, bool append) {
+                if (append)
+                    appendFiles(paths);
+                else
+                    openFiles(paths);
+            });
+    connect(folderMenu_, &FolderMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message); });
+    connect(folderMenu_, &FolderMenu::errorOccurred, this, &MainWindow::showError);
+    connect(stopAction_, &QAction::triggered, folderMenu_, &FolderMenu::cancel);
+    connect(previousAction_, &QAction::triggered, folderMenu_, &FolderMenu::cancel);
+    connect(nextAction_, &QAction::triggered, folderMenu_, &FolderMenu::cancel);
+    // Structural edits supersede a pending folder import, including direct list drag/drop.
+    auto *model = playlist_->model();
+    connect(model, &PlaylistModel::rowsAboutToBeInserted, folderMenu_, &FolderMenu::cancel);
+    connect(model, &PlaylistModel::rowsAboutToBeRemoved, folderMenu_, &FolderMenu::cancel);
+    connect(model, &PlaylistModel::rowsAboutToBeMoved, folderMenu_, &FolderMenu::cancel);
+    connect(model, &PlaylistModel::modelAboutToBeReset, folderMenu_, &FolderMenu::cancel);
+    auto *recent = new RecentMediaMenu(*recentMedia_, this);
+    connect(recent, &RecentMediaMenu::openRequested, this, &MainWindow::openFile);
+    connect(recent, &RecentMediaMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message); });
+    auto *currentMedia = new CurrentMediaMenu(*controller_, this);
+    connect(currentMedia, &CurrentMediaMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message); });
+    connect(currentMedia, &CurrentMediaMenu::errorOccurred, this, &MainWindow::showError);
     auto *file = menuBar()->addMenu(tr("文件(&F)"));
     file->addAction(openAction_);
+    file->addAction(openNetworkAction_);
     file->addAction(appendAction_);
+    file->addMenu(folderMenu_->menu());
+    file->addMenu(recent->menu());
+    file->addMenu(currentMedia->menu());
+    file->addSeparator();
+    file->addActions({openPlaylistAction_, savePlaylistAction_});
+    file->addSeparator();
+    file->addAction(information);
     file->addSeparator();
     file->addAction(quit);
     auto *playback = menuBar()->addMenu(tr("播放(&P)"));
     playback->addActions({previousAction_, pauseAction_, nextAction_, stopAction_});
     playback->addSeparator();
     playback->addActions({back, forward});
+    auto *navigation = new NavigationMenu(*controller_, this);
+    connect(navigation, &NavigationMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message, 4000); });
+    connect(navigation, &NavigationMenu::seekFeedback, this, &MainWindow::showSeekFeedback);
+    playback->addMenu(navigation->menu());
+    auto *tuning = new TuningMenus(*controller_, this);
+    connect(tuning, &TuningMenus::feedback, this,
+            [this](const QString &message) { showActionFeedback(message, 2500); });
+    playback->addMenu(tuning->speedMenu());
     auto *audio = menuBar()->addMenu(tr("声音(&A)"));
     audio->addActions({muteAction_, louder, quieter});
-    auto *playlistMenu = menuBar()->addMenu(tr("播放列表(&L)"));
-    playlistMenu->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
+    auto *subtitleDisplay = new SubtitleDisplayMenu(*controller_, this);
+    connect(subtitleDisplay, &SubtitleDisplayMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message, 2500); });
+    trackMenus_ =
+        new TrackMenus(*controller_, this, tuning->subtitleDelayMenu(), subtitleDisplay->menu());
+    auto *audioDevices = new AudioDeviceMenu(*controller_, this);
+    audio->addSeparator();
+    audio->addMenu(audioDevices->menu());
+    audio->addMenu(trackMenus_->audioMenu());
+    audio->addMenu(tuning->audioDelayMenu());
+    menuBar()->addMenu(trackMenus_->subtitleMenu());
+    auto *video = new VideoMenu(*controller_, this);
+    connect(video, &VideoMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message, 2500); });
+    menuBar()->addMenu(video->menu());
+    playlistMenu_ = menuBar()->addMenu(tr("播放列表(&L)"));
+    playlistMenu_->setObjectName(QStringLiteral("playlistMenu"));
+    playlistMenu_->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
+    playlistMenu_->addMenu(folderMenu_->menu());
+    playlistMenu_->addSeparator();
+    playlistMenu_->addActions({openPlaylistAction_, savePlaylistAction_});
+    auto *modeMenu = new PlaylistModeMenu(*playlist_, this);
+    connect(modeMenu, &PlaylistModeMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message, 2500); });
+    playlistMenu_->addMenu(modeMenu->menu());
     auto *view = menuBar()->addMenu(tr("视图(&V)"));
     view->addAction(fullscreenAction_);
+    auto *playbackInformation =
+        make(tr("显示当前播放信息"), "playbackInformationAction", QKeySequence(Qt::Key_Tab));
+    playbackInformation->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+    playbackInformation->setCheckable(true);
+    playbackInformation->setAutoRepeat(false);
+    connect(playbackInformation, &QAction::toggled, this, [this](bool visible) {
+        if (playbackOverlay_)
+            playbackOverlay_->setInformationVisible(visible);
+    });
+    view->addAction(playbackInformation);
     showPlaylistAction_ =
         make(tr("显示播放列表"), "showPlaylistAction", QKeySequence(Qt::CTRL | Qt::Key_L));
     showPlaylistAction_->setCheckable(true);
@@ -82,12 +235,155 @@ void MainWindow::createActions() {
     connect(showPlaylistAction_, &QAction::toggled, this,
             [this](bool visible) { playlistPane_->setVisible(visible); });
     view->addAction(showPlaylistAction_);
+    auto *settings = menuBar()->addMenu(tr("设置(&S)"));
+    auto *playbackSettings =
+        make(tr("播放设置…"), "playbackSettingsAction", QKeySequence(Qt::Key_F5));
+    playbackSettings->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    connect(playbackSettings, &QAction::triggered, this, [this] {
+        PreferencesDialog dialog(*controller_, this);
+        dialog.selectCategory(PreferencesDialog::Category::Playback);
+        dialog.exec();
+    });
+    settings->addAction(playbackSettings);
+    settings->addAction(subtitleDisplay->settingsAction());
+    settings->addSeparator();
+    auto *themeMenu = settings->addMenu(tr("主题"));
+    themeMenu->menuAction()->setObjectName(QStringLiteral("themeMenuAction"));
+    auto *themeGroup = new QActionGroup(themeMenu);
+    themeGroup->setExclusive(true);
+    QSettings appearanceSettings;
+    const auto savedTheme =
+        qApp->property("configurationEnabled").toBool()
+            ? appearanceSettings.value(QStringLiteral("appearance/theme"), QStringLiteral("dark"))
+                  .toString()
+            : QStringLiteral("dark");
+    for (const auto theme : AppearancePreferences::themes()) {
+        auto *action = themeMenu->addAction(AppearancePreferences::themeName(theme));
+        action->setCheckable(true);
+        themeGroup->addAction(action);
+        const auto key = theme == AppearancePreferences::Theme::Dark    ? QStringLiteral("dark")
+                         : theme == AppearancePreferences::Theme::Light ? QStringLiteral("light")
+                                                                        : QStringLiteral("system");
+        action->setChecked(savedTheme == key);
+        connect(action, &QAction::triggered, this, [this, theme, key] {
+            if (auto *application = qobject_cast<QApplication *>(qApp))
+                AppearancePreferences::applyTheme(*application, theme);
+            if (qApp->property("configurationEnabled").toBool()) {
+                QSettings preferences;
+                preferences.setValue(QStringLiteral("appearance/theme"), key);
+            }
+        });
+    }
+    auto *languageMenu = settings->addMenu(tr("语言"));
+    languageMenu->menuAction()->setObjectName(QStringLiteral("languageMenuAction"));
+    auto *languageGroup = new QActionGroup(languageMenu);
+    languageGroup->setExclusive(true);
+    const auto savedLanguage =
+        qApp->property("configurationEnabled").toBool()
+            ? appearanceSettings
+                  .value(QStringLiteral("appearance/language"), QStringLiteral("zh_CN"))
+                  .toString()
+            : QStringLiteral("zh_CN");
+    for (const auto &[name, key] : {std::pair{tr("简体中文"), QStringLiteral("zh_CN")},
+                                    std::pair{QStringLiteral("English"), QStringLiteral("en")}}) {
+        auto *action = languageMenu->addAction(name);
+        action->setObjectName(key == QLatin1String("en") ? QStringLiteral("languageEnglishAction")
+                                                         : QStringLiteral("languageChineseAction"));
+        action->setCheckable(true);
+        action->setEnabled(qApp->property("configurationEnabled").toBool());
+        languageGroup->addAction(action);
+        action->setChecked(savedLanguage == key);
+        connect(action, &QAction::triggered, this, [this, key] {
+            auto *manager = static_cast<LanguageManager *>(
+                qApp->property("languageManager").value<QObject *>());
+            if (!manager || !manager->setLanguage(key))
+                return;
+            if (property("configurationEnabled").toBool()) {
+                QSettings preferences;
+                preferences.setValue(QStringLiteral("appearance/language"), key);
+            }
+        });
+    }
+    auto *about = settings->addAction(tr("关于 NekoPlayer…"));
+    about->setObjectName(QStringLiteral("aboutAction"));
+    about->setIcon(style()->standardIcon(QStyle::SP_MessageBoxInformation));
+    about->setToolTip(about->text());
+    about->setStatusTip(about->text());
+    connect(about, &QAction::triggered, this,
+            [this] { AppearancePreferences::showAboutDialog(this); });
     contextMenu_ = new QMenu(this);
-    contextMenu_->addActions({openAction_, appendAction_, pauseAction_, stopAction_});
+    contextMenu_->addActions(
+        {openAction_, openNetworkAction_, appendAction_, pauseAction_, stopAction_});
+    contextMenu_->addMenu(folderMenu_->menu());
+    contextMenu_->addMenu(recent->menu());
+    contextMenu_->addMenu(currentMedia->menu());
     contextMenu_->addSeparator();
+    contextMenu_->addMenu(navigation->menu());
+    contextMenu_->addMenu(tuning->speedMenu());
+    contextMenu_->addMenu(tuning->audioDelayMenu());
+    contextMenu_->addMenu(modeMenu->menu());
     contextMenu_->addActions(
         {previousAction_, nextAction_, showPlaylistAction_, muteAction_, fullscreenAction_});
+    contextMenu_->addSeparator();
+    contextMenu_->addMenu(audioDevices->menu());
+    contextMenu_->addMenu(trackMenus_->audioMenu());
+    contextMenu_->addMenu(trackMenus_->subtitleMenu());
+    contextMenu_->addMenu(video->menu());
+    contextMenu_->addSeparator();
+    contextMenu_->addAction(information);
+    contextMenu_->addAction(playbackInformation);
+    contextMenu_->addAction(playbackSettings);
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this,
             [this](const QPoint &point) { contextMenu_->popup(mapToGlobal(point)); });
+}
+
+void MainWindow::changeEvent(QEvent *event) {
+    QMainWindow::changeEvent(event);
+    if (event->type() != QEvent::LanguageChange)
+        return;
+
+    const auto setActionText = [this](const char *name, const QString &text) {
+        if (auto *action = findChild<QAction *>(QString::fromLatin1(name))) {
+            action->setText(text);
+            action->setToolTip(text);
+            action->setStatusTip(text);
+        }
+    };
+    setActionText("openAction", tr("打开文件…"));
+    setActionText("openNetworkAction", tr("打开网络地址…"));
+    setActionText("openPlaylistAction", tr("打开播放列表…"));
+    setActionText("savePlaylistAction", tr("保存播放列表…"));
+    setActionText("appendAction", tr("添加文件…"));
+    setActionText("pauseAction", controller_->state().paused ? tr("播放") : tr("暂停"));
+    setActionText("stopAction", tr("停止"));
+    setActionText("previousAction", tr("上一个"));
+    setActionText("nextAction", tr("下一个"));
+    setActionText("clearPlaylistAction", tr("清空播放列表"));
+    setActionText("muteAction", tr("静音"));
+    setActionText("fullscreenAction", isFullScreen() ? tr("退出全屏") : tr("全屏"));
+    const auto menus = menuBar()->actions();
+    const QStringList titles{tr("文件(&F)"), tr("播放(&P)"),     tr("声音(&A)"), tr("字幕(&U)"),
+                             tr("视频(&I)"), tr("播放列表(&L)"), tr("视图(&V)"), tr("设置(&S)")};
+    for (int index = 0; index < qMin(menus.size(), titles.size()); ++index)
+        menus.at(index)->setText(titles.at(index));
+    emptyHint_->setText(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件\nCtrl+U 打开网络地址"));
+    if (auto *theme = findChild<QAction *>(QStringLiteral("themeMenuAction")))
+        theme->setText(tr("主题"));
+    if (auto *language = findChild<QAction *>(QStringLiteral("languageMenuAction")))
+        language->setText(tr("语言"));
+    if (auto *english = findChild<QAction *>(QStringLiteral("languageEnglishAction")))
+        english->setText(QStringLiteral("English"));
+    if (auto *chinese = findChild<QAction *>(QStringLiteral("languageChineseAction")))
+        chinese->setText(tr("简体中文"));
+    if (auto *video = findChild<VideoMenu *>())
+        video->retranslate();
+    for (auto *menu : findChildren<NavigationMenu *>())
+        menu->retranslate();
+    for (auto *menu : findChildren<TuningMenus *>())
+        menu->retranslate();
+    for (auto *menu : findChildren<AbLoopMenu *>())
+        menu->retranslate();
+    for (auto *menu : findChildren<PlaylistModeMenu *>())
+        menu->retranslate();
 }

@@ -1,16 +1,28 @@
 #include "playback/mpvcontroller.h"
+#include "playback/playlistcontroller.h"
+#include "playback/playlistmodel.h"
 #include "playback/videowidget.h"
+#include "session/sessionstore.h"
 #include "ui/mainwindow.h"
+#include "ui/playbacksettingsdialog.h"
+#include "ui/timeseekdialog.h"
 #include <QAction>
+#include <QComboBox>
+#include <QDialogButtonBox>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QLabel>
+#include <QLineEdit>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMimeData>
 #include <QProcess>
 #include <QProcessEnvironment>
+#include <QPushButton>
 #include <QSignalSpy>
 #include <QSlider>
 #include <QStatusBar>
+#include <QTemporaryDir>
 #include <QtTest>
 
 namespace {
@@ -33,11 +45,302 @@ bool hasColoredVideo(const QImage &image) {
 QAction *action(MainWindow &window, const char *name) {
     return window.findChild<QAction *>(QString::fromLatin1(name));
 }
+qint64 selectedTrack(MainWindow &window, MediaTrack::Type type) {
+    for (const auto &track : window.controller()->tracks()) {
+        if (track.type == type && track.selected)
+            return track.id;
+    }
+    return 0;
+}
 } // namespace
 
 class WindowTest final : public QObject {
     Q_OBJECT
   private slots:
+    void playbackSettingsApplyAndCancelPreserveIntent() {
+        MpvController player(true, true);
+        {
+            PlaybackSettingsDialog dialog(player);
+            auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
+            auto *buttons =
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+            auto *actual = dialog.findChild<QLabel *>(QStringLiteral("actualDecoder"));
+            QVERIFY(choice && buttons && actual);
+            QVERIFY(choice->currentData().toBool());
+            QCOMPARE(actual->text(), QStringLiteral("未播放"));
+            QVERIFY(!buttons->button(QDialogButtonBox::Apply)->isEnabled());
+            choice->setCurrentIndex(1);
+            QVERIFY(buttons->button(QDialogButtonBox::Apply)->isEnabled());
+            QVERIFY(player.hardwareDecodingEnabled());
+            buttons->button(QDialogButtonBox::Cancel)->click();
+            QVERIFY(player.hardwareDecodingEnabled());
+        }
+        {
+            PlaybackSettingsDialog dialog(player);
+            auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
+            auto *buttons =
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+            QVERIFY(choice && buttons);
+            choice->setCurrentIndex(1);
+            buttons->button(QDialogButtonBox::Apply)->click();
+            QVERIFY(!player.hardwareDecodingEnabled());
+            QVERIFY(!buttons->button(QDialogButtonBox::Apply)->isEnabled());
+            choice->setCurrentIndex(0);
+            buttons->button(QDialogButtonBox::Cancel)->click();
+            QVERIFY(!player.hardwareDecodingEnabled());
+        }
+        {
+            PlaybackSettingsDialog dialog(player);
+            auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
+            auto *buttons =
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+            QVERIFY(choice && buttons);
+            QVERIFY(!choice->currentData().toBool());
+            choice->setCurrentIndex(0);
+            buttons->button(QDialogButtonBox::Ok)->click();
+            QVERIFY(player.hardwareDecodingEnabled());
+            QCOMPARE(dialog.result(), QDialog::Accepted);
+        }
+        MainWindow window(true);
+        auto *settings = action(window, "playbackSettingsAction");
+        QVERIFY(settings);
+        QCOMPARE(settings->shortcut(), QKeySequence(Qt::Key_F5));
+        int containers = 0;
+        for (auto *menu : window.findChildren<QMenu *>()) {
+            if (menu->actions().contains(settings))
+                ++containers;
+        }
+        QCOMPARE(containers, 2); // Menu bar and context menu share the same action.
+    }
+
+    void chapterActionsFollowSelectionAndKeepPause() {
+        MainWindow window(true);
+        auto *jump = action(window, "seekTimeAction");
+        auto *previous = action(window, "previousChapterAction");
+        auto *next = action(window, "nextChapterAction");
+        auto *menu = window.findChild<QMenu *>(QStringLiteral("chaptersMenu"));
+        QVERIFY(jump && previous && next && menu);
+        QVERIFY(!jump->isEnabled() && !previous->isEnabled() && !next->isEnabled());
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        window.openFile(QString::fromUtf8(TEST_CHAPTER_MEDIA_PATH));
+        QTRY_VERIFY(window.controller()->state().active && window.controller()->state().seekable);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(window.controller()->state().paused);
+        QTRY_COMPARE(menu->actions().size(), 3);
+        QVERIFY(jump->isEnabled());
+        QTRY_COMPARE(window.controller()->state().currentChapter, 0);
+        next->trigger();
+        QVERIFY(previous->isEnabled());
+        previous->trigger();
+        QCOMPARE(window.controller()->chapterNavigationIndex(), 0);
+        next->trigger();
+        next->trigger();
+        QVERIFY(!next->isEnabled() && previous->isEnabled());
+        previous->trigger();
+        QVERIFY(next->isEnabled());
+        next->trigger();
+        QTRY_COMPARE(window.controller()->state().currentChapter, 2);
+        auto *last = action(window, "chapterAction2");
+        QVERIFY(last);
+        last->trigger();
+        QTRY_COMPARE(window.controller()->state().currentChapter, 2);
+        QVERIFY(last->isChecked() && previous->isEnabled() && !next->isEnabled());
+        QVERIFY(window.controller()->state().paused);
+        previous->trigger();
+        QTRY_COMPARE(window.controller()->state().currentChapter, 1);
+        QVERIFY(action(window, "chapterAction1")->isChecked());
+        QVERIFY(next->isEnabled() && window.controller()->state().paused);
+        window.controller()->stop();
+        QTRY_VERIFY(!window.controller()->state().active);
+        QVERIFY(!jump->isEnabled() && !menu->isEnabled());
+    }
+
+    void timeDialogRejectsMalformedAndOutOfRangeTargets() {
+        TimeSeekDialog dialog(1.25, 4.0);
+        auto *input = dialog.findChild<QLineEdit *>(QStringLiteral("timeSeekInput"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("timeSeekButtons"));
+        QVERIFY(input && buttons);
+        auto *accept = buttons->button(QDialogButtonBox::Ok);
+        QVERIFY(accept->isEnabled());
+        QCOMPARE(dialog.selectedSeconds().value(), 1.25);
+        input->setText(QStringLiteral("4.001"));
+        QVERIFY(!accept->isEnabled());
+        input->setText(QStringLiteral("1:60"));
+        QVERIFY(!accept->isEnabled());
+        input->setText(QStringLiteral("00:00:02.500"));
+        QVERIFY(accept->isEnabled());
+        QCOMPARE(dialog.selectedSeconds().value(), 2.5);
+    }
+
+    void playlistModeActionsShareStateAndRefreshNavigation() {
+        MainWindow window(true);
+        auto *off = action(window, "repeatOffAction");
+        auto *one = action(window, "repeatOneAction");
+        auto *all = action(window, "repeatAllAction");
+        auto *cycle = action(window, "cycleRepeatAction");
+        auto *menu = window.findChild<QMenu *>(QStringLiteral("playlistModeMenu"));
+        QVERIFY(off && one && all && cycle && menu);
+        QVERIFY(off->isChecked());
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        window.openFile(mediaPath());
+        QTRY_VERIFY(window.controller()->state().active);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(window.controller()->state().paused);
+        QVERIFY(!action(window, "nextAction")->isEnabled());
+        all->trigger();
+        QCOMPARE(window.playlist()->repeatMode(), PlaylistController::RepeatMode::All);
+        QVERIFY(all->isChecked() && !off->isChecked() && !one->isChecked());
+        QVERIFY(action(window, "nextAction")->isEnabled());
+        QVERIFY(action(window, "previousAction")->isEnabled());
+        QVERIFY(menu->title().contains(all->text()));
+        cycle->trigger();
+        QCOMPARE(window.playlist()->repeatMode(), PlaylistController::RepeatMode::Off);
+        QVERIFY(off->isChecked());
+        QVERIFY(!action(window, "nextAction")->isEnabled());
+        window.playlist()->setRepeatMode(PlaylistController::RepeatMode::One);
+        QVERIFY(one->isChecked());
+        QVERIFY(window.controller()->state().paused);
+    }
+
+    void tuningActionsFollowBackendAndSurviveTrackRebuilds() {
+        MainWindow window(true);
+        auto *speed = window.findChild<QMenu *>(QStringLiteral("speedMenu"));
+        auto *audioDelay = window.findChild<QMenu *>(QStringLiteral("audioDelayMenu"));
+        auto *subtitleDelay = window.findChild<QMenu *>(QStringLiteral("subtitleDelayMenu"));
+        QVERIFY(speed && audioDelay && subtitleDelay);
+        auto *faster = action(window, "speedUpAction");
+        auto *audioLater = action(window, "audioLaterAction");
+        auto *subtitleEarlier = action(window, "subtitleEarlierAction");
+        QVERIFY(faster && audioLater && subtitleEarlier);
+        faster->trigger();
+        faster->trigger();
+        QTRY_VERIFY(qAbs(window.controller()->state().playbackSpeed - 1.2) < 0.0001);
+        QTRY_VERIFY(speed->title().contains(QStringLiteral("1.20")));
+        action(window, "speedResetAction")->trigger();
+        QTRY_VERIFY(qAbs(window.controller()->state().playbackSpeed - (1.0)) < 0.000001);
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        window.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(window.controller()->state().active);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(window.controller()->state().paused);
+        audioLater->trigger();
+        subtitleEarlier->trigger();
+        QTRY_VERIFY(qAbs(window.controller()->state().audioDelay - (0.05)) < 0.000001);
+        QTRY_VERIFY(qAbs(window.controller()->state().subtitleDelay - (-0.1)) < 0.000001);
+        action(window, "subtitleTrack0Action")->trigger();
+        QTRY_COMPARE(selectedTrack(window, MediaTrack::Type::Subtitle), 0);
+        auto *subtitles = window.findChild<QMenu *>(QStringLiteral("subtitleTracksMenu"));
+        QVERIFY(subtitles->actions().contains(subtitleDelay->menuAction()));
+        QVERIFY(subtitleEarlier->isEnabled());
+        QVERIFY(window.controller()->state().paused);
+        action(window, "audioDelayResetAction")->trigger();
+        action(window, "subtitleDelayResetAction")->trigger();
+        QTRY_VERIFY(qAbs(window.controller()->state().audioDelay - (0.0)) < 0.000001);
+        QTRY_VERIFY(qAbs(window.controller()->state().subtitleDelay - (0.0)) < 0.000001);
+    }
+
+    void sessionRestoresWithoutAutoplayAndSavesOnClose() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionState saved;
+        saved.paths = {mediaPath(), mediaPath()};
+        saved.currentIndex = 1;
+        saved.audio = {34.0, true};
+        saved.resumePosition = 1.24;
+        saved.window.playlistVisible = true;
+        QVERIFY(SessionStore(file).save(saved).isEmpty());
+        {
+            MainWindow window(true, file);
+            QCOMPARE(window.playlist()->model()->rowCount(), 2);
+            QCOMPARE(window.playlist()->model()->currentIndex(), 1);
+            QVERIFY(!action(window, "pauseAction")->isEnabled());
+            QCOMPARE(window.playlist()->pendingResumePosition(), 1.24);
+            QVERIFY(window.statusBar()->currentMessage().contains(QStringLiteral("上次位置")));
+            QVERIFY(action(window, "showPlaylistAction")->isChecked());
+            window.show();
+            QTRY_VERIFY(window.videoWidget()->isReady());
+            QTRY_VERIFY(action(window, "pauseAction")->isEnabled());
+            QVERIFY(!window.controller()->state().active);
+            window.controller()->setVolume(52);
+            window.controller()->setMuted(false);
+            window.resize(920, 540);
+            const auto normalGeometry = window.saveGeometry();
+            action(window, "fullscreenAction")->trigger();
+            QTRY_VERIFY(window.isFullScreen());
+            window.close();
+            const auto loaded = SessionStore(file).load();
+            QCOMPARE(loaded.state.window.geometry, normalGeometry);
+            QCOMPARE(loaded.state.audio.volume, 52.0);
+            QCOMPARE(loaded.state.resumePosition, 1.24);
+            QVERIFY(!loaded.state.audio.muted);
+        }
+        MainWindow replaced(true, file);
+        replaced.openFiles({mediaPath()}); // Also save files queued before renderer initialization.
+        replaced.close();
+        const auto loaded = SessionStore(file).load();
+        QCOMPARE(loaded.state.paths, QStringList{mediaPath()});
+        QCOMPARE(loaded.state.currentIndex, 0);
+        QCOMPARE(loaded.state.resumePosition, 0.0);
+        MainWindow cleared(true, file);
+        cleared.appendFiles({mediaPath()});
+        QVERIFY(action(cleared, "clearPlaylistAction")->isEnabled());
+        action(cleared, "clearPlaylistAction")->trigger();
+        cleared.close();
+        QVERIFY(SessionStore(file).load().state.paths.isEmpty());
+    }
+
+    void trackMenuActionsFollowBackend() {
+        MainWindow window(true);
+        auto *audio = window.findChild<QMenu *>(QStringLiteral("audioTracksMenu"));
+        auto *subtitles = window.findChild<QMenu *>(QStringLiteral("subtitleTracksMenu"));
+        auto *load = action(window, "loadSubtitleAction");
+        QVERIFY(audio && subtitles && load);
+        QVERIFY(!audio->isEnabled());
+        QVERIFY(!subtitles->isEnabled());
+        QVERIFY(!load->isEnabled());
+        QVERIFY(window.menuBar()->actions().contains(subtitles->menuAction()));
+        auto *display = window.findChild<QMenu *>(QStringLiteral("subtitleDisplayMenu"));
+        auto *settings = action(window, "subtitleSettingsAction");
+        QVERIFY(display && settings && settings->isEnabled());
+        QVERIFY(subtitles->actions().contains(display->menuAction()));
+        QCOMPARE(settings->shortcut(), QKeySequence(Qt::Key_F6));
+        int audioMenuUses = 0;
+        const auto menus = window.findChildren<QMenu *>();
+        for (auto *menu : menus) {
+            if (menu->actions().contains(audio->menuAction()))
+                ++audioMenuUses;
+        }
+        QCOMPARE(audioMenuUses, 2); // Menu bar and context menu share the same submenu.
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        window.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(window.controller()->state().active);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(action(window, "audioTrack2Action"));
+        QVERIFY(load->isEnabled());
+        QVERIFY(audio->isEnabled());
+        action(window, "audioTrack2Action")->trigger();
+        QTRY_COMPARE(selectedTrack(window, MediaTrack::Type::Audio), 2);
+        QTRY_VERIFY(action(window, "audioTrack2Action")->isChecked());
+        action(window, "subtitleTrack1Action")->trigger();
+        QTRY_COMPARE(selectedTrack(window, MediaTrack::Type::Subtitle), 1);
+        QTRY_VERIFY(action(window, "subtitleTrack1Action")->isChecked());
+        action(window, "subtitleTrack0Action")->trigger();
+        QTRY_COMPARE(selectedTrack(window, MediaTrack::Type::Subtitle), 0);
+        QTRY_VERIFY(action(window, "subtitleTrack0Action")->isChecked());
+        window.controller()->stop();
+        QTRY_VERIFY(!load->isEnabled());
+        QTRY_VERIFY(!action(window, "audioTrack2Action"));
+        QVERIFY(!audio->isEnabled());
+        QVERIFY(!subtitles->isEnabled());
+        QVERIFY(settings->isEnabled());
+        QVERIFY(subtitles->actions().contains(display->menuAction()));
+    }
+
     void rendersVideo() {
         MainWindow window(true);
         window.show();
@@ -99,7 +402,7 @@ class WindowTest final : public QObject {
         window.close();
     }
 
-    void rejectsDropsAndRecovers() {
+    void appendsLocalDropsAndRecoversFromInvalidInput() {
         MainWindow window(true);
         window.show();
         QTRY_VERIFY(window.videoWidget()->isReady());
@@ -121,18 +424,37 @@ class WindowTest final : public QObject {
         window.openFile(mediaPath());
         QTRY_VERIFY(window.controller()->state().active);
         drop({QUrl::fromLocalFile(mediaPath()), QUrl::fromLocalFile(mediaPath())});
-        QTRY_COMPARE(errors.count(), 1);
+        QCOMPARE(window.playlist()->model()->rowCount(), 3);
+        QVERIFY(errors.isEmpty());
         QVERIFY(window.controller()->state().active);
         drop({QUrl(QStringLiteral("https://example.com/movie.mkv"))});
-        QTRY_COMPARE(errors.count(), 2);
+        QTRY_COMPARE(errors.count(), 1);
         action(window, "fullscreenAction")->trigger();
         QTRY_VERIFY(window.isFullScreen());
         window.openFile(QStringLiteral("/no-such-neko-file.mkv"));
-        QTRY_COMPARE(errors.count(), 3);
+        QTRY_COMPARE(errors.count(), 2);
         QTRY_VERIFY_WITH_TIMEOUT(!window.statusBar()->currentMessage().isEmpty(), 3000);
         QTRY_VERIFY(!window.controller()->state().active);
         drop({QUrl::fromLocalFile(mediaPath())});
         QTRY_VERIFY(window.controller()->state().active);
+    }
+
+    void pausedAppendUpdatesNavigationImmediately() {
+        MainWindow window(true);
+        window.show();
+        window.openFile(mediaPath());
+        QTRY_VERIFY(window.controller()->state().active);
+        window.controller()->setPaused(true);
+        QTRY_VERIFY(window.controller()->state().paused);
+        QVERIFY(!action(window, "nextAction")->isEnabled());
+        window.appendFiles({mediaPath()});
+        // No mpv property event is needed to publish a queue-only change.
+        QVERIFY(action(window, "nextAction")->isEnabled());
+        QVERIFY(window.controller()->state().paused);
+        QCOMPARE(window.playlist()->model()->currentIndex(), 0);
+        action(window, "clearPlaylistAction")->trigger();
+        QVERIFY(!action(window, "clearPlaylistAction")->isEnabled());
+        QVERIFY(!action(window, "nextAction")->isEnabled());
     }
 
     void commandLineMultipleFilesStartsPlaylist() {

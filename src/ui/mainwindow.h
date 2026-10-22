@@ -1,22 +1,32 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QPersistentModelIndex>
 #include <QTimer>
 #include <memory>
 
 class MpvController;
 class VideoWidget;
 class TransportBar;
+class TrackMenus;
+class SessionManager;
 class PlaylistController;
 class PlaylistPane;
 class QAction;
 class QMenu;
 class QLabel;
+class LocalFileDrop;
+class ActionFeedbackOverlay;
+class PlaybackOverlay;
+class FolderMenu;
+class RecentMediaHistory;
+class FullscreenControls;
+class QVBoxLayout;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
   public:
-    explicit MainWindow(bool silentAudio = false);
+    explicit MainWindow(bool silentAudio = false, const QString &sessionPath = {});
     ~MainWindow() override;
     [[nodiscard]] MpvController *controller() const;
     [[nodiscard]] VideoWidget *videoWidget() const;
@@ -24,6 +34,7 @@ class MainWindow final : public QMainWindow {
     void openFile(const QString &path);
     void openFiles(const QStringList &paths);
     void appendFiles(const QStringList &paths);
+    void openFolder(const QString &directory, bool append = false, bool recursive = false);
 
   signals:
     void userError(const QString &message);
@@ -32,22 +43,47 @@ class MainWindow final : public QMainWindow {
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void changeEvent(QEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
 
   private:
     void createActions();
     void chooseFile();
+    void chooseNetworkUrl();
     void chooseFilesToAppend();
+    void choosePlaylistToOpen();
+    void choosePlaylistToSave();
+    void openPlaylist(const QString &path);
+    void savePlaylist(const QString &path);
+    void clearPlaylist();
     void updateState();
     void showError(const QString &message);
+    void showActionFeedback(const QString &message, int durationMs = 2500);
+    void showSeekFeedback(const QString &message);
     void setFullscreen(bool enabled);
     void revealControls();
+    void restoreSession(const QString &path);
+    QString saveSession();
+    [[nodiscard]] QString mediaDirectory() const;
     std::unique_ptr<MpvController> controller_;
     std::unique_ptr<PlaylistController> playlist_;
+    std::unique_ptr<SessionManager> session_;
+    std::unique_ptr<RecentMediaHistory> recentMedia_;
     VideoWidget *video_ = nullptr;
     TransportBar *transport_ = nullptr;
+    FullscreenControls *fullscreenControls_ = nullptr;
+    QVBoxLayout *centralLayout_ = nullptr;
+    TrackMenus *trackMenus_ = nullptr;
     PlaylistPane *playlistPane_ = nullptr;
+    LocalFileDrop *fileDrop_ = nullptr;
     QLabel *emptyHint_ = nullptr;
+    ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
+    PlaybackOverlay *playbackOverlay_ = nullptr;
+    FolderMenu *folderMenu_ = nullptr;
     QAction *openAction_ = nullptr;
+    QAction *openNetworkAction_ = nullptr;
+    QAction *openPlaylistAction_ = nullptr;
+    QAction *savePlaylistAction_ = nullptr;
     QAction *pauseAction_ = nullptr;
     QAction *stopAction_ = nullptr;
     QAction *muteAction_ = nullptr;
@@ -58,8 +94,11 @@ class MainWindow final : public QMainWindow {
     QAction *clearPlaylistAction_ = nullptr;
     QAction *showPlaylistAction_ = nullptr;
     QMenu *contextMenu_ = nullptr;
+    QMenu *playlistMenu_ = nullptr;
     QTimer controlsTimer_;
     QStringList pendingPaths_;
+    QPersistentModelIndex pendingPlaylistIndex_;
     QByteArray normalGeometry_;
     bool normalMaximized_ = false;
+    bool sessionSaveAttempted_ = false;
 };

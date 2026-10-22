@@ -1,6 +1,12 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Test)
 find_program(FFMPEG_EXECUTABLE ffmpeg REQUIRED)
 
+add_executable(commandlinearguments_test commandlinearguments_test.cpp)
+target_include_directories(commandlinearguments_test PRIVATE ../src)
+target_link_libraries(commandlinearguments_test PRIVATE neko_options Qt6::Core Qt6::Test)
+add_test(NAME command-line-arguments COMMAND commandlinearguments_test)
+set_tests_properties(command-line-arguments PROPERTIES TIMEOUT 20)
+
 add_executable(action_feedback_test action_feedback_test.cpp ../src/ui/actionfeedbacktext.cpp)
 target_include_directories(action_feedback_test PRIVATE ../src)
 target_link_libraries(action_feedback_test PRIVATE neko_options Qt6::Core Qt6::Test)

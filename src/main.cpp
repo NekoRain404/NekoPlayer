@@ -1,3 +1,4 @@
+#include "cli/commandlinearguments.h"
 #include "playback/backenddiagnostic.h"
 #include "playback/mpvcontroller.h"
 #include "playback/videowidget.h"
@@ -11,14 +12,10 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
-#include <string_view>
 
 int main(int argc, char *argv[]) {
-    bool checkBackendOnly = false;
-    for (int i = 1; i < argc; ++i) {
-        const auto argument = std::string_view(argv[i]);
-        checkBackendOnly = checkBackendOnly || argument == "--check-backend";
-    }
+    const bool checkBackendOnly =
+        CommandLineArguments::hasOptionBeforeSeparator(argc, argv, "--check-backend");
     std::unique_ptr<QCoreApplication> app;
     if (checkBackendOnly)
         app = std::make_unique<QCoreApplication>(argc, argv);

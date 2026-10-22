@@ -1,5 +1,11 @@
 # Verification Record
 
+Extended seek shortcuts stage (2026-10-22):
+
+- Added shared Navigation menu/context-menu actions for Shift+Left/Right (30 seconds), Ctrl+Shift+Left/Right (5 minutes), and Home (current media beginning). Existing plain-arrow seeking and Ctrl+arrow frame stepping retain their bindings. New actions require active, seekable playback; Home does not autorepeat. All new actions use the existing typed controller APIs and fullscreen seek-progress feedback. Seeking beyond the end follows native EOF and queue behavior.
+- Full Debug build succeeded. The selected non-window `code-size|action-feedback|playback-overlay-text|navigation|frame-step|playback` checks passed **6/6** in **10.47 seconds**. ASan/UBSan builds of NekoPlayer, `frame_step_window_test` and `fullscreen_feedback_window_test` succeeded. Independent read-only review found no issues; changed-source formatting and `git diff --check` passed, with no code-size exception.
+- No window behavior tests were run. The existing headless tests check the reused backend and text/progress formatting, not physical shortcut dispatch or the new menu-to-progress wiring. Those Wayland interactions remain unverified. This bounded UI addition reuses the existing backend command implementation and introduces no polling, frame copies or rendering resources.
+
 Asynchronous media folder import stage (2026-10-22):
 
 - Added a shared folder submenu to File, Playlist and the context menu. Ctrl+D replaces the queue and Ctrl+Shift+D appends; optional subfolder traversal defaults off. QtConcurrent performs extension filtering and numeric filename sorting away from the GUI thread. Hidden entries and symlinks are skipped, and all encountered entries count toward a 100000-entry traversal limit. Empty, failed, cancelled and superseded results leave the existing queue intact.

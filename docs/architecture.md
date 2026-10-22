@@ -26,7 +26,7 @@
 | `AudioDeviceMenu` | 当前输出设备选择；菜单栏与右键菜单复用同一菜单 | 只读取拥有数据的设备快照并调用控制器业务 API |
 | `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
 | `PlaylistModeMenu` | 互斥循环模式、独立随机开关、R／Shift+R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
-| `NavigationMenu` / `TimeSeekDialog` | 章节、逐帧动作及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键 |
+| `NavigationMenu` / `TimeSeekDialog` | 章节、逐帧、多档跳转、回到开头及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键；定位反馈复用全屏进度 |
 | `AbLoop` / `mpvcontroller_loop.cpp` | 当前媒体的 A–B 区间意图、端点校验和原生异步设置 | Qt Core 值类型与同一 mpv client，不依赖 UI |
 | `AbLoopMenu` | 共享区间菜单、当前时间端点动作和快捷键 | 只使用控制器业务 API，端点变化时刷新标题 |
 | `PlaybackSettingsDialog` | 解码方式草稿、应用／取消与实际解码状态 | 仅调用控制器业务 API，QObject 接收上下文随对话框销毁 |

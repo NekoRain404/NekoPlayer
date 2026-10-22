@@ -1,5 +1,7 @@
 # 参考项目
 
+多档定位参考 mpv.net `src/MpvNet/InputHelp.cs` 的 5 秒、30 秒与 5 分钟跳转分组。NekoPlayer 沿用既有左右键 5 秒定位，将较大步长放在 Shift／Ctrl+Shift 修饰键下，以保留上下键音量和 Ctrl+左右逐帧；Home 回到开头。动作独立编写，调用现有异步控制器并复用全屏定位进度，没有复制上游代码。
+
 文件夹入口参考 Haruna `src/playlist/playlistfilterproxymodel.cpp` 的 `addFilesAndFolders()`、`playlistmodel.cpp` 的 `getSiblingItems()`，KikoPlay `Play/Playlist/playlistprivate.cpp` 的 `addSubFolder()`，以及 mpv.net `src/MpvNet/Player.cs` 的 `LoadFolder()`。沿用音视频筛选与数字自然排序的交互思路；本项目独立实现 QtConcurrent 后台扫描、上限校验、协作取消及旧结果隔离，不复制 GPL 源码、不引入 MIME 内容探测或启动延时。扫描结果非空且完整成功后才提交队列。
 
 截图入口参考 Haruna `src/qml/Actions.qml` 的异步 screenshot 动作；具体实现以安装的 mpv 0.41 client API 与 `screenshot-to-file` 契约为准。参数数组 API 默认不做属性展开，避免将文件名中的 `${...}` 解释为命令属性。mpv `player/screenshot.c` 说明截图可按需下载硬件帧并编码；NekoPlayer 不自行抓取 QOpenGLWidget 或在正常播放中回拷图像。实现独立编写，没有复制上游源码。

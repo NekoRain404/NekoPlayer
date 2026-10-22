@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QList>
 #include <QObject>
 
 class MpvController;
@@ -16,6 +17,7 @@ class NavigationMenu final : public QObject {
 
   signals:
     void feedback(const QString &message);
+    void seekFeedback(const QString &message);
 
   private:
     void rebuildChapters();
@@ -31,6 +33,7 @@ class NavigationMenu final : public QObject {
     QAction *next_;
     QAction *previousFrame_;
     QAction *nextFrame_;
+    QList<QAction *> seekActions_;
     int presentedChapter_ = -2;
     int presentedNavigationChapter_ = -2;
     bool presentedSeekable_ = false;

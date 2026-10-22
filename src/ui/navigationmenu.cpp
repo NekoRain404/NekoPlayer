@@ -1,5 +1,6 @@
 #include "navigationmenu.h"
 #include "abloopmenu.h"
+#include "actionfeedbacktext.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playbacktime.h"
 #include "timeseekdialog.h"
@@ -22,6 +23,31 @@ NavigationMenu::NavigationMenu(MpvController &player, QWidget *window)
         window_->addAction(action);
         return action;
     };
+    const auto relativeSeek = [this, &make](const QString &text, const char *name,
+                                            QKeySequence shortcut, double seconds) {
+        auto *action = make(text, name, shortcut);
+        seekActions_.append(action);
+        connect(action, &QAction::triggered, this, [this, seconds] {
+            player_.seekRelative(seconds);
+            emit seekFeedback(ActionFeedbackText::seek(seconds));
+        });
+    };
+    menu_->addSeparator();
+    relativeSeek(tr("后退 30 秒"), "seekBack30Action", QKeySequence(Qt::SHIFT | Qt::Key_Left), -30);
+    relativeSeek(tr("前进 30 秒"), "seekForward30Action", QKeySequence(Qt::SHIFT | Qt::Key_Right),
+                 30);
+    relativeSeek(tr("后退 5 分钟"), "seekBack300Action",
+                 QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Left), -300);
+    relativeSeek(tr("前进 5 分钟"), "seekForward300Action",
+                 QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Right), 300);
+    auto *beginning = make(tr("回到开头"), "seekBeginningAction", QKeySequence(Qt::Key_Home));
+    beginning->setAutoRepeat(false);
+    seekActions_.append(beginning);
+    connect(beginning, &QAction::triggered, this, [this] {
+        player_.seekAbsolute(0);
+        emit seekFeedback(ActionFeedbackText::seekTo(0));
+    });
+    menu_->addSeparator();
     seekTime_ = make(tr("跳转到指定时间…"), "seekTimeAction", QKeySequence(Qt::CTRL | Qt::Key_G));
     previous_ =
         make(tr("上一章"), "previousChapterAction", QKeySequence(Qt::CTRL | Qt::Key_PageUp));
@@ -93,6 +119,8 @@ void NavigationMenu::updateState() {
     nextFrame_->setEnabled(frameForward);
     previousFrame_->setEnabled(frameBackward);
     seekTime_->setEnabled(timeSeekable);
+    for (auto *action : seekActions_)
+        action->setEnabled(seekable);
     chaptersMenu_->setEnabled(seekable && !player_.chapters().isEmpty());
     bool hasPrevious = false;
     bool hasNext = false;

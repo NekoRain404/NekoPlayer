@@ -151,6 +151,7 @@ void MainWindow::createActions() {
     auto *navigation = new NavigationMenu(*controller_, this);
     connect(navigation, &NavigationMenu::feedback, this,
             [this](const QString &message) { showActionFeedback(message, 4000); });
+    connect(navigation, &NavigationMenu::seekFeedback, this, &MainWindow::showSeekFeedback);
     playback->addMenu(navigation->menu());
     auto *tuning = new TuningMenus(*controller_, this);
     connect(tuning, &TuningMenus::feedback, this,

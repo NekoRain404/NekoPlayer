@@ -5,6 +5,7 @@ Mini-player session geometry follow-up (2026-10-23):
 - Closing the app while mini mode was active previously persisted the temporary compact geometry as the normal window size. Mini mode now captures the pre-entry Qt geometry blob and session saving persists that value, while the existing `QRect` still restores the visible window when leaving mini mode.
 - The new test failed before the fix by comparing the stored session geometry with the normal geometry captured before mini mode; both the persistence regression and mini-mode toggle test pass after the fix. Full Debug build, code-size, formatting and `git diff --check` passed.
 - Tests ran offscreen and report unsupported QOpenGLWidget/raise operations; they validate saved Qt state, not actual Wayland placement or video rendering.
+- After the follow-up, the full non-window Debug CTest selection (`-E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'`) passed **45/45** in **53.33 seconds**. Window behavior tests remain outside this suite per the standing preference.
 
 Mini-player window mode stage (2026-10-23):
 

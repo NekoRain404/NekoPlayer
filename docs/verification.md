@@ -2,6 +2,13 @@
 
 Environment: native Linux Wayland session (niri), Qt 6.12.0, system libmpv 0.41.0 and GCC 16.2.1. The verified display is one 2880x1800 panel at 1.75 scale. Window tests use the Qt Wayland platform plugin, null audio and `MALLOC_PERTURB_=128`.
 
+Static analysis review (2026-10-22):
+
+- `clang-tidy` 23.1.3 processed all 40 project C++ translation units with a separate Clang 23 compile database using `clang-analyzer-*`, `bugprone-*`, and `performance-*`. The initial GCC 16 compile database was incompatible with clang-tidy (`-mno-direct-extern-access`), so it was not treated as analysis evidence.
+- No clang-analyzer diagnostics were reported. Reviewable warnings include Qt container `qsizetype` to model/config `int` conversions, adjacent arguments that clang-tidy considers easy to transpose, a conservative integer-division precision warning, and small copy/layout suggestions. The integer division intentionally reserves rounding headroom; Qt value copies are implicitly shared, and reordering the one-per-player private implementation object has negligible measured value. Queue/model row counts are practically bounded by available memory, but explicit conversion bounds remain a potential hardening item.
+- Read-only callback review found the renderer and libmpv wakeup callback teardown ordering synchronized and lifetime-safe. Path conversion remains `QString` to UTF-8 at libmpv boundaries; volume inputs and persisted values are finite and clamped to 0–100. A concrete unaddressed edge remains: synchronous `loadfile` submission failure or an asynchronous command-reply error can leave the newly requested path in state without emitting `mediaLoadFailed`, while playlist recovery advances only on that signal. This can strand queue advancement or associate the old active media with the attempted path. It needs a focused regression and fix before being considered closed.
+- The scan was read-only. No source changes or GUI/window tests were made; this does not establish Wayland rendering, real hardware decoding, or interactive desktop behavior.
+
 Session resume position stage (2026-10-22):
 
 - `cmake --build --preset debug -j 4` succeeded, including NekoPlayer and compile-only window suites. The selected headless CTest run passed 21/21 in 38.40 seconds: code-size, backend startup, resume, media information/report, frame stepping, A-B looping, decoding, playback, playlist editing/modes/shuffle, tracks, session, tuning, navigation, playback time, file drop and video presentation.

@@ -1,9 +1,11 @@
 #include "playback/mpvcontroller.h"
 #include "ui/appearancepreferences.h"
 #include "ui/transportbar.h"
+#include "ui/transportbarmetrics.h"
 
 #include <QAction>
 #include <QApplication>
+#include <QLabel>
 #include <QPalette>
 #include <QSlider>
 #include <QToolButton>
@@ -101,6 +103,44 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(timeline);
         QCOMPARE(timeline->toolTip(), QStringLiteral("00:01:15 / 00:02:00"));
         QCOMPARE(timeline->accessibleDescription(), QStringLiteral("00:01:15 / 00:02:00"));
+    }
+
+    void transportMetricsFitNarrowFullscreenWidths() {
+        const auto compact = TransportBarMetrics::forWidth(560);
+        QVERIFY(compact.showTime);
+        QVERIFY(compact.showVolume);
+        QVERIFY(compact.minimumRowWidth <= 560);
+
+        const auto narrow = TransportBarMetrics::forWidth(400);
+        QVERIFY(!narrow.showTime);
+        QVERIFY(narrow.showVolume);
+        QVERIFY(narrow.minimumRowWidth <= 400);
+    }
+
+    void transportBarHidesOptionalLabelsWhenNarrow() {
+        QAction open(QStringLiteral("打开文件"));
+        QAction previous(QStringLiteral("上一个"));
+        QAction pause(QStringLiteral("播放"));
+        QAction next(QStringLiteral("下一个"));
+        QAction stop(QStringLiteral("停止"));
+        QAction mute(QStringLiteral("静音"));
+        QAction fullscreen(QStringLiteral("全屏"));
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen);
+        auto *time = transport.findChild<QLabel *>(QStringLiteral("timeLabel"));
+        auto *volume = transport.findChild<QSlider *>(QStringLiteral("volumeSlider"));
+        QVERIFY(time && volume);
+
+        transport.show();
+        transport.setFixedSize(400, 100);
+        QCoreApplication::processEvents();
+        QCOMPARE(transport.width(), 400);
+        QVERIFY(time->isHidden());
+        QCOMPARE(volume->width(), 60);
+
+        transport.setFixedSize(560, 100);
+        QCoreApplication::processEvents();
+        QVERIFY(!time->isHidden());
+        QVERIFY(volume->width() >= 60);
     }
 };
 

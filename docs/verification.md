@@ -1,5 +1,11 @@
 # Verification Record
 
+Responsive transport stage (2026-10-22):
+
+- TransportBar now selects compact metrics from its live width. At 560 px it keeps time and volume controls with smaller footprints; below 480 px it hides the optional time label and shrinks volume; below 360 px it hides volume as a final narrow-surface fallback. Button sizing, timeline interaction, and shared QAction wiring are unchanged.
+- `code-size`, `appearance-preferences`, `preferences-dialog`, `action-feedback`, and `playback-overlay-text` passed **5/5**. The appearance suite covers metric calculations and live widget visibility at 400/560 px. ASan/UBSan appearance run passed **9/9** with leak detection disabled; enabling LeakSanitizer reports platform fontconfig/GTK allocations after Qt shutdown, not project-owned objects.
+- Formatting and `git diff --check` passed. Window behavior tests were not run; native Wayland sizing, icon rasterization, and fullscreen pointer interaction remain desktop verification work. No libmpv, decoder, or GPU render-path code changed.
+
 Action feedback compactness stage (2026-10-22):
 
 - Action feedback geometry now clamps both the panel and its text area to the overlay viewport. Normal surfaces retain the centered, lower-third presentation; tiny fullscreen surfaces collapse padding instead of painting outside the video.

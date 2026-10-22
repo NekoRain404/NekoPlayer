@@ -6,6 +6,7 @@ class QAction;
 class QLabel;
 class QSlider;
 class QEvent;
+class QResizeEvent;
 struct PlaybackState;
 
 // Presents state and emits intent; knows neither libmpv nor the main window.
@@ -17,6 +18,7 @@ class TransportBar final : public QWidget {
     void present(const PlaybackState &state);
 
   protected:
+    void resizeEvent(QResizeEvent *event) override;
     void changeEvent(QEvent *event) override;
 
   signals:
@@ -24,6 +26,7 @@ class TransportBar final : public QWidget {
     void volumeRequested(double volume);
 
   private:
+    void applyResponsiveMetrics();
     QSlider *timeline_;
     QSlider *volume_;
     QLabel *time_;

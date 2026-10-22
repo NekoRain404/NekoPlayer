@@ -1,6 +1,7 @@
 #include "transportbar.h"
 #include "playback/mpvcontroller.h"
 #include "seekslidergeometry.h"
+#include "transportbarmetrics.h"
 
 #include <QAction>
 #include <QCursor>
@@ -8,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QResizeEvent>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QStyle>
@@ -158,6 +160,7 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     time_->setObjectName(QStringLiteral("timeLabel"));
     time_->setAccessibleName(tr("播放时间"));
     auto *layout = new QVBoxLayout(this);
+    layout->setSizeConstraint(QLayout::SetNoConstraint);
     layout->setContentsMargins(12, 4, 12, 8);
     layout->setSpacing(4);
     layout->addWidget(timeline_);
@@ -176,6 +179,7 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     row->addSpacing(8);
     row->addWidget(button(fullscreen, this));
     layout->addLayout(row);
+    setMinimumSize(0, 0);
     connect(timeline_, &QSlider::sliderReleased, this, [this] {
         auto *seekSlider = static_cast<SeekSlider *>(timeline_);
         if (!seekSlider->takeSuppressedReleaseSeek())
@@ -206,6 +210,25 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
         timeline_->setAccessibleDescription(text);
         QToolTip::showText(QCursor::pos(), text, timeline_);
     };
+    applyResponsiveMetrics();
+}
+
+void TransportBar::resizeEvent(QResizeEvent *event) {
+    QWidget::resizeEvent(event);
+    applyResponsiveMetrics();
+}
+
+void TransportBar::applyResponsiveMetrics() {
+    const auto metrics = TransportBarMetrics::forWidth(width());
+    const int buttonHeight = metrics.buttonExtent == 36 ? 32 : metrics.buttonExtent;
+    for (auto *toolButton : findChildren<QToolButton *>(QString(), Qt::FindDirectChildrenOnly))
+        toolButton->setFixedSize(metrics.buttonExtent, buttonHeight);
+
+    volume_->setVisible(metrics.showVolume);
+    volume_->setFixedWidth(metrics.showVolume ? metrics.volumeWidth : 0);
+    time_->setVisible(metrics.showTime);
+    time_->setMinimumWidth(metrics.showTime ? metrics.timeWidth : 0);
+    time_->setMaximumWidth(metrics.showTime ? metrics.timeWidth : 0);
 }
 
 void TransportBar::present(const PlaybackState &state) {

@@ -14,6 +14,21 @@
 
 优先阅读 mpv-examples 和 MpvQt 的嵌入边界，再看 Haruna 的桌面交互。mpv.net、IINA 的平台和语言不同，主要借鉴产品行为。不要为了兼容所有参考项目而同时引入多种 UI 或播放内核。
 
+## 许可证核查
+
+这些目录是忽略的独立参考克隆，不是构建依赖。检查过的 NekoPlayer 实现记录为借鉴 API、行为或交互设计，没有复制下列项目的实现代码；这不是对整个代码库来源的法律结论。将来采用任何上游代码前，必须逐文件检查 SPDX 标记、版权声明、依赖及许可证文本，并记录修改和来源。
+
+| 参考内容 | 检查到的许可证信息 | 复用边界 |
+| --- | --- | --- |
+| mpv 核心与 client API | 仓库含 GPL-2.0+ 与 LGPL-2.1 文本；client API 头文件声明 ISC。核心构建选项会影响核心许可证。 | 本项目链接系统 libmpv；发行时核对目标系统实际构建、随包文件及对应义务。不要把核心、client API 和整个仓库视为同一许可证。 |
+| mpv-examples/libmpv | `Copyright` 声明示例可按 WTFPL、ISC、Ms-PL、AGPLv3、BSD 中任一许可，也可视为公有领域。 | 仅该目录中示例适用此声明；复制前仍须检查具体文件及第三方内容。 |
+| MpvQt | 被检查的 C++ 实现文件为 LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL；CMake 文件为 BSD-3-Clause。 | 文件和目录可能适用不同许可证；Qt/KDE 依赖不因源文件许可证而自动同许可。 |
+| Haruna | 本文引用的播放列表和播放实现文件标记 GPL-3.0-or-later。 | 若复制或改编受 GPL 覆盖的实现并分发，需按适用许可证履行版权、许可证和源代码等义务。 |
+| mpv.net | 根目录 `License.txt` 为 GPL version 2。 | 逐文件确认是否有不同声明；分发改编代码须遵守适用条款。 |
+| IINA、KikoPlay | 根目录许可证文本为 GPL version 3；仓库中也包含具有各自声明的第三方文件。 | 根目录许可证不能代替对具体文件的检查。 |
+
+本项目许可证尚未选择。发行版会动态链接其系统提供的 Qt 与 libmpv，libmpv 的 FFmpeg、音频、渲染和解码依赖会随发行版及构建选项变化；不能仅凭本仓库的 CMake 依赖列表推断二进制发行的完整义务。本机 2026-10-22 环境的包元数据显示其 FFmpeg 构建启用了 GPL 组件，这只是该机器的证据，不代表其他发行版。选择项目许可证及制作二进制发行包前，应按实际目标平台、库构建、捆绑方式和当前许可证文本复核；此记录不构成法律意见。
+
 官方 API 文档：https://mpv.io/manual/stable/ 。使用本机头文件确认可用接口；浅克隆 HEAD 不等于本机已安装发行版。
 
 媒体信息字段参考 IINA `iina/InspectorWindowController.swift` 的 `updateInfo()`：容器格式、当前视频编码、容器帧率、音频编码及解码参数。语义对照 [mpv v0.41.0 input.rst](https://github.com/mpv-player/mpv/blob/v0.41.0/DOCS/man/input.rst) 的 `file-format`、`file-size`、`current-tracks`、`video-params`、`audio-params`、`container-fps` 与 `hwdec-current`。容器帧率可能不准确，文件大小是媒体源长度；本机原生 Matroska 解复用器报告 `mkv`。NekoPlayer 独立实现拥有数据的快照、异步事件补全与非模态 Widgets 纯文本报告，不采用 IINA 的定时同步查询，也未复制其 GPL 源码。

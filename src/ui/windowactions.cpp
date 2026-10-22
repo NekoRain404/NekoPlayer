@@ -3,6 +3,7 @@
 #include "audiodevicemenu.h"
 #include "currentmediamenu.h"
 #include "foldermenu.h"
+#include "languagemanager.h"
 #include "mainwindow.h"
 #include "mediainformationdialog.h"
 #include "navigationmenu.h"
@@ -22,10 +23,10 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QEvent>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMessageBox>
 #include <QSettings>
 #include <QStatusBar>
 #include <QStyle>
@@ -231,6 +232,7 @@ void MainWindow::createActions() {
     settings->addAction(subtitleDisplay->settingsAction());
     settings->addSeparator();
     auto *themeMenu = settings->addMenu(tr("主题"));
+    themeMenu->menuAction()->setObjectName(QStringLiteral("themeMenuAction"));
     auto *themeGroup = new QActionGroup(themeMenu);
     themeGroup->setExclusive(true);
     QSettings appearanceSettings;
@@ -250,13 +252,14 @@ void MainWindow::createActions() {
         connect(action, &QAction::triggered, this, [this, theme, key] {
             if (auto *application = qobject_cast<QApplication *>(qApp))
                 AppearancePreferences::applyTheme(*application, theme);
-            if (property("configurationEnabled").toBool()) {
+            if (qApp->property("configurationEnabled").toBool()) {
                 QSettings preferences;
                 preferences.setValue(QStringLiteral("appearance/theme"), key);
             }
         });
     }
     auto *languageMenu = settings->addMenu(tr("语言"));
+    languageMenu->menuAction()->setObjectName(QStringLiteral("languageMenuAction"));
     auto *languageGroup = new QActionGroup(languageMenu);
     languageGroup->setExclusive(true);
     const auto savedLanguage =
@@ -268,14 +271,21 @@ void MainWindow::createActions() {
     for (const auto &[name, key] : {std::pair{tr("简体中文"), QStringLiteral("zh_CN")},
                                     std::pair{QStringLiteral("English"), QStringLiteral("en")}}) {
         auto *action = languageMenu->addAction(name);
+        action->setObjectName(key == QLatin1String("en") ? QStringLiteral("languageEnglishAction")
+                                                         : QStringLiteral("languageChineseAction"));
         action->setCheckable(true);
         action->setEnabled(qApp->property("configurationEnabled").toBool());
         languageGroup->addAction(action);
         action->setChecked(savedLanguage == key);
         connect(action, &QAction::triggered, this, [this, key] {
-            QSettings preferences;
-            preferences.setValue(QStringLiteral("appearance/language"), key);
-            QMessageBox::information(this, tr("语言"), tr("更改语言将在重新启动后生效。"));
+            auto *manager = static_cast<LanguageManager *>(
+                qApp->property("languageManager").value<QObject *>());
+            if (!manager || !manager->setLanguage(key))
+                return;
+            if (property("configurationEnabled").toBool()) {
+                QSettings preferences;
+                preferences.setValue(QStringLiteral("appearance/language"), key);
+            }
         });
     }
     auto *about = settings->addAction(tr("关于 NekoPlayer…"));
@@ -306,4 +316,40 @@ void MainWindow::createActions() {
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this,
             [this](const QPoint &point) { contextMenu_->popup(mapToGlobal(point)); });
+}
+
+void MainWindow::changeEvent(QEvent *event) {
+    QMainWindow::changeEvent(event);
+    if (event->type() != QEvent::LanguageChange)
+        return;
+
+    const auto setActionText = [this](const char *name, const QString &text) {
+        if (auto *action = findChild<QAction *>(QString::fromLatin1(name)))
+            action->setText(text);
+    };
+    setActionText("openAction", tr("打开文件…"));
+    setActionText("openNetworkAction", tr("打开网络地址…"));
+    setActionText("openPlaylistAction", tr("打开播放列表…"));
+    setActionText("savePlaylistAction", tr("保存播放列表…"));
+    setActionText("appendAction", tr("添加文件…"));
+    setActionText("pauseAction", controller_->state().paused ? tr("播放") : tr("暂停"));
+    setActionText("stopAction", tr("停止"));
+    setActionText("previousAction", tr("上一个"));
+    setActionText("nextAction", tr("下一个"));
+    setActionText("clearPlaylistAction", tr("清空播放列表"));
+    setActionText("muteAction", tr("静音"));
+    setActionText("fullscreenAction", isFullScreen() ? tr("退出全屏") : tr("全屏"));
+    const auto menus = menuBar()->actions();
+    const QStringList titles{tr("文件(&F)"), tr("播放(&P)"),     tr("声音(&A)"), tr("字幕(&U)"),
+                             tr("视频(&I)"), tr("播放列表(&L)"), tr("视图(&V)"), tr("设置(&S)")};
+    for (int index = 0; index < qMin(menus.size(), titles.size()); ++index)
+        menus.at(index)->setText(titles.at(index));
+    if (auto *theme = findChild<QAction *>(QStringLiteral("themeMenuAction")))
+        theme->setText(tr("主题"));
+    if (auto *language = findChild<QAction *>(QStringLiteral("languageMenuAction")))
+        language->setText(tr("语言"));
+    if (auto *english = findChild<QAction *>(QStringLiteral("languageEnglishAction")))
+        english->setText(QStringLiteral("English"));
+    if (auto *chinese = findChild<QAction *>(QStringLiteral("languageChineseAction")))
+        chinese->setText(tr("简体中文"));
 }

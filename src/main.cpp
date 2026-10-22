@@ -3,6 +3,7 @@
 #include "playback/mpvcontroller.h"
 #include "playback/videowidget.h"
 #include "ui/appearancepreferences.h"
+#include "ui/languagemanager.h"
 #include "ui/mainwindow.h"
 
 #include <QApplication>
@@ -11,7 +12,6 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
-#include <QTranslator>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -55,11 +55,12 @@ int main(int argc, char *argv[]) {
         useConfig ? settings.value(QStringLiteral("appearance/language"), QStringLiteral("zh_CN"))
                         .toString()
                   : QStringLiteral("zh_CN");
-    QTranslator translator;
-    if (language == QLatin1String("en")) {
-        if (translator.load(QStringLiteral(":/i18n/NekoPlayer_en.qm")))
-            app->installTranslator(&translator);
-    }
+    LanguageManager languageManager(*app);
+    if (!languageManager.setLanguage(language))
+        if (!languageManager.setLanguage(QStringLiteral("zh_CN")))
+            return EXIT_FAILURE;
+    app->setProperty("languageManager",
+                     QVariant::fromValue(static_cast<QObject *>(&languageManager)));
     if (auto *gui = qobject_cast<QApplication *>(app.get())) {
         const auto themeName =
             useConfig ? settings.value(QStringLiteral("appearance/theme"), QStringLiteral("dark"))

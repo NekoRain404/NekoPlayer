@@ -8,6 +8,7 @@
 #include "subtitlepreferences.h"
 #include "trackselectionpreference.h"
 #include "videocoloradjustment.h"
+#include "videoframing.h"
 #include "videopresentation.h"
 #include <QList>
 #include <QObject>
@@ -63,6 +64,7 @@ class MpvController final : public QObject {
     void applyAudioDevicePreference(const QString &name);
     // Session-only accepted intent; asynchronous errors are reported separately.
     [[nodiscard]] const VideoPresentation &videoPresentation() const;
+    [[nodiscard]] const VideoFraming &videoFraming() const;
     [[nodiscard]] const VideoColorAdjustment &videoColorAdjustment() const;
     void setVideoColorAdjustment(const VideoColorAdjustment &adjustment);
     void setVideoAspect(VideoAspect aspect);
@@ -108,6 +110,13 @@ class MpvController final : public QObject {
     void setVideoRotation(int clockwiseDegrees);
     void rotateVideoClockwise();
     void rotateVideoCounterClockwise();
+    void setVideoZoom(double log2Scale);
+    void adjustVideoZoom(double delta);
+    void setVideoPanX(double offset);
+    void adjustVideoPanX(double delta);
+    void setVideoPanY(double offset);
+    void adjustVideoPanY(double delta);
+    void resetVideoFraming();
     void prepareForRendererReset();
     void resumeAfterRendererReset();
 
@@ -120,6 +129,7 @@ class MpvController final : public QObject {
     void hardwareDecodingPreferenceChanged(bool enabled);
     void subtitlePreferencesChanged();
     void videoPresentationChanged();
+    void videoFramingChanged();
     void videoColorAdjustmentChanged();
     void abLoopChanged();
     void stateChanged();

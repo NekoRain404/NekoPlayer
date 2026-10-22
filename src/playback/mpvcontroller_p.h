@@ -122,6 +122,7 @@ struct MpvController::Impl {
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
     VideoPresentation presentation;
+    VideoFraming framing;
     VideoColorAdjustment videoColor;
     QList<AudioDevice> audioDevices;
     QString selectedAudioDevice = QStringLiteral("auto");
@@ -160,6 +161,9 @@ struct MpvController::Impl {
     TuningSetting subtitleDelay{"sub-delay", -600.0, 600.0, &PlaybackState::subtitleDelay, {}};
 
     explicit Impl(MpvController *controller) : owner(controller), client(mpv_create()) {}
+
+    void setFramingComponent(const char *name, double value, double VideoFraming::*member,
+                             double minimum, double maximum);
 
     void report(int status) {
         if (status < 0) {

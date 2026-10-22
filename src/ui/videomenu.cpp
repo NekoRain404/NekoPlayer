@@ -2,6 +2,7 @@
 #include "playback/mpvcontroller.h"
 #include "screenshotmenu.h"
 #include "videocolordialog.h"
+#include "videoframingmenu.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -51,6 +52,10 @@ VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
     connect(counterClockwise, &QAction::triggered, &controller_,
             &MpvController::rotateVideoCounterClockwise);
     connect(resetRotation_, &QAction::triggered, this, [this] { controller_.setVideoRotation(0); });
+    menu_->addSeparator();
+    auto *framing = new VideoFramingMenu(controller_, window);
+    menu_->addMenu(framing->menu());
+    connect(framing, &VideoFramingMenu::feedback, this, &VideoMenu::feedback);
     menu_->addSeparator();
     auto *colorAdjustment = make(tr("色彩调整…"), "videoColorAdjustmentAction");
     menu_->addAction(colorAdjustment);

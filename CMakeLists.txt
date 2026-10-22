@@ -36,6 +36,7 @@ add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.
     src/playback/mpvcontroller_navigation.cpp
     src/playback/mpvcontroller_loop.cpp
     src/playback/mpvcontroller_video.cpp
+    src/playback/mpvcontroller_framing.cpp
     src/playback/mpvcontroller_screenshot.cpp
     src/playback/mpvcontroller_subtitles.cpp src/playback/subtitlepreferences.cpp
     src/playback/mpvcontroller_video_color.cpp src/playback/videocoloradjustment.cpp
@@ -60,6 +61,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/foldermenu.cpp
     src/ui/recentmediamenu.cpp
     src/ui/currentmediamenu.cpp
+    src/ui/videoframingmenu.cpp
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
     src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
     src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp src/ui/networkopendialog.cpp

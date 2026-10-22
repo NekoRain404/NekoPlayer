@@ -329,6 +329,14 @@ add_dependencies(video_presentation_test test_track_media)
 add_test(NAME video-presentation COMMAND video_presentation_test)
 set_tests_properties(video-presentation PROPERTIES TIMEOUT 60)
 
+add_executable(video_framing_test video_framing_test.cpp)
+target_link_libraries(video_framing_test PRIVATE neko_playback Qt6::Test)
+target_compile_definitions(video_framing_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"
+    TEST_EXTERNAL_SUBTITLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt")
+add_dependencies(video_framing_test test_track_media)
+add_test(NAME video-framing COMMAND video_framing_test)
+set_tests_properties(video-framing PROPERTIES TIMEOUT 60)
+
 add_executable(video_color_test video_color_test.cpp)
 target_link_libraries(video_color_test PRIVATE neko_session Qt6::Test)
 add_test(NAME video-color COMMAND video_color_test)

@@ -2,6 +2,8 @@
 #include "actionfeedbackoverlay.h"
 #include "actionfeedbacktext.h"
 #include "input/localfiledrop.h"
+#include "networkopendialog.h"
+#include "playback/mediasource.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
@@ -27,6 +29,20 @@
 #include <QUrl>
 #include <QVBoxLayout>
 #include <utility>
+
+namespace {
+QStringList normalizedSources(const QStringList &sources) {
+    QStringList result;
+    result.reserve(sources.size());
+    for (const auto &source : sources) {
+        const auto normalized = MediaSource::normalize(source);
+        if (normalized.isEmpty())
+            return {};
+        result.append(normalized);
+    }
+    return result;
+}
+} // namespace
 
 MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     : controller_(std::make_unique<MpvController>(false, silentAudio)),
@@ -58,7 +74,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     video_ = new VideoWidget(*controller_, content);
     feedbackOverlay_ = new ActionFeedbackOverlay(video_);
     feedbackOverlay_->setGeometry(video_->rect());
-    emptyHint_ = new QLabel(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件"), video_);
+    emptyHint_ =
+        new QLabel(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件\nCtrl+U 打开网络地址"), video_);
     emptyHint_->setAlignment(Qt::AlignCenter);
     emptyHint_->setAttribute(Qt::WA_TransparentForMouseEvents);
     emptyHint_->setStyleSheet(
@@ -87,7 +104,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(controller_.get(), &MpvController::errorOccurred, this, &MainWindow::showError);
     connect(controller_.get(), &MpvController::fileLoaded, this, [this] {
         statusBar()->showMessage(
-            tr("正在播放 · %1").arg(QFileInfo(controller_->state().path).fileName()));
+            tr("正在播放 · %1").arg(MediaSource::displayName(controller_->state().path)));
     });
     connect(playlist_.get(), &PlaylistController::queueFinished, this,
             [this] { statusBar()->showMessage(tr("播放列表已结束")); });
@@ -174,28 +191,33 @@ void MainWindow::openFile(const QString &path) { openFiles({path}); }
 void MainWindow::openFiles(const QStringList &paths) {
     if (paths.isEmpty())
         return;
+    const auto sources = normalizedSources(paths);
+    if (sources.isEmpty()) {
+        showError(tr("媒体地址无效；网络地址需要包含受支持的协议与主机名"));
+        return;
+    }
     if (video_->hasFailed()) {
         showError(tr("OpenGL 初始化失败，无法打开媒体文件"));
         return;
     }
     clearPlaylist();
-    appendFiles(paths);
+    appendFiles(sources);
 }
 
 void MainWindow::appendFiles(const QStringList &paths) {
-    QStringList absolutePaths;
-    for (const auto &path : paths) {
-        if (!path.isEmpty())
-            absolutePaths.append(QFileInfo(path).absoluteFilePath());
-    }
-    if (absolutePaths.isEmpty())
+    if (paths.isEmpty())
         return;
+    const auto sources = normalizedSources(paths);
+    if (sources.isEmpty()) {
+        showError(tr("媒体地址无效；未添加到播放列表"));
+        return;
+    }
     if (session_)
-        session_->rememberMedia(absolutePaths.constFirst());
+        session_->rememberMedia(sources.constFirst());
     if (video_->isReady())
-        playlist_->addFiles(absolutePaths);
+        playlist_->addFiles(sources);
     else
-        pendingPaths_.append(absolutePaths);
+        pendingPaths_.append(sources);
     updateState();
 }
 
@@ -243,8 +265,8 @@ void MainWindow::openPlaylist(const QString &path) {
 }
 
 void MainWindow::savePlaylist(const QString &path) {
-    const auto error = M3u8Store::save(path, playlist_->model()->paths(),
-                                       playlist_->model()->currentIndex());
+    const auto error =
+        M3u8Store::save(path, playlist_->model()->paths(), playlist_->model()->currentIndex());
     if (!error.isEmpty())
         showError(error);
     else
@@ -258,6 +280,12 @@ void MainWindow::chooseFile() {
                                         "*.flac *.wav);;所有文件 (*)"));
     if (!path.isEmpty())
         openFile(path);
+}
+
+void MainWindow::chooseNetworkUrl() {
+    NetworkOpenDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted)
+        openFile(dialog.mediaUrl());
 }
 
 void MainWindow::chooseFilesToAppend() {
@@ -288,7 +316,7 @@ void MainWindow::updateState() {
     emptyHint_->setVisible(!state.active);
     setWindowTitle(state.path.isEmpty()
                        ? QStringLiteral("NekoPlayer")
-                       : QFileInfo(state.path).fileName() + QStringLiteral(" — NekoPlayer"));
+                       : MediaSource::displayName(state.path) + QStringLiteral(" — NekoPlayer"));
 }
 
 void MainWindow::showError(const QString &message) {

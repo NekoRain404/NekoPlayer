@@ -42,6 +42,7 @@ class MainWindow final : public QMainWindow {
   private:
     void createActions();
     void chooseFile();
+    void chooseNetworkUrl();
     void chooseFilesToAppend();
     void choosePlaylistToOpen();
     void choosePlaylistToSave();
@@ -67,6 +68,7 @@ class MainWindow final : public QMainWindow {
     QLabel *emptyHint_ = nullptr;
     ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
     QAction *openAction_ = nullptr;
+    QAction *openNetworkAction_ = nullptr;
     QAction *openPlaylistAction_ = nullptr;
     QAction *savePlaylistAction_ = nullptr;
     QAction *pauseAction_ = nullptr;

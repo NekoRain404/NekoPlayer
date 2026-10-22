@@ -31,6 +31,8 @@
 
 官方 API 文档：https://mpv.io/manual/stable/ 。使用本机头文件确认可用接口；浅克隆 HEAD 不等于本机已安装发行版。
 
+网络播放参考 MpvQt `examples/video-player/mpvitem.cpp` 的本地／远端来源区分，Haruna `src/qml/Main.qml` 的 URL 输入与 `src/mpv/mpvitem.cpp` 的加载入口，KikoPlay `Play/Playlist/playlist.cpp` 的网络队列条目，以及 IINA `iina/PlayerCore.swift` 的文件路径与 URL 分流。NekoPlayer 独立实现 Qt Widgets 地址对话框、共享 QAction 和 Qt Core 校验／持久化，没有复制上述项目的实现代码或引入其依赖。网络读取仍走同一 libmpv 的异步 `loadfile`；参考本机 mpv 0.41 的协议列表与内置 ytdl hook 行为，协议可用不等于公网服务或网页解析已验证。签名地址以本地 HTTP 服务核对实际请求路径和查询字节。
+
 媒体信息字段参考 IINA `iina/InspectorWindowController.swift` 的 `updateInfo()`：容器格式、当前视频编码、容器帧率、音频编码及解码参数。语义对照 [mpv v0.41.0 input.rst](https://github.com/mpv-player/mpv/blob/v0.41.0/DOCS/man/input.rst) 的 `file-format`、`file-size`、`current-tracks`、`video-params`、`audio-params`、`container-fps` 与 `hwdec-current`。容器帧率可能不准确，文件大小是媒体源长度；本机原生 Matroska 解复用器报告 `mkv`。NekoPlayer 独立实现拥有数据的快照、异步事件补全与非模态 Widgets 纯文本报告，不采用 IINA 的定时同步查询，也未复制其 GPL 源码。
 
 逐帧参考 Haruna `src/qml/Actions.qml` 的 `onFrameStepForwardAction()`／`onFrameStepBackwardAction()`，以及 IINA `MenuController.swift` 的菜单映射。具体命令与局限对照 [mpv v0.41.0 input.rst](https://github.com/mpv-player/mpv/blob/v0.41.0/DOCS/man/input.rst) 的 `frame-step`／`frame-back-step`；前进原生播放一帧后暂停，后退执行精确定位，不能用于纯音频。结合 mpv `player/command.c` 的当前轨道属性和 `player/playloop.c` 的 `add_step_frame()`，使用事件观察区分动态视频与静态图片，保留原生定位和解码行为。NekoPlayer 独立实现类型化控制器和共享 Widgets 动作，没有复制上游代码；无界面测试核对 25 fps 素材实际 40 ms 步进，不推定 Wayland 画面或硬解已验证。

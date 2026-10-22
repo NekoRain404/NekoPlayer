@@ -1,4 +1,5 @@
 #include "sessionmanager.h"
+#include "playback/mediasource.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
@@ -145,7 +146,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
 
 void SessionManager::rememberPlaybackPosition(const QString &path, double position,
                                               double duration) {
-    if (!historyError_.isEmpty())
+    if (MediaSource::isNetwork(path) || !historyError_.isEmpty())
         return;
     const auto normalized = PlaybackHistoryStore::normalizedPath(path);
     if (normalized.isEmpty() || !std::isfinite(duration) || duration <= 0)
@@ -186,7 +187,8 @@ void SessionManager::restoreTrackPreference() {
     // Renderer recovery reloads the same media without a new open request.
     if (!std::exchange(pendingMediaPreference_, false))
         return;
-    if (!player_.state().active || player_.state().path != playlist_.model()->currentPath())
+    if (!player_.state().active || MediaSource::isNetwork(player_.state().path) ||
+        player_.state().path != playlist_.model()->currentPath())
         return;
     const auto path = TrackPreferenceStore::normalizedPath(player_.state().path);
     if (path.isEmpty())
@@ -213,8 +215,8 @@ void SessionManager::restoreTrackPreference() {
 }
 
 void SessionManager::rememberTrackPreference() {
-    if (restoringTrackPreference_ || player_.trackRestorationPending() || pendingMediaPreference_ ||
-        !loadedMediaFingerprint_ ||
+    if (MediaSource::isNetwork(player_.state().path) || restoringTrackPreference_ ||
+        player_.trackRestorationPending() || pendingMediaPreference_ || !loadedMediaFingerprint_ ||
         !TrackPreferenceStore::matchesFingerprint(*loadedMediaFingerprint_) ||
         !trackPreferenceError_.isEmpty() || !player_.state().active || player_.tracks().isEmpty() ||
         player_.state().path != playlist_.model()->currentPath())
@@ -314,6 +316,7 @@ QString SessionManager::saveTrackPreferences() {
 
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }
 void SessionManager::rememberMedia(const QString &path) {
-    if (!path.isEmpty())
-        mediaDirectory_ = QFileInfo(path).absolutePath();
+    const auto source = MediaSource::normalize(path);
+    if (!source.isEmpty() && !MediaSource::isNetwork(source))
+        mediaDirectory_ = QFileInfo(source).absolutePath();
 }

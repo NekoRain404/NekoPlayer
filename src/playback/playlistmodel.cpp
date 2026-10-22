@@ -1,4 +1,5 @@
 #include "playlistmodel.h"
+#include "mediasource.h"
 
 #include <QFileInfo>
 #include <QMimeData>
@@ -30,7 +31,7 @@ QVariant PlaylistModel::data(const QModelIndex &index, int role) const {
     const auto &path = paths_.at(index.row());
     switch (role) {
     case Qt::DisplayRole:
-        return QFileInfo(path).fileName();
+        return MediaSource::displayName(path);
     case PathRole:
     case Qt::ToolTipRole:
         return path;
@@ -111,9 +112,8 @@ int PlaylistModel::addFiles(const QStringList &paths) {
     QStringList additions;
     for (const auto &path : paths) {
         const QUrl url(path, QUrl::StrictMode);
-        const auto absolute = url.isValid() && !url.scheme().isEmpty()
-                                  ? path
-                                  : QFileInfo(path).absoluteFilePath();
+        const auto absolute =
+            url.isValid() && !url.scheme().isEmpty() ? path : QFileInfo(path).absoluteFilePath();
         if (!absolute.isEmpty())
             additions.append(absolute);
     }

@@ -1,4 +1,5 @@
 #include "sessionstore.h"
+#include "playback/mediasource.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -6,6 +7,7 @@
 #include <QFileInfo>
 #include <QSettings>
 #include <QTemporaryFile>
+#include <QUrl>
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -63,14 +65,19 @@ SessionState normalized(SessionState state) {
     int current = -1;
     for (qsizetype row = 0; row < state.paths.size(); ++row) {
         const auto &path = state.paths.at(row);
-        if (path.isEmpty() || path.contains(QChar::Null) || !QFileInfo(path).isAbsolute())
+        // Persisted local paths must remain independent of the working directory.
+        if (!QDir::isAbsolutePath(path) && QUrl(path, QUrl::StrictMode).scheme().isEmpty())
+            continue;
+        const auto source = MediaSource::normalize(path);
+        if (source.isEmpty())
             continue;
         if (row == state.currentIndex)
             current = paths.size();
-        paths.append(QDir::cleanPath(path));
+        paths.append(source);
     }
     state.paths = std::move(paths);
-    if (current < 0 || !std::isfinite(state.resumePosition) || state.resumePosition < 0)
+    if (current < 0 || !std::isfinite(state.resumePosition) || state.resumePosition < 0 ||
+        MediaSource::isNetwork(state.paths.at(current)))
         state.resumePosition = 0;
     state.currentIndex = current >= 0 ? current : (state.paths.isEmpty() ? -1 : 0);
     const QFileInfo directory(state.window.mediaDirectory);

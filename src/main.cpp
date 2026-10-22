@@ -37,7 +37,8 @@ int main(int argc, char *argv[]) {
         {QStringLiteral("silent-audio"), QStringLiteral("使用空音频输出，供自动化检查使用")});
     parser.addOption(
         {QStringLiteral("no-config"), QStringLiteral("不读取或保存播放列表和偏好设置")});
-    parser.addPositionalArgument(QStringLiteral("files"), QStringLiteral("一个或多个本地媒体文件"),
+    parser.addPositionalArgument(QStringLiteral("files"),
+                                 QStringLiteral("一个或多个媒体文件或网络地址"),
                                  QStringLiteral("[files...]"));
     parser.process(*app);
     if (checkBackendOnly)

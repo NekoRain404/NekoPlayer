@@ -32,6 +32,9 @@ void MainWindow::createActions() {
     openAction_ = make(tr("打开文件…"), "openAction", QKeySequence::Open);
     openAction_->setIcon(style()->standardIcon(QStyle::SP_DialogOpenButton));
     connect(openAction_, &QAction::triggered, this, &MainWindow::chooseFile);
+    openNetworkAction_ =
+        make(tr("打开网络地址…"), "openNetworkAction", QKeySequence(Qt::CTRL | Qt::Key_U));
+    connect(openNetworkAction_, &QAction::triggered, this, &MainWindow::chooseNetworkUrl);
     openPlaylistAction_ = make(tr("打开播放列表…"), "openPlaylistAction", {});
     connect(openPlaylistAction_, &QAction::triggered, this, &MainWindow::choosePlaylistToOpen);
     savePlaylistAction_ = make(tr("保存播放列表…"), "savePlaylistAction", {});
@@ -109,6 +112,7 @@ void MainWindow::createActions() {
     });
     auto *file = menuBar()->addMenu(tr("文件(&F)"));
     file->addAction(openAction_);
+    file->addAction(openNetworkAction_);
     file->addAction(appendAction_);
     file->addSeparator();
     file->addActions({openPlaylistAction_, savePlaylistAction_});
@@ -174,7 +178,8 @@ void MainWindow::createActions() {
     settings->addAction(playbackSettings);
     settings->addAction(subtitleDisplay->settingsAction());
     contextMenu_ = new QMenu(this);
-    contextMenu_->addActions({openAction_, appendAction_, pauseAction_, stopAction_});
+    contextMenu_->addActions(
+        {openAction_, openNetworkAction_, appendAction_, pauseAction_, stopAction_});
     contextMenu_->addSeparator();
     contextMenu_->addMenu(navigation->menu());
     contextMenu_->addMenu(tuning->speedMenu());

@@ -37,7 +37,7 @@ add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.
     src/playback/mpvcontroller_video.cpp
     src/playback/mpvcontroller_subtitles.cpp src/playback/subtitlepreferences.cpp
     src/playback/mpvcontroller_video_color.cpp src/playback/videocoloradjustment.cpp
-    src/playback/mpvchapters.cpp src/playback/playbacktime.cpp
+    src/playback/mpvchapters.cpp src/playback/playbacktime.cpp src/playback/mediasource.cpp
     src/playback/playlistcontroller.cpp src/playback/playlistmodel.cpp src/playback/shuffleorder.cpp)
 target_include_directories(neko_playback PUBLIC src)
 target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV)
@@ -55,7 +55,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
     src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
-    src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp
+    src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp src/ui/networkopendialog.cpp
     src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp
     src/ui/subtitledisplaymenu.cpp src/ui/subtitlesettingsdialog.cpp
     src/ui/preferencesdialog.cpp src/ui/videocolordialog.cpp)

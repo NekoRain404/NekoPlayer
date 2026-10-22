@@ -25,6 +25,13 @@ class MpvControllerTestAccess final {
         return generation;
     }
 
+    static void primeRecovery(MpvController &player, const QString &path, bool seekable) {
+        primeExistingPlayback(player);
+        player.impl_->state.path = path;
+        player.impl_->playingPath = path;
+        player.impl_->state.seekable = seekable;
+    }
+
     static uint64_t beginSynchronousOpen(MpvController &player) {
         return ++player.impl_->openGeneration;
     }
@@ -81,6 +88,31 @@ class MpvControllerTestAccess final {
 class MpvOpenFailureTest final : public QObject {
     Q_OBJECT
   private slots:
+    void rendererRecoveryRespectsStreamSeekability_data() {
+        QTest::addColumn<QString>("path");
+        QTest::addColumn<bool>("seekable");
+        QTest::addColumn<double>("position");
+        QTest::newRow("live-url") << QStringLiteral("rtsp://127.0.0.1:9/live") << false << 0.0;
+        QTest::newRow("seekable-url")
+            << QStringLiteral("http://127.0.0.1:9/movie.mkv") << true << 12.5;
+        QTest::newRow("local-before-loaded") << QStringLiteral("/old/media.mkv") << false << 12.5;
+    }
+
+    void rendererRecoveryRespectsStreamSeekability() {
+        QFETCH(QString, path);
+        QFETCH(bool, seekable);
+        QFETCH(double, position);
+        MpvController player(true, true);
+        QVERIFY2(player.isReady(), qPrintable(player.errorString()));
+        MpvControllerTestAccess::primeRecovery(player, path, seekable);
+        player.prepareForRendererReset();
+
+        player.resumeAfterRendererReset();
+
+        // Inspect the pending bookmark before asynchronous backend observations.
+        QCOMPARE(player.resumePosition(), position);
+    }
+
     void rejectedOpenNotifiesQueueAndKeepsExistingPlayback() {
         MpvController player(true, true);
         QSignalSpy failed(&player, &MpvController::mediaLoadFailed);

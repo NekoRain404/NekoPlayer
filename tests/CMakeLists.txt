@@ -1,5 +1,20 @@
-find_package(Qt6 6.5 REQUIRED COMPONENTS Test)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Test Network)
 find_program(FFMPEG_EXECUTABLE ffmpeg REQUIRED)
+
+add_executable(media_source_test media_source_test.cpp)
+target_link_libraries(media_source_test PRIVATE neko_playback Qt6::Test)
+add_test(NAME media-source COMMAND media_source_test)
+set_tests_properties(media-source PROPERTIES TIMEOUT 20)
+
+add_executable(network_session_test network_session_test.cpp)
+target_link_libraries(network_session_test PRIVATE neko_session Qt6::Test)
+add_test(NAME network-session COMMAND network_session_test)
+set_tests_properties(network-session PROPERTIES TIMEOUT 30)
+
+add_executable(network_playback_test network_playback_test.cpp)
+target_link_libraries(network_playback_test PRIVATE neko_session Qt6::Test Qt6::Network)
+add_test(NAME network-playback COMMAND network_playback_test)
+set_tests_properties(network-playback PROPERTIES TIMEOUT 60)
 
 add_executable(preferences_dialog_test preferences_dialog_test.cpp)
 target_link_libraries(preferences_dialog_test PRIVATE neko_ui Qt6::Test)
@@ -53,6 +68,8 @@ add_custom_command(OUTPUT "${TEST_MEDIA}"
         -t 4 -c:v mpeg4 -q:v 4 -c:a pcm_s16le "${TEST_MEDIA}"
     VERBATIM)
 add_custom_target(test_media DEPENDS "${TEST_MEDIA}")
+target_compile_definitions(network_playback_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(network_playback_test test_media)
 set(TEST_AUDIO_ONLY "${CMAKE_CURRENT_BINARY_DIR}/media/audio-only.mka")
 add_custom_command(OUTPUT "${TEST_AUDIO_ONLY}"
     COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y

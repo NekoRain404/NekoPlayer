@@ -1,3 +1,4 @@
+#include "mediasource.h"
 #include "mpvcontroller_p.h"
 
 MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
@@ -422,16 +423,19 @@ void MpvController::resumeAfterRendererReset() {
     const auto loopPoint = [](const std::optional<double> &value) {
         return value ? QByteArray::number(*value, 'g', 17) : QByteArray("no");
     };
-    const auto options =
-        QByteArray("start=") + QByteArray::number(saved.playback.position, 'f', 3) +
-        ",pause=" + (saved.playback.paused ? "yes" : "no") +
-        ",aid=" + selectedInternal(MediaTrack::Type::Audio) +
-        ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no" +
-        ",ab-loop-a=" + loopPoint(abLoop().start) + ",ab-loop-b=" + loopPoint(abLoop().end);
+    const auto position = MediaSource::isNetwork(saved.playback.path) && !saved.playback.seekable
+                              ? 0.0
+                              : saved.playback.position;
+    const auto options = QByteArray("start=") + QByteArray::number(position, 'f', 3) +
+                         ",pause=" + (saved.playback.paused ? "yes" : "no") +
+                         ",aid=" + selectedInternal(MediaTrack::Type::Audio) +
+                         ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no" +
+                         ",ab-loop-a=" + loopPoint(abLoop().start) +
+                         ",ab-loop-b=" + loopPoint(abLoop().end);
     impl_->tracksToRestore = saved.tracks;
     impl_->state.path = saved.playback.path;
     impl_->playingPath = saved.playback.path;
-    impl_->openingPosition = saved.playback.position;
+    impl_->openingPosition = position;
     impl_->openingEntry = -1;
     impl_->resetPlayback();
     emit stateChanged();

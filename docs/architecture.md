@@ -12,7 +12,9 @@
 | `AudioDevice` / `audiodevice.cpp` / `mpvcontroller_audio.cpp` | 音频输出设备值类型、mpv node 解析、设备列表观察与异步选择 | 值类型不依赖 mpv；解析器和控制器复用同一 client，不依赖 UI |
 | `MediaChapter` / `mpvchapters.cpp` | 章节原始编号、标题及起始秒数；复制借用的 node 为独立快照 | 领域类型不依赖 mpv，解析器不依赖 UI |
 | `playbacktime.cpp` | 时间字符串解析与格式化，校验格式、有限值及转换范围 | Qt Core，无播放或窗口状态 |
-| `PlaylistModel` | 本地文件队列、当前项与原生单项移动；提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器 |
+| `MediaSource` | 本地路径、file URL 与受支持网络地址的校验、规范化和显示名称 | Qt Core，无 I/O、播放或窗口状态；保留签名 URL 的路径与查询转义 |
+| `NetworkOpenDialog` | 网络地址输入与播放按钮可用性 | Qt Widgets / MediaSource；确认后由 MainWindow 交给队列业务 API |
+| `PlaylistModel` | 本地／网络媒体队列、当前项与原生单项移动；提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器 |
 | `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环／随机策略与有界失败恢复 | 依赖播放业务 API、队列模型和 `ShuffleOrder`，不依赖 UI |
 | `ShuffleOrder` | 随机候选池、实际访问历史与前后导航 | Qt Core 持久模型索引，不控制播放器，不改变显示顺序 |
 | `VideoWidget` | GL 上下文、物理像素 FBO、帧更新、隐藏时跳帧、资源释放 | 只处理渲染，不提交播放命令 |
@@ -39,7 +41,9 @@
 | `windowsession.cpp` | 同一 MainWindow 类的会话装配、窗口 geometry 与关闭保存 | SessionManager、Qt Widgets，不介入帧渲染 |
 | `main.cpp` | 参数解析、启动和 smoke 退出条件 | 后端诊断实现单独保留 |
 
-业务路径：用户文件入口 → `PlaylistController` 选择有效本地项 → 控制器异步命令 → mpv 事件 → Qt 接收者队列 → 状态信号 → 展示更新。EOF 自动选择下一项；加载失败沿当前导航方向跳过失败项，不将一般 mpv 错误误认为队列切换。渲染路径独立：mpv 更新回调 → Qt 队列 → GL current → render API → Qt 合成。
+业务路径：用户文件／网络入口 → `MediaSource` 校验与规范化 → `PlaylistController` 选择媒体项 → 控制器异步命令 → mpv 事件 → Qt 接收者队列 → 状态信号 → 展示更新。替换队列前验证整批输入，无效输入不修改队列；网络 I/O 由 mpv 负责，Qt Network 仅用于测试。EOF 自动选择下一项；加载失败沿当前导航方向跳过失败项，不将一般 mpv 错误误认为队列切换。渲染路径独立：mpv 更新回调 → Qt 队列 → GL current → render API → Qt 合成。
+
+网络入口支持 HTTP(S)、RTSP(S)、RTMP(S)，要求合法主机名、端口与百分号转义。QUrl 严格解析后独立编码非 ASCII 尾部，避免规范化签名 URL 的 `%7e`、`%2f` 等原始转义。会话 schema 1 的队列字段同时接受绝对本地路径和受支持 URL，file URL 转为本地路径，非法条目过滤后重新映射当前行，书签仍只属于原选中条目。网络条目不持久保存续播位置、不进入本地历史／文件指纹，也不改变文件选择目录；恢复队列不会自动联网播放。当前运行中渲染重建时，可定位网络媒体沿用内存位置，不可定位流从零重新打开，本地待加载书签继续保留。
 
 播放模式由队列持有，默认 Off，不写入会话配置。One 和只有一项的 All 通过控制器异步设置 `loop-file`，由 mpv 定位回起点，避免重载解码器和丢失轨道。多项 All 的 EOF／手动导航由应用队列衔接；列表长度或模式改变时立即更新原生循环设置。若切换为 One 时 EOF 已排队，结束回调兜底重播当前项。顺序导航最多扫描队列一轮；随机扫描预算受候选池、至多 1024 项历史及一轮队列长度约束。异步失败行和缺失行记录在失败集合中，错误链不会反复加载同一失败行。成功自然播完、显式导航或清空会重置失败集合；`FILE_LOADED` 仅代表容器和轨道初始化成功，不能据此清除失败历史。全失败后保留队列，追加或显式操作可重试。模式与导航变化独立通知动作可用性，不订阅时间进度。
 

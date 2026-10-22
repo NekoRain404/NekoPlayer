@@ -87,6 +87,102 @@ const QList<MediaTrack> &MpvController::tracks() const { return impl_->tracks; }
 const QList<MediaChapter> &MpvController::chapters() const { return impl_->chapters; }
 bool MpvController::hardwareDecodingEnabled() const { return impl_->hardwareDecodingEnabled; }
 
+void MpvController::Impl::commitPendingOpen(int64_t entry) {
+    auto found = std::find_if(pendingOpens.begin(), pendingOpens.end(),
+                              [entry](const PendingOpen &open) { return open.entry == entry; });
+    if (found == pendingOpens.end()) {
+        if (std::any_of(pendingOpens.cbegin(), pendingOpens.cend(),
+                        [](const PendingOpen &open) { return !open.replyReceived; }))
+            startedEntries.insert(entry);
+        return;
+    }
+    const auto opened = *found;
+    pendingOpens.erase(found);
+    if (opened.generation == openGeneration) {
+        openingEntry = entry;
+        state.path = opened.path;
+    }
+    playingPath = opened.path;
+    openGenerationsByEntry.insert(entry, opened.generation);
+    mediaReady = false;
+    cancelInformationQueries();
+    const bool informationChanged = information != MediaInformation{};
+    information = {};
+    cancelChapterRequest();
+    recovery.reset();
+    cancelTrackRestore();
+    recoveringRenderer = false;
+    resetAbLoop();
+    property("pause", MPV_FORMAT_FLAG, 0);
+    if (informationChanged)
+        emit owner->mediaInformationChanged();
+}
+
+void MpvController::Impl::rejectPendingOpen(uint64_t command, int status) {
+    const auto found =
+        std::find_if(pendingOpens.begin(), pendingOpens.end(),
+                     [command](const PendingOpen &open) { return open.command == command; });
+    if (found == pendingOpens.end())
+        return;
+    const auto generation = found->generation;
+    pendingOpens.erase(found);
+    if (openingCommand == command)
+        openingCommand = 0;
+    if (generation == openGeneration) {
+        state.path = playingPath;
+        openingPosition.reset();
+        openingEntry = -1;
+        emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(status)));
+    }
+}
+
+void MpvController::Impl::notifySynchronousOpenFailure(uint64_t generation, int status) {
+    if (generation != openGeneration)
+        return;
+    state.path = playingPath;
+    openingPosition.reset();
+    openingEntry = -1;
+    emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(status)));
+}
+
+bool MpvController::Impl::handleOpeningCommandReply(const mpv_event &event) {
+    auto found =
+        std::find_if(pendingOpens.begin(), pendingOpens.end(), [&event](const PendingOpen &open) {
+            return open.command == event.reply_userdata;
+        });
+    if (found == pendingOpens.end()) {
+        if (event.reply_userdata != openingCommand || !openingCommand)
+            return false;
+        openingCommand = 0;
+    } else if (event.error < 0) {
+        rejectPendingOpen(event.reply_userdata, event.error);
+        return true;
+    }
+    if (event.data) {
+        const auto &result = static_cast<mpv_event_command *>(event.data)->result;
+        if (result.format == MPV_FORMAT_NODE_MAP) {
+            const auto &map = *result.u.list;
+            for (int index = 0; index < map.num; ++index) {
+                if (QByteArrayView(map.keys[index]) == "playlist_entry_id" &&
+                    map.values[index].format == MPV_FORMAT_INT64) {
+                    const auto entry = map.values[index].u.int64;
+                    if (found != pendingOpens.end()) {
+                        found->entry = entry;
+                        found->replyReceived = true;
+                        if (startedEntries.remove(entry))
+                            commitPendingOpen(entry);
+                    } else {
+                        openingEntry = entry;
+                    }
+                }
+            }
+        }
+    }
+    if (event.reply_userdata == openingCommand)
+        openingCommand = 0;
+    return true;
+}
+
 void MpvController::setHardwareDecodingEnabled(bool enabled) {
     if (enabled == impl_->hardwareDecodingEnabled)
         return;
@@ -103,28 +199,20 @@ void MpvController::openFile(const QString &path) { openFileAtPosition(path, 0);
 void MpvController::openFileAtPosition(const QString &path, double seconds) {
     if (!isReady() || path.isEmpty() || !std::isfinite(seconds) || seconds < 0)
         return;
-    impl_->mediaReady = false;
+    const auto generation = ++impl_->openGeneration;
     impl_->openingPosition = seconds;
     impl_->openingEntry = -1;
-    impl_->cancelInformationQueries();
-    const bool informationChanged = impl_->information != MediaInformation{};
-    impl_->information = {};
-    impl_->state.path = path;
-    impl_->cancelChapterRequest();
-    impl_->recovery.reset();
-    impl_->cancelTrackRestore();
-    impl_->recoveringRenderer = false;
-    impl_->resetAbLoop();
-    impl_->property("pause", MPV_FORMAT_FLAG, 0);
     const auto options = QByteArray("start=") + QByteArray::number(seconds, 'f', 3);
     const auto [id, status] =
         impl_->submitCommand({"loadfile", path.toUtf8(), "replace", "-1", options});
     impl_->openingCommand = id;
-    if (!id)
-        impl_->openingPosition.reset();
+    if (id) {
+        impl_->pendingOpens.append({id, generation, path});
+        impl_->state.path = path;
+    }
     emit fileOpenRequested();
-    if (informationChanged)
-        emit mediaInformationChanged();
+    if (!id)
+        impl_->notifySynchronousOpenFailure(generation, status);
     impl_->report(status);
 }
 void MpvController::setPaused(bool paused) {
@@ -136,8 +224,14 @@ void MpvController::stop() {
     emit stopRequested();
     impl_->mediaReady = false;
     impl_->openingPosition.reset();
+    if (!impl_->pendingOpens.isEmpty())
+        impl_->state.path = impl_->playingPath;
+    ++impl_->openGeneration;
     impl_->openingCommand = 0;
     impl_->openingEntry = -1;
+    impl_->pendingOpens.clear();
+    impl_->startedEntries.clear();
+    impl_->openGenerationsByEntry.clear();
     impl_->cancelInformationQueries();
     const bool informationChanged = impl_->information != MediaInformation{};
     impl_->information = {};
@@ -247,6 +341,7 @@ void MpvController::resumeAfterRendererReset() {
         ",ab-loop-a=" + loopPoint(abLoop().start) + ",ab-loop-b=" + loopPoint(abLoop().end);
     impl_->tracksToRestore = saved.tracks;
     impl_->state.path = saved.playback.path;
+    impl_->playingPath = saved.playback.path;
     impl_->openingPosition = saved.playback.position;
     impl_->openingEntry = -1;
     impl_->resetPlayback();

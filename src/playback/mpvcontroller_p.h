@@ -70,6 +70,13 @@ struct MpvController::Impl {
         PlaybackState playback;
         QList<MediaTrack> tracks;
     };
+    struct PendingOpen {
+        uint64_t command = 0;
+        uint64_t generation = 0;
+        QString path;
+        int64_t entry = -1;
+        bool replyReceived = false;
+    };
     MpvController *owner;
     std::unique_ptr<mpv_handle, MpvPrivate::MpvDeleter> client;
     PlaybackState state;
@@ -101,6 +108,11 @@ struct MpvController::Impl {
     VideoPresentation presentation;
     AbLoop abLoop;
     bool mediaReady = false;
+    QList<PendingOpen> pendingOpens;
+    QSet<int64_t> startedEntries;
+    QHash<int64_t, uint64_t> openGenerationsByEntry;
+    QString playingPath;
+    uint64_t openGeneration = 0;
     // Preserve load intent until the matching native file reports its position.
     std::optional<double> openingPosition;
     uint64_t openingCommand = 0;
@@ -354,4 +366,9 @@ struct MpvController::Impl {
                 self->owner, [self] { self->drainEvents(); }, Qt::QueuedConnection);
         }
     }
+
+    void commitPendingOpen(int64_t entry);
+    void rejectPendingOpen(uint64_t command, int status);
+    void notifySynchronousOpenFailure(uint64_t generation, int status);
+    bool handleOpeningCommandReply(const mpv_event &event);
 };

@@ -99,6 +99,7 @@ void MpvController::Impl::drainEvents() {
             return;
         case MPV_EVENT_START_FILE:
             playingEntry = static_cast<mpv_event_start_file *>(event->data)->playlist_entry_id;
+            commitPendingOpen(playingEntry);
             resetPlayback();
             loading = true;
             emit owner->stateChanged();
@@ -118,8 +119,12 @@ void MpvController::Impl::drainEvents() {
             const auto &end = *static_cast<mpv_event_end_file *>(event->data);
             if (end.playlist_entry_id == openingEntry)
                 openingPosition.reset();
+            const bool staleOpen =
+                openGenerationsByEntry.contains(end.playlist_entry_id) &&
+                openGenerationsByEntry.value(end.playlist_entry_id) != openGeneration;
+            openGenerationsByEntry.remove(end.playlist_entry_id);
             const bool expectedReset = recoveringRenderer && end.error == MPV_ERROR_VO_INIT_FAILED;
-            if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
+            if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset && !staleOpen) {
                 recoveringRenderer = false;
                 recovery.reset();
             }
@@ -147,20 +152,7 @@ void MpvController::Impl::drainEvents() {
             queryChapterRequest(chapterSeekStarted);
             break;
         case MPV_EVENT_COMMAND_REPLY:
-            if (event->reply_userdata == openingCommand && openingCommand) {
-                openingCommand = 0;
-                const auto &result = static_cast<mpv_event_command *>(event->data)->result;
-                if (event->error < 0) {
-                    openingPosition.reset();
-                } else if (result.format == MPV_FORMAT_NODE_MAP) {
-                    const auto &map = *result.u.list;
-                    for (int index = 0; index < map.num; ++index) {
-                        if (QByteArrayView(map.keys[index]) == "playlist_entry_id" &&
-                            map.values[index].format == MPV_FORMAT_INT64)
-                            openingEntry = map.values[index].u.int64;
-                    }
-                }
-            }
+            handleOpeningCommandReply(*event);
             confirmChapterRequest(*event);
             if (canceledRestoreRequests.remove(event->reply_userdata))
                 break;

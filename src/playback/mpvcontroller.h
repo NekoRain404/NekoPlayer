@@ -117,6 +117,7 @@ class MpvController final : public QObject {
     void errorOccurred(const QString &message);
 
   private:
+    friend class MpvControllerTestAccess;
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };

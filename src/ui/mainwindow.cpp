@@ -1,4 +1,6 @@
 #include "mainwindow.h"
+#include "actionfeedbackoverlay.h"
+#include "actionfeedbacktext.h"
 #include "input/localfiledrop.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
@@ -53,6 +55,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     video_ = new VideoWidget(*controller_, content);
+    feedbackOverlay_ = new ActionFeedbackOverlay(video_);
+    feedbackOverlay_->setGeometry(video_->rect());
     emptyHint_ = new QLabel(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件"), video_);
     emptyHint_->setAlignment(Qt::AlignCenter);
     emptyHint_->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -117,10 +121,14 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
             controller_->resumeAfterRendererReset();
         updateState();
     });
-    connect(transport_, &TransportBar::seekRequested, controller_.get(),
-            &MpvController::seekAbsolute);
-    connect(transport_, &TransportBar::volumeRequested, controller_.get(),
-            &MpvController::setVolume);
+    connect(transport_, &TransportBar::seekRequested, this, [this](double seconds) {
+        controller_->seekAbsolute(seconds);
+        showActionFeedback(ActionFeedbackText::seekTo(seconds));
+    });
+    connect(transport_, &TransportBar::volumeRequested, this, [this](double volume) {
+        controller_->setVolume(volume);
+        showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
     controlsTimer_.setSingleShot(true);
     controlsTimer_.setInterval(2200);
     connect(&controlsTimer_, &QTimer::timeout, this, [this] {
@@ -232,12 +240,20 @@ void MainWindow::updateState() {
 }
 
 void MainWindow::showError(const QString &message) {
+    feedbackOverlay_->clearMessage();
     statusBar()->showMessage(tr("无法播放：%1").arg(message));
     if (isFullScreen()) {
         revealControls();
         statusBar()->show();
     }
     emit userError(message);
+}
+
+void MainWindow::showActionFeedback(const QString &message, int durationMs) {
+    if (isFullScreen())
+        feedbackOverlay_->showMessage(message, durationMs);
+    else
+        statusBar()->showMessage(message, durationMs);
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
@@ -286,6 +302,8 @@ void MainWindow::revealControls() {
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == video_ && event->type() == QEvent::Resize)
+        feedbackOverlay_->setGeometry(video_->rect());
     if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress)
         revealControls();
     return QMainWindow::eventFilter(watched, event);

@@ -1,3 +1,4 @@
+#include "actionfeedbacktext.h"
 #include "mainwindow.h"
 #include "mediainformationdialog.h"
 #include "navigationmenu.h"
@@ -17,6 +18,7 @@
 #include <QMenuBar>
 #include <QStatusBar>
 #include <QStyle>
+#include <QtGlobal>
 
 void MainWindow::createActions() {
     const auto make = [this](const QString &text, const char *name, QKeySequence shortcut) {
@@ -35,22 +37,31 @@ void MainWindow::createActions() {
     connect(appendAction_, &QAction::triggered, this, &MainWindow::chooseFilesToAppend);
     pauseAction_ = make(tr("暂停"), "pauseAction", QKeySequence(Qt::Key_Space));
     connect(pauseAction_, &QAction::triggered, playlist_.get(), &PlaylistController::playOrPause);
+    connect(pauseAction_, &QAction::triggered, this, [this] {
+        showActionFeedback(ActionFeedbackText::playback(pauseAction_->text() == tr("暂停")));
+    });
     stopAction_ = make(tr("停止"), "stopAction", QKeySequence(Qt::Key_S));
     stopAction_->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
     connect(stopAction_, &QAction::triggered, controller_.get(), &MpvController::stop);
+    connect(stopAction_, &QAction::triggered, this, [this] { showActionFeedback(tr("已停止")); });
     previousAction_ = make(tr("上一个"), "previousAction", QKeySequence(Qt::Key_MediaPrevious));
     previousAction_->setIcon(style()->standardIcon(QStyle::SP_MediaSkipBackward));
     connect(previousAction_, &QAction::triggered, playlist_.get(),
             &PlaylistController::playPrevious);
+    connect(previousAction_, &QAction::triggered, this,
+            [this] { showActionFeedback(tr("上一个")); });
     nextAction_ = make(tr("下一个"), "nextAction", QKeySequence(Qt::Key_MediaNext));
     nextAction_->setIcon(style()->standardIcon(QStyle::SP_MediaSkipForward));
     connect(nextAction_, &QAction::triggered, playlist_.get(), &PlaylistController::playNext);
+    connect(nextAction_, &QAction::triggered, this, [this] { showActionFeedback(tr("下一个")); });
     clearPlaylistAction_ = make(tr("清空播放列表"), "clearPlaylistAction", {});
     clearPlaylistAction_->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
     connect(clearPlaylistAction_, &QAction::triggered, this, &MainWindow::clearPlaylist);
     muteAction_ = make(tr("静音"), "muteAction", QKeySequence(Qt::Key_M));
     muteAction_->setCheckable(true);
     connect(muteAction_, &QAction::triggered, controller_.get(), &MpvController::setMuted);
+    connect(muteAction_, &QAction::triggered, this,
+            [this](bool muted) { showActionFeedback(ActionFeedbackText::mute(muted)); });
     fullscreenAction_ = make(tr("全屏"), "fullscreenAction", QKeySequence(Qt::Key_F));
     fullscreenAction_->setCheckable(true);
     fullscreenAction_->setIcon(style()->standardIcon(QStyle::SP_TitleBarMaxButton));
@@ -59,14 +70,26 @@ void MainWindow::createActions() {
     connect(escape, &QAction::triggered, this, [this] { setFullscreen(false); });
     auto *back = make(tr("后退 5 秒"), "seekBackAction", QKeySequence(Qt::Key_Left));
     auto *forward = make(tr("前进 5 秒"), "seekForwardAction", QKeySequence(Qt::Key_Right));
-    connect(back, &QAction::triggered, this, [this] { controller_->seekRelative(-5); });
-    connect(forward, &QAction::triggered, this, [this] { controller_->seekRelative(5); });
+    connect(back, &QAction::triggered, this, [this] {
+        controller_->seekRelative(-5);
+        showActionFeedback(ActionFeedbackText::seek(-5));
+    });
+    connect(forward, &QAction::triggered, this, [this] {
+        controller_->seekRelative(5);
+        showActionFeedback(ActionFeedbackText::seek(5));
+    });
     auto *louder = make(tr("增加音量"), "volumeUpAction", QKeySequence(Qt::Key_Up));
     auto *quieter = make(tr("降低音量"), "volumeDownAction", QKeySequence(Qt::Key_Down));
-    connect(louder, &QAction::triggered, this,
-            [this] { controller_->setVolume(controller_->state().volume + 5); });
-    connect(quieter, &QAction::triggered, this,
-            [this] { controller_->setVolume(controller_->state().volume - 5); });
+    connect(louder, &QAction::triggered, this, [this] {
+        const auto volume = qBound(0.0, controller_->state().volume + 5.0, 100.0);
+        controller_->setVolume(volume);
+        showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
+    connect(quieter, &QAction::triggered, this, [this] {
+        const auto volume = qBound(0.0, controller_->state().volume - 5.0, 100.0);
+        controller_->setVolume(volume);
+        showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
     auto *quit = make(tr("退出"), "quitAction", QKeySequence::Quit);
     connect(quit, &QAction::triggered, this, &QWidget::close);
     auto *information =
@@ -92,17 +115,17 @@ void MainWindow::createActions() {
     playback->addActions({back, forward});
     auto *navigation = new NavigationMenu(*controller_, this);
     connect(navigation, &NavigationMenu::feedback, this,
-            [this](const QString &message) { statusBar()->showMessage(message, 4000); });
+            [this](const QString &message) { showActionFeedback(message, 4000); });
     playback->addMenu(navigation->menu());
     auto *tuning = new TuningMenus(*controller_, this);
     connect(tuning, &TuningMenus::feedback, this,
-            [this](const QString &message) { statusBar()->showMessage(message, 2500); });
+            [this](const QString &message) { showActionFeedback(message, 2500); });
     playback->addMenu(tuning->speedMenu());
     auto *audio = menuBar()->addMenu(tr("声音(&A)"));
     audio->addActions({muteAction_, louder, quieter});
     auto *subtitleDisplay = new SubtitleDisplayMenu(*controller_, this);
     connect(subtitleDisplay, &SubtitleDisplayMenu::feedback, this,
-            [this](const QString &message) { statusBar()->showMessage(message, 2500); });
+            [this](const QString &message) { showActionFeedback(message, 2500); });
     trackMenus_ =
         new TrackMenus(*controller_, this, tuning->subtitleDelayMenu(), subtitleDisplay->menu());
     audio->addSeparator();
@@ -111,14 +134,14 @@ void MainWindow::createActions() {
     menuBar()->addMenu(trackMenus_->subtitleMenu());
     auto *video = new VideoMenu(*controller_, this);
     connect(video, &VideoMenu::feedback, this,
-            [this](const QString &message) { statusBar()->showMessage(message, 2500); });
+            [this](const QString &message) { showActionFeedback(message, 2500); });
     menuBar()->addMenu(video->menu());
     playlistMenu_ = menuBar()->addMenu(tr("播放列表(&L)"));
     playlistMenu_->setObjectName(QStringLiteral("playlistMenu"));
     playlistMenu_->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
     auto *modeMenu = new PlaylistModeMenu(*playlist_, this);
     connect(modeMenu, &PlaylistModeMenu::feedback, this,
-            [this](const QString &message) { statusBar()->showMessage(message, 2500); });
+            [this](const QString &message) { showActionFeedback(message, 2500); });
     playlistMenu_->addMenu(modeMenu->menu());
     auto *view = menuBar()->addMenu(tr("视图(&V)"));
     view->addAction(fullscreenAction_);

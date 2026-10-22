@@ -48,7 +48,8 @@ target_link_libraries(neko_input PUBLIC neko_playback)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
     src/ui/mediainformationtext.cpp src/ui/mediainformationdialog.cpp
-    src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/trackmenus.cpp
+    src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp
+    src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
     src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
     src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp
     src/ui/abloopmenu.cpp

@@ -1,6 +1,12 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Test)
 find_program(FFMPEG_EXECUTABLE ffmpeg REQUIRED)
 
+add_executable(action_feedback_test action_feedback_test.cpp ../src/ui/actionfeedbacktext.cpp)
+target_include_directories(action_feedback_test PRIVATE ../src)
+target_link_libraries(action_feedback_test PRIVATE neko_options Qt6::Core Qt6::Test)
+add_test(NAME action-feedback COMMAND action_feedback_test)
+set_tests_properties(action-feedback PROPERTIES TIMEOUT 20)
+
 add_executable(playback_history_store_test playback_history_store_test.cpp
     ../src/session/playbackhistorystore.cpp)
 target_include_directories(playback_history_store_test PRIVATE ../src)
@@ -236,6 +242,12 @@ else()
     message(FATAL_ERROR "NEKOPLAYER_WINDOW_TEST_BACKEND must be wayland or x11")
 endif()
 add_executable(window_test window_test.cpp)
+add_executable(fullscreen_feedback_window_test fullscreen_feedback_window_test.cpp)
+target_link_libraries(fullscreen_feedback_window_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME fullscreen-feedback-window
+    COMMAND ${WINDOW_TEST_RUNNER} $<TARGET_FILE:fullscreen_feedback_window_test>)
+set_tests_properties(fullscreen-feedback-window PROPERTIES TIMEOUT 30
+    ENVIRONMENT "${WINDOW_TEST_ENVIRONMENT}")
 add_executable(media_information_window_test media_information_window_test.cpp)
 target_link_libraries(media_information_window_test PRIVATE neko_ui Qt6::Test)
 target_compile_definitions(media_information_window_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")

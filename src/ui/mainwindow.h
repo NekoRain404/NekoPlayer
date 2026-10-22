@@ -15,6 +15,7 @@ class QAction;
 class QMenu;
 class QLabel;
 class LocalFileDrop;
+class ActionFeedbackOverlay;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -44,6 +45,7 @@ class MainWindow final : public QMainWindow {
     void clearPlaylist();
     void updateState();
     void showError(const QString &message);
+    void showActionFeedback(const QString &message, int durationMs = 2500);
     void setFullscreen(bool enabled);
     void revealControls();
     void restoreSession(const QString &path);
@@ -58,6 +60,7 @@ class MainWindow final : public QMainWindow {
     PlaylistPane *playlistPane_ = nullptr;
     LocalFileDrop *fileDrop_ = nullptr;
     QLabel *emptyHint_ = nullptr;
+    ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
     QAction *openAction_ = nullptr;
     QAction *pauseAction_ = nullptr;
     QAction *stopAction_ = nullptr;

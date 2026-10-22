@@ -3,6 +3,8 @@
 #include <QWidget>
 
 class QAction;
+class QBoxLayout;
+class QResizeEvent;
 
 // Lightweight empty-state surface; actions remain owned by MainWindow.
 class WelcomePanel final : public QWidget {
@@ -12,7 +14,11 @@ class WelcomePanel final : public QWidget {
 
   protected:
     void changeEvent(QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
   private:
+    void updateButtonDirection();
     void retranslateUi();
+
+    QBoxLayout *buttonsLayout_ = nullptr;
 };

@@ -4,6 +4,7 @@
 #include "ui/welcomepanel.h"
 
 #include <QAction>
+#include <QBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QSignalSpy>
@@ -33,6 +34,24 @@ class UiSurfaceTest final : public QObject {
         QSignalSpy openSpy(&open, &QAction::triggered);
         openButton->click();
         QCOMPARE(openSpy.size(), 1);
+    }
+
+    void welcomePanelKeepsActionsReadableAtNarrowWidth() {
+        QAction open(QStringLiteral("Open File…"));
+        QAction network(QStringLiteral("Open Network URL…"));
+        WelcomePanel panel(&open, &network);
+        panel.resize(280, 220);
+        panel.show();
+        QCoreApplication::processEvents();
+
+        auto *openButton = panel.findChild<QPushButton *>(QStringLiteral("welcomeOpenButton"));
+        auto *networkButton =
+            panel.findChild<QPushButton *>(QStringLiteral("welcomeNetworkButton"));
+        QVERIFY(openButton && networkButton);
+        panel.layout()->activate();
+        QVERIFY(networkButton->geometry().top() > openButton->geometry().top());
+        QVERIFY(openButton->width() >= openButton->sizeHint().width());
+        QVERIFY(networkButton->width() >= networkButton->sizeHint().width());
     }
 
     void playlistHeaderShowsLocalizedTitleAndItemCount() {

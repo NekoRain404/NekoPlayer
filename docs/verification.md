@@ -1,5 +1,11 @@
 # Verification Record
 
+Welcome panel narrow-layout stage (2026-10-23):
+
+- The welcome card now switches its primary actions from a row to a column when the translated button labels no longer fit side-by-side. Its minimum width was reduced so the stacked layout fits the supported narrow video surface with the playlist open.
+- `ui-surface` passed in Debug and ASan/UBSan (`ASAN_OPTIONS=detect_leaks=0`); the new offscreen regression checks the 280 px card width where the network action previously had only 118 px for a 168 px size hint. `code-size`, `appearance-preferences`, and `preferences-dialog` passed **4/4**; the full Debug build, formatting and `git diff --check` passed. Window behavior tests were compiled but not run; native Wayland layout remains desktop verification work.
+- Running the sanitizer test with default LeakSanitizer reported process-exit allocations rooted in system fontconfig/GTK libraries. The same ASan/UBSan test passed with leak detection disabled; this is consistent with other Qt UI sanitizer runs recorded above.
+
 Control-state styling stage (2026-10-22):
 
 - Dark and light themes now give disabled slider handles an explicit muted track color and border, so an unavailable seek control is visibly distinct from a focused/hovered one while retaining the existing opacity treatment.

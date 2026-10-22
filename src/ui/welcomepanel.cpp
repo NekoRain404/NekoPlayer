@@ -1,10 +1,12 @@
 #include "welcomepanel.h"
 
 #include <QAction>
+#include <QBoxLayout>
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QResizeEvent>
 #include <QSizePolicy>
 #include <QVBoxLayout>
 
@@ -29,7 +31,7 @@ void bindButton(QPushButton *button, QAction *action) {
 WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : QWidget(parent) {
     setObjectName(QStringLiteral("welcomePanel"));
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    setMinimumWidth(280);
+    setMinimumWidth(224);
     setMaximumWidth(460);
 
     auto *layout = new QVBoxLayout(this);
@@ -49,9 +51,9 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     subtitle->setAttribute(Qt::WA_TransparentForMouseEvents);
     layout->addWidget(subtitle);
 
-    auto *buttons = new QHBoxLayout;
-    buttons->setContentsMargins(0, 10, 0, 4);
-    buttons->setSpacing(8);
+    buttonsLayout_ = new QHBoxLayout;
+    buttonsLayout_->setContentsMargins(0, 10, 0, 4);
+    buttonsLayout_->setSpacing(8);
     auto *openButton = new QPushButton(this);
     openButton->setObjectName(QStringLiteral("welcomeOpenButton"));
     bindButton(openButton, open);
@@ -62,9 +64,9 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     bindButton(networkButton, network);
     networkButton->setMinimumHeight(38);
     networkButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    buttons->addWidget(openButton);
-    buttons->addWidget(networkButton);
-    layout->addLayout(buttons);
+    buttonsLayout_->addWidget(openButton);
+    buttonsLayout_->addWidget(networkButton);
+    layout->addLayout(buttonsLayout_);
 
     auto *hint = new QLabel(this);
     hint->setObjectName(QStringLiteral("welcomeDropHint"));
@@ -72,6 +74,7 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     hint->setWordWrap(true);
     hint->setAttribute(Qt::WA_TransparentForMouseEvents);
     layout->addWidget(hint);
+    updateButtonDirection();
     retranslateUi();
 }
 
@@ -79,6 +82,29 @@ void WelcomePanel::changeEvent(QEvent *event) {
     QWidget::changeEvent(event);
     if (event->type() == QEvent::LanguageChange)
         retranslateUi();
+}
+
+void WelcomePanel::resizeEvent(QResizeEvent *event) {
+    QWidget::resizeEvent(event);
+    updateButtonDirection();
+}
+
+void WelcomePanel::updateButtonDirection() {
+    const auto buttons = findChildren<QPushButton *>();
+    if (buttons.size() < 2)
+        return;
+
+    constexpr int horizontalSpacing = 8;
+    constexpr int horizontalMargins = 56;
+    const auto requiredWidth = buttons[0]->sizeHint().width() + buttons[1]->sizeHint().width() +
+                               horizontalSpacing + horizontalMargins;
+    const auto direction =
+        width() >= requiredWidth ? QBoxLayout::LeftToRight : QBoxLayout::TopToBottom;
+    if (buttonsLayout_->direction() != direction) {
+        buttonsLayout_->setDirection(direction);
+        buttonsLayout_->invalidate();
+        buttonsLayout_->activate();
+    }
 }
 
 void WelcomePanel::retranslateUi() {

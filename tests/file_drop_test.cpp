@@ -3,6 +3,7 @@
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 
+#include <QDir>
 #include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -12,6 +13,55 @@
 class FileDropTest final : public QObject {
     Q_OBJECT
   private slots:
+    void emitsFolderDropWithoutScanningOnInputObject() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        MpvController player(true, true);
+        LocalFileDrop drop(player);
+        QSignalSpy folders(&drop, &LocalFileDrop::foldersDropped);
+        QSignalSpy media(&drop, &LocalFileDrop::mediaFilesDropped);
+        QSignalSpy errors(&drop, &LocalFileDrop::errorOccurred);
+
+        QVERIFY(drop.handleUrls({QUrl::fromLocalFile(directory.path())}));
+        QCOMPARE(folders.count(), 1);
+        QCOMPARE(folders.constFirst().constFirst().toStringList(), QStringList{directory.path()});
+        QVERIFY(media.isEmpty());
+        QVERIFY(errors.isEmpty());
+    }
+
+    void emitsMultipleFoldersAsOneAtomicDrop() {
+        QTemporaryDir first;
+        QTemporaryDir second;
+        QVERIFY(first.isValid() && second.isValid());
+        MpvController player(true, true);
+        LocalFileDrop drop(player);
+        QSignalSpy folders(&drop, &LocalFileDrop::foldersDropped);
+        QSignalSpy errors(&drop, &LocalFileDrop::errorOccurred);
+
+        QVERIFY(drop.handleUrls(
+            {QUrl::fromLocalFile(first.path()), QUrl::fromLocalFile(second.path())}));
+        QCOMPARE(folders.count(), 1);
+        QCOMPARE(folders.constFirst().constFirst().toStringList(),
+                 (QStringList{first.path(), second.path()}));
+        QVERIFY(errors.isEmpty());
+    }
+
+    void rejectsFolderMixedWithMediaAtomically() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        MpvController player(true, true);
+        LocalFileDrop drop(player);
+        QSignalSpy folders(&drop, &LocalFileDrop::foldersDropped);
+        QSignalSpy media(&drop, &LocalFileDrop::mediaFilesDropped);
+        QSignalSpy errors(&drop, &LocalFileDrop::errorOccurred);
+
+        QVERIFY(!drop.handleUrls({QUrl::fromLocalFile(directory.path()),
+                                  QUrl::fromLocalFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH))}));
+        QCOMPARE(errors.count(), 1);
+        QVERIFY(folders.isEmpty());
+        QVERIFY(media.isEmpty());
+    }
+
     void appendsMediaInOrderWithDuplicates() {
         MpvController player(true, true);
         PlaylistController queue(player);

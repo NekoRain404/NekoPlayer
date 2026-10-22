@@ -15,6 +15,7 @@ class LocalFileDrop final : public QObject {
 
   signals:
     void mediaFilesDropped(const QStringList &paths);
+    void foldersDropped(const QStringList &paths);
     void errorOccurred(const QString &message);
 
   private:

@@ -15,7 +15,9 @@ class FolderMenu final : public QObject {
   public:
     FolderMenu(QWidget *window, std::function<QString()> initialDirectory);
     [[nodiscard]] QMenu *menu() const;
+    [[nodiscard]] bool recursiveEnabled() const;
     void start(const QString &directory, bool append, bool recursive);
+    void start(const QStringList &directories, bool append, bool recursive);
     void cancel();
 
   signals:

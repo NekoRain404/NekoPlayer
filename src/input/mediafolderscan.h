@@ -14,3 +14,7 @@ struct MediaFolderScanResult {
 [[nodiscard]] MediaFolderScanResult
 scanMediaFolder(const QString &directory, bool recursive,
                 const std::shared_ptr<std::atomic_bool> &cancelled);
+
+[[nodiscard]] MediaFolderScanResult
+scanMediaFolders(const QStringList &directories, bool recursive,
+                 const std::shared_ptr<std::atomic_bool> &cancelled);

@@ -2,6 +2,26 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>LocalFileDrop</name>
+    <message><source>请拖入本地媒体或字幕文件</source><translation>Drop a local media or subtitle file</translation></message>
+    <message><source>拖放仅支持本地媒体或字幕文件</source><translation>Only local media or subtitle files can be dropped</translation></message>
+    <message><source>请单独拖入一个文件夹；文件夹与媒体或字幕不能混合拖放</source><translation>Drop folders separately; folders cannot be mixed with media or subtitles</translation></message>
+    <message><source>请单独拖入一个字幕文件；媒体文件可分批添加到播放列表</source><translation>Drop one subtitle file separately; media files can be added in batches</translation></message>
+    <message><source>请先播放媒体，再拖入字幕文件</source><translation>Start media playback before dropping a subtitle file</translation></message>
+</context>
+<context>
+    <name>FolderMenu</name>
+    <message><source>文件夹</source><translation>Folders</translation></message>
+    <message><source>包含子文件夹</source><translation>Include subfolders</translation></message>
+    <message><source>取消文件夹扫描</source><translation>Cancel folder scan</translation></message>
+    <message><source>正在扫描媒体文件…</source><translation>Scanning media files…</translation></message>
+    <message><source>扫描文件夹</source><translation>Scan Folder</translation></message>
+    <message><source>打开文件夹…</source><translation>Open Folder…</translation></message>
+    <message><source>添加文件夹…</source><translation>Add Folder…</translation></message>
+    <message><source>文件夹中没有找到支持的音视频文件</source><translation>No supported audio or video files found in the folder</translation></message>
+    <message><source>添加文件夹</source><translation>Add Folder</translation></message>
+</context>
+<context>
     <name>MainWindow</name>
     <message><source>就绪 · Qt 6 + libmpv</source><translation>Ready · Qt 6 + libmpv</translation></message>
     <message><source>正在播放 · %1</source><translation>Playing · %1</translation></message>

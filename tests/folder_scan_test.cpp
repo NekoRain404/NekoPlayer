@@ -26,6 +26,10 @@ MediaFolderScanResult scan(const QString &path, bool recursive = false) {
     return scanMediaFolder(path, recursive, std::make_shared<std::atomic_bool>(false));
 }
 
+MediaFolderScanResult scanFolders(const QStringList &paths, bool recursive = false) {
+    return scanMediaFolders(paths, recursive, std::make_shared<std::atomic_bool>(false));
+}
+
 // Hold the real global pool so queued cancellation/replacement is deterministic.
 class PoolBlocker final {
   public:
@@ -92,6 +96,29 @@ class FolderScanTest final : public QObject {
         const auto result = scan(directory.path());
         QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
         QCOMPARE(result.paths.size(), suffixes.size());
+    }
+
+    void scansMultipleRootsAsOneNaturallySortedResult() {
+        QTemporaryDir first;
+        QTemporaryDir second;
+        QVERIFY(first.isValid() && second.isValid());
+        QVERIFY(touch(first.filePath("episode10.mp4")));
+        QVERIFY(touch(second.filePath("episode2.mp4")));
+        const auto result = scanFolders({first.path(), second.path()});
+        QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
+        QCOMPARE(result.paths,
+                 QStringList({first.filePath("episode10.mp4"), second.filePath("episode2.mp4")}));
+        QVERIFY(!result.cancelled);
+    }
+
+    void rejectsBatchWhenAnyRootIsInvalid() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        QVERIFY(touch(directory.filePath("media.mp4")));
+        const auto result = scanFolders({directory.path(), directory.filePath("missing")});
+        QVERIFY(!result.error.isEmpty());
+        QVERIFY(result.paths.isEmpty());
+        QVERIFY(!result.cancelled);
     }
 
     void recursiveScanSkipsHiddenDirectoriesAndAllSymlinks() {

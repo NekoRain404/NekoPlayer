@@ -15,6 +15,10 @@ FolderScanJob::~FolderScanJob() {
 bool FolderScanJob::isScanning() const { return scanning_; }
 
 void FolderScanJob::start(const QString &directory, bool recursive) {
+    start(QStringList{directory}, recursive);
+}
+
+void FolderScanJob::start(const QStringList &directories, bool recursive) {
     if (cancellation_)
         cancellation_->store(true, std::memory_order_relaxed);
     const auto generation = ++generation_;
@@ -47,8 +51,8 @@ void FolderScanJob::start(const QString &directory, bool recursive) {
                 else
                     emit completed(result.paths);
             });
-    watcher->setFuture(QtConcurrent::run([directory, recursive, cancellation] {
-        return scanMediaFolder(directory, recursive, cancellation);
+    watcher->setFuture(QtConcurrent::run([directories, recursive, cancellation] {
+        return scanMediaFolders(directories, recursive, cancellation);
     }));
 }
 

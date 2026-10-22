@@ -1,5 +1,11 @@
 # Verification Record
 
+Folder drag-and-drop stage (2026-10-22):
+
+- Local drag routing now distinguishes files, subtitles, and one or more folders before emitting any side effect. Folder batches are scanned by the existing QtConcurrent worker and emitted as one naturally sorted result; mixed folder/media/subtitle drops are rejected atomically.
+- `file-drop` passed with single-folder, multi-folder, mixed-drop, subtitle, and media regressions. Existing `folder-scan` also passed. Window behavior tests were compiled but not run as requested, so native Wayland drag delivery and visual scan feedback remain desktop verification work.
+- No playback polling, CPU frame copies, or renderer changes were introduced; folder traversal remains off the GUI thread.
+
 HDR detection and GPU tone-mapping stage (2026-10-22):
 
 - libmpv media properties now identify PQ/HLG transfer functions and video primaries; the Tab overlay and media report expose HDR color information.

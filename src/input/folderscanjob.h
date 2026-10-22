@@ -14,6 +14,7 @@ class FolderScanJob final : public QObject {
 
   public slots:
     void start(const QString &directory, bool recursive = false);
+    void start(const QStringList &directories, bool recursive = false);
     void cancel();
 
   signals:

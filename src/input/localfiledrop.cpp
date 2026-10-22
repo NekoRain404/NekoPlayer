@@ -13,6 +13,7 @@ bool LocalFileDrop::handleUrls(const QList<QUrl> &urls) {
     }
     QStringList mediaPaths;
     QStringList subtitlePaths;
+    QStringList folderPaths;
     for (const auto &url : urls) {
         // Qt also calls file://host/path local; do not reinterpret UNC paths
         // as local Linux paths (including the localhost authority spelling).
@@ -22,6 +23,10 @@ bool LocalFileDrop::handleUrls(const QList<QUrl> &urls) {
             return false;
         }
         const QFileInfo file(url.toLocalFile());
+        if (file.isDir()) {
+            folderPaths.append(file.absoluteFilePath());
+            continue;
+        }
         const auto suffix = file.suffix().toLower();
         static const QStringList subtitleSuffixes{QStringLiteral("srt"), QStringLiteral("ass"),
                                                   QStringLiteral("ssa"), QStringLiteral("sub"),
@@ -31,6 +36,14 @@ bool LocalFileDrop::handleUrls(const QList<QUrl> &urls) {
             subtitlePaths.append(file.absoluteFilePath());
         else
             mediaPaths.append(file.absoluteFilePath());
+    }
+    if (!folderPaths.isEmpty()) {
+        if (!mediaPaths.isEmpty() || !subtitlePaths.isEmpty()) {
+            emit errorOccurred(tr("请单独拖入一个文件夹；文件夹与媒体或字幕不能混合拖放"));
+            return false;
+        }
+        emit foldersDropped(folderPaths);
+        return true;
     }
     if (!subtitlePaths.isEmpty()) {
         if (!mediaPaths.isEmpty() || subtitlePaths.size() != 1) {

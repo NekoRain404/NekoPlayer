@@ -60,6 +60,9 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(fileDrop_, &LocalFileDrop::mediaFilesDropped, this, &MainWindow::appendFiles);
     connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
     createActions();
+    connect(fileDrop_, &LocalFileDrop::foldersDropped, this, [this](const QStringList &paths) {
+        folderMenu_->start(paths, true, folderMenu_->recursiveEnabled());
+    });
     auto *content = new QWidget(this);
     auto *layout = new QVBoxLayout(content);
     centralLayout_ = layout;

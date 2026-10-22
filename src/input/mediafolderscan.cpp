@@ -113,3 +113,20 @@ MediaFolderScanResult scanMediaFolder(const QString &directory, bool recursive,
         return {{}, {}, true};
     return {std::move(paths), {}, false};
 }
+
+MediaFolderScanResult scanMediaFolders(const QStringList &directories, bool recursive,
+                                       const std::shared_ptr<std::atomic_bool> &cancelled) {
+    if (directories.isEmpty())
+        return {{}, QStringLiteral("未指定媒体文件夹"), false};
+    QStringList paths;
+    for (const auto &directory : directories) {
+        const auto result = scanMediaFolder(directory, recursive, cancelled);
+        if (result.cancelled || !result.error.isEmpty())
+            return result;
+        paths.append(result.paths);
+    }
+    // Keep the user's folder drop order; each root was already naturally
+    // sorted by scanMediaFolder. Sorting absolute paths here would make the
+    // result depend on temporary/root names rather than the drop gesture.
+    return {std::move(paths), {}, false};
+}

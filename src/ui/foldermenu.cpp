@@ -65,9 +65,15 @@ FolderMenu::FolderMenu(QWidget *window, std::function<QString()> initialDirector
 
 QMenu *FolderMenu::menu() const { return menu_; }
 
+bool FolderMenu::recursiveEnabled() const { return recursiveAction_->isChecked(); }
+
 void FolderMenu::start(const QString &directory, bool append, bool recursive) {
+    start(QStringList{directory}, append, recursive);
+}
+
+void FolderMenu::start(const QStringList &directories, bool append, bool recursive) {
     append_ = append;
-    job_->start(directory, recursive);
+    job_->start(directories, recursive);
 }
 
 void FolderMenu::cancel() { job_->cancel(); }

@@ -43,8 +43,8 @@
 | `CurrentMediaMenu` | 共享当前媒体来源／时间复制与本地文件夹入口 | 只读取控制器快照；Qt 剪贴板与 QDesktopServices，不调用 mpv、不拼接 shell 命令 |
 | `SessionManager` | 恢复空闲队列、播放偏好、逐文件位置及媒体级轨道选择，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
 | `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调 | 通过队列和控制器接口发出业务操作 |
-| `LocalFileDrop` | 完整校验一批本地拖放；区分单字幕和媒体队列意图 | Qt Core；通过类型化控制器加载字幕，通过信号请求媒体追加 |
-| `mediafolderscan.cpp` / `FolderScanJob` | 有界目录发现、自然排序、后台任务和取消代次 | Qt Core / Concurrent；工作线程只持有路径与共享原子取消标志，不接触 QObject、播放器或 UI |
+| `LocalFileDrop` | 完整校验一批本地拖放；区分单字幕、媒体队列和一个或多个文件夹意图 | Qt Core；通过类型化控制器加载字幕，通过信号请求媒体追加或后台目录扫描 |
+| `mediafolderscan.cpp` / `FolderScanJob` | 有界目录发现、批量自然排序、后台任务和取消代次 | Qt Core / Concurrent；工作线程只持有路径与共享原子取消标志，不接触 QObject、播放器或 UI |
 | `FolderMenu` | 共享文件夹入口、递归选项与可取消进度窗口 | 只向 MainWindow 发布完整结果，再复用原有打开／追加队列入口 |
 | `windowactions.cpp` | 同一 MainWindow 类的动作与菜单装配 | 菜单、按钮、快捷键共用 QAction |
 | `windowsession.cpp` | 同一 MainWindow 类的会话装配、窗口 geometry 与关闭保存 | SessionManager、Qt Widgets，不介入帧渲染 |
@@ -74,7 +74,7 @@ M3U8 导入先按播放列表目录解析相对路径，再复用 `MediaSource` 
 
 音频设备列表通过同一 client 异步观察，`mpv_node` 在事件处理期间立即解析为 Qt 拥有数据的 `AudioDevice` 快照，不保留借用指针。设备 ID 用于异步 `audio-device` 设置，描述只用于菜单展示；请求被拒绝时不乐观更新当前设备。`AudioDeviceMenu` 在菜单栏和右键菜单中复用。`SessionStore` 持久化用户设备 ID：若设备暂时不可用，运行时选择 `auto`，但保留原偏好；设备重新出现后重新应用该偏好。该路径仅在设备列表变化时更新，不轮询、不触碰视频帧或解码设置。
 
-桌面 URL 拖放由 `LocalFileDrop` 在任何副作用前验证整批数据：远端／非法 URL、空输入、媒体与字幕混合以及多个字幕均拒绝。已知字幕扩展名不区分大小写，单字幕仅在 active 状态调用现有 `addSubtitle`；其余本地文件按原顺序保留重复项，发出媒体追加意图，由窗口保留 renderer 未就绪时的待播逻辑。返回成功表示已路由／提交，不保证 mpv 已完成解析；异步加载失败复用控制器错误信号。此路径只在拖放时运行，不枚举媒体、不读取视频帧、不重载影片，也不改变硬解偏好。
+桌面 URL 拖放由 `LocalFileDrop` 在任何副作用前验证整批数据：远端／非法 URL、空输入以及文件夹与媒体／字幕混合均拒绝。已知字幕扩展名不区分大小写，单字幕仅在 active 状态调用现有 `addSubtitle`；本地文件按原顺序保留重复项，文件夹意图交给 `FolderMenu` 的后台批量扫描，媒体意图发出追加请求，由窗口保留 renderer 未就绪时的待播逻辑。返回成功表示已路由／提交，不保证 mpv 已完成解析；异步加载失败复用控制器错误信号。此路径不读取视频帧、不重载影片、不在 GUI 线程枚举目录，也不改变硬解偏好。
 
 控制器公开方法和初始化位于 `mpvcontroller.cpp`，事件分发和属性更新集中在 `mpvcontroller_events.cpp`，私有状态／恢复逻辑位于 `mpvcontroller_p.h`，不向 UI 暴露内部结构。倍速与延迟通过有限值校验、范围限制和异步属性设置提交；独立 `tuningChanged` 通知避免进度更新触发菜单刷新。每项保留最新请求供连续步进累积，最新设置回复后异步查询实际值，再清除待确认状态。新设置使旧查询失效，旧回复不能清除新请求；不依赖必然出现的属性变化事件，也不比较请求值与后端浮点值来判断完成。此路径无定时轮询或同步查询。倍速／延迟是本次运行的全局偏好，不随媒体状态清空；SessionManager 在正常关闭时通过 `SessionStore` 持久化意图，并在启动时于媒体加载前恢复。
 

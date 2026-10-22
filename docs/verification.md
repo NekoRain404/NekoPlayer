@@ -1,5 +1,12 @@
 # Verification Record
 
+Recent media stage (2026-10-22):
+
+- File and context menus share a recent-media submenu. Only successful file-loaded events update its newest-first, normalized, distinct 20-source list. Ctrl+Shift+T reopens the most recent source through the existing validated opening path. Clearing is independent of queue and resume history. Labels escape menu mnemonics; tooltips omit network user info, queries and fragments while stored signed URLs remain usable.
+- Independent versioned `<session path>.recent.json` persistence uses bounded validation and QSaveFile at normal session save, with no per-position/per-file disk writes. Empty configuration paths stay memory-only. Invalid, future, oversized and externally corrupted documents are preserved and reported. Concurrent instances do not merge history or hold a cross-process lock.
+- The headless suite first failed against a no-op implementation (24 failing cases), then passed after implementation. It checks ordering, duplicate movement, eviction, source normalization, signed URL round trips, explicit-save behavior, independent clearing, invalid-file preservation, external corruption, failed writes and memory-only mode. Full Debug build passed, including existing compile-only desktop targets; the complete non-window collection passed **38/38** in **51.68 seconds**. ASan/UBSan builds of NekoPlayer and the history suite passed; `code-size|backend-startup|recent-media-history` passed **3/3** in **1.07 seconds**, without sanitizer reports.
+- Read-only review found no issues. Changed-source formatting and `git diff --check` passed; all new code files remain under 500 lines. No window behavior tests were run. Actual Wayland menu, shortcut and tooltip presentation remains unverified; this stage does not alter rendering or decoding.
+
 Extended seek shortcuts stage (2026-10-22):
 
 - Added shared Navigation menu/context-menu actions for Shift+Left/Right (30 seconds), Ctrl+Shift+Left/Right (5 minutes), and Home (current media beginning). Existing plain-arrow seeking and Ctrl+arrow frame stepping retain their bindings. New actions require active, seekable playback; Home does not autorepeat. All new actions use the existing typed controller APIs and fullscreen seek-progress feedback. Seeking beyond the end follows native EOF and queue behavior.

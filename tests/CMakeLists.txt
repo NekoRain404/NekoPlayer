@@ -1,6 +1,11 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Test Network)
 find_program(FFMPEG_EXECUTABLE ffmpeg REQUIRED)
 
+add_executable(recent_media_history_test recent_media_history_test.cpp)
+target_link_libraries(recent_media_history_test PRIVATE neko_session Qt6::Test)
+add_test(NAME recent-media-history COMMAND recent_media_history_test)
+set_tests_properties(recent-media-history PROPERTIES TIMEOUT 20)
+
 add_executable(folder_scan_test folder_scan_test.cpp)
 target_link_libraries(folder_scan_test PRIVATE neko_input Qt6::Test)
 add_test(NAME folder-scan COMMAND folder_scan_test)

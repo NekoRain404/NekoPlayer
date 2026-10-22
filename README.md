@@ -4,6 +4,8 @@
 
 当前为可播放的早期版本：Qt Widgets + QOpenGLWidget 嵌入 libmpv，提供深色紧凑控制区、菜单、右键菜单和本地播放列表。本地媒体可通过打开、添加、拖放或命令行进入队列；支持 M3U8 播放列表读写、暂停、停止、时间定位、章节导航、上一项/下一项、音量、静音、全屏、音轨切换、内嵌字幕选择、外挂字幕加载、字幕显示设置、画面比例／旋转、亮度／对比度／饱和度／色调／伽马调整、倍速与音频／字幕延迟调整。队列、音量、硬解、字幕显示、色彩调整、倍速与延迟、窗口偏好及最近 100 个媒体文件的续播位置可在正常退出后恢复；F5 打开按播放、音频、字幕分组的偏好设置，F6 直接定位到字幕页。
 
+文件菜单和右键菜单提供“最近播放”：保留最近成功加载的 20 个本地文件或网络地址，重复播放会移到最前，可一键清空；Ctrl+Shift+T 重新打开最近媒体。记录与续播位置分开，正常退出时保存；`--no-config` 仅保留本次运行的记录。网络地址会完整保存以便重开，菜单提示省略账号、查询参数和片段。
+
 ## 构建与检查
 
 需要 CMake 3.25+、Ninja、支持 C++20 的编译器、Qt 6.5+ Core/Concurrent/Widgets/OpenGLWidgets、libmpv 开发库和 pkg-config。构建测试还需要 Qt Test、Qt Network 和 FFmpeg，Qt Network 仅用于本地 HTTP 测试服务。原生 Wayland 测试另需 Qt Wayland 平台插件及可用的 Wayland 桌面会话。Xvfb、xvfb-run 和 Openbox 仅用于显式的 X11 CI 回归。仅构建播放器可传入 `-DBUILD_TESTING=OFF`。当前使用 Linux/pkg-config；Windows SDK 查找与打包尚未配置。

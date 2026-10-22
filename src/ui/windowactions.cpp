@@ -11,6 +11,7 @@
 #include "playlistmodemenu.h"
 #include "playlistpane.h"
 #include "preferencesdialog.h"
+#include "recentmediamenu.h"
 #include "subtitledisplaymenu.h"
 #include "trackmenus.h"
 #include "tuningmenus.h"
@@ -133,11 +134,16 @@ void MainWindow::createActions() {
     connect(model, &PlaylistModel::rowsAboutToBeRemoved, folderMenu_, &FolderMenu::cancel);
     connect(model, &PlaylistModel::rowsAboutToBeMoved, folderMenu_, &FolderMenu::cancel);
     connect(model, &PlaylistModel::modelAboutToBeReset, folderMenu_, &FolderMenu::cancel);
+    auto *recent = new RecentMediaMenu(*recentMedia_, this);
+    connect(recent, &RecentMediaMenu::openRequested, this, &MainWindow::openFile);
+    connect(recent, &RecentMediaMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message); });
     auto *file = menuBar()->addMenu(tr("文件(&F)"));
     file->addAction(openAction_);
     file->addAction(openNetworkAction_);
     file->addAction(appendAction_);
     file->addMenu(folderMenu_->menu());
+    file->addMenu(recent->menu());
     file->addSeparator();
     file->addActions({openPlaylistAction_, savePlaylistAction_});
     file->addSeparator();
@@ -216,6 +222,7 @@ void MainWindow::createActions() {
     contextMenu_->addActions(
         {openAction_, openNetworkAction_, appendAction_, pauseAction_, stopAction_});
     contextMenu_->addMenu(folderMenu_->menu());
+    contextMenu_->addMenu(recent->menu());
     contextMenu_->addSeparator();
     contextMenu_->addMenu(navigation->menu());
     contextMenu_->addMenu(tuning->speedMenu());

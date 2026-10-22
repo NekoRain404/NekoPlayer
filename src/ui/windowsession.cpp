@@ -1,5 +1,6 @@
 #include "foldermenu.h"
 #include "mainwindow.h"
+#include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 
 #include <QAction>
@@ -11,6 +12,11 @@
 void MainWindow::restoreSession(const QString &path) {
     if (path.isEmpty())
         return;
+    const auto recentError = recentMedia_->load(path + QStringLiteral(".recent.json"));
+    if (!recentError.isEmpty())
+        QMetaObject::invokeMethod(
+            this, [this, recentError] { statusBar()->showMessage(recentError); },
+            Qt::QueuedConnection);
     session_ = std::make_unique<SessionManager>(*controller_, *playlist_, path);
     connect(
         session_.get(), &SessionManager::configurationErrorOccurred, this,
@@ -34,12 +40,16 @@ void MainWindow::restoreSession(const QString &path) {
 }
 
 QString MainWindow::saveSession() {
+    const auto recentError = recentMedia_->save();
     if (!session_)
-        return {};
+        return recentError;
     WindowPreferences window;
     window.geometry = isFullScreen() ? normalGeometry_ : saveGeometry();
     window.playlistVisible = showPlaylistAction_->isChecked();
-    return session_->save(std::move(window), pendingPaths_);
+    const auto sessionError = session_->save(std::move(window), pendingPaths_);
+    if (recentError.isEmpty())
+        return sessionError;
+    return sessionError.isEmpty() ? recentError : sessionError + QLatin1Char('\n') + recentError;
 }
 
 QString MainWindow::mediaDirectory() const {

@@ -12,6 +12,7 @@
 #include "playbackoverlay.h"
 #include "playlist/m3u8store.h"
 #include "playlistpane.h"
+#include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 #include "transportbar.h"
 
@@ -48,7 +49,8 @@ QStringList normalizedSources(const QStringList &sources) {
 
 MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     : controller_(std::make_unique<MpvController>(false, silentAudio)),
-      playlist_(std::make_unique<PlaylistController>(*controller_)) {
+      playlist_(std::make_unique<PlaylistController>(*controller_)),
+      recentMedia_(std::make_unique<RecentMediaHistory>()) {
     setWindowTitle(QStringLiteral("NekoPlayer"));
     resize(1100, 680);
     setMinimumSize(560, 360);
@@ -107,6 +109,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(controller_.get(), &MpvController::stateChanged, this, &MainWindow::updateState);
     connect(controller_.get(), &MpvController::errorOccurred, this, &MainWindow::showError);
     connect(controller_.get(), &MpvController::fileLoaded, this, [this] {
+        recentMedia_->remember(controller_->state().path);
         statusBar()->showMessage(
             tr("正在播放 · %1").arg(MediaSource::displayName(controller_->state().path)));
     });

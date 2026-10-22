@@ -19,6 +19,7 @@ class LocalFileDrop;
 class ActionFeedbackOverlay;
 class PlaybackOverlay;
 class FolderMenu;
+class RecentMediaHistory;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -64,6 +65,7 @@ class MainWindow final : public QMainWindow {
     std::unique_ptr<MpvController> controller_;
     std::unique_ptr<PlaylistController> playlist_;
     std::unique_ptr<SessionManager> session_;
+    std::unique_ptr<RecentMediaHistory> recentMedia_;
     VideoWidget *video_ = nullptr;
     TransportBar *transport_ = nullptr;
     TrackMenus *trackMenus_ = nullptr;

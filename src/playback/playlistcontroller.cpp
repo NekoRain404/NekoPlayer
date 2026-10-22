@@ -212,7 +212,8 @@ void PlaylistController::clear() {
     exhausted_ = false;
     navigationStep_ = 1;
     failedRows_.clear();
-    player_.stop();
+    if (player_.state().active || !player_.state().path.isEmpty())
+        player_.stop();
     model_->clear();
     emit currentChanged(-1);
 }

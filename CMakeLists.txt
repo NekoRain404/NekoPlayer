@@ -31,6 +31,7 @@ endif()
 add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.cpp
     src/playback/audiodevice.cpp src/playback/mpvcontroller_audio.cpp
     src/playback/mpvcontroller_events.cpp src/playback/mpvcontroller_information.cpp
+    src/playback/mpvcontroller_trackpreferences.cpp
     src/playback/mpvcontroller_navigation.cpp
     src/playback/mpvcontroller_loop.cpp
     src/playback/mpvcontroller_video.cpp

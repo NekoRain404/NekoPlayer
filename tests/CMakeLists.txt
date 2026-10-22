@@ -191,6 +191,16 @@ add_dependencies(playback_history_session_test test_media)
 add_test(NAME playback-history-session COMMAND playback_history_session_test)
 set_tests_properties(playback-history-session PROPERTIES TIMEOUT 60)
 
+set(TEST_TRACK_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/multiple-tracks.mkv")
+add_executable(track_preference_session_test track_preference_session_test.cpp)
+target_link_libraries(track_preference_session_test PRIVATE neko_session Qt6::Test)
+target_compile_definitions(track_preference_session_test PRIVATE
+    TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"
+    TEST_EXTERNAL_SUBTITLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt")
+add_dependencies(track_preference_session_test test_track_media)
+add_test(NAME track-preference-session COMMAND track_preference_session_test)
+set_tests_properties(track-preference-session PROPERTIES TIMEOUT 60)
+
 add_executable(session_test session_test.cpp)
 target_link_libraries(session_test PRIVATE neko_session Qt6::Test)
 target_compile_definitions(session_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
@@ -198,7 +208,6 @@ add_dependencies(session_test test_media)
 add_test(NAME session COMMAND session_test)
 set_tests_properties(session PROPERTIES TIMEOUT 60)
 
-set(TEST_TRACK_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/multiple-tracks.mkv")
 add_custom_command(OUTPUT "${TEST_TRACK_MEDIA}"
     COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
         -i "${TEST_MEDIA}" -f lavfi -i sine=frequency=880:sample_rate=48000
@@ -212,7 +221,8 @@ add_custom_command(OUTPUT "${TEST_TRACK_MEDIA}"
 add_custom_target(test_track_media DEPENDS "${TEST_TRACK_MEDIA}")
 add_executable(subtitles_test subtitles_test.cpp)
 target_link_libraries(subtitles_test PRIVATE neko_session Qt6::Test)
-target_compile_definitions(subtitles_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}")
+target_compile_definitions(subtitles_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"
+    TEST_EXTERNAL_SUBTITLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt")
 add_dependencies(subtitles_test test_track_media)
 add_test(NAME subtitles COMMAND subtitles_test)
 set_tests_properties(subtitles PROPERTIES TIMEOUT 60)
@@ -228,6 +238,8 @@ add_custom_command(OUTPUT "${TEST_MULTI_SUBTITLE}"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt"
         "${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt" test_track_media VERBATIM)
 add_custom_target(test_multi_subtitle DEPENDS "${TEST_MULTI_SUBTITLE}")
+target_compile_definitions(subtitles_test PRIVATE TEST_MULTI_SUBTITLE_PATH="${TEST_MULTI_SUBTITLE}")
+add_dependencies(subtitles_test test_multi_subtitle)
 add_executable(tracks_test tracks_test.cpp)
 target_link_libraries(tracks_test PRIVATE neko_playback Qt6::Test)
 target_compile_definitions(tracks_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"

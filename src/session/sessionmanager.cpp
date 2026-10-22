@@ -5,6 +5,7 @@
 
 #include <QDateTime>
 #include <QFileInfo>
+#include <QSet>
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -12,7 +13,8 @@
 SessionManager::SessionManager(MpvController &player, PlaylistController &playlist,
                                QString filePath, QObject *parent)
     : QObject(parent), player_(player), playlist_(playlist), store_(filePath),
-      historyStore_(filePath + QStringLiteral(".history.ini")) {
+      historyStore_(filePath + QStringLiteral(".history.ini")),
+      trackPreferenceStore_(filePath + QStringLiteral(".tracks.ini")) {
     // Persist user intent immediately; initial asynchronous mpv observations can be stale.
     connect(&player_, &MpvController::volumeRequested, this,
             [this](double volume) { audio_.volume = volume; });
@@ -28,13 +30,39 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
             });
     connect(&playlist_, &PlaylistController::playbackPositionSnapshot, this,
             &SessionManager::rememberPlaybackPosition);
+    connect(&playlist_, &PlaylistController::playbackPositionSnapshot, this,
+            [this] { rememberTrackPreference(); });
     connect(&player_, &MpvController::stopRequested, this, [this] {
+        rememberTrackPreference();
+        pendingMediaPreference_ = false;
         stopRequested_ = true;
         const auto path = PlaybackHistoryStore::normalizedPath(playlist_.model()->currentPath());
         if (!path.isEmpty())
             resumePositions_.remove(path);
     });
-    connect(&player_, &MpvController::fileOpenRequested, this, [this] { stopRequested_ = false; });
+    connect(&player_, &MpvController::fileOpenRequested, this, [this] {
+        stopRequested_ = false;
+        pendingMediaPreference_ = true;
+        loadedMediaFingerprint_.reset();
+        requestedAudioTrackId_.reset();
+        requestedSubtitleTrackId_.reset();
+    });
+    connect(&player_, &MpvController::trackSelectionRequested, this,
+            [this](MediaTrack::Type type, qint64 id) {
+                auto &target = type == MediaTrack::Type::Audio ? requestedAudioTrackId_
+                                                               : requestedSubtitleTrackId_;
+                target = id;
+                rememberTrackPreference();
+            });
+    connect(&player_, &MpvController::subtitleLoadRequested, this,
+            [this] { requestedSubtitleTrackId_.reset(); });
+    connect(&player_, &MpvController::fileLoaded, this, &SessionManager::restoreTrackPreference);
+    connect(&player_, &MpvController::tracksChanged, this, &SessionManager::observeTrackPreference);
+    connect(&player_, &MpvController::trackPreferenceRestoreFinished, this, [this](bool canceled) {
+        restoringTrackPreference_ = false;
+        if (!canceled)
+            rememberTrackPreference();
+    });
     connect(&playlist_, &PlaylistController::mediaPlaybackFinished, this,
             [this](const QString &path) {
                 const auto normalized = PlaybackHistoryStore::normalizedPath(path);
@@ -55,6 +83,11 @@ SessionLoadResult SessionManager::restore() {
     if (!loadError_.isEmpty())
         return loaded;
     audio_ = loaded.state.audio;
+    const auto trackPreferences = trackPreferenceStore_.load();
+    trackPreferences_ = trackPreferences.entries;
+    trackPreferenceError_ = trackPreferences.error;
+    if (!trackPreferenceError_.isEmpty())
+        emit configurationErrorOccurred(trackPreferenceError_);
     player_.applyAudioDevicePreference(audio_.outputDevice);
     tuning_ = loaded.state.tuning;
     const auto restoredTuning = tuning_;
@@ -82,6 +115,7 @@ SessionLoadResult SessionManager::restore() {
 QString SessionManager::save(WindowPreferences window, const QStringList &pendingPaths) {
     if (!loadError_.isEmpty())
         return loadError_;
+    rememberTrackPreference();
     const auto &state = player_.state();
     if (!stopRequested_ && state.active && state.seekable &&
         state.path == playlist_.model()->currentPath()) {
@@ -104,7 +138,9 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.videoColor = player_.videoColorAdjustment();
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
-    return !sessionError.isEmpty() ? sessionError : historyError;
+    if (!sessionError.isEmpty())
+        return sessionError;
+    return !historyError.isEmpty() ? historyError : trackPreferenceError_;
 }
 
 void SessionManager::rememberPlaybackPosition(const QString &path, double position,
@@ -144,6 +180,136 @@ QString SessionManager::savePlaybackHistory() const {
     for (const auto &entry : historyEntries_)
         entries.append(entry);
     return historyStore_.save(entries);
+}
+
+void SessionManager::restoreTrackPreference() {
+    // Renderer recovery reloads the same media without a new open request.
+    if (!std::exchange(pendingMediaPreference_, false))
+        return;
+    if (!player_.state().active || player_.state().path != playlist_.model()->currentPath())
+        return;
+    const auto path = TrackPreferenceStore::normalizedPath(player_.state().path);
+    if (path.isEmpty())
+        return;
+    TrackPreferenceEntry fingerprint;
+    fingerprint.mediaPath = path;
+    const QFileInfo info(path);
+    fingerprint.fileSize = info.size();
+    fingerprint.modifiedUtcMs = info.lastModified().toUTC().toMSecsSinceEpoch();
+    loadedMediaFingerprint_ = fingerprint;
+    if (!trackPreferenceError_.isEmpty())
+        return;
+    const auto found = std::find_if(
+        trackPreferences_.cbegin(), trackPreferences_.cend(), [&path](const auto &entry) {
+            return entry.mediaPath == path && TrackPreferenceStore::matchesFingerprint(entry);
+        });
+    if (found == trackPreferences_.cend()) {
+        restoringTrackPreference_ = false;
+        rememberTrackPreference();
+        return;
+    }
+    restoringTrackPreference_ = true;
+    player_.restoreTrackPreference(found->selection);
+}
+
+void SessionManager::rememberTrackPreference() {
+    if (restoringTrackPreference_ || player_.trackRestorationPending() || pendingMediaPreference_ ||
+        !loadedMediaFingerprint_ ||
+        !TrackPreferenceStore::matchesFingerprint(*loadedMediaFingerprint_) ||
+        !trackPreferenceError_.isEmpty() || !player_.state().active || player_.tracks().isEmpty() ||
+        player_.state().path != playlist_.model()->currentPath())
+        return;
+    const auto path = TrackPreferenceStore::normalizedPath(player_.state().path);
+    if (path.isEmpty() || loadedMediaFingerprint_->mediaPath != path)
+        return;
+    auto entry = *loadedMediaFingerprint_;
+    entry.lastUsedUtcMs = QDateTime::currentMSecsSinceEpoch();
+    QSet<QString> externalPaths;
+    int selectedExternalOrdinal = -1;
+    const auto &tracks = player_.tracks();
+    const auto requestedTrack = [&tracks](MediaTrack::Type type, const std::optional<qint64> &id) {
+        const auto selected =
+            std::find_if(tracks.cbegin(), tracks.cend(), [type](const auto &track) {
+                return track.type == type && track.selected;
+            });
+        const auto selectedId = selected == tracks.cend() ? 0 : selected->id;
+        return id.value_or(selectedId);
+    };
+    const auto audioId = requestedTrack(MediaTrack::Type::Audio, requestedAudioTrackId_);
+    const auto subtitleId = requestedTrack(MediaTrack::Type::Subtitle, requestedSubtitleTrackId_);
+    const auto subtitlePath = [](const MediaTrack &track) {
+        const QFileInfo info(track.externalPath);
+        const auto canonical = info.canonicalFilePath();
+        return canonical.isEmpty() ? info.absoluteFilePath() : canonical;
+    };
+    // A populated track snapshot with no selected track represents explicit off.
+    entry.selection.audioTrackId = audioId;
+    entry.selection.subtitleTrackId = subtitleId;
+    for (const auto &track : player_.tracks()) {
+        if (track.type != MediaTrack::Type::Subtitle)
+            continue;
+        if (track.external && !track.externalPath.isEmpty()) {
+            const auto externalPath = subtitlePath(track);
+            if (externalPath.isEmpty())
+                continue;
+            if (!externalPaths.contains(externalPath)) {
+                externalPaths.insert(externalPath);
+                entry.selection.externalSubtitlePaths.append(externalPath);
+            }
+            if (track.id == subtitleId) {
+                entry.selection.subtitleTrackId.reset();
+                entry.selection.selectedExternalSubtitlePath = externalPath;
+                selectedExternalOrdinal = 0;
+                for (const auto &prior : player_.tracks()) {
+                    if (&prior == &track)
+                        break;
+                    if (prior.type == MediaTrack::Type::Subtitle && prior.external &&
+                        subtitlePath(prior) == externalPath)
+                        ++selectedExternalOrdinal;
+                }
+            }
+        }
+    }
+    entry.selection.selectedExternalSubtitleStream = selectedExternalOrdinal;
+    const auto old = std::find_if(trackPreferences_.begin(), trackPreferences_.end(),
+                                  [&path](const auto &item) { return item.mediaPath == path; });
+    if (old == trackPreferences_.end())
+        trackPreferences_.append(entry);
+    else
+        *old = entry;
+    const auto error = saveTrackPreferences();
+    if (!error.isEmpty()) {
+        trackPreferenceError_ = error;
+        emit configurationErrorOccurred(error);
+    }
+}
+
+void SessionManager::observeTrackPreference() {
+    // A request can match an old snapshot before the queued command runs.
+    // Clear pending intent only when a new observation confirms it.
+    for (const auto type : {MediaTrack::Type::Audio, MediaTrack::Type::Subtitle}) {
+        auto &requested =
+            type == MediaTrack::Type::Audio ? requestedAudioTrackId_ : requestedSubtitleTrackId_;
+        const auto selected = std::find_if(
+            player_.tracks().cbegin(), player_.tracks().cend(),
+            [type](const auto &track) { return track.type == type && track.selected; });
+        const auto selectedId = selected == player_.tracks().cend() ? 0 : selected->id;
+        if (requested == selectedId)
+            requested.reset();
+    }
+    rememberTrackPreference();
+}
+
+QString SessionManager::saveTrackPreferences() {
+    trackPreferences_.removeIf(
+        [](const auto &entry) { return !TrackPreferenceStore::matchesFingerprint(entry); });
+    std::stable_sort(trackPreferences_.begin(), trackPreferences_.end(),
+                     [](const auto &left, const auto &right) {
+                         return left.lastUsedUtcMs > right.lastUsedUtcMs;
+                     });
+    if (trackPreferences_.size() > TrackPreferenceStore::MaximumEntries)
+        trackPreferences_.resize(TrackPreferenceStore::MaximumEntries);
+    return trackPreferenceStore_.save(trackPreferences_);
 }
 
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }

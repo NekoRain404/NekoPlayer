@@ -1,8 +1,10 @@
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
+#include "playback/trackselectionpreference.h"
 #include "session/sessionmanager.h"
 #include "session/sessionstore.h"
 
+#include <QFile>
 #include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -150,6 +152,202 @@ class SubtitlesTest final : public QObject {
         QCOMPARE(backendText(player, "sub-pos").toDouble(), 90.0);
         QCOMPARE(backendText(player, "sub-font"), QStringLiteral("Noto Sans"));
         QVERIFY(errors.isEmpty());
+    }
+
+    void restoresAudioAndExternalSubtitleSelectionAsynchronously() {
+        MpvController player(true, true);
+        player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        const auto audio =
+            std::find_if(player.tracks().cbegin(), player.tracks().cend(), [](const auto &track) {
+                return track.type == MediaTrack::Type::Audio && !track.selected;
+            });
+        QVERIFY(audio != player.tracks().cend());
+        const auto audioId = audio->id;
+
+        const auto subtitle = QString::fromUtf8(TEST_EXTERNAL_SUBTITLE_PATH);
+        TrackSelectionPreference preference;
+        preference.audioTrackId = audioId;
+        preference.externalSubtitlePaths = {subtitle};
+        preference.selectedExternalSubtitlePath = subtitle;
+        preference.selectedExternalSubtitleStream = 0;
+        bool confirmedAtCompletion = false;
+        connect(&player, &MpvController::trackPreferenceRestoreFinished, &player,
+                [&](bool canceled) {
+                    confirmedAtCompletion =
+                        !canceled &&
+                        std::any_of(player.tracks().cbegin(), player.tracks().cend(),
+                                    [audioId](const auto &track) {
+                                        return track.type == MediaTrack::Type::Audio &&
+                                               track.id == audioId && track.selected;
+                                    }) &&
+                        std::any_of(player.tracks().cbegin(), player.tracks().cend(),
+                                    [&](const auto &track) {
+                                        return track.externalPath == subtitle && track.selected;
+                                    });
+                });
+        player.restoreTrackPreference(preference);
+
+        QTRY_COMPARE(backendText(player, "aid").toLongLong(), audioId);
+        QTRY_VERIFY(
+            std::any_of(player.tracks().cbegin(), player.tracks().cend(), [&](const auto &track) {
+                return track.type == MediaTrack::Type::Subtitle && track.external &&
+                       track.externalPath == subtitle && track.selected;
+            }));
+        QTRY_VERIFY(confirmedAtCompletion);
+    }
+
+    void brokenExternalSubtitleDoesNotBlockOtherRestoration() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto brokenPath = temporary.filePath(QStringLiteral("broken.srt"));
+        QFile broken(brokenPath);
+        QVERIFY(broken.open(QIODevice::WriteOnly));
+        QVERIFY(broken.write("not a subtitle") > 0);
+        broken.close();
+        MpvController player(true, true);
+        player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        player.setPaused(true);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        QSignalSpy finished(&player, &MpvController::trackPreferenceRestoreFinished);
+        TrackSelectionPreference preference;
+        preference.audioTrackId = 2;
+        preference.externalSubtitlePaths = {brokenPath,
+                                            QString::fromUtf8(TEST_EXTERNAL_SUBTITLE_PATH)};
+        preference.selectedExternalSubtitlePath = preference.externalSubtitlePaths.back();
+        preference.selectedExternalSubtitleStream = 0;
+        player.restoreTrackPreference(preference);
+        QTRY_COMPARE(finished.count(), 1);
+        QVERIFY(!finished.front().front().toBool());
+        QVERIFY(!errors.isEmpty());
+        QCOMPARE(backendText(player, "aid"), QStringLiteral("2"));
+        QCOMPARE(backendText(player, "sid"), QStringLiteral("2"));
+        QCOMPARE(player.tracks().size(), 4);
+    }
+
+    void restoresExplicitlyDisabledSubtitleSelection() {
+        MpvController player(true, true);
+        player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active);
+        TrackSelectionPreference preference;
+        preference.subtitleTrackId = 0;
+        player.restoreTrackPreference(preference);
+        QTRY_COMPARE(backendText(player, "sid"), QStringLiteral("no"));
+    }
+
+    void restoresSecondStreamFromOneExternalFile() {
+        MpvController player(true, true);
+        player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        player.setPaused(true);
+        QSignalSpy finished(&player, &MpvController::trackPreferenceRestoreFinished);
+        TrackSelectionPreference preference;
+        preference.selectedExternalSubtitlePath = QString::fromUtf8(TEST_MULTI_SUBTITLE_PATH);
+        preference.selectedExternalSubtitleStream = 1;
+        player.restoreTrackPreference(preference);
+        QTRY_COMPARE(finished.count(), 1);
+        QVERIFY(!finished.front().front().toBool());
+        QCOMPARE(player.tracks().size(), 5);
+        QCOMPARE(backendText(player, "sid"), QStringLiteral("3"));
+        QVERIFY(player.tracks().back().external && player.tracks().back().selected);
+    }
+
+    void explicitUserChoiceCancelsPendingRestore() {
+        MpvController player(true, true);
+        player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        QSignalSpy finished(&player, &MpvController::trackPreferenceRestoreFinished);
+        TrackSelectionPreference preference;
+        preference.audioTrackId = 2;
+        preference.subtitleTrackId = 1;
+        player.restoreTrackPreference(preference);
+        player.selectSubtitleTrack(0);
+        QTRY_COMPARE(backendText(player, "sid"), QStringLiteral("no"));
+        QTRY_COMPARE(backendText(player, "aid"), QStringLiteral("1"));
+        QCOMPARE(finished.count(), 1);
+        QVERIFY(finished.front().front().toBool());
+    }
+
+    void pendingOpenRejectsPreferenceRestore() {
+        MpvController player(true, true);
+        const auto media = QString::fromUtf8(TEST_TRACK_MEDIA_PATH);
+        player.openFile(media);
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        player.openFile(media);
+        QVERIFY(!player.state().active);
+        QSignalSpy finished(&player, &MpvController::trackPreferenceRestoreFinished);
+        TrackSelectionPreference preference;
+        preference.audioTrackId = 2;
+        player.restoreTrackPreference(preference);
+        QCOMPARE(finished.count(), 1);
+        QVERIFY(finished.front().front().toBool());
+    }
+
+    void reentrantOpenCancelsRestoreBeforeCompletion() {
+        MpvController player(true, true);
+        const auto media = QString::fromUtf8(TEST_TRACK_MEDIA_PATH);
+        player.openFile(media);
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        QSignalSpy finished(&player, &MpvController::trackPreferenceRestoreFinished);
+        bool replaced = false;
+        connect(&player, &MpvController::tracksChanged, &player, [&] {
+            if (!replaced && std::any_of(player.tracks().cbegin(), player.tracks().cend(),
+                                         [](const auto &track) {
+                                             return track.type == MediaTrack::Type::Audio &&
+                                                    track.id == 2 && track.selected;
+                                         })) {
+                replaced = true;
+                player.openFile(media);
+            }
+        });
+        TrackSelectionPreference preference;
+        preference.audioTrackId = 2;
+        player.restoreTrackPreference(preference);
+        QTRY_VERIFY(replaced);
+        QTRY_COMPARE(finished.count(), 1);
+        QVERIFY(finished.front().front().toBool());
+        QTRY_VERIFY(player.state().active);
+        QTRY_COMPARE(backendText(player, "aid"), QStringLiteral("1"));
+    }
+
+    void canceledRestoreCallbackCanOpenAnotherMediaDuringStop() {
+        MpvController player(true, true);
+        const auto media = QString::fromUtf8(TEST_TRACK_MEDIA_PATH);
+        player.openFile(media);
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        bool reopened = false;
+        connect(&player, &MpvController::trackPreferenceRestoreFinished, &player,
+                [&](bool canceled) {
+                    if (canceled && !reopened) {
+                        reopened = true;
+                        player.openFile(media);
+                    }
+                });
+        TrackSelectionPreference preference;
+        preference.audioTrackId = 2;
+        player.restoreTrackPreference(preference);
+        player.stop();
+        QVERIFY(reopened);
+        QTRY_COMPARE(loaded.count(), 1);
+        QTRY_VERIFY(player.state().active);
+    }
+
+    void missingExternalSubtitleDoesNotBlockRestore() {
+        MpvController player(true, true);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active);
+        TrackSelectionPreference preference;
+        preference.externalSubtitlePaths = {QStringLiteral("/tmp/neko-missing-subtitle.srt")};
+        preference.selectedExternalSubtitlePath = preference.externalSubtitlePaths.front();
+        preference.selectedExternalSubtitleStream = 0;
+        player.restoreTrackPreference(preference);
+        QTRY_VERIFY(!errors.isEmpty());
+        QVERIFY(player.state().active);
+        QVERIFY(std::none_of(player.tracks().cbegin(), player.tracks().cend(),
+                             [](const auto &track) { return track.external; }));
     }
 
     void oldAndMalformedConfigurationUsesIndependentDefaults() {

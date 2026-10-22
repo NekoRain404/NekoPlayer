@@ -40,6 +40,7 @@ class FileDropTest final : public QObject {
         const auto media = QString::fromUtf8(TEST_TRACK_MEDIA_PATH);
         queue.addFiles({media, media});
         QTRY_COMPARE(player.tracks().size(), 3);
+        QTRY_VERIFY(player.state().active);
         player.setPaused(true);
         QTRY_VERIFY(player.state().paused);
         player.seekAbsolute(1.0);
@@ -129,6 +130,7 @@ class FileDropTest final : public QObject {
         QSignalSpy backendErrors(&player, &MpvController::errorOccurred);
         player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
         QTRY_COMPARE(player.tracks().size(), 3);
+        QTRY_VERIFY(player.state().active);
         player.setPaused(true);
         QTRY_VERIFY(player.state().paused);
         QVERIFY(drop.handleUrls({QUrl::fromLocalFile(path)}));

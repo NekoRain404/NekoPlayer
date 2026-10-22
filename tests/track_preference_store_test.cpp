@@ -1,5 +1,6 @@
 #include "session/trackpreferencestore.h"
 
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
@@ -17,9 +18,9 @@ class TrackPreferenceStoreTest final : public QObject {
         result.fileSize = info.size();
         result.modifiedUtcMs = info.lastModified().toUTC().toMSecsSinceEpoch();
         result.lastUsedUtcMs = timestamp;
-        result.audioTrackId = 2;
-        result.subtitleTrackId = 4;
-        result.externalSubtitlePaths = {path + QStringLiteral(".srt")};
+        result.selection.audioTrackId = 2;
+        result.selection.subtitleTrackId = 4;
+        result.selection.externalSubtitlePaths = {path + QStringLiteral(".srt")};
         return result;
     }
 
@@ -42,9 +43,9 @@ class TrackPreferenceStoreTest final : public QObject {
         QCOMPARE(loaded.entries.size(), 1);
         QCOMPARE(loaded.entries.front().mediaPath, QFileInfo(media).canonicalFilePath());
         QCOMPARE(loaded.entries.front().fileSize, qint64(5));
-        QCOMPARE(loaded.entries.front().audioTrackId, std::optional<qint64>(2));
-        QCOMPARE(loaded.entries.front().subtitleTrackId, std::optional<qint64>(4));
-        QCOMPARE(loaded.entries.front().externalSubtitlePaths,
+        QCOMPARE(loaded.entries.front().selection.audioTrackId, std::optional<qint64>(2));
+        QCOMPARE(loaded.entries.front().selection.subtitleTrackId, std::optional<qint64>(4));
+        QCOMPARE(loaded.entries.front().selection.externalSubtitlePaths,
                  QStringList{media + QStringLiteral(".srt")});
     }
 
@@ -61,11 +62,11 @@ class TrackPreferenceStoreTest final : public QObject {
         TrackPreferenceStore store(temporary.filePath(QStringLiteral("tracks.ini")));
         auto older = entry(media, 100);
         auto newer = entry(temporary.path() + QStringLiteral("/folder/../movie.mkv"), 200);
-        newer.audioTrackId = 9;
+        newer.selection.audioTrackId = 9;
         QVERIFY(store.save({older, newer}).isEmpty());
         const auto loaded = store.load();
         QCOMPARE(loaded.entries.size(), 1);
-        QCOMPARE(loaded.entries.front().audioTrackId, std::optional<qint64>(9));
+        QCOMPARE(loaded.entries.front().selection.audioTrackId, std::optional<qint64>(9));
         QCOMPARE(loaded.entries.front().lastUsedUtcMs, qint64(200));
     }
 
@@ -120,6 +121,92 @@ class TrackPreferenceStoreTest final : public QObject {
         QVERIFY(!store.save({}).isEmpty());
         QVERIFY(original.open(QIODevice::ReadOnly));
         QCOMPARE(original.readAll(), bytes);
+    }
+
+    void malformedSelectionFieldsArePreserved_data() {
+        QTest::addColumn<QString>("key");
+        QTest::addColumn<QVariant>("value");
+        QTest::newRow("stream-text") << QStringLiteral("selectedExternalSubtitleStream")
+                                     << QVariant(QStringLiteral("not-a-number"));
+        QTest::newRow("stream-overflow")
+            << QStringLiteral("selectedExternalSubtitleStream") << QVariant(qint64(2147483648LL));
+        QTest::newRow("audio-presence")
+            << QStringLiteral("audioTrack/present") << QVariant(QStringLiteral("garbage"));
+        QTest::newRow("subtitle-presence")
+            << QStringLiteral("subtitleTrack/present") << QVariant(QStringLiteral("garbage"));
+    }
+
+    void malformedSelectionFieldsArePreserved() {
+        QFETCH(QString, key);
+        QFETCH(QVariant, value);
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        QFile file(media);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write("v"), qint64(1));
+        file.close();
+        const auto path = temporary.filePath(QStringLiteral("tracks.ini"));
+        const TrackPreferenceStore store(path);
+        QVERIFY(store.save({entry(media, 1)}).isEmpty());
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("entries/0/") + key, value);
+            settings.sync();
+        }
+        QFile original(path);
+        QVERIFY(original.open(QIODevice::ReadOnly));
+        const auto bytes = original.readAll();
+        original.close();
+        QVERIFY(!store.load().error.isEmpty());
+        QVERIFY(!store.save({}).isEmpty());
+        QVERIFY(original.open(QIODevice::ReadOnly));
+        QCOMPARE(original.readAll(), bytes);
+    }
+
+    void missingAndChangedMediaDoNotInvalidateOtherEntries() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto missing = temporary.filePath(QStringLiteral("missing.mkv"));
+        const auto changed = temporary.filePath(QStringLiteral("changed.mkv"));
+        const auto retained = temporary.filePath(QStringLiteral("retained.mkv"));
+        for (const auto &path : {missing, changed, retained}) {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QCOMPARE(file.write("video"), qint64(5));
+        }
+        TrackPreferenceStore store(temporary.filePath(QStringLiteral("tracks.ini")));
+        QVERIFY(store.save({entry(missing, 1), entry(changed, 2), entry(retained, 3)}).isEmpty());
+        QVERIFY(QFile::remove(missing));
+        QFile file(changed);
+        QVERIFY(file.open(QIODevice::Append));
+        QCOMPARE(file.write("different"), qint64(9));
+        file.close();
+        const auto loaded = store.load();
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.entries.size(), 1);
+        QCOMPARE(loaded.entries.front().mediaPath, retained);
+        QVERIFY(store.save(loaded.entries).isEmpty());
+    }
+
+    void savingPrunesStaleEntries() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto stale = temporary.filePath(QStringLiteral("stale.mkv"));
+        const auto current = temporary.filePath(QStringLiteral("current.mkv"));
+        for (const auto &path : {stale, current}) {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QCOMPARE(file.write("v"), qint64(1));
+        }
+        const auto staleEntry = entry(stale, 1);
+        QVERIFY(QFile::remove(stale));
+        TrackPreferenceStore store(temporary.filePath(QStringLiteral("tracks.ini")));
+        QVERIFY(store.save({staleEntry, entry(current, 2)}).isEmpty());
+        const auto loaded = store.load();
+        QVERIFY(loaded.error.isEmpty());
+        QCOMPARE(loaded.entries.size(), 1);
+        QCOMPARE(loaded.entries.front().mediaPath, current);
     }
 };
 

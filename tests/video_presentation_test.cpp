@@ -2,6 +2,7 @@
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 
+#include <QDeadlineTimer>
 #include <QSignalSpy>
 #include <QtTest>
 #include <climits>
@@ -31,14 +32,28 @@ class VideoPresentationTest final : public QObject {
         MpvController player(true, true);
         QVERIFY(player.isReady());
         QSignalSpy errors(&player, &MpvController::errorOccurred);
-        // Settle startup events before filling the real libmpv reply queue.
-        QTest::qWait(50);
+        // A delayed startup idle notification could consume or overflow reply
+        // space. Disable it and drain existing events before saturating the queue.
+        QCOMPARE(mpv_request_event(player.handle(), MPV_EVENT_IDLE, 0), 0);
+        while (mpv_wait_event(player.handle(), 0)->event_id != MPV_EVENT_NONE) {
+        }
         int status = 0;
         for (int count = 0; count < 4096 && status >= 0; ++count)
             status = mpv_get_property_async(player.handle(), 0, "mpv-version", MPV_FORMAT_STRING);
         QCOMPARE(status, MPV_ERROR_EVENT_QUEUE_FULL);
-        // Release exactly one reply slot: only the first aspect setter fits.
-        QVERIFY(mpv_wait_event(player.handle(), 1)->event_id != MPV_EVENT_NONE);
+        // Property notifications are synthesized without releasing reply space.
+        // Consume an actual reply so only the first aspect setter fits, without
+        // processing Qt events (which would drain the remaining replies).
+        QDeadlineTimer replyDeadline(1000);
+        mpv_event_id released = MPV_EVENT_NONE;
+        while (released != MPV_EVENT_GET_PROPERTY_REPLY && !replyDeadline.hasExpired()) {
+            released =
+                mpv_wait_event(player.handle(), replyDeadline.remainingTime() / 1000.0)->event_id;
+            QVERIFY2(released == MPV_EVENT_NONE || released == MPV_EVENT_PROPERTY_CHANGE ||
+                         released == MPV_EVENT_GET_PROPERTY_REPLY,
+                     mpv_event_name(released));
+        }
+        QCOMPARE(released, MPV_EVENT_GET_PROPERTY_REPLY);
         player.setVideoAspect(VideoAspect::Ratio4x3);
         QVERIFY(!errors.isEmpty());
         QCOMPARE(player.videoPresentation().aspect, VideoAspect::Source);

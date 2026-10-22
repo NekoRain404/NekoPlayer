@@ -79,6 +79,16 @@ struct MpvController::Impl {
         int64_t entry = -1;
         bool replyReceived = false;
     };
+    struct TrackPreferenceRestore {
+        TrackSelectionPreference preference;
+        QStringList paths;
+        uint64_t generation = 0;
+        uint64_t command = 0;
+        uint64_t query = 0;
+        uint64_t identity = 0;
+        bool selecting = false;
+        QList<std::pair<MediaTrack::Type, qint64>> selections;
+    };
     MpvController *owner;
     std::unique_ptr<mpv_handle, MpvPrivate::MpvDeleter> client;
     PlaybackState state;
@@ -102,6 +112,7 @@ struct MpvController::Impl {
     uint64_t restoreQuery = 0;
     QSet<uint64_t> canceledRestoreRequests;
     bool applyingRestoredSelections = false;
+    std::optional<TrackPreferenceRestore> preferenceRestore;
     bool recoveringRenderer = false;
     QString error;
     std::atomic_bool shuttingDown{false};
@@ -303,7 +314,13 @@ struct MpvController::Impl {
             emit owner->errorOccurred(error);
             return;
         }
+        const auto generation = openGeneration;
         cancelTrackRestore();
+        if (generation != openGeneration || pendingPlayback || !state.active)
+            return;
+        emit owner->trackSelectionRequested(type, id);
+        if (generation != openGeneration || pendingPlayback || !state.active)
+            return;
         command({"set", type == MediaTrack::Type::Audio ? "aid" : "sid",
                  id == 0 ? QByteArray("no") : QByteArray::number(id)});
     }
@@ -317,7 +334,16 @@ struct MpvController::Impl {
         tracksToRestore.clear();
         subtitlePathsToRestore.clear();
         restoreCommand = restoreQuery = 0;
+        cancelPreferenceRestore();
     }
+
+    void cancelPreferenceRestore();
+    void startPreferenceSubtitleLoad();
+    void queryPreferenceTracks();
+    void applyPreferenceTracks(const QList<MediaTrack> &snapshot);
+    void startPreferenceSelection();
+    bool finishPreferenceCommand(const mpv_event &event);
+    bool finishPreferenceQuery(const mpv_event &event);
 
     void queryRestoredTracks() {
         restoreQuery = ++request;

@@ -1,20 +1,15 @@
 #pragma once
 
+#include "playback/trackselectionpreference.h"
 #include <QList>
 #include <QString>
-#include <QStringList>
-#include <optional>
 
 struct TrackPreferenceEntry {
     QString mediaPath;
     qint64 fileSize = -1;
     qint64 modifiedUtcMs = -1;
     qint64 lastUsedUtcMs = 0;
-    std::optional<qint64> audioTrackId;
-    std::optional<qint64> subtitleTrackId;
-    QString selectedExternalSubtitlePath;
-    int selectedExternalSubtitleStream = -1;
-    QStringList externalSubtitlePaths;
+    TrackSelectionPreference selection;
 };
 
 struct TrackPreferenceLoadResult {

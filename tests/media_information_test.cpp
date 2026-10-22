@@ -59,9 +59,14 @@ class MediaInformationTest final : public QObject {
         MpvController player(true, true);
         player.openFile(QString::fromUtf8(TEST_MEDIA_PATH));
         QTRY_COMPARE(player.mediaInformation().videoWidth, 320);
+        // The replacement keeps identical audio parameters, so mpv may omit
+        // unchanged observations even while its new decoder is still starting.
+        QTRY_COMPARE(player.mediaInformation().audioSampleRate, 48000);
         player.openFile(QString::fromUtf8(TEST_AUDIO_ONLY_PATH));
         QCOMPARE(player.mediaInformation(), MediaInformation{});
         QTRY_COMPARE(player.mediaInformation().audioSampleRate, 48000);
+        QTRY_VERIFY(!player.mediaInformation().audioChannels.isEmpty());
+        QTRY_VERIFY(!player.mediaInformation().audioSampleFormat.isEmpty());
         QCOMPARE(player.mediaInformation().videoWidth, 0);
         QVERIFY(player.mediaInformation().videoCodec.isEmpty());
         QVERIFY(player.mediaInformation().videoPixelFormat.isEmpty());

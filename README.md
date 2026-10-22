@@ -22,15 +22,15 @@ ctest --preset debug
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 
 ```bash
-ctest --test-dir build/debug -R '^(code-size|backend-startup|resume|media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'
 ```
 
-内存检查预设，以下命令仅构建和执行非 GUI 集成测试：
+内存检查预设，以下命令构建全部目标，仅执行非 GUI 测试：
 
 ```bash
 cmake --preset sanitizers
-cmake --build --preset sanitizers --target resume_test media_information_test media_report_test frame_step_test ab_loop_test decoding_test subtitles_test playback_test playlist_test playlist_edit_test playlist_modes_test playlist_shuffle_test tracks_test session_test tuning_test navigation_test playback_time_test file_drop_test video_presentation_test
-ctest --test-dir build/sanitizers -R '^(resume|media-information|media-report|frame-step|ab-loop|decoding|subtitles|playback|playlist|playlist-edit|playlist-modes|playlist-shuffle|tracks|session|tuning|navigation|playback-time|file-drop|video-presentation)$' --output-on-failure
+cmake --build --preset sanitizers
+ctest --test-dir build/sanitizers --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'
 ```
 
 在没有 Wayland 桌面会话的 CI 上，显式选择 X11 回归后端：
@@ -94,7 +94,7 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 
 随机播放可从同一菜单或 Shift+R 独立开关，与循环模式组合，保留列表显示顺序及重复路径条目的独立身份。当前项视为本轮已访问，下一项从剩余条目中随机选择；不循环时一轮结束即停止，列表循环会开启新一轮，多项时避免轮次交界立即重复当前项。上一项沿实际访问历史回退，下一项先重走前向历史，再抽取新项；历史最多保留 1024 项。追加条目加入待播池，移动条目不打乱历史身份，删除当前项会停止并以邻项重新建立随机顺序。切换随机开关不重载媒体、不改变暂停和位置；显式选播或停止后重新播放会重新建立一轮。随机状态与历史仅在本次运行保留。
 
-正常退出会保存播放列表、当前行及其播放位置、音量／静音、窗口大小和最大化状态、列表面板显示状态及媒体对话框目录。另有独立的 `<session path>.history.ini` 保存最近 100 个媒体文件的续播位置，切换文件、停止和正常退出时更新，媒体自然播完后删除该文件的历史；因此上次队列选中项之外的媒体也可在后续队列中续播。再次启动只恢复空闲队列，按空格才从上次位置继续；剩余不超过一秒时从头开始。会话续播位置只属于上次选中的条目，移动条目会保留，停止、清空、删除该条目或播放其他条目会取消；相同路径的重复条目独立处理。显式停止后的媒体不会在本次运行中从历史位置续播，但已保存的历史可在下次启动时恢复。命令行文件替换恢复队列。退出全屏时或在全屏下关闭，均保留之前的普通窗口状态，不在下次启动自动全屏。配置使用版本化 INI，Linux 默认位于 `$XDG_CONFIG_HOME/NekoPlayer/NekoPlayer/session.ini`（未设置时位于 `~/.config/` 下）；保存失败会提示，损坏或未知版本的配置不会被覆盖。`--no-config` 与 `--smoke-test` 均不读写配置。暂不提供轨道／外挂字幕持久化或崩溃恢复，也不检测同一路径的文件是否已被替换；同时运行多个实例时以最后保存的会话为准。
+正常退出会保存播放列表、当前行及其播放位置、音量／静音、窗口大小和最大化状态、列表面板显示状态及媒体对话框目录。另有独立的 `<session path>.history.ini` 保存最近 100 个媒体文件的续播位置，切换文件、停止和正常退出时更新，媒体自然播完后删除该文件的历史；因此上次队列选中项之外的媒体也可在后续队列中续播。再次启动只恢复空闲队列，按空格才从上次位置继续；剩余不超过一秒时从头开始。会话续播位置只属于上次选中的条目，移动条目会保留，停止、清空、删除该条目或播放其他条目会取消；相同路径的重复条目独立处理。显式停止后的媒体不会在本次运行中从历史位置续播，但已保存的历史可在下次启动时恢复。命令行文件替换恢复队列。轨道选择另存为 `<session path>.tracks.ini`：按规范化路径、文件大小和修改时间指纹匹配媒体，保存内嵌音轨／字幕、明确关闭轨道以及外挂字幕路径和流序号；文件被替换或不存在匹配记录时不会套用旧媒体选择。该文件采用独立版本化格式，损坏或未知版本不会被覆盖。退出全屏时或在全屏下关闭，均保留之前的普通窗口状态，不在下次启动自动全屏。配置使用版本化 INI，Linux 默认位于 `$XDG_CONFIG_HOME/NekoPlayer/NekoPlayer/session.ini`（未设置时位于 `~/.config/` 下）；保存失败会提示，损坏或未知版本的配置不会被覆盖。`--no-config` 与 `--smoke-test` 均不读写配置；同时运行多个实例时以最后保存的会话为准。
 
 “声音 → 音轨”和“字幕”菜单可查看轨道编号、标题、语言、编码及当前选择，也可关闭音轨或字幕；右键菜单共用这些入口。加载外挂字幕后自动选中该轨道。切换轨道无需重新打开媒体，保持暂停状态；停止或换片时清空旧轨道。图形上下文重建时恢复音轨、字幕选择和已加载的外挂字幕。外挂字幕可通过文件对话框或单文件拖放加载，拖放识别 srt、ass、ssa、sub、vtt、sup、idx、mks（扩展名不区分大小写）。请先播放媒体，再单独拖入一个字幕文件；空闲时、一次拖入多个字幕或混合媒体与字幕会整体拒绝并提示，不修改播放列表。VobSub 的 idx/sub 配对请选择 idx，伴随文件交给 mpv 读取。其他扩展名沿用媒体追加行为，文件能否解析由 mpv 判断。
 
@@ -115,6 +115,8 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 “设置 → 偏好设置”及右键菜单的 F5 入口提供“自动（安全）”和“软件解码”，应用后立即切换，取消丢弃尚未应用的修改。音频页可选择输出设备，选择立即生效；右键菜单也保留快速设备菜单。自动模式默认请求 `hwdec=auto-safe`，不可用时由 mpv 回退；“实际解码器”独立显示观察到的结果。切换不重新打开媒体，但 mpv 可能重建解码器，画面会短暂中断。偏好在正常退出时保存，下次加载媒体前恢复；旧配置或非法字段默认自动模式。`--no-config` 不保存该偏好。真实 GPU 硬解效果尚未通过本阶段的非 GUI 测试验证。
 
 “文件 → 媒体信息”、右键菜单或 Ctrl+F1 可查看当前文件的容器、字节大小、视频编码／尺寸／像素格式、容器帧率、音频编码／采样率／声道／采样格式与实际视频解码方式。窗口非模态，不暂停播放，可选中文本或按“复制”复制报告；换片及轨道变化自动更新。无法取得的参数显示“未知”，容器帧率是估计值，不代表实测输出帧率；文件大小来自 mpv 的媒体源长度，分段媒体不代表所有分段总大小。信息通过事件和解码配置变化后的异步查询更新，不定时轮询。
+
+当前暂不提供崩溃恢复；会话状态依赖正常退出保存，媒体历史与轨道偏好也会在相关生命周期事件中更新。
 
 ## 工程约束与验证边界
 

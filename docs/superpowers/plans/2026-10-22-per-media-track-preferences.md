@@ -36,7 +36,7 @@
 - [x] Run `track-preference-store`; initial CMake generation failed because the planned source did not exist, then implementation verification passed.
 - [x] Implement the value types, path/file validation, parsing, atomic INI write, and bounded retention.
 - [x] Run `track-preference-store` and the existing `playback-history-store` test.
-- [ ] Commit as `feat: add per-media track preference store`.
+- [x] Commit as `feat: add per-media track preference store` (`7851985`).
 
 ### Task 2: Asynchronous Controller Restore
 
@@ -48,12 +48,12 @@
 
 **Interface:** Controller restore accepts a saved track preference and request generation, loads only recorded external subtitle paths, then resolves audio/subtitle tracks from fresh `MediaTrack` snapshots. User selection, new load, stop, or failure invalidates pending restore work.
 
-- [ ] Add headless libmpv tests demonstrating restoration of an alternate audio track, embedded subtitle, external subtitle, disabled track, and external subtitle stream identity.
-- [ ] Run the focused test and confirm each new expectation fails against current controller behavior.
-- [ ] Implement asynchronous restore using the existing mpv event queue and typed command paths; preserve renderer recovery behavior.
-- [ ] Test delayed/failed subtitle load and stale request invalidation after media switch and user choice.
-- [ ] Run focused controller tests and `tracks`, `subtitles`, and `playback` regressions.
-- [ ] Commit as `feat: restore media track choices asynchronously`.
+- [x] Add headless libmpv tests demonstrating restoration of an alternate audio track, embedded subtitle, external subtitle, disabled track, and external subtitle stream identity.
+- [x] Run focused regressions during implementation; record reproduced failures and fixes in the execution record below. A separate initial failure for every conceptual expectation was not recorded.
+- [x] Implement asynchronous restore using the existing mpv event queue and typed command paths; preserve renderer recovery behavior.
+- [x] Test failed subtitle load and stale request invalidation after media switch, user choice, stop, and reentrant signal callbacks.
+- [x] Run focused controller tests and `tracks`, `subtitles`, and `playback` regressions.
+- [x] Include controller restoration in the combined Tasks 2–4 stage commit, `feat: persist and restore per-media track choices`.
 
 ### Task 3: Session Lifecycle Persistence
 
@@ -65,11 +65,11 @@
 
 **Interface:** `SessionManager` owns `TrackPreferenceStore`, captures observed track snapshots for the active local regular file, checks file fingerprints at new-media open, requests controller restoration only for new media, and persists the final available snapshot on media transition or shutdown.
 
-- [ ] Write integration tests for restart restoration, changed-file fingerprint rejection, missing-file tolerance, repeated queue paths, and user choice during pending restoration.
-- [ ] Run `track-preference-session`; confirm the integration expectations fail before implementation.
-- [ ] Implement normalized media identity and snapshot capture without subscribing to progress or frame callbacks.
-- [ ] Run the new session integration test plus `playback-history-session`, `session`, `tracks`, and `subtitles` tests.
-- [ ] Commit as `feat: persist track choices across sessions`.
+- [x] Write integration tests for restart restoration, same-file reopen, changed-file fingerprint rejection, missing-file tolerance, renderer recovery, and corrupt configuration; controller tests cover user choice during pending restoration.
+- [x] Run `track-preference-session`; reproduce media-switch intent leaking from the previous path, then verify the lifecycle isolation fix.
+- [x] Implement normalized media identity and snapshot capture without subscribing to progress or frame callbacks.
+- [x] Run the new session integration test plus `playback-history-session`, `session`, `tracks`, and `subtitles` tests.
+- [x] Include session persistence in the combined Tasks 2–4 stage commit.
 
 ### Task 4: Verification and Documentation
 
@@ -78,12 +78,20 @@
 - Modify: `docs/verification.md`
 - Modify: `README.md`
 
-- [ ] Build the full Debug preset.
-- [ ] Run CTest excluding window/desktop interaction tests; report the exact excluded set and result count.
-- [ ] Build and run focused store/session/playback tests with ASan/UBSan.
-- [ ] Run `git diff --check`, formatting checks, and the 500/800-line code-size check.
-- [ ] Update docs with persistence behavior, known limitations, and exact verification coverage.
-- [ ] Commit as `docs: document per-media track preferences`.
+- [x] Build the full Debug preset.
+- [x] Run CTest excluding window/desktop interaction tests; report the exact excluded set and result count in `docs/verification.md`.
+- [x] Build the full sanitizer preset and run the non-window store/session/playback collection with ASan/UBSan.
+- [x] Run `git diff --check`, formatting checks, and the 500/800-line code-size check.
+- [x] Update docs with persistence behavior, known limitations, and exact verification coverage.
+- [x] Include documentation in the combined Tasks 2–4 stage commit.
+
+## Execution Record
+
+Task 1 was committed independently. Controller restoration and session capture were developed and reviewed together because completion, cancellation, and snapshot publication form one lifecycle contract; Tasks 2–4 ship as one subsequent stage commit.
+
+The final implementation awaits each selection command reply and queries a fresh final snapshot before completing. Ordinary opens reset `aid`/`sid` to automatic defaults before applying the media record. Renderer recovery uses its existing in-memory snapshot and suppresses intermediate persistence. The file fingerprint is captured at load, so modifying a playing file cannot attach the old selection to its replacement.
+
+Review added corruption tests for invalid presence flags and external-stream values, stale-history pruning, and reentrant cancellation. Broad verification exposed an existing metadata refresh gap when an audio output was reused, a reply-queue saturation test consuming a synthesized property notification instead of a reply, and a subtitle-drop test requesting pause before `FILE_LOADED`. The metadata path now refreshes on playback restart; the two tests now wait for their actual prerequisites. Exact final commands, results, and desktop limitations are recorded in `docs/verification.md`.
 
 ## Spec Coverage
 

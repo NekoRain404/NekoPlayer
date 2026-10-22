@@ -11,6 +11,10 @@ void MainWindow::restoreSession(const QString &path) {
     if (path.isEmpty())
         return;
     session_ = std::make_unique<SessionManager>(*controller_, *playlist_, path);
+    connect(
+        session_.get(), &SessionManager::configurationErrorOccurred, this,
+        [this](const QString &message) { statusBar()->showMessage(message); },
+        Qt::QueuedConnection);
     const auto loaded = session_->restore();
     if (!loaded.error.isEmpty()) {
         statusBar()->showMessage(tr("无法恢复会话：%1").arg(loaded.error));

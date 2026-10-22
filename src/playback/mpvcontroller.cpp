@@ -253,7 +253,8 @@ void MpvController::openFileAtPosition(const QString &path, double seconds) {
     const auto generation = ++impl_->openGeneration;
     impl_->openingPosition = seconds;
     impl_->openingEntry = -1;
-    const auto options = QByteArray("start=") + QByteArray::number(seconds, 'f', 3);
+    const auto options =
+        QByteArray("aid=auto,sid=auto,start=") + QByteArray::number(seconds, 'f', 3);
     const auto [id, status] =
         impl_->submitCommand({"loadfile", path.toUtf8(), "replace", "-1", options});
     impl_->openingCommand = id;
@@ -270,6 +271,9 @@ void MpvController::openFileAtPosition(const QString &path, double seconds) {
         pending.path = path;
         impl_->pendingPlayback = std::move(pending);
     }
+    impl_->cancelPreferenceRestore();
+    if (generation != impl_->openGeneration)
+        return;
     emit fileOpenRequested();
     if (id) {
         emit stateChanged();
@@ -292,12 +296,15 @@ void MpvController::setPaused(bool paused) {
 }
 void MpvController::togglePause() { setPaused(!state().paused); }
 void MpvController::stop() {
+    const auto requestedGeneration = impl_->openGeneration;
     emit stopRequested();
+    if (requestedGeneration != impl_->openGeneration)
+        return;
     impl_->mediaReady = false;
     impl_->openingPosition.reset();
     if (!impl_->pendingOpens.isEmpty())
         impl_->state.path = impl_->playingPath;
-    ++impl_->openGeneration;
+    const auto generation = ++impl_->openGeneration;
     impl_->pendingPlayback.reset();
     impl_->openingCommand = 0;
     impl_->openingEntry = -1;
@@ -314,6 +321,8 @@ void MpvController::stop() {
     impl_->cancelChapterRequest();
     impl_->recovery.reset();
     impl_->cancelTrackRestore();
+    if (generation != impl_->openGeneration)
+        return;
     impl_->command({"stop"});
     if (informationChanged)
         emit mediaInformationChanged();
@@ -373,7 +382,13 @@ void MpvController::selectSubtitleTrack(qint64 id) {
 
 void MpvController::addSubtitle(const QString &path) {
     if (state().active && !path.isEmpty()) {
+        const auto generation = impl_->openGeneration;
         impl_->cancelTrackRestore();
+        if (generation != impl_->openGeneration || !state().active)
+            return;
+        emit subtitleLoadRequested();
+        if (generation != impl_->openGeneration || !state().active)
+            return;
         impl_->command({"sub-add", QFileInfo(path).absoluteFilePath().toUtf8(), "select"});
     }
 }

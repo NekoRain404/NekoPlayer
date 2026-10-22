@@ -6,6 +6,7 @@
 #include "mediainformation.h"
 #include "mediatrack.h"
 #include "subtitlepreferences.h"
+#include "trackselectionpreference.h"
 #include "videocoloradjustment.h"
 #include "videopresentation.h"
 #include <QList>
@@ -54,6 +55,8 @@ class MpvController final : public QObject {
     [[nodiscard]] bool hardwareDecodingEnabled() const;
     [[nodiscard]] const SubtitlePreferences &subtitlePreferences() const;
     void setSubtitlePreferences(const SubtitlePreferences &preferences);
+    void restoreTrackPreference(const TrackSelectionPreference &preference);
+    [[nodiscard]] bool trackRestorationPending() const;
     void applyAudioDevicePreference(const QString &name);
     // Session-only accepted intent; asynchronous errors are reported separately.
     [[nodiscard]] const VideoPresentation &videoPresentation() const;
@@ -119,6 +122,9 @@ class MpvController final : public QObject {
     void mediaInformationChanged();
     void tuningChanged();
     void tracksChanged();
+    void trackSelectionRequested(MediaTrack::Type type, qint64 id);
+    void subtitleLoadRequested();
+    void trackPreferenceRestoreFinished(bool canceled);
     void audioDevicesChanged();
     void audioDevicePreferenceChanged(const QString &name);
     void chaptersChanged();

@@ -146,12 +146,15 @@ void MpvController::Impl::drainEvents() {
             chapterSeekStarted = requestedChapter.has_value() && !chapterCommand;
             break;
         case MPV_EVENT_PLAYBACK_RESTART:
+            scheduleInformationRefresh();
             queryChapterRequest(chapterSeekStarted);
             break;
         case MPV_EVENT_COMMAND_REPLY:
             handleOpeningCommandReply(*event);
             confirmChapterRequest(*event);
             if (canceledRestoreRequests.remove(event->reply_userdata))
+                break;
+            if (finishPreferenceCommand(*event))
                 break;
             if (event->reply_userdata == restoreCommand && restoreCommand) {
                 restoreCommand = 0;
@@ -167,6 +170,8 @@ void MpvController::Impl::drainEvents() {
             if (finishTuningQuery(*event))
                 break;
             if (canceledRestoreRequests.remove(event->reply_userdata))
+                break;
+            if (finishPreferenceQuery(*event))
                 break;
             if (event->reply_userdata == restoreQuery && restoreQuery) {
                 restoreQuery = 0;

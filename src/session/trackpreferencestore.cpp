@@ -56,15 +56,17 @@ QString validateExistingFile(const QString &path) {
 bool validOptionalId(const std::optional<qint64> &id) { return !id || *id >= 0; }
 
 bool validEntry(const TrackPreferenceEntry &entry) {
-    if (TrackPreferenceStore::normalizedPath(entry.mediaPath).isEmpty() || entry.fileSize < 0 ||
+    if (normalizedSubtitlePath(entry.mediaPath).isEmpty() || entry.fileSize < 0 ||
         entry.modifiedUtcMs <= 0 || entry.lastUsedUtcMs <= 0 ||
-        !validOptionalId(entry.audioTrackId) || !validOptionalId(entry.subtitleTrackId) ||
-        entry.selectedExternalSubtitleStream < -1 || entry.externalSubtitlePaths.size() > 64)
+        !validOptionalId(entry.selection.audioTrackId) ||
+        !validOptionalId(entry.selection.subtitleTrackId) ||
+        entry.selection.selectedExternalSubtitleStream < -1 ||
+        entry.selection.externalSubtitlePaths.size() > 64)
         return false;
-    if (!entry.selectedExternalSubtitlePath.isEmpty() &&
-        normalizedSubtitlePath(entry.selectedExternalSubtitlePath).isEmpty())
+    if (!entry.selection.selectedExternalSubtitlePath.isEmpty() &&
+        normalizedSubtitlePath(entry.selection.selectedExternalSubtitlePath).isEmpty())
         return false;
-    for (const auto &path : entry.externalSubtitlePaths) {
+    for (const auto &path : entry.selection.externalSubtitlePaths) {
         if (normalizedSubtitlePath(path).isEmpty())
             return false;
     }
@@ -75,12 +77,14 @@ QList<TrackPreferenceEntry> normalizedEntries(const QList<TrackPreferenceEntry> 
     QList<TrackPreferenceEntry> unique;
     unique.reserve(entries.size());
     for (auto entry : entries) {
+        if (!TrackPreferenceStore::matchesFingerprint(entry))
+            continue;
         entry.mediaPath = TrackPreferenceStore::normalizedPath(entry.mediaPath);
-        for (auto &path : entry.externalSubtitlePaths)
+        for (auto &path : entry.selection.externalSubtitlePaths)
             path = normalizedSubtitlePath(path);
-        if (!entry.selectedExternalSubtitlePath.isEmpty())
-            entry.selectedExternalSubtitlePath =
-                normalizedSubtitlePath(entry.selectedExternalSubtitlePath);
+        if (!entry.selection.selectedExternalSubtitlePath.isEmpty())
+            entry.selection.selectedExternalSubtitlePath =
+                normalizedSubtitlePath(entry.selection.selectedExternalSubtitlePath);
         const auto existing =
             std::find_if(unique.begin(), unique.end(),
                          [&entry](const auto &item) { return item.mediaPath == entry.mediaPath; });
@@ -112,7 +116,10 @@ bool readEntry(QSettings &settings, int index, TrackPreferenceEntry &entry) {
         return false;
     const auto readId = [&settings, &prefix](const QString &name, std::optional<qint64> &target) {
         const auto key = prefix + name + QStringLiteral("/present");
-        const auto present = settings.value(key).toBool();
+        const auto presence = settings.value(key).toString().toLower();
+        if (presence != QStringLiteral("true") && presence != QStringLiteral("false"))
+            return false;
+        const auto present = presence == QStringLiteral("true");
         if (!present) {
             target.reset();
             return true;
@@ -124,20 +131,24 @@ bool readEntry(QSettings &settings, int index, TrackPreferenceEntry &entry) {
         target = id;
         return true;
     };
-    if (!readId(QStringLiteral("audioTrack"), entry.audioTrackId) ||
-        !readId(QStringLiteral("subtitleTrack"), entry.subtitleTrackId))
+    if (!readId(QStringLiteral("audioTrack"), entry.selection.audioTrackId) ||
+        !readId(QStringLiteral("subtitleTrack"), entry.selection.subtitleTrackId))
         return false;
-    entry.selectedExternalSubtitlePath =
+    entry.selection.selectedExternalSubtitlePath =
         settings.value(prefix + QStringLiteral("selectedExternalSubtitlePath")).toString();
-    entry.selectedExternalSubtitleStream =
-        settings.value(prefix + QStringLiteral("selectedExternalSubtitleStream"), -1).toInt();
+    bool streamValid = false;
+    entry.selection.selectedExternalSubtitleStream =
+        settings.value(prefix + QStringLiteral("selectedExternalSubtitleStream"), -1)
+            .toInt(&streamValid);
+    if (!streamValid)
+        return false;
     bool countValid = false;
     const auto count =
         settings.value(prefix + QStringLiteral("externalSubtitleCount"), 0).toInt(&countValid);
     if (!countValid || count < 0 || count > 64)
         return false;
     for (int item = 0; item < count; ++item)
-        entry.externalSubtitlePaths.append(
+        entry.selection.externalSubtitlePaths.append(
             settings.value(prefix + QStringLiteral("externalSubtitles/%1/path").arg(item))
                 .toString());
     return validEntry(entry);
@@ -197,12 +208,15 @@ TrackPreferenceLoadResult TrackPreferenceStore::load() const {
     for (int index = 0; index < count; ++index) {
         TrackPreferenceEntry entry;
         if (readEntry(settings, index, entry)) {
+            // Removed or replaced media is stale data, not a corrupt configuration.
+            if (!matchesFingerprint(entry))
+                continue;
             entry.mediaPath = normalizedPath(entry.mediaPath);
-            for (auto &path : entry.externalSubtitlePaths)
+            for (auto &path : entry.selection.externalSubtitlePaths)
                 path = normalizedSubtitlePath(path);
-            if (!entry.selectedExternalSubtitlePath.isEmpty())
-                entry.selectedExternalSubtitlePath =
-                    normalizedSubtitlePath(entry.selectedExternalSubtitlePath);
+            if (!entry.selection.selectedExternalSubtitlePath.isEmpty())
+                entry.selection.selectedExternalSubtitlePath =
+                    normalizedSubtitlePath(entry.selection.selectedExternalSubtitlePath);
             entries.append(std::move(entry));
         } else
             invalid = true;
@@ -217,14 +231,14 @@ QString TrackPreferenceStore::save(const QList<TrackPreferenceEntry> &entries) c
     if (!loaded.error.isEmpty())
         return loaded.error;
     for (const auto &entry : entries) {
-        if (!validEntry(entry) || !matchesFingerprint(entry))
+        if (!validEntry(entry))
             return schemaError(filePath_);
-        for (const auto &path : entry.externalSubtitlePaths) {
+        for (const auto &path : entry.selection.externalSubtitlePaths) {
             if (normalizedSubtitlePath(path).isEmpty())
                 return schemaError(filePath_);
         }
-        if (!entry.selectedExternalSubtitlePath.isEmpty() &&
-            normalizedSubtitlePath(entry.selectedExternalSubtitlePath).isEmpty())
+        if (!entry.selection.selectedExternalSubtitlePath.isEmpty() &&
+            normalizedSubtitlePath(entry.selection.selectedExternalSubtitlePath).isEmpty())
             return schemaError(filePath_);
     }
     const auto retained = normalizedEntries(entries);
@@ -245,17 +259,17 @@ QString TrackPreferenceStore::save(const QList<TrackPreferenceEntry> &entries) c
         settings.setValue(prefix + QStringLiteral("fileSize"), entry.fileSize);
         settings.setValue(prefix + QStringLiteral("modifiedUtcMs"), entry.modifiedUtcMs);
         settings.setValue(prefix + QStringLiteral("lastUsedUtcMs"), entry.lastUsedUtcMs);
-        writeId(settings, prefix, QStringLiteral("audioTrack"), entry.audioTrackId);
-        writeId(settings, prefix, QStringLiteral("subtitleTrack"), entry.subtitleTrackId);
+        writeId(settings, prefix, QStringLiteral("audioTrack"), entry.selection.audioTrackId);
+        writeId(settings, prefix, QStringLiteral("subtitleTrack"), entry.selection.subtitleTrackId);
         settings.setValue(prefix + QStringLiteral("selectedExternalSubtitlePath"),
-                          entry.selectedExternalSubtitlePath);
+                          entry.selection.selectedExternalSubtitlePath);
         settings.setValue(prefix + QStringLiteral("selectedExternalSubtitleStream"),
-                          entry.selectedExternalSubtitleStream);
+                          entry.selection.selectedExternalSubtitleStream);
         settings.setValue(prefix + QStringLiteral("externalSubtitleCount"),
-                          entry.externalSubtitlePaths.size());
-        for (qsizetype item = 0; item < entry.externalSubtitlePaths.size(); ++item)
+                          entry.selection.externalSubtitlePaths.size());
+        for (qsizetype item = 0; item < entry.selection.externalSubtitlePaths.size(); ++item)
             settings.setValue(prefix + QStringLiteral("externalSubtitles/%1/path").arg(item),
-                              entry.externalSubtitlePaths.at(item));
+                              entry.selection.externalSubtitlePaths.at(item));
     }
     settings.sync();
     return settings.status() == QSettings::NoError ? QString{} : configurationError(filePath_);

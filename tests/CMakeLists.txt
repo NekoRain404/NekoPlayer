@@ -83,6 +83,13 @@ add_custom_command(OUTPUT "${TEST_AUDIO_ONLY}"
         -i "${TEST_MEDIA}" -map 0:a -c copy "${TEST_AUDIO_ONLY}"
     DEPENDS "${TEST_MEDIA}" VERBATIM)
 add_custom_target(test_audio_only DEPENDS "${TEST_AUDIO_ONLY}")
+add_executable(screenshot_test screenshot_test.cpp)
+target_link_libraries(screenshot_test PRIVATE neko_playback Qt6::Test Qt6::Gui)
+target_compile_definitions(screenshot_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}"
+    TEST_AUDIO_ONLY_PATH="${TEST_AUDIO_ONLY}")
+add_dependencies(screenshot_test test_media test_audio_only)
+add_test(NAME screenshot COMMAND screenshot_test)
+set_tests_properties(screenshot PROPERTIES TIMEOUT 60)
 set(TEST_STILL_IMAGE "${CMAKE_CURRENT_BINARY_DIR}/media/still.png")
 add_custom_command(OUTPUT "${TEST_STILL_IMAGE}"
     COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
@@ -243,6 +250,8 @@ add_custom_command(OUTPUT "${TEST_TRACK_MEDIA}"
         "${TEST_TRACK_MEDIA}"
     DEPENDS "${TEST_MEDIA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt" VERBATIM)
 add_custom_target(test_track_media DEPENDS "${TEST_TRACK_MEDIA}")
+target_compile_definitions(screenshot_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}")
+add_dependencies(screenshot_test test_track_media)
 add_executable(subtitles_test subtitles_test.cpp)
 target_link_libraries(subtitles_test PRIVATE neko_session Qt6::Test)
 target_compile_definitions(subtitles_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"

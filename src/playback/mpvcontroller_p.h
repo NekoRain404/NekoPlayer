@@ -141,6 +141,8 @@ struct MpvController::Impl {
     int64_t openingEntry = -1;
     int64_t playingEntry = -1;
     bool hasMotionVideo = false;
+    uint64_t screenshotCommand = 0;
+    QString screenshotPath;
     uint64_t request = 0;
     struct TuningSetting {
         const char *name;
@@ -399,6 +401,7 @@ struct MpvController::Impl {
     void scheduleInformationRefresh();
     void cancelInformationQueries();
     bool finishInformationQuery(const mpv_event &event);
+    bool finishScreenshot(const mpv_event &event);
     void drainEvents();
     void handleEndFile(const mpv_event_end_file &end);
     void handleFileLoaded();

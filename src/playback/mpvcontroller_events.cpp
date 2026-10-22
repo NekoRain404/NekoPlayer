@@ -150,6 +150,8 @@ void MpvController::Impl::drainEvents() {
             queryChapterRequest(chapterSeekStarted);
             break;
         case MPV_EVENT_COMMAND_REPLY:
+            if (finishScreenshot(*event))
+                break;
             handleOpeningCommandReply(*event);
             confirmChapterRequest(*event);
             if (canceledRestoreRequests.remove(event->reply_userdata))

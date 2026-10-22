@@ -35,6 +35,7 @@ add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.
     src/playback/mpvcontroller_navigation.cpp
     src/playback/mpvcontroller_loop.cpp
     src/playback/mpvcontroller_video.cpp
+    src/playback/mpvcontroller_screenshot.cpp
     src/playback/mpvcontroller_subtitles.cpp src/playback/subtitlepreferences.cpp
     src/playback/mpvcontroller_video_color.cpp src/playback/videocoloradjustment.cpp
     src/playback/mpvchapters.cpp src/playback/playbacktime.cpp src/playback/mediasource.cpp
@@ -57,7 +58,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
     src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
     src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp src/ui/networkopendialog.cpp
-    src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp
+    src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp src/ui/screenshotmenu.cpp
     src/ui/subtitledisplaymenu.cpp src/ui/subtitlesettingsdialog.cpp
     src/ui/preferencesdialog.cpp src/ui/videocolordialog.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input Qt6::Widgets Qt6::OpenGLWidgets)

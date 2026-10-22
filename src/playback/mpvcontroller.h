@@ -51,6 +51,9 @@ class MpvController final : public QObject {
     [[nodiscard]] int chapterNavigationIndex() const;
     [[nodiscard]] bool canStepFrameForward() const;
     [[nodiscard]] bool canStepFrameBackward() const;
+    [[nodiscard]] bool canTakeScreenshot() const;
+    [[nodiscard]] bool screenshotPending() const;
+    bool takeScreenshot(const QString &absolutePath, bool includeSubtitles = true);
     // User preference; state().hardwareDecoder reports the decoder actually in use.
     [[nodiscard]] bool hardwareDecodingEnabled() const;
     [[nodiscard]] const SubtitlePreferences &subtitlePreferences() const;
@@ -131,6 +134,8 @@ class MpvController final : public QObject {
     void chapterNavigationChanged();
     void fileLoaded();
     void playbackFinished();
+    void screenshotPendingChanged();
+    void screenshotFinished(const QString &path, bool success);
     void mediaLoadFailed(const QString &message);
     void errorOccurred(const QString &message);
 

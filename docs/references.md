@@ -1,5 +1,7 @@
 # 参考项目
 
+截图入口参考 Haruna `src/qml/Actions.qml` 的异步 screenshot 动作；具体实现以安装的 mpv 0.41 client API 与 `screenshot-to-file` 契约为准。参数数组 API 默认不做属性展开，避免将文件名中的 `${...}` 解释为命令属性。mpv `player/screenshot.c` 说明截图可按需下载硬件帧并编码；NekoPlayer 不自行抓取 QOpenGLWidget 或在正常播放中回拷图像。实现独立编写，没有复制上游源码。
+
 画面内信息与定位进度参考 mpv.net `src/MpvNet/InputHelp.cs` 对统计／媒体信息／进度动作的区分，以及 IINA `iina/OSDView.swift` 的位置进度展示。NekoPlayer 独立实现 Qt Widgets 叠加层、共享 Tab 动作和纯文本快照格式化；没有复制上游源码。定位进度独立于全屏控制区，只随已有属性事件更新，以 mpv 实际观察位置为准。
 
 以下项目已浅克隆到 `references/`，保持各自独立的 Git 仓库。它们是学习材料，不是构建依赖。复用源码前须核对具体文件及依赖的许可证。

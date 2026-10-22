@@ -1,5 +1,6 @@
 #include "videomenu.h"
 #include "playback/mpvcontroller.h"
+#include "screenshotmenu.h"
 #include "videocolordialog.h"
 
 #include <QAction>
@@ -57,6 +58,10 @@ VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
         VideoColorDialog dialog(controller_, window);
         dialog.exec();
     });
+    menu_->addSeparator();
+    auto *screenshots = new ScreenshotMenu(controller_, window);
+    menu_->addMenu(screenshots->menu());
+    connect(screenshots, &ScreenshotMenu::feedback, this, &VideoMenu::feedback);
     connect(&controller_, &MpvController::videoPresentationChanged, this, [this] {
         update();
         emit feedback(tr("画面比例：%1 · 旋转：%2°")

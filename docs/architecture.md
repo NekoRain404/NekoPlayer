@@ -34,6 +34,7 @@
 | `SubtitleDisplayMenu` / `SubtitleSettingsDialog` | 共享字幕显示动作、快捷键和应用／取消草稿 | 只使用字幕偏好与控制器业务 API，不订阅播放进度 |
 | `VideoPresentation` / `mpvcontroller_video.cpp` | 本次运行的画面比例与四分之一圈旋转意图、校验及异步提交 | 值类型不依赖 UI；实现只使用同一 mpv client |
 | `VideoMenu` | 互斥比例动作、旋转快捷键与共享菜单 | 仅调用控制器业务 API，按专用信号刷新 |
+| `ScreenshotMenu` / `mpvcontroller_screenshot.cpp` | 含字幕／无字幕截图入口、保存位置选择与原生命令完成确认 | UI 不读取帧；控制器校验目标与视频状态，通过同一 client 异步编码保存 |
 | `SessionState` / `SessionStore` | 音频、输出设备、解码、字幕、倍速／延迟、窗口偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
 | `PlaybackHistoryStore` | 独立版本化 INI 文件；按规范化绝对路径保存最近 100 个媒体位置 | Qt Core，不依赖队列、播放控制器或 UI |
 | `SessionManager` | 恢复空闲队列、播放偏好、逐文件位置及媒体级轨道选择，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |

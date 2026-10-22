@@ -37,6 +37,13 @@ target_link_libraries(preferences_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME preferences-dialog COMMAND preferences_dialog_test)
 set_tests_properties(preferences-dialog PROPERTIES TIMEOUT 20)
 
+add_executable(appearance_preferences_test appearance_preferences_test.cpp)
+target_link_libraries(appearance_preferences_test PRIVATE neko_ui Qt6::Test)
+qt_add_translations(appearance_preferences_test TS_FILES ../translations/NekoPlayer_en.ts
+    RESOURCE_PREFIX "/i18n")
+add_test(NAME appearance-preferences COMMAND appearance_preferences_test)
+set_tests_properties(appearance-preferences PROPERTIES TIMEOUT 20)
+
 add_executable(commandlinearguments_test commandlinearguments_test.cpp)
 target_include_directories(commandlinearguments_test PRIVATE ../src)
 target_link_libraries(commandlinearguments_test PRIVATE neko_options Qt6::Core Qt6::Test)

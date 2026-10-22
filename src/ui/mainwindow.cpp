@@ -59,18 +59,6 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     fileDrop_ = new LocalFileDrop(*controller_, this);
     connect(fileDrop_, &LocalFileDrop::mediaFilesDropped, this, &MainWindow::appendFiles);
     connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
-    setStyleSheet(QStringLiteral(
-        "QMainWindow, QWidget#transportBar { background: #202126; color: #e3e4e9; }"
-        "QMenuBar, QMenu, QStatusBar { background: #26282e; color: #d7d9e0; }"
-        "QMenuBar::item:selected, QMenu::item:selected { background: #414655; }"
-        "QLabel { color: #bfc3cf; }"
-        "QToolButton { color: #e3e4e9; background: transparent; border: none; border-radius: 4px; }"
-        "QToolButton:hover { background: #3b3f4b; }"
-        "QToolButton:disabled { color: #666a75; }"
-        "QSlider::groove:horizontal { height: 4px; background: #454953; border-radius: 2px; }"
-        "QSlider::sub-page:horizontal { background: #8ba9ef; border-radius: 2px; }"
-        "QSlider::handle:horizontal { background: #dce5fa; width: 10px; margin: -4px 0; "
-        "border-radius: 5px; }"));
     createActions();
     auto *content = new QWidget(this);
     auto *layout = new QVBoxLayout(content);
@@ -86,8 +74,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         new QLabel(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件\nCtrl+U 打开网络地址"), video_);
     emptyHint_->setAlignment(Qt::AlignCenter);
     emptyHint_->setAttribute(Qt::WA_TransparentForMouseEvents);
-    emptyHint_->setStyleSheet(
-        QStringLiteral("color: #8b92a3; font-size: 18px; background: transparent;"));
+    emptyHint_->setStyleSheet(QStringLiteral("font-size: 18px; background: transparent;"));
     auto *videoLayout = new QVBoxLayout(video_);
     videoLayout->addWidget(emptyHint_);
     playlistPane_ = new PlaylistPane(*playlist_, appendAction_, previousAction_, nextAction_,

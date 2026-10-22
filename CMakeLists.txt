@@ -4,7 +4,7 @@ project(NekoPlayer VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 
@@ -60,7 +60,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp
     src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/foldermenu.cpp
     src/ui/recentmediamenu.cpp
-    src/ui/currentmediamenu.cpp src/ui/fullscreencontrols.cpp
+    src/ui/currentmediamenu.cpp src/ui/fullscreencontrols.cpp src/ui/appearancepreferences.cpp
     src/ui/videoframingmenu.cpp
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
     src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
@@ -72,6 +72,8 @@ target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input Qt6::
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)
+qt_add_translations(NekoPlayer TS_FILES translations/NekoPlayer_en.ts
+    RESOURCE_PREFIX "/i18n")
 
 include(CTest)
 if(BUILD_TESTING)

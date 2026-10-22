@@ -1,4 +1,5 @@
 #include "actionfeedbacktext.h"
+#include "appearancepreferences.h"
 #include "audiodevicemenu.h"
 #include "currentmediamenu.h"
 #include "foldermenu.h"
@@ -19,9 +20,13 @@
 #include "videomenu.h"
 
 #include <QAction>
+#include <QActionGroup>
+#include <QApplication>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMessageBox>
+#include <QSettings>
 #include <QStatusBar>
 #include <QStyle>
 #include <QtGlobal>
@@ -224,6 +229,58 @@ void MainWindow::createActions() {
     });
     settings->addAction(playbackSettings);
     settings->addAction(subtitleDisplay->settingsAction());
+    settings->addSeparator();
+    auto *themeMenu = settings->addMenu(tr("主题"));
+    auto *themeGroup = new QActionGroup(themeMenu);
+    themeGroup->setExclusive(true);
+    QSettings appearanceSettings;
+    const auto savedTheme =
+        qApp->property("configurationEnabled").toBool()
+            ? appearanceSettings.value(QStringLiteral("appearance/theme"), QStringLiteral("dark"))
+                  .toString()
+            : QStringLiteral("dark");
+    for (const auto theme : AppearancePreferences::themes()) {
+        auto *action = themeMenu->addAction(AppearancePreferences::themeName(theme));
+        action->setCheckable(true);
+        themeGroup->addAction(action);
+        const auto key = theme == AppearancePreferences::Theme::Dark    ? QStringLiteral("dark")
+                         : theme == AppearancePreferences::Theme::Light ? QStringLiteral("light")
+                                                                        : QStringLiteral("system");
+        action->setChecked(savedTheme == key);
+        connect(action, &QAction::triggered, this, [this, theme, key] {
+            if (auto *application = qobject_cast<QApplication *>(qApp))
+                AppearancePreferences::applyTheme(*application, theme);
+            if (property("configurationEnabled").toBool()) {
+                QSettings preferences;
+                preferences.setValue(QStringLiteral("appearance/theme"), key);
+            }
+        });
+    }
+    auto *languageMenu = settings->addMenu(tr("语言"));
+    auto *languageGroup = new QActionGroup(languageMenu);
+    languageGroup->setExclusive(true);
+    const auto savedLanguage =
+        qApp->property("configurationEnabled").toBool()
+            ? appearanceSettings
+                  .value(QStringLiteral("appearance/language"), QStringLiteral("zh_CN"))
+                  .toString()
+            : QStringLiteral("zh_CN");
+    for (const auto &[name, key] : {std::pair{tr("简体中文"), QStringLiteral("zh_CN")},
+                                    std::pair{QStringLiteral("English"), QStringLiteral("en")}}) {
+        auto *action = languageMenu->addAction(name);
+        action->setCheckable(true);
+        action->setEnabled(qApp->property("configurationEnabled").toBool());
+        languageGroup->addAction(action);
+        action->setChecked(savedLanguage == key);
+        connect(action, &QAction::triggered, this, [this, key] {
+            QSettings preferences;
+            preferences.setValue(QStringLiteral("appearance/language"), key);
+            QMessageBox::information(this, tr("语言"), tr("更改语言将在重新启动后生效。"));
+        });
+    }
+    auto *about = settings->addAction(tr("关于 NekoPlayer…"));
+    connect(about, &QAction::triggered, this,
+            [this] { AppearancePreferences::showAboutDialog(this); });
     contextMenu_ = new QMenu(this);
     contextMenu_->addActions(
         {openAction_, openNetworkAction_, appendAction_, pauseAction_, stopAction_});

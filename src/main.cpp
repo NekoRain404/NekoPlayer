@@ -2,13 +2,16 @@
 #include "playback/backenddiagnostic.h"
 #include "playback/mpvcontroller.h"
 #include "playback/videowidget.h"
+#include "ui/appearancepreferences.h"
 #include "ui/mainwindow.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QTranslator>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -46,6 +49,29 @@ int main(int argc, char *argv[]) {
     const auto paths = parser.positionalArguments();
     const bool useConfig =
         !parser.isSet(QStringLiteral("no-config")) && !parser.isSet(QStringLiteral("smoke-test"));
+    app->setProperty("configurationEnabled", useConfig);
+    QSettings settings;
+    const auto language =
+        useConfig ? settings.value(QStringLiteral("appearance/language"), QStringLiteral("zh_CN"))
+                        .toString()
+                  : QStringLiteral("zh_CN");
+    QTranslator translator;
+    if (language == QLatin1String("en")) {
+        if (translator.load(QStringLiteral(":/i18n/NekoPlayer_en.qm")))
+            app->installTranslator(&translator);
+    }
+    if (auto *gui = qobject_cast<QApplication *>(app.get())) {
+        const auto themeName =
+            useConfig ? settings.value(QStringLiteral("appearance/theme"), QStringLiteral("dark"))
+                            .toString()
+                      : QStringLiteral("dark");
+        auto theme = AppearancePreferences::Theme::Dark;
+        if (themeName == QLatin1String("light"))
+            theme = AppearancePreferences::Theme::Light;
+        else if (themeName == QLatin1String("system"))
+            theme = AppearancePreferences::Theme::System;
+        AppearancePreferences::applyTheme(*gui, theme);
+    }
     const auto sessionPath =
         useConfig ? QDir(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation))
                         .filePath(QStringLiteral("session.ini"))

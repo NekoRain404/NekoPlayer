@@ -1,5 +1,12 @@
 # Verification Record
 
+Appearance and language settings stage (2026-10-22):
+
+- Added persisted Dark, Light, and Follow System themes with immediate palette/style updates, plus a Settings → About dialog showing NekoPlayer, Qt runtime, and libmpv client API versions (no license claim).
+- Added persisted Simplified Chinese/English selection. English takes effect on next launch; `--no-config` keeps reading/writing appearance preferences disabled. The bundled Qt Linguist catalog currently translates the core menus, settings, playback information overlay, and transport labels (**89 strings**); legacy dialogs and less common messages may remain Chinese and are follow-up localization work.
+- `appearance-preferences` verifies all three theme modes and loads the bundled `.qm` resource. Full Debug build and `QT_QPA_PLATFORM=offscreen ./build/debug/NekoPlayer --no-config --smoke-test` passed. The non-window collection passed **44/44** before the last localized-resource test addition, and that updated `appearance-preferences` test passed again afterward. No window behavior test was run.
+- `clang-format --dry-run --Werror`, code-size checks, and `git diff --check` passed; no new source exceeds 500 lines.
+
 Video framing, playback overlay, and timeline stage (2026-10-22):
 
 - Added PotPlayer-style video zoom/pan (25–800%, horizontal/vertical offsets, presets, keyboard shortcuts and reset) using mpv's native `video-zoom`/`video-pan-*` properties. Runtime intent survives stop/reload and renderer recovery; Stretch mode disables framing operations while preserving the values for later use.

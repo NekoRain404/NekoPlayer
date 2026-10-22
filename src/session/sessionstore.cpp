@@ -53,6 +53,7 @@ bool readBool(QSettings &settings, const QString &key, bool fallback = false) {
 
 SessionState normalized(SessionState state) {
     state.subtitles = state.subtitles.normalized();
+    state.tuning = state.tuning.normalized();
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
     QStringList paths;
@@ -75,6 +76,14 @@ SessionState normalized(SessionState state) {
     return state;
 }
 } // namespace
+
+TuningPreferences TuningPreferences::normalized() const {
+    return {
+        std::isfinite(playbackSpeed) ? std::clamp(playbackSpeed, 0.25, 4.0) : 1.0,
+        std::isfinite(audioDelay) ? std::clamp(audioDelay, -10.0, 10.0) : 0.0,
+        std::isfinite(subtitleDelay) ? std::clamp(subtitleDelay, -600.0, 600.0) : 0.0,
+    };
+}
 
 SessionStore::SessionStore(QString filePath) : filePath_(std::move(filePath)) {}
 
@@ -111,6 +120,14 @@ SessionLoadResult SessionStore::load() const {
     state.window.playlistVisible = readBool(settings, QStringLiteral("window/playlistVisible"));
     state.window.mediaDirectory =
         settings.value(QStringLiteral("window/mediaDirectory")).toString();
+    const auto speed = settings.value(QStringLiteral("playback/speed"), 1).toDouble(&valid);
+    state.tuning.playbackSpeed = valid ? speed : 1;
+    const auto audioDelay =
+        settings.value(QStringLiteral("playback/audioDelay"), 0).toDouble(&valid);
+    state.tuning.audioDelay = valid ? audioDelay : 0;
+    const auto subtitleDelay =
+        settings.value(QStringLiteral("playback/subtitleDelay"), 0).toDouble(&valid);
+    state.tuning.subtitleDelay = valid ? subtitleDelay : 0;
     return {normalized(std::move(state)), {}};
 }
 
@@ -139,6 +156,9 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("window/geometry"), saved.window.geometry);
     settings.setValue(QStringLiteral("window/playlistVisible"), saved.window.playlistVisible);
     settings.setValue(QStringLiteral("window/mediaDirectory"), saved.window.mediaDirectory);
+    settings.setValue(QStringLiteral("playback/speed"), saved.tuning.playbackSpeed);
+    settings.setValue(QStringLiteral("playback/audioDelay"), saved.tuning.audioDelay);
+    settings.setValue(QStringLiteral("playback/subtitleDelay"), saved.tuning.subtitleDelay);
     settings.sync();
     return settings.status() == QSettings::NoError ? QString{} : configurationError(filePath_);
 }

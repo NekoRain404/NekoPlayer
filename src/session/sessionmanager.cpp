@@ -18,6 +18,10 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
             [this](double volume) { audio_.volume = volume; });
     connect(&player_, &MpvController::muteRequested, this,
             [this](bool muted) { audio_.muted = muted; });
+    connect(&player_, &MpvController::tuningRequested, this,
+            [this](double speed, double audioDelay, double subtitleDelay) {
+                tuning_ = {speed, audioDelay, subtitleDelay};
+            });
     connect(&playlist_, &PlaylistController::playbackPositionSnapshot, this,
             &SessionManager::rememberPlaybackPosition);
     connect(&player_, &MpvController::stopRequested, this, [this] {
@@ -47,6 +51,8 @@ SessionLoadResult SessionManager::restore() {
     if (!loadError_.isEmpty())
         return loaded;
     audio_ = loaded.state.audio;
+    tuning_ = loaded.state.tuning;
+    const auto restoredTuning = tuning_;
     const auto history = historyStore_.load();
     historyError_ = history.error;
     for (const auto &entry : history.entries) {
@@ -61,6 +67,9 @@ SessionLoadResult SessionManager::restore() {
     player_.setMuted(audio_.muted);
     player_.setHardwareDecodingEnabled(loaded.state.hardwareDecodingEnabled);
     player_.setSubtitlePreferences(loaded.state.subtitles);
+    player_.setPlaybackSpeed(restoredTuning.playbackSpeed);
+    player_.setAudioDelay(restoredTuning.audioDelay);
+    player_.setSubtitleDelay(restoredTuning.subtitleDelay);
     return loaded;
 }
 
@@ -77,10 +86,16 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     const auto position = player_.state().path == playlist_.model()->currentPath()
                               ? player_.resumePosition()
                               : playlist_.pendingResumePosition();
-    const auto sessionError =
-        store_.save({audio_, std::move(window), playlist_.model()->paths() + pendingPaths,
-                     playlist_.model()->currentIndex(), player_.hardwareDecodingEnabled(),
-                     player_.subtitlePreferences(), position});
+    SessionState saved;
+    saved.audio = audio_;
+    saved.window = std::move(window);
+    saved.paths = playlist_.model()->paths() + pendingPaths;
+    saved.currentIndex = playlist_.model()->currentIndex();
+    saved.hardwareDecodingEnabled = player_.hardwareDecodingEnabled();
+    saved.subtitles = player_.subtitlePreferences();
+    saved.resumePosition = position;
+    saved.tuning = tuning_;
+    const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     return !sessionError.isEmpty() ? sessionError : historyError;
 }

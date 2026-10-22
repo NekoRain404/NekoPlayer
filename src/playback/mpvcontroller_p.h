@@ -188,6 +188,9 @@ struct MpvController::Impl {
             setting.requested = value;
             setting.requestId = id;
             setting.queryId = 0;
+            emit owner->tuningRequested(speed.requested.value_or(state.playbackSpeed),
+                                        audioDelay.requested.value_or(state.audioDelay),
+                                        subtitleDelay.requested.value_or(state.subtitleDelay));
         }
         report(status);
     }

@@ -26,6 +26,7 @@ class SessionManager final : public QObject {
     QHash<QString, double> resumePositions_;
     QHash<QString, PlaybackHistoryEntry> historyEntries_;
     AudioPreferences audio_;
+    TuningPreferences tuning_;
     QString mediaDirectory_;
     QString loadError_;
     QString historyError_;

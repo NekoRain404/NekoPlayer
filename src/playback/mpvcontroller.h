@@ -101,6 +101,7 @@ class MpvController final : public QObject {
     void stopRequested();
     void volumeRequested(double volume);
     void muteRequested(bool muted);
+    void tuningRequested(double playbackSpeed, double audioDelay, double subtitleDelay);
     void hardwareDecodingPreferenceChanged(bool enabled);
     void subtitlePreferencesChanged();
     void videoPresentationChanged();

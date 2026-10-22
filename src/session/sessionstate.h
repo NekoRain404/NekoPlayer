@@ -9,6 +9,14 @@ struct AudioPreferences {
     bool muted = false;
 };
 
+struct TuningPreferences {
+    double playbackSpeed = 1;
+    double audioDelay = 0;
+    double subtitleDelay = 0;
+
+    [[nodiscard]] TuningPreferences normalized() const;
+};
+
 struct WindowPreferences {
     QByteArray geometry;
     bool playlistVisible = false;
@@ -23,6 +31,7 @@ struct SessionState {
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
     double resumePosition = 0;
+    TuningPreferences tuning;
 };
 
 struct SessionLoadResult {

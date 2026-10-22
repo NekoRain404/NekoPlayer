@@ -82,6 +82,27 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.window.geometry, QByteArray::fromHex("00ff0012"));
         QVERIFY(loaded.state.window.playlistVisible);
         QCOMPARE(loaded.state.window.mediaDirectory, temporary.path());
+        QCOMPARE(loaded.state.tuning.playbackSpeed, 1.0);
+        QCOMPARE(loaded.state.tuning.audioDelay, 0.0);
+        QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
+    }
+
+    void schemaOneConfigurationWithoutTuningValuesUsesDefaults() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("schemaVersion"), 1);
+            settings.setValue(QStringLiteral("audio/volume"), 42.0);
+            settings.sync();
+        }
+
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QCOMPARE(loaded.state.tuning.playbackSpeed, 1.0);
+        QCOMPARE(loaded.state.tuning.audioDelay, 0.0);
+        QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
     }
 
     void emptyQueueReplacesPreviousSession() {
@@ -155,6 +176,64 @@ class SessionTest final : public QObject {
         QVERIFY(!player.state().active);
     }
 
+    void storedTuningPreferencesRestoreToPlayer() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("schemaVersion"), 1);
+            settings.setValue(QStringLiteral("playback/speed"), 1.5);
+            settings.setValue(QStringLiteral("playback/audioDelay"), -0.25);
+            settings.setValue(QStringLiteral("playback/subtitleDelay"), 2.75);
+            settings.sync();
+        }
+        const auto stored = SessionStore(path).load();
+        QVERIFY(stored.error.isEmpty());
+        QCOMPARE(stored.state.tuning.playbackSpeed, 1.5);
+        QCOMPARE(stored.state.tuning.audioDelay, -0.25);
+        QCOMPARE(stored.state.tuning.subtitleDelay, 2.75);
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, path);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+
+        QVERIFY(session.restore().error.isEmpty());
+        QVERIFY(session.save({}).isEmpty());
+        QSettings restored(path, QSettings::IniFormat);
+        QCOMPARE(restored.value(QStringLiteral("playback/speed")).toDouble(), 1.5);
+        QCOMPARE(restored.value(QStringLiteral("playback/audioDelay")).toDouble(), -0.25);
+        QCOMPARE(restored.value(QStringLiteral("playback/subtitleDelay")).toDouble(), 2.75);
+        QTRY_VERIFY(qAbs(player.state().playbackSpeed - 1.5) < 0.000001);
+        QTRY_VERIFY(qAbs(player.state().audioDelay - (-0.25)) < 0.000001);
+        QTRY_VERIFY(qAbs(player.state().subtitleDelay - 2.75) < 0.000001);
+        QVERIFY2(errors.isEmpty(),
+                 qPrintable(errors.isEmpty() ? QString{} : errors.first().first().toString()));
+    }
+
+    void tuningRequestsArePersistedBeforeMpvObservation() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, path);
+        QVERIFY(session.restore().error.isEmpty());
+
+        player.setPlaybackSpeed(1.75);
+        player.setAudioDelay(-0.4);
+        player.setSubtitleDelay(3.25);
+        QVERIFY(session.save({}).isEmpty());
+
+        QSettings settings(path, QSettings::IniFormat);
+        QVERIFY(qAbs(settings.value(QStringLiteral("playback/speed")).toDouble() - 1.75) <
+                0.000001);
+        QVERIFY(qAbs(settings.value(QStringLiteral("playback/audioDelay")).toDouble() - (-0.4)) <
+                0.000001);
+        QVERIFY(qAbs(settings.value(QStringLiteral("playback/subtitleDelay")).toDouble() - 3.25) <
+                0.000001);
+    }
+
     void invalidValuesCannotEscapeDomainLimits() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());
@@ -169,6 +248,9 @@ class SessionTest final : public QObject {
                               QStringList{QString{}, QStringLiteral("relative.mkv"), media});
             settings.setValue(QStringLiteral("playlist/currentIndex"), 2);
             settings.setValue(QStringLiteral("window/mediaDirectory"), media);
+            settings.setValue(QStringLiteral("playback/speed"), 99.0);
+            settings.setValue(QStringLiteral("playback/audioDelay"), -99.0);
+            settings.setValue(QStringLiteral("playback/subtitleDelay"), QStringLiteral("nan"));
             settings.sync();
         }
         const auto loaded = SessionStore(file).load();
@@ -178,6 +260,9 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.paths, QStringList{media});
         QCOMPARE(loaded.state.currentIndex, 0);
         QVERIFY(loaded.state.window.mediaDirectory.isEmpty());
+        QCOMPARE(loaded.state.tuning.playbackSpeed, 4.0);
+        QCOMPARE(loaded.state.tuning.audioDelay, -10.0);
+        QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
     }
 
     void inaccessibleDestinationReportsFailure() {

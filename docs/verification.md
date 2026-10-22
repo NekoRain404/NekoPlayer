@@ -1,5 +1,13 @@
 # Verification Record
 
+Welcome panel recent-history stage (2026-10-23):
+
+- The welcome surface now shows up to three recent local or network sources, keeps network credentials, query strings and fragments out of labels/tooltips, and emits the original source when a history action is selected.
+- Recent history updates live from `RecentMediaHistory`, and the empty state remains clear when no entries exist. Runtime language changes translate the recent-history heading and fallback label.
+- The card now yields recent entries and supporting copy at short heights while preserving both primary playback actions; wide cards keep the compact two-column action layout and narrow cards stack actions vertically.
+- `ui-surface_test` passed **8/8** in Debug and ASan/UBSan with offscreen Qt (`ASAN_OPTIONS=detect_leaks=0`). The short-height regression covers the 360×190 surface and the existing narrow-width regression covers the stacked actions. `appearance-preferences`, `code-size`, formatting and `git diff --check` also passed. Window behavior tests were not run; native Wayland visual spacing and history-click behavior remain desktop verification work.
+- No libmpv commands, decoder settings, GPU render path, CPU frame copies, HDR handling or playback polling changed in this stage.
+
 Welcome panel narrow-layout stage (2026-10-23):
 
 - The welcome card now switches its primary actions from a row to a column when the translated button labels no longer fit side-by-side. Its minimum width was reduced so the stacked layout fits the supported narrow video surface with the playlist open.

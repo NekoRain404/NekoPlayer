@@ -86,6 +86,8 @@
     <message><source>开始播放</source><translation>Start Playing</translation></message>
     <message><source>打开本地媒体或连接网络地址，享受流畅播放体验</source><translation>Open local media or connect to a network address for smooth playback</translation></message>
     <message><source>也可以将视频拖到这里 · Ctrl+O 打开文件 · Ctrl+U 打开网络地址</source><translation>You can also drop a video here · Ctrl+O to open a file · Ctrl+U to open a network URL</translation></message>
+    <message><source>最近播放</source><translation>Recently Played</translation></message>
+    <message><source>未命名媒体</source><translation>Untitled Media</translation></message>
 </context>
 <context>
     <name>MediaInformationDialog</name>

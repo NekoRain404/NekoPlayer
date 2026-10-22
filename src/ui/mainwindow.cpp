@@ -75,6 +75,10 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     playbackOverlay_ = new PlaybackOverlay(*controller_, video_);
     playbackOverlay_->setGeometry(video_->rect());
     welcomePanel_ = new WelcomePanel(openAction_, openNetworkAction_, video_);
+    connect(welcomePanel_, &WelcomePanel::recentSourceRequested, this, &MainWindow::openFile);
+    connect(recentMedia_.get(), &RecentMediaHistory::changed, this,
+            [this] { welcomePanel_->setRecentSources(recentMedia_->entries()); });
+    welcomePanel_->setRecentSources(recentMedia_->entries());
     auto *videoLayout = new QVBoxLayout(video_);
     videoLayout->setContentsMargins(24, 24, 24, 24);
     videoLayout->setSpacing(0);

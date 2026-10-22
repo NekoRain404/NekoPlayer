@@ -1,14 +1,19 @@
 #include "welcomepanel.h"
 
+#include "playback/mediasource.h"
+
 #include <QAction>
 #include <QBoxLayout>
 #include <QEvent>
+#include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSizePolicy>
+#include <QUrl>
 #include <QVBoxLayout>
+#include <algorithm>
 
 namespace {
 void bindButton(QPushButton *button, QAction *action) {
@@ -30,11 +35,12 @@ void bindButton(QPushButton *button, QAction *action) {
 
 WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : QWidget(parent) {
     setObjectName(QStringLiteral("welcomePanel"));
-    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     setMinimumWidth(224);
     setMaximumWidth(460);
 
     auto *layout = new QVBoxLayout(this);
+    layout->setSizeConstraint(QLayout::SetNoConstraint);
     layout->setContentsMargins(28, 24, 28, 22);
     layout->setSpacing(8);
 
@@ -68,6 +74,17 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     buttonsLayout_->addWidget(networkButton);
     layout->addLayout(buttonsLayout_);
 
+    auto *recentHeading = new QLabel(this);
+    recentHeading->setObjectName(QStringLiteral("welcomeRecentHeading"));
+    recentHeading->setVisible(false);
+    recentHeading->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    recentHeading->setAttribute(Qt::WA_TransparentForMouseEvents);
+    layout->addWidget(recentHeading);
+    recentLayout_ = new QVBoxLayout;
+    recentLayout_->setContentsMargins(0, 0, 0, 0);
+    recentLayout_->setSpacing(4);
+    layout->addLayout(recentLayout_);
+
     auto *hint = new QLabel(this);
     hint->setObjectName(QStringLiteral("welcomeDropHint"));
     hint->setAlignment(Qt::AlignCenter);
@@ -87,16 +104,19 @@ void WelcomePanel::changeEvent(QEvent *event) {
 void WelcomePanel::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
     updateButtonDirection();
+    updateRecentButtonLabels();
+    updateVerticalDensity();
 }
 
 void WelcomePanel::updateButtonDirection() {
-    const auto buttons = findChildren<QPushButton *>();
-    if (buttons.size() < 2)
+    const auto *openButton = findChild<QPushButton *>(QStringLiteral("welcomeOpenButton"));
+    const auto *networkButton = findChild<QPushButton *>(QStringLiteral("welcomeNetworkButton"));
+    if (!openButton || !networkButton)
         return;
 
     constexpr int horizontalSpacing = 8;
     constexpr int horizontalMargins = 56;
-    const auto requiredWidth = buttons[0]->sizeHint().width() + buttons[1]->sizeHint().width() +
+    const auto requiredWidth = openButton->sizeHint().width() + networkButton->sizeHint().width() +
                                horizontalSpacing + horizontalMargins;
     const auto direction =
         width() >= requiredWidth ? QBoxLayout::LeftToRight : QBoxLayout::TopToBottom;
@@ -105,6 +125,68 @@ void WelcomePanel::updateButtonDirection() {
         buttonsLayout_->invalidate();
         buttonsLayout_->activate();
     }
+}
+
+void WelcomePanel::setRecentSources(const QStringList &sources) {
+    recentSources_ = sources.mid(0, 3);
+    while (auto *item = recentLayout_->takeAt(0)) {
+        if (item->widget())
+            delete item->widget();
+        delete item;
+    }
+    auto *heading = findChild<QLabel *>(QStringLiteral("welcomeRecentHeading"));
+    heading->setVisible(!recentSources_.isEmpty());
+
+    for (qsizetype index = 0; index < recentSources_.size(); ++index) {
+        const auto source = recentSources_.at(index);
+        auto *button = new QPushButton(this);
+        button->setObjectName(QStringLiteral("welcomeRecentAction%1").arg(index + 1));
+        button->setProperty("welcomeRecentAction", true);
+        button->setMinimumHeight(34);
+        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        const auto location =
+            MediaSource::isNetwork(source)
+                ? QUrl(source).toDisplayString(QUrl::RemoveUserInfo | QUrl::RemoveQuery |
+                                               QUrl::RemoveFragment)
+                : source;
+        button->setToolTip(location.toHtmlEscaped());
+        button->setAccessibleName(location);
+        connect(button, &QPushButton::clicked, this,
+                [this, source] { emit recentSourceRequested(source); });
+        recentLayout_->addWidget(button);
+    }
+    updateRecentButtonLabels();
+    updateVerticalDensity();
+}
+
+void WelcomePanel::updateRecentButtonLabels() {
+    const auto availableWidth = std::max(0, width() - 80);
+    const QFontMetrics metrics(font());
+    for (qsizetype index = 0; index < recentSources_.size(); ++index) {
+        auto *button =
+            findChild<QPushButton *>(QStringLiteral("welcomeRecentAction%1").arg(index + 1));
+        auto label = MediaSource::displayName(recentSources_.at(index));
+        if (label.isEmpty())
+            label = tr("未命名媒体");
+        label.replace(QLatin1Char('&'), QStringLiteral("&&"));
+        button->setText(metrics.elidedText(label, Qt::ElideMiddle, availableWidth));
+    }
+}
+
+void WelcomePanel::updateVerticalDensity() {
+    const bool showRecent = height() >= 260;
+    const bool showSupportingText = height() >= 215;
+    if (auto *heading = findChild<QLabel *>(QStringLiteral("welcomeRecentHeading")))
+        heading->setVisible(showRecent && !recentSources_.isEmpty());
+    for (qsizetype index = 0; index < recentSources_.size(); ++index) {
+        if (auto *button =
+                findChild<QPushButton *>(QStringLiteral("welcomeRecentAction%1").arg(index + 1)))
+            button->setVisible(showRecent);
+    }
+    if (auto *subtitle = findChild<QLabel *>(QStringLiteral("welcomeSubtitle")))
+        subtitle->setVisible(showSupportingText);
+    if (auto *hint = findChild<QLabel *>(QStringLiteral("welcomeDropHint")))
+        hint->setVisible(showSupportingText);
 }
 
 void WelcomePanel::retranslateUi() {
@@ -116,4 +198,9 @@ void WelcomePanel::retranslateUi() {
         hint->setText(tr("也可以将视频拖到这里 · Ctrl+O 打开文件 · Ctrl+U 打开网络地址"));
         hint->setAccessibleName(hint->text());
     }
+    if (auto *heading = findChild<QLabel *>(QStringLiteral("welcomeRecentHeading"))) {
+        heading->setText(tr("最近播放"));
+        updateVerticalDensity();
+    }
+    updateRecentButtonLabels();
 }

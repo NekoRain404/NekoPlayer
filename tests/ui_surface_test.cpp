@@ -36,6 +36,54 @@ class UiSurfaceTest final : public QObject {
         QCOMPARE(openSpy.size(), 1);
     }
 
+    void welcomePanelShowsRecentMediaAndRequestsPlayback() {
+        QAction open(QStringLiteral("打开文件…"));
+        QAction network(QStringLiteral("打开网络地址…"));
+        WelcomePanel panel(&open, &network);
+        QSignalSpy recentSpy(&panel, &WelcomePanel::recentSourceRequested);
+        const QStringList sources{QStringLiteral("/media/Film One.mkv"),
+                                  QStringLiteral("https://example.test/series/episode.mkv")};
+
+        panel.setRecentSources(sources);
+
+        auto *heading = panel.findChild<QLabel *>(QStringLiteral("welcomeRecentHeading"));
+        auto *first = panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1"));
+        auto *second = panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction2"));
+        QVERIFY(heading && first && second);
+        QVERIFY(!heading->isHidden());
+        QVERIFY(first->text().contains(QStringLiteral("Film One")));
+        QVERIFY(second->text().contains(QStringLiteral("episode")));
+        QVERIFY(!second->toolTip().contains(QStringLiteral("?")));
+        QVERIFY(second->property("welcomeRecentAction").toBool());
+
+        first->click();
+        QCOMPARE(recentSpy.size(), 1);
+        QCOMPARE(recentSpy.takeFirst().at(0).toString(), sources.constFirst());
+
+        panel.setRecentSources({});
+        QVERIFY(!panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1")));
+    }
+
+    void welcomePanelPrioritizesPlaybackActionsWhenShort() {
+        QAction open(QStringLiteral("Open File…"));
+        QAction network(QStringLiteral("Open Network URL…"));
+        WelcomePanel panel(&open, &network);
+        panel.setRecentSources({QStringLiteral("/media/one.mkv"), QStringLiteral("/media/two.mkv"),
+                                QStringLiteral("/media/three.mkv")});
+        panel.resize(360, 190);
+        panel.show();
+        QCoreApplication::processEvents();
+
+        auto *openButton = panel.findChild<QPushButton *>(QStringLiteral("welcomeOpenButton"));
+        auto *networkButton =
+            panel.findChild<QPushButton *>(QStringLiteral("welcomeNetworkButton"));
+        auto *heading = panel.findChild<QLabel *>(QStringLiteral("welcomeRecentHeading"));
+        QVERIFY(openButton && networkButton && heading);
+        QVERIFY(!openButton->isHidden());
+        QVERIFY(!networkButton->isHidden());
+        QVERIFY(heading->isHidden());
+    }
+
     void welcomePanelKeepsActionsReadableAtNarrowWidth() {
         QAction open(QStringLiteral("Open File…"));
         QAction network(QStringLiteral("Open Network URL…"));
@@ -76,6 +124,7 @@ class UiSurfaceTest final : public QObject {
         QAction open(QStringLiteral("打开文件…"));
         QAction network(QStringLiteral("打开网络地址…"));
         WelcomePanel panel(&open, &network);
+        panel.setRecentSources({QStringLiteral("/media/Film One.mkv")});
         QTranslator translator;
         QVERIFY(translator.load(QStringLiteral(":/i18n/NekoPlayer_en.qm")));
         qApp->installTranslator(&translator);
@@ -83,6 +132,8 @@ class UiSurfaceTest final : public QObject {
         QCoreApplication::sendEvent(&panel, &languageChange);
         QCOMPARE(panel.findChild<QLabel *>(QStringLiteral("welcomeTitle"))->text(),
                  QStringLiteral("Start Playing"));
+        QCOMPARE(panel.findChild<QLabel *>(QStringLiteral("welcomeRecentHeading"))->text(),
+                 QStringLiteral("Recently Played"));
         qApp->removeTranslator(&translator);
     }
 };

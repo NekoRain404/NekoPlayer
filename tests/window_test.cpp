@@ -140,6 +140,21 @@ class WindowTest final : public QObject {
         QCOMPARE(window.size(), normalSize);
     }
 
+    void closingMiniPlayerPersistsNormalWindowGeometry() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto sessionPath = temporary.filePath(QStringLiteral("mini-session.ini"));
+        MainWindow window(true, sessionPath);
+        window.resize(920, 560);
+        const auto normalGeometry = window.saveGeometry();
+        auto *mini = action(window, "miniPlayerAction");
+        QVERIFY(mini);
+        mini->trigger();
+        window.close();
+
+        QCOMPARE(SessionStore(sessionPath).load().state.window.geometry, normalGeometry);
+    }
+
     void chapterActionsFollowSelectionAndKeepPause() {
         MainWindow window(true);
         auto *jump = action(window, "seekTimeAction");

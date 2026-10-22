@@ -425,6 +425,7 @@ void MainWindow::setMiniPlayer(bool enabled) {
         if (isFullScreen())
             setFullscreen(false);
         miniPlayerActive_ = true;
+        miniPlayerSavedGeometry_ = saveGeometry();
         miniPlayerGeometry_ = isMaximized() ? normalGeometry() : geometry();
         miniPlayerMaximized_ = isMaximized();
         showPlaylistAction_->setEnabled(false);

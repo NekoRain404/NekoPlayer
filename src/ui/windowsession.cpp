@@ -44,7 +44,9 @@ QString MainWindow::saveSession() {
     if (!session_)
         return recentError;
     WindowPreferences window;
-    window.geometry = isFullScreen() ? normalGeometry_ : saveGeometry();
+    window.geometry = miniPlayerActive_ ? miniPlayerSavedGeometry_
+                      : isFullScreen()  ? normalGeometry_
+                                        : saveGeometry();
     window.playlistVisible = showPlaylistAction_->isChecked();
     const auto sessionError = session_->save(std::move(window), pendingPaths_);
     if (recentError.isEmpty())

@@ -101,6 +101,7 @@ class MainWindow final : public QMainWindow {
     QStringList pendingPaths_;
     QPersistentModelIndex pendingPlaylistIndex_;
     QByteArray normalGeometry_;
+    QByteArray miniPlayerSavedGeometry_;
     bool normalMaximized_ = false;
     QRect miniPlayerGeometry_;
     bool miniPlayerMaximized_ = false;

@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "actionfeedbackoverlay.h"
 #include "actionfeedbacktext.h"
+#include "foldermenu.h"
 #include "input/localfiledrop.h"
 #include "networkopendialog.h"
 #include "playback/mediasource.h"
@@ -124,6 +125,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(playlist_->model(), &PlaylistModel::rowsMoved, this, &MainWindow::updateState);
     connect(playlist_->model(), &PlaylistModel::modelReset, this, &MainWindow::updateState);
     connect(playlistPane_, &PlaylistPane::playRequested, playlist_.get(), [this](int row) {
+        folderMenu_->cancel();
         if (video_->isReady())
             playlist_->playAt(row);
     });
@@ -177,6 +179,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
 }
 
 MainWindow::~MainWindow() {
+    folderMenu_->cancel();
     controlsTimer_.stop();
     if (!sessionSaveAttempted_) {
         if (const auto error = saveSession(); !error.isEmpty())
@@ -192,6 +195,7 @@ PlaylistController *MainWindow::playlist() const { return playlist_.get(); }
 void MainWindow::openFile(const QString &path) { openFiles({path}); }
 
 void MainWindow::openFiles(const QStringList &paths) {
+    folderMenu_->cancel();
     if (paths.isEmpty())
         return;
     const auto sources = normalizedSources(paths);
@@ -208,6 +212,7 @@ void MainWindow::openFiles(const QStringList &paths) {
 }
 
 void MainWindow::appendFiles(const QStringList &paths) {
+    folderMenu_->cancel();
     if (paths.isEmpty())
         return;
     const auto sources = normalizedSources(paths);
@@ -225,12 +230,14 @@ void MainWindow::appendFiles(const QStringList &paths) {
 }
 
 void MainWindow::clearPlaylist() {
+    folderMenu_->cancel();
     pendingPlaylistIndex_ = QPersistentModelIndex{};
     pendingPaths_.clear();
     playlist_->clear();
 }
 
 void MainWindow::choosePlaylistToOpen() {
+    folderMenu_->cancel();
     const auto path = QFileDialog::getOpenFileName(this, tr("打开播放列表"), mediaDirectory(),
                                                    tr("M3U8 播放列表 (*.m3u8);;所有文件 (*)"));
     if (!path.isEmpty())
@@ -248,6 +255,7 @@ void MainWindow::choosePlaylistToSave() {
 }
 
 void MainWindow::openPlaylist(const QString &path) {
+    folderMenu_->cancel();
     if (video_->hasFailed()) {
         showError(tr("OpenGL 初始化失败，无法打开播放列表"));
         return;
@@ -277,6 +285,7 @@ void MainWindow::savePlaylist(const QString &path) {
 }
 
 void MainWindow::chooseFile() {
+    folderMenu_->cancel();
     const auto path =
         QFileDialog::getOpenFileName(this, tr("打开媒体文件"), mediaDirectory(),
                                      tr("媒体文件 (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.ts *.mp3 "
@@ -286,17 +295,27 @@ void MainWindow::chooseFile() {
 }
 
 void MainWindow::chooseNetworkUrl() {
+    folderMenu_->cancel();
     NetworkOpenDialog dialog(this);
     if (dialog.exec() == QDialog::Accepted)
         openFile(dialog.mediaUrl());
 }
 
 void MainWindow::chooseFilesToAppend() {
+    folderMenu_->cancel();
     const auto paths =
         QFileDialog::getOpenFileNames(this, tr("添加媒体文件"), mediaDirectory(),
                                       tr("媒体文件 (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.ts "
                                          "*.mp3 *.flac *.wav);;所有文件 (*)"));
     appendFiles(paths);
+}
+
+void MainWindow::openFolder(const QString &directory, bool append, bool recursive) {
+    if (video_->hasFailed()) {
+        showError(tr("OpenGL 初始化失败，无法打开文件夹"));
+        return;
+    }
+    folderMenu_->start(directory, append, recursive);
 }
 
 void MainWindow::updateState() {

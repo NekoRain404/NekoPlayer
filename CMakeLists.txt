@@ -4,7 +4,7 @@ project(NekoPlayer VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets OpenGLWidgets)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 
@@ -47,14 +47,15 @@ add_library(neko_session src/session/sessionstore.cpp src/session/sessionmanager
     src/session/playbackhistorystore.cpp src/session/trackpreferencestore.cpp)
 target_link_libraries(neko_session PUBLIC neko_playback)
 
-add_library(neko_input src/input/localfiledrop.cpp)
-target_link_libraries(neko_input PUBLIC neko_playback)
+add_library(neko_input src/input/localfiledrop.cpp src/input/mediafolderscan.cpp
+    src/input/folderscanjob.cpp)
+target_link_libraries(neko_input PUBLIC neko_playback Qt6::Concurrent)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
     src/playlist/m3u8store.cpp
     src/ui/mediainformationtext.cpp src/ui/mediainformationdialog.cpp
     src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp
-    src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp
+    src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/foldermenu.cpp
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
     src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
     src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp src/ui/networkopendialog.cpp

@@ -1,3 +1,4 @@
+#include "foldermenu.h"
 #include "mainwindow.h"
 #include "session/sessionmanager.h"
 
@@ -48,6 +49,7 @@ QString MainWindow::mediaDirectory() const {
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
+    folderMenu_->cancel();
     const auto error = saveSession();
     sessionSaveAttempted_ = true;
     if (!error.isEmpty())

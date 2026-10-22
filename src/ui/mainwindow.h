@@ -18,6 +18,7 @@ class QLabel;
 class LocalFileDrop;
 class ActionFeedbackOverlay;
 class PlaybackOverlay;
+class FolderMenu;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -30,6 +31,7 @@ class MainWindow final : public QMainWindow {
     void openFile(const QString &path);
     void openFiles(const QStringList &paths);
     void appendFiles(const QStringList &paths);
+    void openFolder(const QString &directory, bool append = false, bool recursive = false);
 
   signals:
     void userError(const QString &message);
@@ -70,6 +72,7 @@ class MainWindow final : public QMainWindow {
     QLabel *emptyHint_ = nullptr;
     ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
     PlaybackOverlay *playbackOverlay_ = nullptr;
+    FolderMenu *folderMenu_ = nullptr;
     QAction *openAction_ = nullptr;
     QAction *openNetworkAction_ = nullptr;
     QAction *openPlaylistAction_ = nullptr;

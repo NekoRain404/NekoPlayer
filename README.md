@@ -6,7 +6,7 @@
 
 ## 构建与检查
 
-需要 CMake 3.25+、Ninja、支持 C++20 的编译器、Qt 6.5+ Core/Widgets/OpenGLWidgets、libmpv 开发库和 pkg-config。构建测试还需要 Qt Test、Qt Network 和 FFmpeg，Qt Network 仅用于本地 HTTP 测试服务。原生 Wayland 测试另需 Qt Wayland 平台插件及可用的 Wayland 桌面会话。Xvfb、xvfb-run 和 Openbox 仅用于显式的 X11 CI 回归。仅构建播放器可传入 `-DBUILD_TESTING=OFF`。当前使用 Linux/pkg-config；Windows SDK 查找与打包尚未配置。
+需要 CMake 3.25+、Ninja、支持 C++20 的编译器、Qt 6.5+ Core/Concurrent/Widgets/OpenGLWidgets、libmpv 开发库和 pkg-config。构建测试还需要 Qt Test、Qt Network 和 FFmpeg，Qt Network 仅用于本地 HTTP 测试服务。原生 Wayland 测试另需 Qt Wayland 平台插件及可用的 Wayland 桌面会话。Xvfb、xvfb-run 和 Openbox 仅用于显式的 X11 CI 回归。仅构建播放器可传入 `-DBUILD_TESTING=OFF`。当前使用 Linux/pkg-config；Windows SDK 查找与打包尚未配置。
 
 ```bash
 cmake --preset debug
@@ -57,6 +57,7 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 | 打开文件 | Ctrl+O |
 | 打开网络地址 | Ctrl+U |
 | 添加文件 / 显示播放列表 | Ctrl+Shift+O / Ctrl+L |
+| 打开 / 添加文件夹 | Ctrl+D / Ctrl+Shift+D |
 | 移除列表所选项（列表聚焦时） | Delete |
 | 上移 / 下移所选项（列表聚焦时） | Ctrl+↑ / Ctrl+↓ |
 | 加载外挂字幕 | Ctrl+Shift+S |
@@ -93,6 +94,8 @@ Tab 在视频左上角切换播放信息，显示媒体名、时间、暂停／�
 打开文件会替换现有队列；添加文件、拖入一个或多个本地媒体文件、或传入多个命令行位置参数会追加或创建队列。网络地址及带主机名的 file URL（含 localhost）拖放会被拒绝并显示原因；本地文件请使用普通路径或无主机名的 file URL。全屏默认隐藏菜单与控制区，移动鼠标显示控制区，闲置后收起；错误会显示可见提示。正常播放禁用用户 mpv 配置、脚本、OSC 和默认键绑定，由 NekoPlayer 统一管理交互。
 
 Ctrl+U、“文件”菜单或右键菜单可打开网络媒体地址，也可在命令行混合传入本地文件和 URL。入口接受 HTTP(S)、RTSP(S)、RTMP(S)，播放与网络读取交给 libmpv；HTTP 媒体直链和 HLS 地址的具体可播性取决于系统 mpv/FFmpeg、服务端和鉴权条件。保留签名地址的路径与查询转义字节，列表标题不包含查询参数。取消对话框或地址校验失败不会清空当前队列。网络条目正常退出时随队列保存，下次启动保持空闲，手动播放时从头打开；不保存网络续播位置或媒体级轨道偏好，也不改变本地文件对话框目录。当前已验证本地 HTTP 直链，公网 HTTPS、HLS、RTSP/RTMP 和网页地址／yt-dlp 解析尚未专项验证；`load-scripts=no` 不禁用 mpv 内置的 ytdl hook。
+
+“文件”“播放列表”和右键菜单共用“文件夹”子菜单：Ctrl+D 打开文件夹并替换队列，Ctrl+Shift+D 追加文件夹。默认只扫描当前层，可勾选“包含子文件夹”；该选择仅在本次运行保留。音视频文件按相对路径自然排序，例如第 2 集排在第 10 集之前；扩展名不区分大小写，不读取媒体内容。后台扫描期间原播放继续，可在进度窗口或菜单中取消。空结果、读取失败、取消以及超过 100000 个目录项的扫描均不提交部分队列。显式打开／添加其他来源、编辑队列、停止或关闭窗口会取消扫描，防止旧结果覆盖新操作。隐藏文件／子目录和符号链接跳过，字幕、图片和播放列表不作为媒体导入；文件夹拖放与自动加载同目录其他文件尚未提供。
 
 播放结束后自动进入下一项并跳过缺失文件；上一项按逆序跳过缺失文件。队列播完后追加媒体会启动新增项，暂停期间追加则保留当前播放。停止或播完后按空格可重新播放当前项。
 

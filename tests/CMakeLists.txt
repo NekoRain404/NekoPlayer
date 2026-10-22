@@ -1,6 +1,11 @@
 find_package(Qt6 6.5 REQUIRED COMPONENTS Test Network)
 find_program(FFMPEG_EXECUTABLE ffmpeg REQUIRED)
 
+add_executable(folder_scan_test folder_scan_test.cpp)
+target_link_libraries(folder_scan_test PRIVATE neko_input Qt6::Test)
+add_test(NAME folder-scan COMMAND folder_scan_test)
+set_tests_properties(folder-scan PROPERTIES TIMEOUT 60)
+
 add_executable(media_source_test media_source_test.cpp)
 target_link_libraries(media_source_test PRIVATE neko_playback Qt6::Test)
 add_test(NAME media-source COMMAND media_source_test)
@@ -363,6 +368,10 @@ add_executable(video_window_test video_window_test.cpp)
 target_link_libraries(video_window_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME video-window COMMAND ${WINDOW_TEST_RUNNER} $<TARGET_FILE:video_window_test>)
 set_tests_properties(video-window PROPERTIES TIMEOUT 30 ENVIRONMENT "${WINDOW_TEST_ENVIRONMENT}")
+add_executable(folder_window_test folder_window_test.cpp)
+target_link_libraries(folder_window_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME folder-window COMMAND ${WINDOW_TEST_RUNNER} $<TARGET_FILE:folder_window_test>)
+set_tests_properties(folder-window PROPERTIES TIMEOUT 30 ENVIRONMENT "${WINDOW_TEST_ENVIRONMENT}")
 add_executable(file_drop_window_test file_drop_window_test.cpp)
 target_link_libraries(file_drop_window_test PRIVATE neko_ui Qt6::Test)
 target_compile_definitions(file_drop_window_test PRIVATE TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"

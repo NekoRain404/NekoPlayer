@@ -1,5 +1,7 @@
 # 参考项目
 
+文件夹入口参考 Haruna `src/playlist/playlistfilterproxymodel.cpp` 的 `addFilesAndFolders()`、`playlistmodel.cpp` 的 `getSiblingItems()`，KikoPlay `Play/Playlist/playlistprivate.cpp` 的 `addSubFolder()`，以及 mpv.net `src/MpvNet/Player.cs` 的 `LoadFolder()`。沿用音视频筛选与数字自然排序的交互思路；本项目独立实现 QtConcurrent 后台扫描、上限校验、协作取消及旧结果隔离，不复制 GPL 源码、不引入 MIME 内容探测或启动延时。扫描结果非空且完整成功后才提交队列。
+
 截图入口参考 Haruna `src/qml/Actions.qml` 的异步 screenshot 动作；具体实现以安装的 mpv 0.41 client API 与 `screenshot-to-file` 契约为准。参数数组 API 默认不做属性展开，避免将文件名中的 `${...}` 解释为命令属性。mpv `player/screenshot.c` 说明截图可按需下载硬件帧并编码；NekoPlayer 不自行抓取 QOpenGLWidget 或在正常播放中回拷图像。实现独立编写，没有复制上游源码。
 
 画面内信息与定位进度参考 mpv.net `src/MpvNet/InputHelp.cs` 对统计／媒体信息／进度动作的区分，以及 IINA `iina/OSDView.swift` 的位置进度展示。NekoPlayer 独立实现 Qt Widgets 叠加层、共享 Tab 动作和纯文本快照格式化；没有复制上游源码。定位进度独立于全屏控制区，只随已有属性事件更新，以 mpv 实际观察位置为准。

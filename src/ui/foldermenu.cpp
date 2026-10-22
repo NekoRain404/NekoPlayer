@@ -1,0 +1,82 @@
+#include "foldermenu.h"
+#include "input/folderscanjob.h"
+
+#include <QAction>
+#include <QFileDialog>
+#include <QMenu>
+#include <QProgressDialog>
+#include <QWidget>
+#include <utility>
+
+FolderMenu::FolderMenu(QWidget *window, std::function<QString()> initialDirectory)
+    : QObject(window), window_(window), menu_(new QMenu(tr("文件夹"), window)),
+      recursiveAction_(new QAction(tr("包含子文件夹"), this)),
+      cancelAction_(new QAction(tr("取消文件夹扫描"), this)),
+      progress_(new QProgressDialog(tr("正在扫描媒体文件…"), tr("取消"), 0, 0, window)),
+      job_(new FolderScanJob(this)), initialDirectory_(std::move(initialDirectory)) {
+    menu_->setObjectName(QStringLiteral("folderMenu"));
+    const auto add = [this, window](const QString &text, const char *name, QKeySequence shortcut,
+                                    bool append) {
+        auto *action = new QAction(text, this);
+        action->setObjectName(QString::fromLatin1(name));
+        action->setShortcut(shortcut);
+        action->setAutoRepeat(false);
+        window->addAction(action);
+        menu_->addAction(action);
+        connect(action, &QAction::triggered, this, [this, append] { chooseDirectory(append); });
+    };
+    add(tr("打开文件夹…"), "openFolderAction", QKeySequence(Qt::CTRL | Qt::Key_D), false);
+    add(tr("添加文件夹…"), "appendFolderAction", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D),
+        true);
+    menu_->addSeparator();
+    recursiveAction_->setObjectName(QStringLiteral("recursiveFolderAction"));
+    recursiveAction_->setCheckable(true);
+    cancelAction_->setObjectName(QStringLiteral("cancelFolderScanAction"));
+    cancelAction_->setEnabled(false);
+    menu_->addActions({recursiveAction_, cancelAction_});
+    progress_->setObjectName(QStringLiteral("folderScanProgress"));
+    progress_->setWindowTitle(tr("扫描文件夹"));
+    progress_->setWindowModality(Qt::NonModal);
+    progress_->setMinimumDuration(0);
+    progress_->setAutoClose(false);
+    progress_->setAutoReset(false);
+    progress_->hide();
+    connect(progress_, &QProgressDialog::canceled, this, &FolderMenu::cancel);
+    connect(cancelAction_, &QAction::triggered, this, &FolderMenu::cancel);
+    connect(job_, &FolderScanJob::scanningChanged, this, [this] {
+        const bool scanning = job_->isScanning();
+        cancelAction_->setEnabled(scanning);
+        if (scanning) {
+            progress_->reset();
+            progress_->show();
+        } else {
+            progress_->hide();
+        }
+    });
+    connect(job_, &FolderScanJob::completed, this, [this](const QStringList &paths) {
+        if (paths.isEmpty()) {
+            emit feedback(tr("文件夹中没有找到支持的音视频文件"));
+            return;
+        }
+        emit filesReady(paths, append_);
+    });
+    connect(job_, &FolderScanJob::failed, this, &FolderMenu::errorOccurred);
+}
+
+QMenu *FolderMenu::menu() const { return menu_; }
+
+void FolderMenu::start(const QString &directory, bool append, bool recursive) {
+    append_ = append;
+    job_->start(directory, recursive);
+}
+
+void FolderMenu::cancel() { job_->cancel(); }
+
+void FolderMenu::chooseDirectory(bool append) {
+    // Choosing a new source invalidates an older scan before entering the modal chooser.
+    cancel();
+    const auto directory = QFileDialog::getExistingDirectory(
+        window_, append ? tr("添加文件夹") : tr("打开文件夹"), initialDirectory_());
+    if (!directory.isEmpty())
+        start(directory, append, recursiveAction_->isChecked());
+}

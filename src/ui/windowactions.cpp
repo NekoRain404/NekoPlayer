@@ -1,10 +1,12 @@
 #include "actionfeedbacktext.h"
 #include "audiodevicemenu.h"
+#include "foldermenu.h"
 #include "mainwindow.h"
 #include "mediainformationdialog.h"
 #include "navigationmenu.h"
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
+#include "playback/playlistmodel.h"
 #include "playbackoverlay.h"
 #include "playlistmodemenu.h"
 #include "playlistpane.h"
@@ -111,10 +113,31 @@ void MainWindow::createActions() {
         dialog->raise();
         dialog->activateWindow();
     });
+    folderMenu_ = new FolderMenu(this, [this] { return mediaDirectory(); });
+    connect(folderMenu_, &FolderMenu::filesReady, this,
+            [this](const QStringList &paths, bool append) {
+                if (append)
+                    appendFiles(paths);
+                else
+                    openFiles(paths);
+            });
+    connect(folderMenu_, &FolderMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message); });
+    connect(folderMenu_, &FolderMenu::errorOccurred, this, &MainWindow::showError);
+    connect(stopAction_, &QAction::triggered, folderMenu_, &FolderMenu::cancel);
+    connect(previousAction_, &QAction::triggered, folderMenu_, &FolderMenu::cancel);
+    connect(nextAction_, &QAction::triggered, folderMenu_, &FolderMenu::cancel);
+    // Structural edits supersede a pending folder import, including direct list drag/drop.
+    auto *model = playlist_->model();
+    connect(model, &PlaylistModel::rowsAboutToBeInserted, folderMenu_, &FolderMenu::cancel);
+    connect(model, &PlaylistModel::rowsAboutToBeRemoved, folderMenu_, &FolderMenu::cancel);
+    connect(model, &PlaylistModel::rowsAboutToBeMoved, folderMenu_, &FolderMenu::cancel);
+    connect(model, &PlaylistModel::modelAboutToBeReset, folderMenu_, &FolderMenu::cancel);
     auto *file = menuBar()->addMenu(tr("文件(&F)"));
     file->addAction(openAction_);
     file->addAction(openNetworkAction_);
     file->addAction(appendAction_);
+    file->addMenu(folderMenu_->menu());
     file->addSeparator();
     file->addActions({openPlaylistAction_, savePlaylistAction_});
     file->addSeparator();
@@ -153,6 +176,7 @@ void MainWindow::createActions() {
     playlistMenu_ = menuBar()->addMenu(tr("播放列表(&L)"));
     playlistMenu_->setObjectName(QStringLiteral("playlistMenu"));
     playlistMenu_->addActions({appendAction_, previousAction_, nextAction_, clearPlaylistAction_});
+    playlistMenu_->addMenu(folderMenu_->menu());
     playlistMenu_->addSeparator();
     playlistMenu_->addActions({openPlaylistAction_, savePlaylistAction_});
     auto *modeMenu = new PlaylistModeMenu(*playlist_, this);
@@ -190,6 +214,7 @@ void MainWindow::createActions() {
     contextMenu_ = new QMenu(this);
     contextMenu_->addActions(
         {openAction_, openNetworkAction_, appendAction_, pauseAction_, stopAction_});
+    contextMenu_->addMenu(folderMenu_->menu());
     contextMenu_->addSeparator();
     contextMenu_->addMenu(navigation->menu());
     contextMenu_->addMenu(tuning->speedMenu());

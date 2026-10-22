@@ -1,0 +1,115 @@
+#include "mediafolderscan.h"
+
+#include <QCollator>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QLocale>
+#include <QSet>
+#include <algorithm>
+#include <filesystem>
+#include <vector>
+
+namespace {
+constexpr qsizetype maximumVisitedEntries = 100000;
+
+std::filesystem::path nativePath(const QString &path) {
+#ifdef Q_OS_WIN
+    return std::filesystem::path(path.toStdWString());
+#else
+    return std::filesystem::path(QFile::encodeName(path).toStdString());
+#endif
+}
+
+QString displayPath(const std::filesystem::path &path) {
+#ifdef Q_OS_WIN
+    return QString::fromStdWString(path.native());
+#else
+    return QFile::decodeName(path.native().c_str());
+#endif
+}
+
+bool supportedMedia(const QFileInfo &file) {
+    static const QSet<QString> suffixes{
+        QStringLiteral("mkv"),  QStringLiteral("mp4"),  QStringLiteral("avi"),
+        QStringLiteral("mov"),  QStringLiteral("webm"), QStringLiteral("m4v"),
+        QStringLiteral("ts"),   QStringLiteral("m2ts"), QStringLiteral("mts"),
+        QStringLiteral("mpg"),  QStringLiteral("mpeg"), QStringLiteral("wmv"),
+        QStringLiteral("flv"),  QStringLiteral("ogv"),  QStringLiteral("3gp"),
+        QStringLiteral("vob"),  QStringLiteral("mp3"),  QStringLiteral("flac"),
+        QStringLiteral("wav"),  QStringLiteral("m4a"),  QStringLiteral("aac"),
+        QStringLiteral("ogg"),  QStringLiteral("opus"), QStringLiteral("wma"),
+        QStringLiteral("aiff"), QStringLiteral("aif"),  QStringLiteral("mka"),
+        QStringLiteral("ac3"),  QStringLiteral("dts"),  QStringLiteral("ape")};
+    return suffixes.contains(file.suffix().toLower());
+}
+
+MediaFolderScanResult unreadable(const QString &path) {
+    return {{}, QStringLiteral("无法读取媒体文件夹：%1").arg(path), false};
+}
+} // namespace
+
+MediaFolderScanResult scanMediaFolder(const QString &directory, bool recursive,
+                                      const std::shared_ptr<std::atomic_bool> &cancelled) {
+    const auto isCancelled = [&] {
+        return cancelled && cancelled->load(std::memory_order_relaxed);
+    };
+    if (isCancelled())
+        return {{}, {}, true};
+    if (directory.isEmpty() || directory.contains(QChar::Null))
+        return unreadable(directory);
+    // Clean trailing separators before checking the root itself for symlinks.
+    const QFileInfo root(QDir::cleanPath(directory));
+    if (root.isSymLink() || !root.isDir() || !root.isReadable())
+        return unreadable(directory);
+
+    QStringList paths;
+    std::vector<std::filesystem::path> pending{nativePath(root.absoluteFilePath())};
+    qsizetype visited = 0;
+    while (!pending.empty()) {
+        if (isCancelled())
+            return {{}, {}, true};
+        const auto current = std::move(pending.back());
+        pending.pop_back();
+        std::error_code error;
+        auto entry = std::filesystem::directory_iterator(current, error);
+        const auto end = std::filesystem::directory_iterator();
+        if (error)
+            return unreadable(displayPath(current));
+        while (entry != end) {
+            if (isCancelled())
+                return {{}, {}, true};
+            if (++visited > maximumVisitedEntries)
+                return {{}, QStringLiteral("文件夹内容超过扫描上限（100000 项）"), false};
+            const auto status = entry->symlink_status(error);
+            if (error)
+                return unreadable(displayPath(entry->path()));
+            if (!std::filesystem::is_symlink(status)) {
+                const QFileInfo file(displayPath(entry->path()));
+                if (!file.isHidden()) {
+                    if (std::filesystem::is_directory(status) && recursive)
+                        pending.push_back(entry->path());
+                    else if (std::filesystem::is_regular_file(status) && supportedMedia(file))
+                        paths.append(file.absoluteFilePath());
+                }
+            }
+            entry.increment(error);
+            if (error)
+                return unreadable(displayPath(current));
+        }
+    }
+    if (isCancelled())
+        return {{}, {}, true};
+    // The C locale ignores numeric mode on some Qt backends. Pin a locale so
+    // ordering is natural and deterministic across the user's locale settings.
+    QCollator collator(QLocale(QLocale::English));
+    collator.setNumericMode(true);
+    collator.setCaseSensitivity(Qt::CaseInsensitive);
+    std::sort(paths.begin(), paths.end(), [&collator](const QString &left, const QString &right) {
+        const auto compared = collator.compare(left, right);
+        return compared != 0 ? compared < 0 : left < right;
+    });
+    if (isCancelled())
+        return {{}, {}, true};
+    return {std::move(paths), {}, false};
+}

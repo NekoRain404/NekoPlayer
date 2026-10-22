@@ -29,6 +29,7 @@ Runtime language refresh follow-up (2026-10-22):
 - Expanded the English catalog for high-frequency action feedback, empty/error playback states, media reports, playlist editing, overlay accessibility labels, transport accessibility/tooltips and the media information dialog.
 - On `LanguageChange`, the empty-state hint, playback/seek overlays, transport labels/tooltips, playlist editing actions, and an open media-information dialog refresh their translated content without replacing playback state or shared QAction objects. Main-window primary menu/action labels continue to refresh in place.
 - Full Debug build and the non-window test collection passed **45/45**. The catalog/resource check `language-manager` passed; UI behavior targets were built but not run per request. Nested legacy menus still need broader retranslation coverage, and visible feedback already on screen is not reconstructed in the new language.
+- Playback-control menus now also retranslate in place: navigation, chapters, A–B loop, speed/delay tuning and playlist repeat/shuffle. Dynamic titles are recomputed from the existing controller state while QAction data, shortcuts and check states remain intact. Focused `ab-loop`, `navigation`, `tuning`, `playlist-modes`, `language-manager` and `code-size` checks passed; the two unrelated session/framing tests passed on immediate focused rerun after one full-suite timing failure.
 
 Video framing, playback overlay, and timeline stage (2026-10-22):
 

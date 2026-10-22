@@ -76,6 +76,28 @@ NavigationMenu::NavigationMenu(MpvController &player, QWidget *window)
 
 QMenu *NavigationMenu::menu() const { return menu_; }
 
+void NavigationMenu::retranslate() {
+    menu_->setTitle(tr("定位"));
+    chaptersMenu_->setTitle(tr("章节"));
+    const auto setText = [this](const char *name, const QString &text) {
+        if (auto *action = menu_->findChild<QAction *>(QString::fromLatin1(name)))
+            action->setText(text);
+    };
+    setText("seekBack30Action", tr("后退 30 秒"));
+    setText("seekForward30Action", tr("前进 30 秒"));
+    setText("seekBack300Action", tr("后退 5 分钟"));
+    setText("seekForward300Action", tr("前进 5 分钟"));
+    setText("seekBeginningAction", tr("回到开头"));
+    setText("seekTimeAction", tr("跳转到指定时间…"));
+    setText("previousChapterAction", tr("上一章"));
+    setText("nextChapterAction", tr("下一章"));
+    setText("previousFrameAction", tr("上一帧"));
+    setText("nextFrameAction", tr("下一帧"));
+    for (auto *loop : window_->findChildren<AbLoopMenu *>())
+        loop->retranslate();
+    rebuildChapters();
+}
+
 void NavigationMenu::rebuildChapters() {
     chaptersMenu_->clear();
     for (const auto &chapter : player_.chapters()) {

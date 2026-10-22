@@ -12,6 +12,7 @@ class AbLoopMenu final : public QObject {
   public:
     AbLoopMenu(MpvController &player, QWidget *window);
     [[nodiscard]] QMenu *menu() const;
+    void retranslate();
 
   signals:
     void feedback(const QString &message);

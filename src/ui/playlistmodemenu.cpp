@@ -52,13 +52,27 @@ QMenu *PlaylistModeMenu::menu() const { return menu_; }
 
 void PlaylistModeMenu::update() {
     shuffleAction_->setChecked(queue_.shuffleEnabled());
+    QString title;
     for (auto *action : group_->actions()) {
         const bool selected =
             action->data().value<PlaylistController::RepeatMode>() == queue_.repeatMode();
         action->setChecked(selected);
         if (selected)
-            menu_->setTitle(tr("播放模式 · %1").arg(action->text()));
+            title = tr("播放模式 · %1").arg(action->text());
     }
     if (queue_.shuffleEnabled())
-        menu_->setTitle(tr("%1 · %2").arg(menu_->title(), shuffleAction_->text()));
+        title = tr("%1 · %2").arg(title, shuffleAction_->text());
+    menu_->setTitle(title);
+}
+
+void PlaylistModeMenu::retranslate() {
+    const auto labels = std::array{tr("不循环"), tr("单曲循环"), tr("列表循环")};
+    const auto actions = group_->actions();
+    for (qsizetype index = 0;
+         index < actions.size() && index < static_cast<qsizetype>(labels.size()); ++index)
+        actions.at(index)->setText(labels.at(index));
+    shuffleAction_->setText(tr("随机播放"));
+    if (auto *cycle = menu_->findChild<QAction *>(QStringLiteral("cycleRepeatAction")))
+        cycle->setText(tr("切换播放模式"));
+    update();
 }

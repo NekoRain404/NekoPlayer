@@ -14,6 +14,7 @@ class NavigationMenu final : public QObject {
   public:
     NavigationMenu(MpvController &player, QWidget *window);
     [[nodiscard]] QMenu *menu() const;
+    void retranslate();
 
   signals:
     void feedback(const QString &message);

@@ -44,6 +44,18 @@ AbLoopMenu::AbLoopMenu(MpvController &player, QWidget *window)
 
 QMenu *AbLoopMenu::menu() const { return menu_; }
 
+void AbLoopMenu::retranslate() {
+    menu_->setTitle(tr("A–B 区间循环 · %1 → %2")
+                        .arg(player_.abLoop().start
+                                 ? formatPlaybackTime(*player_.abLoop().start, true)
+                                 : tr("未设置"),
+                             player_.abLoop().end ? formatPlaybackTime(*player_.abLoop().end, true)
+                                                  : tr("未设置")));
+    start_->setText(tr("将当前位置设为起点 A"));
+    end_->setText(tr("将当前位置设为终点 B"));
+    clear_->setText(tr("清除 A–B 区间"));
+}
+
 void AbLoopMenu::updateAvailability() {
     const auto &state = player_.state();
     const bool available =

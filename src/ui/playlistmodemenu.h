@@ -13,6 +13,7 @@ class PlaylistModeMenu final : public QObject {
   public:
     explicit PlaylistModeMenu(PlaylistController &queue, QWidget *window);
     [[nodiscard]] QMenu *menu() const;
+    void retranslate();
 
   signals:
     void feedback(const QString &message);

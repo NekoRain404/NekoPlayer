@@ -2,6 +2,67 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>AbLoopMenu</name>
+    <message><source>将当前位置设为起点 A</source><translation>Set Current Position as A</translation></message>
+    <message><source>将当前位置设为终点 B</source><translation>Set Current Position as B</translation></message>
+    <message><source>清除 A–B 区间</source><translation>Clear A–B Loop</translation></message>
+    <message><source>起点必须早于终点和媒体结尾；可先清除原区间。</source><translation>The start must be before the end and media duration; clear the current loop first.</translation></message>
+    <message><source>请先设置起点，终点必须晚于起点。</source><translation>Set the start point first; the end must be later.</translation></message>
+    <message><source>已清除 A–B 区间</source><translation>A–B loop cleared</translation></message>
+    <message><source>未设置</source><translation>Not set</translation></message>
+    <message><source>A–B 区间循环 · %1 → %2</source><translation>A–B Loop · %1 → %2</translation></message>
+</context>
+<context>
+    <name>NavigationMenu</name>
+    <message><source>定位</source><translation>Navigate</translation></message>
+    <message><source>章节</source><translation>Chapters</translation></message>
+    <message><source>后退 30 秒</source><translation>Seek Back 30 Seconds</translation></message>
+    <message><source>前进 30 秒</source><translation>Seek Forward 30 Seconds</translation></message>
+    <message><source>后退 5 分钟</source><translation>Seek Back 5 Minutes</translation></message>
+    <message><source>前进 5 分钟</source><translation>Seek Forward 5 Minutes</translation></message>
+    <message><source>回到开头</source><translation>Go to Beginning</translation></message>
+    <message><source>跳转到指定时间…</source><translation>Seek to Time…</translation></message>
+    <message><source>上一章</source><translation>Previous Chapter</translation></message>
+    <message><source>下一章</source><translation>Next Chapter</translation></message>
+    <message><source>上一帧</source><translation>Previous Frame</translation></message>
+    <message><source>下一帧</source><translation>Next Frame</translation></message>
+    <message><source>第 %1 章</source><translation>Chapter %1</translation></message>
+    <message><source>%1  %2  %3</source><translation>%1  %2  %3</translation></message>
+    <message><source>当前媒体没有章节</source><translation>No chapters in current media</translation></message>
+    <message><source>媒体已改变，未执行时间跳转。</source><translation>Media changed; seek was not performed.</translation></message>
+</context>
+<context>
+    <name>PlaylistModeMenu</name>
+    <message><source>不循环</source><translation>No Repeat</translation></message>
+    <message><source>单曲循环</source><translation>Repeat One</translation></message>
+    <message><source>列表循环</source><translation>Repeat All</translation></message>
+    <message><source>随机播放</source><translation>Shuffle</translation></message>
+    <message><source>切换播放模式</source><translation>Cycle Repeat Mode</translation></message>
+    <message><source>播放模式 · %1</source><translation>Repeat · %1</translation></message>
+    <message><source>%1 · %2</source><translation>%1 · %2</translation></message>
+</context>
+<context>
+    <name>TuningMenus</name>
+    <message><source>%1 倍</source><translation>%1×</translation></message>
+    <message><source>减慢 0.1 倍</source><translation>Decrease Speed by 0.1×</translation></message>
+    <message><source>加快 0.1 倍</source><translation>Increase Speed by 0.1×</translation></message>
+    <message><source>正常速度</source><translation>Normal Speed</translation></message>
+    <message><source>自定义速度…</source><translation>Custom Speed…</translation></message>
+    <message><source>提前 %1 毫秒</source><translation>Earlier by %1 ms</translation></message>
+    <message><source>延后 %1 毫秒</source><translation>Later by %1 ms</translation></message>
+    <message><source>延迟归零</source><translation>Reset Delay</translation></message>
+    <message><source>自定义延迟…</source><translation>Custom Delay…</translation></message>
+    <message><source>播放速度</source><translation>Playback Speed</translation></message>
+    <message><source>音频延迟</source><translation>Audio Delay</translation></message>
+    <message><source>字幕延迟</source><translation>Subtitle Delay</translation></message>
+    <message><source>播放倍率（0.25–4.00，保持音调）</source><translation>Playback speed (0.25–4.00, preserve pitch)</translation></message>
+    <message><source>延迟秒数（正值延后，负值提前）</source><translation>Delay in seconds (positive is later, negative is earlier)</translation></message>
+    <message><source>播放速度 · %1 倍</source><translation>Playback Speed · %1×</translation></message>
+    <message><source>音频延迟 · %1 秒</source><translation>Audio Delay · %1 s</translation></message>
+    <message><source>字幕延迟 · %1 秒</source><translation>Subtitle Delay · %1 s</translation></message>
+    <message><source>速度 %1 倍 · 音频 %2 秒 · 字幕 %3 秒</source><translation>Speed %1× · Audio %2 s · Subtitles %3 s</translation></message>
+</context>
+<context>
     <name>ActionFeedbackText</name>
     <message><source>前进 %1 秒</source><translation>Seek Forward %1 Seconds</translation></message>
     <message><source>后退 %1 秒</source><translation>Seek Back %1 Seconds</translation></message>

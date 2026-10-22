@@ -15,6 +15,7 @@ class TuningMenus final : public QObject {
     [[nodiscard]] QMenu *speedMenu() const;
     [[nodiscard]] QMenu *audioDelayMenu() const;
     [[nodiscard]] QMenu *subtitleDelayMenu() const;
+    void retranslate();
 
   signals:
     void feedback(const QString &message);

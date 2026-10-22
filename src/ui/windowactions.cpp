@@ -1,3 +1,4 @@
+#include "abloopmenu.h"
 #include "actionfeedbacktext.h"
 #include "appearancepreferences.h"
 #include "audiodevicemenu.h"
@@ -356,4 +357,12 @@ void MainWindow::changeEvent(QEvent *event) {
         chinese->setText(tr("简体中文"));
     if (auto *video = findChild<VideoMenu *>())
         video->retranslate();
+    for (auto *menu : findChildren<NavigationMenu *>())
+        menu->retranslate();
+    for (auto *menu : findChildren<TuningMenus *>())
+        menu->retranslate();
+    for (auto *menu : findChildren<AbLoopMenu *>())
+        menu->retranslate();
+    for (auto *menu : findChildren<PlaylistModeMenu *>())
+        menu->retranslate();
 }

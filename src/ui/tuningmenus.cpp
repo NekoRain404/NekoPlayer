@@ -38,6 +38,31 @@ QMenu *TuningMenus::speedMenu() const { return speedMenu_; }
 QMenu *TuningMenus::audioDelayMenu() const { return audioDelayMenu_; }
 QMenu *TuningMenus::subtitleDelayMenu() const { return subtitleDelayMenu_; }
 
+void TuningMenus::retranslate() {
+    const auto speedActions = speedGroup_->actions();
+    const std::array speeds{0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0};
+    for (qsizetype index = 0;
+         index < static_cast<qsizetype>(speeds.size()) && index < speedActions.size(); ++index)
+        speedActions.at(index)->setText(tr("%1 倍").arg(speeds.at(index), 0, 'f', 2));
+    const auto setText = [](QMenu *menu, const char *name, const QString &text) {
+        if (auto *action = menu->findChild<QAction *>(QString::fromLatin1(name)))
+            action->setText(text);
+    };
+    setText(speedMenu_, "speedDownAction", tr("减慢 0.1 倍"));
+    setText(speedMenu_, "speedUpAction", tr("加快 0.1 倍"));
+    setText(speedMenu_, "speedResetAction", tr("正常速度"));
+    setText(speedMenu_, "customSpeedAction", tr("自定义速度…"));
+    setText(audioDelayMenu_, "audioEarlierAction", tr("提前 %1 毫秒").arg(50));
+    setText(audioDelayMenu_, "audioLaterAction", tr("延后 %1 毫秒").arg(50));
+    setText(audioDelayMenu_, "audioDelayResetAction", tr("延迟归零"));
+    setText(audioDelayMenu_, "audioCustomDelayAction", tr("自定义延迟…"));
+    setText(subtitleDelayMenu_, "subtitleEarlierAction", tr("提前 %1 毫秒").arg(100));
+    setText(subtitleDelayMenu_, "subtitleLaterAction", tr("延后 %1 毫秒").arg(100));
+    setText(subtitleDelayMenu_, "subtitleDelayResetAction", tr("延迟归零"));
+    setText(subtitleDelayMenu_, "subtitleCustomDelayAction", tr("自定义延迟…"));
+    update();
+}
+
 void TuningMenus::announceAfterChange() { announce_ = true; }
 
 void TuningMenus::createSpeedMenu() {

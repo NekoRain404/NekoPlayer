@@ -47,6 +47,13 @@ class LanguageManagerTest final : public QObject {
                  QStringLiteral("Playback position"));
         QCOMPARE(QCoreApplication::translate("MediaInformationDialog", "复制"),
                  QStringLiteral("Copy"));
+        QCOMPARE(QCoreApplication::translate("NavigationMenu", "定位"), QStringLiteral("Navigate"));
+        QCOMPARE(QCoreApplication::translate("TuningMenus", "播放速度"),
+                 QStringLiteral("Playback Speed"));
+        QCOMPARE(QCoreApplication::translate("AbLoopMenu", "将当前位置设为起点 A"),
+                 QStringLiteral("Set Current Position as A"));
+        QCOMPARE(QCoreApplication::translate("PlaylistModeMenu", "不循环"),
+                 QStringLiteral("No Repeat"));
     }
 
     void rejectsUnsupportedLanguageWithoutChangingCurrentTranslation() {

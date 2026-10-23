@@ -458,6 +458,8 @@ target_link_libraries(subtitle_window_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME subtitle-window COMMAND ${WINDOW_TEST_RUNNER} $<TARGET_FILE:subtitle_window_test>)
 set_tests_properties(subtitle-window PROPERTIES TIMEOUT 30 ENVIRONMENT "${WINDOW_TEST_ENVIRONMENT}")
 target_link_libraries(window_test PRIVATE neko_ui Qt6::Test)
+qt_add_translations(window_test TS_FILES ../translations/NekoPlayer_en.ts
+    RESOURCE_PREFIX "/i18n")
 target_compile_definitions(window_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
 target_compile_definitions(window_test PRIVATE PLAYER_EXECUTABLE="$<TARGET_FILE:NekoPlayer>")
 target_compile_definitions(window_test PRIVATE TEST_VIDEO_ONLY_PATH="${TEST_VIDEO_ONLY}")

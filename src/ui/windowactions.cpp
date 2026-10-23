@@ -265,11 +265,15 @@ void MainWindow::createActions() {
             : QStringLiteral("dark");
     for (const auto theme : AppearancePreferences::themes()) {
         auto *action = themeMenu->addAction(AppearancePreferences::themeName(theme));
-        action->setCheckable(true);
-        themeGroup->addAction(action);
         const auto key = theme == AppearancePreferences::Theme::Dark    ? QStringLiteral("dark")
                          : theme == AppearancePreferences::Theme::Light ? QStringLiteral("light")
                                                                         : QStringLiteral("system");
+        action->setObjectName(QStringLiteral("theme%1Action")
+                                  .arg(key == QLatin1String("dark")    ? QStringLiteral("Dark")
+                                       : key == QLatin1String("light") ? QStringLiteral("Light")
+                                                                       : QStringLiteral("System")));
+        action->setCheckable(true);
+        themeGroup->addAction(action);
         action->setChecked(savedTheme == key);
         connect(action, &QAction::triggered, this, [this, theme, key] {
             if (auto *application = qobject_cast<QApplication *>(qApp))
@@ -382,6 +386,16 @@ void MainWindow::changeEvent(QEvent *event) {
         english->setText(QStringLiteral("English"));
     if (auto *chinese = findChild<QAction *>(QStringLiteral("languageChineseAction")))
         chinese->setText(tr("简体中文"));
+    setActionText("playbackSettingsAction", tr("播放设置…"));
+    setActionText("aboutAction", tr("关于 NekoPlayer…"));
+    setActionText("themeDarkAction",
+                  AppearancePreferences::themeName(AppearancePreferences::Theme::Dark));
+    setActionText("themeLightAction",
+                  AppearancePreferences::themeName(AppearancePreferences::Theme::Light));
+    setActionText("themeSystemAction",
+                  AppearancePreferences::themeName(AppearancePreferences::Theme::System));
+    for (auto *menu : findChildren<SubtitleDisplayMenu *>())
+        menu->retranslate();
     if (auto *video = findChild<VideoMenu *>())
         video->retranslate();
     for (auto *menu : findChildren<NavigationMenu *>())

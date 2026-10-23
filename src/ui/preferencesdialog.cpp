@@ -11,6 +11,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QStyle>
 #include <QTabWidget>
 #include <QVBoxLayout>
 
@@ -40,7 +41,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
                                   playback);
     decodeHelp->setWordWrap(true);
     playbackForm->addRow(decodeHelp);
-    tabs_->addTab(playback, tr("播放"));
+    tabs_->addTab(playback, style()->standardIcon(QStyle::SP_MediaPlay), tr("播放"));
 
     auto *audio = new QWidget(tabs_);
     auto *audioForm = new QFormLayout(audio);
@@ -51,7 +52,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
         new QLabel(tr("输出设备切换会立即生效；设备不可用时将回退到自动选择。"), audio);
     audioHelp->setWordWrap(true);
     audioForm->addRow(audioHelp);
-    tabs_->addTab(audio, tr("音频"));
+    tabs_->addTab(audio, style()->standardIcon(QStyle::SP_MediaVolume), tr("音频"));
 
     auto *subtitles = new QWidget(tabs_);
     auto *subtitleForm = new QFormLayout(subtitles);
@@ -83,7 +84,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
                    subtitles);
     subtitleHelp->setWordWrap(true);
     subtitleForm->addRow(subtitleHelp);
-    tabs_->addTab(subtitles, tr("字幕"));
+    tabs_->addTab(subtitles, style()->standardIcon(QStyle::SP_FileDialogDetailedView), tr("字幕"));
 
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(tabs_);

@@ -1,5 +1,21 @@
 # Verification Record
 
+Runtime language refresh stage (2026-10-23):
+
+- Settings now retranslate as one subtree when the language changes at runtime: theme menu items,
+  playback settings, subtitle display settings, and About keep their existing actions, shortcuts,
+  enabled state and theme check state. Subtitle display menu actions now expose a dedicated
+  `retranslate()` path and include English catalog entries.
+- Preferences categories now show Qt standard playback, audio and subtitle icons for faster visual
+  scanning without changing the three-page data flow.
+- The new window regression passes English -> Chinese round-tripping and preserves the playback
+  settings shortcut and selected theme. `preferences-dialog` and `window` passed **2/2** in the
+  focused run; the full non-window Debug selection (`ctest --test-dir build/debug -E 'window|startup'`)
+  passed **46/46** in **58.81 seconds**. Code-size, Clang formatting and `git diff --check` passed.
+- No playback commands, decoder settings, GPU render path, CPU frame copies or HDR handling changed.
+  The window test was run under the native Wayland session; broader window-suite failures recorded
+  in the previous stages remain outside the non-window regression scope.
+
 Transport hierarchy stage (2026-10-23):
 
 - The transport bar now has a restrained top separator in both themes, a distinct monospace time

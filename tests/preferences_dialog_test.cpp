@@ -5,6 +5,7 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFontComboBox>
+#include <QIcon>
 #include <QTabWidget>
 #include <QtTest>
 
@@ -20,6 +21,9 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(tabs->tabText(0), QStringLiteral("播放"));
         QCOMPARE(tabs->tabText(1), QStringLiteral("音频"));
         QCOMPARE(tabs->tabText(2), QStringLiteral("字幕"));
+        QVERIFY(!tabs->tabIcon(0).isNull());
+        QVERIFY(!tabs->tabIcon(1).isNull());
+        QVERIFY(!tabs->tabIcon(2).isNull());
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice")));
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("audioOutputDeviceChoice")));
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("subtitleFontChoice")));

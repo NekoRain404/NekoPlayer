@@ -259,6 +259,16 @@ libmpv client API: %2.%3</translation></message>
     <message><source>画面比例：%1 · 旋转：%2°</source><translation>Aspect ratio: %1 · Rotation: %2°</translation></message>
 </context>
 <context>
+    <name>SubtitleDisplayMenu</name>
+    <message><source>字幕显示</source><translation>Subtitle Display</translation></message>
+    <message><source>显示字幕</source><translation>Show Subtitles</translation></message>
+    <message><source>放大字幕</source><translation>Increase Subtitle Size</translation></message>
+    <message><source>缩小字幕</source><translation>Decrease Subtitle Size</translation></message>
+    <message><source>上移字幕</source><translation>Move Subtitles Up</translation></message>
+    <message><source>下移字幕</source><translation>Move Subtitles Down</translation></message>
+    <message><source>字幕显示设置…</source><translation>Subtitle Display Settings…</translation></message>
+</context>
+<context>
     <name>MediaInformation</name>
     <message><source>未播放媒体</source><translation>No media playing</translation></message>
     <message><source>未知</source><translation>Unknown</translation></message>

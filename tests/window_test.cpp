@@ -3,6 +3,7 @@
 #include "playback/playlistmodel.h"
 #include "playback/videowidget.h"
 #include "session/sessionstore.h"
+#include "ui/languagemanager.h"
 #include "ui/mainwindow.h"
 #include "ui/playbacksettingsdialog.h"
 #include "ui/timeseekdialog.h"
@@ -23,6 +24,7 @@
 #include <QSlider>
 #include <QStatusBar>
 #include <QTemporaryDir>
+#include <QVariant>
 #include <QtTest>
 
 namespace {
@@ -111,6 +113,45 @@ class WindowTest final : public QObject {
                 ++containers;
         }
         QCOMPARE(containers, 2); // Menu bar and context menu share the same action.
+    }
+
+    void settingsMenuRetranslatesWithoutChangingActionState() {
+        const auto previousConfiguration = qApp->property("configurationEnabled");
+        const auto previousLanguageManager = qApp->property("languageManager");
+        qApp->setProperty("configurationEnabled", true);
+        LanguageManager language(*qApp);
+        qApp->setProperty("languageManager",
+                          QVariant::fromValue(static_cast<QObject *>(&language)));
+
+        MainWindow window(true);
+        auto *themeMenuAction = action(window, "themeMenuAction");
+        auto *playbackSettings = action(window, "playbackSettingsAction");
+        auto *subtitleSettings = action(window, "subtitleSettingsAction");
+        auto *about = action(window, "aboutAction");
+        QVERIFY(themeMenuAction && themeMenuAction->menu() && playbackSettings &&
+                subtitleSettings && about);
+        const auto shortcut = playbackSettings->shortcut();
+        const auto checkedTheme = themeMenuAction->menu()->actions().at(0)->isChecked();
+        QCOMPARE(themeMenuAction->menu()->actions().size(), 3);
+
+        QVERIFY(language.setLanguage(QStringLiteral("en")));
+        QCoreApplication::processEvents();
+        QCOMPARE(themeMenuAction->text(), QStringLiteral("Theme"));
+        QCOMPARE(themeMenuAction->menu()->actions().at(0)->text(), QStringLiteral("Dark"));
+        QCOMPARE(themeMenuAction->menu()->actions().at(1)->text(), QStringLiteral("Light"));
+        QCOMPARE(themeMenuAction->menu()->actions().at(2)->text(), QStringLiteral("Follow System"));
+        QCOMPARE(playbackSettings->text(), QStringLiteral("Playback Settings…"));
+        QCOMPARE(about->text(), QStringLiteral("About NekoPlayer…"));
+        QCOMPARE(playbackSettings->shortcut(), shortcut);
+        QCOMPARE(themeMenuAction->menu()->actions().at(0)->isChecked(), checkedTheme);
+
+        QVERIFY(language.setLanguage(QStringLiteral("zh_CN")));
+        QCoreApplication::processEvents();
+        QCOMPARE(themeMenuAction->text(), QStringLiteral("主题"));
+        QCOMPARE(playbackSettings->text(), QStringLiteral("播放设置…"));
+        QCOMPARE(about->text(), QStringLiteral("关于 NekoPlayer…"));
+        qApp->setProperty("languageManager", previousLanguageManager);
+        qApp->setProperty("configurationEnabled", previousConfiguration);
     }
 
     void miniPlayerTogglesWindowPresentation() {

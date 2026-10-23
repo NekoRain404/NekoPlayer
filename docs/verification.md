@@ -1,5 +1,15 @@
 # Verification Record
 
+Thumbnail request service stage (2026-10-23):
+
+- Added a single-worker `ThumbnailService` with cancellation, generation checks, local-file policy,
+  bounded in-memory cache and GUI-thread result delivery. Network URLs are rejected deliberately
+  until preview access can share mpv authentication and buffering policy.
+- `thumbnail-service`, `thumbnail-decoder` and `code-size` passed. The service regression covers
+  network rejection, latest-request wins, cancellation suppression and cache reuse. Formatting and
+  `git diff --check` passed; the primary libmpv hardware decode, HDR and Wayland render paths are
+  untouched.
+
 Transport grouping polish stage (2026-10-23):
 
 - The bottom transport now separates playback controls, time readout and audio/window controls

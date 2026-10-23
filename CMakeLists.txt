@@ -60,9 +60,9 @@ add_library(neko_input src/input/localfiledrop.cpp src/input/mediafolderscan.cpp
     src/input/folderscanjob.cpp)
 target_link_libraries(neko_input PUBLIC neko_playback Qt6::Concurrent)
 
-add_library(neko_preview src/preview/ffmpegthumbnaildecoder.cpp)
+add_library(neko_preview src/preview/ffmpegthumbnaildecoder.cpp src/preview/thumbnailservice.cpp)
 target_include_directories(neko_preview PUBLIC src)
-target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Gui
+target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Concurrent Qt6::Gui
     PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp

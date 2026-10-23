@@ -1,5 +1,19 @@
 # Verification Record
 
+Welcome panel hierarchy stage (2026-10-23):
+
+- The empty-state surface now has a small NekoPlayer brand mark, more deliberate vertical rhythm,
+  a slightly lighter container radius, and taller recent-history rows. The brand mark is hidden only
+  for extremely short surfaces, preserving the primary open actions before supporting copy.
+- `ui-surface` and `appearance-preferences` passed **2/2** in the focused Debug run. The full
+  non-window Debug selection (`ctest --test-dir build/debug -E 'window|startup'`) passed **46/46**
+  in **54.98 seconds**; code-size, formatting and `git diff --check` passed. No libmpv commands,
+  decoder settings, GPU render path, CPU frame copies, HDR handling or playback polling changed.
+- A full unfiltered Debug CTest run was also attempted under the native Wayland session. Four
+  pre-existing window targets failed (fullscreen feedback, media-information teardown, file-drop,
+  and playlist-window); these are outside the standing non-window verification scope and are not
+  attributed to this welcome-panel-only change. Native Wayland visual spacing remains unverified.
+
 Mini-player session geometry follow-up (2026-10-23):
 
 - Closing the app while mini mode was active previously persisted the temporary compact geometry as the normal window size. Mini mode now captures the pre-entry Qt geometry blob and session saving persists that value, while the existing `QRect` still restores the visible window when leaving mini mode.

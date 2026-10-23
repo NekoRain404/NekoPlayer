@@ -37,13 +37,19 @@ void bindButton(QPushButton *button, QAction *action) {
 WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : QWidget(parent) {
     setObjectName(QStringLiteral("welcomePanel"));
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-    setMinimumWidth(224);
-    setMaximumWidth(460);
+    setMinimumWidth(236);
+    setMaximumWidth(500);
 
     auto *layout = new QVBoxLayout(this);
     layout->setSizeConstraint(QLayout::SetNoConstraint);
-    layout->setContentsMargins(28, 24, 28, 22);
-    layout->setSpacing(8);
+    layout->setContentsMargins(30, 24, 30, 22);
+    layout->setSpacing(7);
+
+    auto *brand = new QLabel(QStringLiteral("NEKOPLAYER"), this);
+    brand->setObjectName(QStringLiteral("welcomeBrand"));
+    brand->setAlignment(Qt::AlignCenter);
+    brand->setAttribute(Qt::WA_TransparentForMouseEvents);
+    layout->addWidget(brand);
 
     auto *title = new QLabel(this);
     title->setObjectName(QStringLiteral("welcomeTitle"));
@@ -59,8 +65,8 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     layout->addWidget(subtitle);
 
     buttonsLayout_ = new QHBoxLayout;
-    buttonsLayout_->setContentsMargins(0, 10, 0, 4);
-    buttonsLayout_->setSpacing(8);
+    buttonsLayout_->setContentsMargins(0, 11, 0, 5);
+    buttonsLayout_->setSpacing(9);
     auto *openButton = new QPushButton(this);
     openButton->setObjectName(QStringLiteral("welcomeOpenButton"));
     bindButton(openButton, open);
@@ -143,7 +149,7 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
         auto *button = new QPushButton(this);
         button->setObjectName(QStringLiteral("welcomeRecentAction%1").arg(index + 1));
         button->setProperty("welcomeRecentAction", true);
-        button->setMinimumHeight(34);
+        button->setMinimumHeight(40);
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         const auto networkSource = MediaSource::isNetwork(source);
         const auto location =
@@ -191,6 +197,9 @@ void WelcomePanel::updateRecentButtonLabels() {
 void WelcomePanel::updateVerticalDensity() {
     const bool showRecent = height() >= 260;
     const bool showSupportingText = height() >= 215;
+    const bool showBrand = height() >= 165;
+    if (auto *brand = findChild<QLabel *>(QStringLiteral("welcomeBrand")))
+        brand->setVisible(showBrand);
     if (auto *heading = findChild<QLabel *>(QStringLiteral("welcomeRecentHeading")))
         heading->setVisible(showRecent && !recentSources_.isEmpty());
     for (qsizetype index = 0; index < recentSources_.size(); ++index) {

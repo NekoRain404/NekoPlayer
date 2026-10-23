@@ -23,11 +23,13 @@ class UiSurfaceTest final : public QObject {
         auto *networkButton =
             panel.findChild<QPushButton *>(QStringLiteral("welcomeNetworkButton"));
         auto *title = panel.findChild<QLabel *>(QStringLiteral("welcomeTitle"));
+        auto *brand = panel.findChild<QLabel *>(QStringLiteral("welcomeBrand"));
         auto *hint = panel.findChild<QLabel *>(QStringLiteral("welcomeDropHint"));
-        QVERIFY(openButton && networkButton && title && hint);
+        QVERIFY(openButton && networkButton && title && brand && hint);
         QCOMPARE(openButton->text(), open.text());
         QCOMPARE(networkButton->text(), network.text());
         QVERIFY(!title->text().isEmpty());
+        QCOMPARE(brand->text(), QStringLiteral("NEKOPLAYER"));
         QVERIFY(!hint->text().isEmpty());
         QVERIFY(openButton->accessibleName() == open.text());
         QVERIFY(networkButton->accessibleName() == network.text());
@@ -104,6 +106,23 @@ class UiSurfaceTest final : public QObject {
         QVERIFY(networkButton->geometry().top() > openButton->geometry().top());
         QVERIFY(openButton->width() >= openButton->sizeHint().width());
         QVERIFY(networkButton->width() >= networkButton->sizeHint().width());
+    }
+
+    void welcomePanelKeepsBrandVisibleOnlyWhenThereIsRoom() {
+        QAction open(QStringLiteral("Open File…"));
+        QAction network(QStringLiteral("Open Network URL…"));
+        WelcomePanel panel(&open, &network);
+        auto *brand = panel.findChild<QLabel *>(QStringLiteral("welcomeBrand"));
+        QVERIFY(brand);
+
+        panel.resize(360, 190);
+        panel.show();
+        QCoreApplication::processEvents();
+        QVERIFY(!brand->isHidden());
+
+        panel.resize(360, 150);
+        QCoreApplication::processEvents();
+        QVERIFY(brand->isHidden());
     }
 
     void playlistHeaderShowsLocalizedTitleAndItemCount() {

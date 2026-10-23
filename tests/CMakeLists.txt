@@ -114,6 +114,12 @@ add_custom_command(OUTPUT "${TEST_MEDIA}"
         -t 4 -c:v mpeg4 -q:v 4 -c:a pcm_s16le "${TEST_MEDIA}"
     VERBATIM)
 add_custom_target(test_media DEPENDS "${TEST_MEDIA}")
+add_executable(thumbnail_decoder_test thumbnail_decoder_test.cpp)
+target_link_libraries(thumbnail_decoder_test PRIVATE neko_preview Qt6::Test)
+target_compile_definitions(thumbnail_decoder_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(thumbnail_decoder_test test_media)
+add_test(NAME thumbnail-decoder COMMAND thumbnail_decoder_test)
+set_tests_properties(thumbnail-decoder PROPERTIES TIMEOUT 30)
 target_compile_definitions(network_playback_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
 add_dependencies(network_playback_test test_media)
 set(TEST_AUDIO_ONLY "${CMAKE_CURRENT_BINARY_DIR}/media/audio-only.mka")

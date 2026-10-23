@@ -1,5 +1,16 @@
 # Verification Record
 
+Thumbnail decoder foundation stage (2026-10-23):
+
+- Added an isolated FFmpeg thumbnail decoder for local media. It owns one format/codec/scaler
+  context per request, supports cancellation through FFmpeg's interrupt callback, and returns
+  GUI-safe `QImage` data without touching libmpv, OpenGL, Wayland surfaces, HDR presentation or
+  the primary hardware-decoding path.
+- The focused `thumbnail-decoder` CTest passed; the generated 320x180 fixture verifies bounded
+  output dimensions and invalid/cancelled request handling. Clang formatting, `git diff --check`
+  and the 500/800-line code-size check passed. Network thumbnail access remains intentionally
+  deferred until a request policy can preserve mpv authentication and avoid blocking previews.
+
 Playlist narrow text stage (2026-10-23):
 
 - Playlist rows now use middle elision so long entries retain both the meaningful filename prefix

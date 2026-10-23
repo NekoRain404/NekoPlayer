@@ -7,6 +7,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
+pkg_check_modules(AVFORMAT REQUIRED IMPORTED_TARGET libavformat)
+pkg_check_modules(AVCODEC REQUIRED IMPORTED_TARGET libavcodec)
+pkg_check_modules(AVUTIL REQUIRED IMPORTED_TARGET libavutil)
+pkg_check_modules(SWSCALE REQUIRED IMPORTED_TARGET libswscale)
 
 option(NEKOPLAYER_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 
@@ -56,6 +60,11 @@ add_library(neko_input src/input/localfiledrop.cpp src/input/mediafolderscan.cpp
     src/input/folderscanjob.cpp)
 target_link_libraries(neko_input PUBLIC neko_playback Qt6::Concurrent)
 
+add_library(neko_preview src/preview/ffmpegthumbnaildecoder.cpp)
+target_include_directories(neko_preview PUBLIC src)
+target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Gui
+    PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
+
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
     src/ui/welcomepanel.cpp
     src/playlist/m3u8store.cpp
@@ -72,7 +81,8 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp src/ui/screenshotmenu.cpp
     src/ui/subtitledisplaymenu.cpp src/ui/subtitlesettingsdialog.cpp
     src/ui/preferencesdialog.cpp src/ui/videocolordialog.cpp)
-target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input Qt6::Widgets Qt6::OpenGLWidgets)
+target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
+    Qt6::OpenGLWidgets)
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)

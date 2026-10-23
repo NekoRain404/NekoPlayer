@@ -1,9 +1,14 @@
 # Verification Record
 
+Wayland file-drop window-test readiness stage (2026-10-23):
+
+- Removed a redundant `qWaitForWindowExposed()` assertion from the desktop drag/drop integration test. Under the configured native Wayland backend it timed out even though the scenario's actual prerequisite is successful `VideoWidget` renderer initialization; the test now waits for that concrete condition before exercising file-drop routing.
+- `file-drop-window` passed ten consecutive repetitions. The full Debug suite subsequently passed **62/62** in **87.89 seconds**; the transient `track-preference-session` and `video-framing` failures from the preceding run did not recur. The changed window checks and `code-size` also passed in focused runs. `clang-format --dry-run --Werror` and `git diff --check` passed.
+
 Playlist navigation window-test readiness stage (2026-10-23):
 
 - The `playlist-window` shuffle/navigation case previously expected navigation actions to be enabled before its `QOpenGLWidget` renderer existed. The test now verifies actions remain disabled before renderer readiness, then waits for the visible renderer and checks the queue-dependent action state. This matches the documented playback-entry readiness boundary; production behavior was unchanged.
-- `playlist-window` passed five consecutive repetitions after the fixture correction. Fresh focused `playlist-window`, `window` and `code-size` results are recorded with this commit. The unrelated `file-drop-window` exposure failure from the earlier full-suite run was not part of this correction.
+- `playlist-window` passed five consecutive repetitions after the fixture correction. It and the general `window` suite passed in focused runs; see the full 62/62 result above.
 
 Fullscreen presentation and preview lifecycle stage (2026-10-23):
 

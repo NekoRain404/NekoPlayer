@@ -40,6 +40,33 @@ QSize targetSize(int width, int height, const QSize &maximum) {
     const auto bounded = QSize(qMax(1, maximum.width()), qMax(1, maximum.height()));
     return QSize(width, height).scaled(bounded, Qt::KeepAspectRatio);
 }
+
+QImage convertFrame(const AVFrame *frame, const QSize &maximum, QString *error) {
+    if (!frame || frame->width <= 0 || frame->height <= 0 || frame->format < 0) {
+        *error = QStringLiteral("video frame has invalid dimensions or pixel format");
+        return {};
+    }
+    const auto output = targetSize(frame->width, frame->height, maximum);
+    QImage image(output, QImage::Format_RGB888);
+    image.fill(Qt::black);
+    auto *scale = sws_getContext(
+        frame->width, frame->height, static_cast<AVPixelFormat>(frame->format), output.width(),
+        output.height(), AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
+    if (!scale) {
+        *error = QStringLiteral("could not create FFmpeg scaler");
+        return {};
+    }
+    uint8_t *destination[] = {image.bits()};
+    int destinationStride[] = {static_cast<int>(image.bytesPerLine())};
+    const auto scaledLines = sws_scale(scale, frame->data, frame->linesize, 0, frame->height,
+                                       destination, destinationStride);
+    sws_freeContext(scale);
+    if (scaledLines != output.height()) {
+        *error = QStringLiteral("could not convert FFmpeg video frame");
+        return {};
+    }
+    return image;
+}
 } // namespace
 
 ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
@@ -68,7 +95,7 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
     int error = avformat_open_input(&format, source.constData(), nullptr, nullptr);
     if (error < 0) {
         result.error = ffmpegError(error);
-        avformat_free_context(format);
+        avformat_close_input(&format);
         return result;
     }
     error = avformat_find_stream_info(format, nullptr);
@@ -107,6 +134,14 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
         return result;
     }
 
+    constexpr auto maximumSeconds =
+        static_cast<double>(std::numeric_limits<int64_t>::max()) / AV_TIME_BASE;
+    if (request.seconds > maximumSeconds) {
+        result.error = QStringLiteral("thumbnail timestamp is too large");
+        avcodec_free_context(&decoder);
+        avformat_close_input(&format);
+        return result;
+    }
     const auto timestamp = av_rescale_q(static_cast<int64_t>(request.seconds * AV_TIME_BASE),
                                         AVRational{1, AV_TIME_BASE}, stream->time_base);
     error = av_seek_frame(format, streamIndex, timestamp, AVSEEK_FLAG_BACKWARD);
@@ -121,46 +156,58 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
     AVPacket *packet = av_packet_alloc();
     AVFrame *frame = av_frame_alloc();
     bool decoded = false;
+    bool reachedTarget = false;
+    double candidateTimestamp = 0.0;
+    QImage candidateImage;
+    const auto considerFrame = [&] {
+        const auto frameTimestamp = frame->best_effort_timestamp == AV_NOPTS_VALUE
+                                        ? request.seconds
+                                        : frame->best_effort_timestamp * av_q2d(stream->time_base);
+        const bool isCloser = !decoded || std::abs(frameTimestamp - request.seconds) <
+                                              std::abs(candidateTimestamp - request.seconds);
+        if (isCloser) {
+            auto image = convertFrame(frame, request.maximumSize, &result.error);
+            if (!image.isNull()) {
+                candidateImage = std::move(image);
+                candidateTimestamp = frameTimestamp;
+                decoded = true;
+            }
+        }
+        reachedTarget = frameTimestamp >= request.seconds;
+    };
+    const auto receiveFrames = [&] {
+        int receiveError = 0;
+        while (!cancelled(request) && !reachedTarget &&
+               (receiveError = avcodec_receive_frame(decoder, frame)) >= 0)
+            considerFrame();
+        return receiveError;
+    };
     if (!packet || !frame) {
         result.error = QStringLiteral("could not allocate FFmpeg frame buffers");
     } else {
-        while (!cancelled(request) && av_read_frame(format, packet) >= 0) {
+        while (!cancelled(request) && !reachedTarget && av_read_frame(format, packet) >= 0) {
             if (packet->stream_index != streamIndex) {
                 av_packet_unref(packet);
                 continue;
             }
-            error = avcodec_send_packet(decoder, packet);
+            do {
+                error = avcodec_send_packet(decoder, packet);
+                if (error == AVERROR(EAGAIN))
+                    receiveFrames();
+            } while (error == AVERROR(EAGAIN) && !cancelled(request) && !reachedTarget);
             av_packet_unref(packet);
-            if (error < 0 && error != AVERROR(EAGAIN))
+            if (error < 0)
                 break;
-            while (!cancelled(request) && (error = avcodec_receive_frame(decoder, frame)) >= 0) {
-                const auto output = targetSize(frame->width, frame->height, request.maximumSize);
-                QImage image(output, QImage::Format_RGB888);
-                image.fill(Qt::black);
-                auto *scale = sws_getContext(frame->width, frame->height,
-                                             static_cast<AVPixelFormat>(frame->format),
-                                             output.width(), output.height(), AV_PIX_FMT_RGB24,
-                                             SWS_BILINEAR, nullptr, nullptr, nullptr);
-                if (!scale) {
-                    result.error = QStringLiteral("could not create FFmpeg scaler");
-                    break;
-                }
-                uint8_t *destination[] = {image.bits()};
-                int destinationStride[] = {static_cast<int>(image.bytesPerLine())};
-                sws_scale(scale, frame->data, frame->linesize, 0, frame->height, destination,
-                          destinationStride);
-                sws_freeContext(scale);
-                result.image = std::move(image);
-                result.timestamp = frame->best_effort_timestamp == AV_NOPTS_VALUE
-                                       ? request.seconds
-                                       : frame->best_effort_timestamp * av_q2d(stream->time_base);
-                decoded = true;
-                break;
-            }
-            if (decoded || (error < 0 && error != AVERROR(EAGAIN) && error != AVERROR_EOF))
-                break;
+            receiveFrames();
         }
-        if (!decoded && result.error.isEmpty())
+        if (!cancelled(request) && !reachedTarget) {
+            error = avcodec_send_packet(decoder, nullptr);
+            if (error >= 0 || error == AVERROR_EOF)
+                receiveFrames();
+        }
+        if (decoded)
+            result.image = std::move(candidateImage), result.timestamp = candidateTimestamp;
+        else if (result.error.isEmpty())
             result.error = cancelled(request) ? QStringLiteral("thumbnail request cancelled")
                                               : QStringLiteral("could not decode video frame");
     }

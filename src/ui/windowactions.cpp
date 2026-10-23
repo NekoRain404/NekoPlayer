@@ -350,6 +350,11 @@ void MainWindow::createActions() {
 
 void MainWindow::changeEvent(QEvent *event) {
     QMainWindow::changeEvent(event);
+    if (event->type() == QEvent::WindowStateChange && !syncingWindowState_) {
+        const auto fullscreen = isFullScreen();
+        if (fullscreen != fullscreenPresentationActive_)
+            setFullscreen(fullscreen);
+    }
     if (event->type() != QEvent::LanguageChange)
         return;
 

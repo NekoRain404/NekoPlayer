@@ -4,8 +4,11 @@
 
 #include <QAction>
 #include <QLabel>
+#include <QMenuBar>
 #include <QProgressBar>
+#include <QSlider>
 #include <QStatusBar>
+#include <QTest>
 #include <QtTest>
 
 class FullscreenFeedbackWindowTest final : public QObject {
@@ -48,18 +51,120 @@ class FullscreenFeedbackWindowTest final : public QObject {
         QVERIFY(fullscreen && back && infoAction && panel && progress && info && transport);
         fullscreen->trigger();
         QTRY_VERIFY(window.isFullScreen());
-        QVERIFY(!transport->isVisible());
+        QVERIFY(transport->isVisible());
         infoAction->trigger();
         back->trigger();
         QVERIFY(panel->isVisible());
         QVERIFY(info->isVisible());
-        QVERIFY(!transport->isVisible());
+        QVERIFY(transport->isVisible());
         QTRY_COMPARE(progress->value(), 0);
         QTRY_VERIFY_WITH_TIMEOUT(!panel->isVisible(), 3500);
         QVERIFY(info->isVisible());
         QVERIFY(window.controller()->state().paused);
         infoAction->trigger();
         QVERIFY(!info->isVisible());
+    }
+
+    void fullscreenClearsTimelinePreview() {
+        MainWindow window(true);
+        window.show();
+        auto *fullscreen = window.findChild<QAction *>(QStringLiteral("fullscreenAction"));
+        auto *preview = window.findChild<QWidget *>(QStringLiteral("thumbnailPreview"));
+        QVERIFY(fullscreen && preview);
+        preview->show();
+        QVERIFY(preview->isVisible());
+
+        fullscreen->trigger();
+        QTRY_VERIFY(window.isFullScreen());
+        QVERIFY(!preview->isVisible());
+    }
+
+    void miniPlayerClearsTimelinePreview() {
+        MainWindow window(true);
+        window.show();
+        auto *mini = window.findChild<QAction *>(QStringLiteral("miniPlayerAction"));
+        auto *preview = window.findChild<QWidget *>(QStringLiteral("thumbnailPreview"));
+        QVERIFY(mini && preview);
+        preview->show();
+        QVERIFY(preview->isVisible());
+
+        mini->trigger();
+        QTRY_VERIFY(mini->isChecked());
+        QVERIFY(!preview->isVisible());
+    }
+
+    void timelinePressClearsTimelinePreview() {
+        MainWindow window(true);
+        window.show();
+        window.openFile(QString::fromUtf8(TEST_MEDIA_PATH));
+        QTRY_VERIFY(window.controller()->state().active &&
+                    window.controller()->state().duration > 0);
+        auto *slider = window.findChild<QSlider *>(QStringLiteral("timelineSlider"));
+        auto *preview = window.findChild<QWidget *>(QStringLiteral("thumbnailPreview"));
+        QVERIFY(slider && preview);
+        slider->resize(400, 24);
+        preview->show();
+        QVERIFY(preview->isVisible());
+
+        QTest::mousePress(slider, Qt::LeftButton, Qt::NoModifier, QPoint(200, 12));
+        QVERIFY(!preview->isVisible());
+        QTest::mouseRelease(slider, Qt::LeftButton, Qt::NoModifier, QPoint(200, 12));
+    }
+
+    void playbackFinishedClearsTimelinePreview() {
+        MainWindow window(true);
+        window.show();
+        auto *preview = window.findChild<QWidget *>(QStringLiteral("thumbnailPreview"));
+        QVERIFY(preview);
+        preview->show();
+        QVERIFY(preview->isVisible());
+
+        QVERIFY(QMetaObject::invokeMethod(window.controller(), "playbackFinished",
+                                          Qt::DirectConnection));
+        QVERIFY(!preview->isVisible());
+    }
+
+    void miniPlayerAndFullscreenRemainMutuallyExclusive() {
+        MainWindow window(true);
+        window.show();
+        auto *mini = window.findChild<QAction *>(QStringLiteral("miniPlayerAction"));
+        auto *fullscreen = window.findChild<QAction *>(QStringLiteral("fullscreenAction"));
+        auto *playlistAction = window.findChild<QAction *>(QStringLiteral("showPlaylistAction"));
+        QVERIFY(mini && fullscreen && playlistAction);
+
+        mini->trigger();
+        QTRY_VERIFY(mini->isChecked());
+        fullscreen->trigger();
+        QTRY_VERIFY(window.isFullScreen());
+        QVERIFY(!mini->isChecked());
+        QVERIFY(!playlistAction->isEnabled());
+
+        fullscreen->trigger();
+        QTRY_VERIFY(!window.isFullScreen());
+        QVERIFY(!mini->isChecked());
+        QVERIFY(playlistAction->isEnabled());
+    }
+
+    void fullscreenAndMiniPlayerSwitchCleanlyInBothDirections() {
+        MainWindow window(true);
+        window.show();
+        auto *mini = window.findChild<QAction *>(QStringLiteral("miniPlayerAction"));
+        auto *fullscreen = window.findChild<QAction *>(QStringLiteral("fullscreenAction"));
+        auto *playlistAction = window.findChild<QAction *>(QStringLiteral("showPlaylistAction"));
+        QVERIFY(mini && fullscreen && playlistAction);
+
+        fullscreen->trigger();
+        QTRY_VERIFY(window.isFullScreen());
+        mini->trigger();
+        QTRY_VERIFY(mini->isChecked());
+        QVERIFY(!window.isFullScreen());
+        QVERIFY(window.windowFlags().testFlag(Qt::Tool));
+        QVERIFY(!fullscreen->isChecked());
+
+        mini->trigger();
+        QTRY_VERIFY(!mini->isChecked());
+        QVERIFY(!window.windowFlags().testFlag(Qt::Tool));
+        QVERIFY(playlistAction->isEnabled());
     }
 
     void fullscreenEntryRevealsTransportBeforeItFades() {
@@ -72,6 +177,35 @@ class FullscreenFeedbackWindowTest final : public QObject {
         fullscreen->trigger();
         QTRY_VERIFY(window.isFullScreen());
         QVERIFY(transport->isVisible());
+    }
+
+    void externalWindowStateChangesKeepFullscreenUiInSync() {
+        MainWindow window(true);
+        window.show();
+        auto *playlistAction = window.findChild<QAction *>(QStringLiteral("showPlaylistAction"));
+        auto *fullscreenAction = window.findChild<QAction *>(QStringLiteral("fullscreenAction"));
+        auto *playlist = window.findChild<QWidget *>(QStringLiteral("playlistPane"));
+        auto *transport = window.findChild<QWidget *>(QStringLiteral("transportBar"));
+        QVERIFY(playlistAction && fullscreenAction && playlist && transport);
+
+        playlistAction->trigger();
+        QTRY_VERIFY(playlist->isVisible());
+        window.showFullScreen();
+        QTRY_VERIFY(window.isFullScreen());
+        QVERIFY(fullscreenAction->isChecked());
+        QVERIFY(!window.menuBar()->isVisible());
+        QVERIFY(!window.statusBar()->isVisible());
+        QVERIFY(!playlistAction->isEnabled());
+        QVERIFY(!playlist->isVisible());
+        QVERIFY(transport->isVisible());
+
+        window.showNormal();
+        QTRY_VERIFY(!window.isFullScreen());
+        QVERIFY(!fullscreenAction->isChecked());
+        QVERIFY(window.menuBar()->isVisible());
+        QVERIFY(window.statusBar()->isVisible());
+        QVERIFY(playlistAction->isEnabled());
+        QVERIFY(playlist->isVisible());
     }
 
     void windowedActionsKeepUsingTheStatusBar() {

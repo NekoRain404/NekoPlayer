@@ -119,6 +119,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
             &MainWindow::hideThumbnailPreview);
     connect(controller_.get(), &MpvController::mediaLoadFailed, this,
             &MainWindow::hideThumbnailPreview);
+    connect(controller_.get(), &MpvController::playbackFinished, this,
+            &MainWindow::hideThumbnailPreview);
     connect(controller_.get(), &MpvController::fileLoaded, this, [this] {
         recentMedia_->remember(controller_->state().path);
         statusBar()->showMessage(
@@ -412,7 +414,11 @@ void MainWindow::showThumbnailPreview(quint64 requestId, const QString &source,
                                       double requestedSeconds, ThumbnailResult result) {
     Q_UNUSED(requestId)
     const auto &state = controller_->state();
-    if (!result.succeeded() || !state.active || source != state.path)
+    if (!state.active) {
+        hideThumbnailPreview();
+        return;
+    }
+    if (!result.succeeded() || source != state.path)
         return;
     thumbnailPreview_->present(result.image, requestedSeconds);
     const auto timeline = transport_->timelineGlobalGeometry();
@@ -447,31 +453,57 @@ void MainWindow::dropEvent(QDropEvent *event) {
 }
 
 void MainWindow::setFullscreen(bool enabled) {
-    if (enabled == isFullScreen())
+    if (syncingWindowState_)
         return;
+    if (enabled == fullscreenPresentationActive_ && enabled == isFullScreen())
+        return;
+
+    if (enabled && miniPlayerActive_)
+        setMiniPlayer(false);
+    hideThumbnailPreview();
+
+    syncingWindowState_ = true;
     if (enabled) {
-        normalGeometry_ = saveGeometry();
-        normalMaximized_ = isMaximized();
-        menuBar()->hide();
-        statusBar()->hide();
-        fullscreenControls_->enter();
-        playlistPane_->hide();
-        showPlaylistAction_->setEnabled(false);
-        showFullScreen();
+        if (!fullscreenPresentationActive_) {
+            const auto priorGeometry = normalGeometry();
+            if (priorGeometry.isValid())
+                normalGeometry_ = saveGeometry();
+            normalMaximized_ = isMaximized();
+            menuBar()->hide();
+            statusBar()->hide();
+            fullscreenControls_->enter();
+            playlistPane_->hide();
+            showPlaylistAction_->setEnabled(false);
+            fullscreenPresentationActive_ = true;
+        }
+        if (!isFullScreen())
+            showFullScreen();
         video_->setCursor(Qt::BlankCursor);
         revealControls();
     } else {
         controlsTimer_.stop();
-        fullscreenControls_->leave();
+        if (fullscreenPresentationActive_)
+            fullscreenControls_->leave();
+        fullscreenPresentationActive_ = false;
         video_->unsetCursor();
-        showNormal();
-        restoreGeometry(normalGeometry_);
-        if (normalMaximized_)
-            showMaximized();
-        menuBar()->show();
-        statusBar()->show();
-        showPlaylistAction_->setEnabled(true);
-        playlistPane_->setVisible(showPlaylistAction_->isChecked());
+        if (isFullScreen()) {
+            showNormal();
+            if (!normalGeometry_.isEmpty())
+                restoreGeometry(normalGeometry_);
+            if (normalMaximized_)
+                showMaximized();
+        }
+        if (miniPlayerActive_) {
+            menuBar()->hide();
+            statusBar()->hide();
+            showPlaylistAction_->setEnabled(false);
+            playlistPane_->hide();
+        } else {
+            menuBar()->show();
+            statusBar()->show();
+            showPlaylistAction_->setEnabled(true);
+            playlistPane_->setVisible(showPlaylistAction_->isChecked());
+        }
     }
     fullscreenAction_->setChecked(enabled);
     fullscreenAction_->setText(enabled ? tr("退出全屏") : tr("全屏"));
@@ -479,12 +511,14 @@ void MainWindow::setFullscreen(bool enabled) {
     fullscreenAction_->setStatusTip(fullscreenAction_->text());
     fullscreenAction_->setIcon(style()->standardIcon(enabled ? QStyle::SP_TitleBarNormalButton
                                                              : QStyle::SP_TitleBarMaxButton));
+    syncingWindowState_ = false;
 }
 
 void MainWindow::setMiniPlayer(bool enabled) {
     auto *action = findChild<QAction *>(QStringLiteral("miniPlayerAction"));
     if (enabled == miniPlayerActive_)
         return;
+    hideThumbnailPreview();
     if (enabled) {
         if (isFullScreen())
             setFullscreen(false);
@@ -502,6 +536,8 @@ void MainWindow::setMiniPlayer(bool enabled) {
         resize(480, 320);
         show();
     } else {
+        if (isFullScreen())
+            setFullscreen(false);
         miniPlayerActive_ = false;
         menuBar()->show();
         statusBar()->show();
@@ -516,6 +552,7 @@ void MainWindow::setMiniPlayer(bool enabled) {
         playlistPane_->setVisible(showPlaylistAction_->isChecked());
     }
     if (action) {
+        action->setChecked(enabled);
         action->setText(enabled ? tr("退出小窗") : tr("小窗播放"));
         action->setToolTip(action->text());
         action->setStatusTip(action->text());

@@ -35,6 +35,9 @@ class SeekSlider final : public QSlider {
 
   protected:
     void mousePressEvent(QMouseEvent *event) override {
+        if (onHoverEnd)
+            onHoverEnd();
+        lastHoverValue_ = -1;
         const auto option = sliderOption();
         if (event->button() != Qt::LeftButton ||
             style()->hitTestComplexControl(QStyle::CC_Slider, &option, event->pos(), this) ==

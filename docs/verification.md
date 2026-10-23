@@ -1,5 +1,12 @@
 # Verification Record
 
+Fullscreen presentation and preview lifecycle stage (2026-10-23):
+
+- `cmake --build --preset debug --target fullscreen_feedback_window_test window_test -j2` succeeded. `ctest --test-dir build/debug -R '^(fullscreen-feedback-window|window|code-size)$' --output-on-failure` passed 3/3. `clang-format --dry-run --Werror` and `git diff --check` passed.
+- The full `ctest --preset debug --output-on-failure` run passed 60/62. Two unrelated desktop-test failures remain: `file-drop-window` could not expose its window in this environment (`qWaitForWindowExposed`), and `playlist-window` failed its shuffle/navigation assertion. The changed fullscreen and general window suites both passed in the same run.
+- New regressions cover direct external fullscreen/normal state synchronization, playlist/menu/status restoration, preview dismissal on fullscreen/mini/seek-press/playback-finish, and clean transitions between mini-player and fullscreen in both directions. The fullscreen transport assertion reflects the tested behavior: controls are visible on entry and subsequently fade.
+- This verifies Qt window state in the configured desktop test runner, not popup positioning or animation under a real Wayland compositor. Hardware video rendering and HDR are outside this UI lifecycle stage.
+
 Timeline thumbnail preview stage (2026-10-23):
 
 - The transport timeline now reports hover time plus global pointer position. `MainWindow` uses

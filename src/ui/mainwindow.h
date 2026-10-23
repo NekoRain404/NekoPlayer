@@ -114,6 +114,8 @@ class MainWindow final : public QMainWindow {
     QByteArray normalGeometry_;
     QByteArray miniPlayerSavedGeometry_;
     bool normalMaximized_ = false;
+    bool fullscreenPresentationActive_ = false;
+    bool syncingWindowState_ = false;
     QRect miniPlayerGeometry_;
     bool miniPlayerMaximized_ = false;
     bool miniPlayerActive_ = false;

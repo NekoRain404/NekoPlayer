@@ -12,6 +12,7 @@
 #include <QMouseEvent>
 #include <QResizeEvent>
 #include <QSignalBlocker>
+#include <QSizePolicy>
 #include <QSlider>
 #include <QStyle>
 #include <QStyleOptionSlider>
@@ -29,7 +30,8 @@ class SeekSlider final : public QSlider {
     explicit SeekSlider(QWidget *parent) : QSlider(Qt::Horizontal, parent) {}
 
     std::function<void(int)> onDirectSeek;
-    std::function<void(int)> onHover;
+    std::function<void(int, QPoint)> onHover;
+    std::function<void()> onHoverEnd;
 
   protected:
     void mousePressEvent(QMouseEvent *event) override {
@@ -56,7 +58,7 @@ class SeekSlider final : public QSlider {
             const int hoverValue = valueAtPosition(event->pos());
             if (onHover && hoverValue != lastHoverValue_) {
                 lastHoverValue_ = hoverValue;
-                onHover(hoverValue);
+                onHover(hoverValue, event->globalPosition().toPoint());
             }
             return;
         }
@@ -65,7 +67,7 @@ class SeekSlider final : public QSlider {
         seekAt(event->pos());
         movedAfterClick_ = movedAfterClick_ || sliderPosition() != previous;
         if (onHover)
-            onHover(value());
+            onHover(value(), event->globalPosition().toPoint());
     }
 
     void mouseReleaseEvent(QMouseEvent *event) override {
@@ -83,6 +85,8 @@ class SeekSlider final : public QSlider {
     void leaveEvent(QEvent *event) override {
         QToolTip::hideText();
         lastHoverValue_ = -1;
+        if (onHoverEnd)
+            onHoverEnd();
         QSlider::leaveEvent(event);
     }
 
@@ -159,6 +163,7 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     : QWidget(parent), timeline_(new SeekSlider(this)), volume_(new QSlider(Qt::Horizontal, this)),
       time_(new QLabel(this)), timeDivider_(divider(this)), audioDivider_(divider(this)) {
     setObjectName(QStringLiteral("transportBar"));
+    setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
     timeline_->setObjectName(QStringLiteral("timelineSlider"));
     timeline_->setRange(0, 10000);
     timeline_->setAccessibleName(tr("播放进度"));
@@ -217,7 +222,8 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
         timeline_->setToolTip(text);
         timeline_->setAccessibleDescription(text);
     });
-    static_cast<SeekSlider *>(timeline_)->onHover = [this](int value) {
+    static_cast<SeekSlider *>(timeline_)->onHover = [this](int value,
+                                                           const QPoint &globalPosition) {
         if (duration_ <= 0)
             return;
         const auto text =
@@ -225,8 +231,14 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
         timeline_->setToolTip(text);
         timeline_->setAccessibleDescription(text);
         QToolTip::showText(QCursor::pos(), text, timeline_);
+        emit timelineHovered(duration_ * value / 10000.0, globalPosition);
     };
+    static_cast<SeekSlider *>(timeline_)->onHoverEnd = [this] { emit timelineHoverEnded(); };
     applyResponsiveMetrics();
+}
+
+QRect TransportBar::timelineGlobalGeometry() const {
+    return QRect(timeline_->mapToGlobal(QPoint()), timeline_->size());
 }
 
 void TransportBar::resizeEvent(QResizeEvent *event) {
@@ -246,6 +258,10 @@ void TransportBar::applyResponsiveMetrics() {
     timeDivider_->setVisible(metrics.showTime);
     time_->setMinimumWidth(metrics.showTime ? metrics.timeWidth : 0);
     time_->setMaximumWidth(metrics.showTime ? metrics.timeWidth : 0);
+    if (layout()) {
+        layout()->invalidate();
+        layout()->activate();
+    }
 }
 
 void TransportBar::present(const PlaybackState &state) {

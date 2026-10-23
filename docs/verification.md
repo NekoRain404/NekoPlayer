@@ -1,5 +1,18 @@
 # Verification Record
 
+Timeline thumbnail preview stage (2026-10-23):
+
+- The transport timeline now reports hover time plus global pointer position. `MainWindow` uses
+  that signal to request a local thumbnail and presents it in a non-activating floating preview;
+  the popup is clamped to the active screen and falls below the timeline when there is no room
+  above it. Fullscreen reparenting remains geometry-safe because the anchor is mapped globally.
+- Preview painting stays on the GUI thread and consumes `QImage` from the isolated service. Source
+  replacement, stop and timeline leave cancel pending work, while stale results are rejected by
+  the service generation and current media path. Network thumbnails remain intentionally disabled.
+- `appearance-preferences`, `thumbnail-preview`, `thumbnail-service`, `thumbnail-decoder` and
+  `code-size` passed. Formatting and `git diff --check` passed; no libmpv, HDR, OpenGL or Wayland
+  video-frame path changed.
+
 Thumbnail request service stage (2026-10-23):
 
 - Added a single-worker `ThumbnailService` with cancellation, generation checks, local-file policy,

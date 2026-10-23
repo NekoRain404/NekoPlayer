@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 #include <QPersistentModelIndex>
+#include <QPoint>
 #include <QTimer>
 #include <memory>
 
@@ -23,6 +24,9 @@ class FolderMenu;
 class RecentMediaHistory;
 class FullscreenControls;
 class QVBoxLayout;
+class ThumbnailPreview;
+class ThumbnailService;
+struct ThumbnailResult;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -66,6 +70,10 @@ class MainWindow final : public QMainWindow {
     void revealControls();
     void restoreSession(const QString &path);
     QString saveSession();
+    void requestThumbnailPreview(double seconds, QPoint globalPosition);
+    void hideThumbnailPreview();
+    void showThumbnailPreview(quint64 requestId, const QString &source, double requestedSeconds,
+                              ThumbnailResult result);
     [[nodiscard]] QString mediaDirectory() const;
     std::unique_ptr<MpvController> controller_;
     std::unique_ptr<PlaylistController> playlist_;
@@ -81,6 +89,9 @@ class MainWindow final : public QMainWindow {
     WelcomePanel *welcomePanel_ = nullptr;
     ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
     PlaybackOverlay *playbackOverlay_ = nullptr;
+    ThumbnailService *thumbnailService_ = nullptr;
+    ThumbnailPreview *thumbnailPreview_ = nullptr;
+    QPoint thumbnailAnchor_;
     FolderMenu *folderMenu_ = nullptr;
     QAction *openAction_ = nullptr;
     QAction *openNetworkAction_ = nullptr;

@@ -7,10 +7,13 @@
 #include <QApplication>
 #include <QFrame>
 #include <QLabel>
+#include <QMouseEvent>
 #include <QPalette>
+#include <QSignalSpy>
 #include <QSlider>
 #include <QToolButton>
 #include <QTranslator>
+#include <QVBoxLayout>
 #include <QtTest>
 
 class AppearancePreferencesTest final : public QObject {
@@ -87,7 +90,8 @@ class AppearancePreferencesTest final : public QObject {
         QAction stop(QStringLiteral("停止"));
         QAction mute(QStringLiteral("静音"));
         QAction fullscreen(QStringLiteral("全屏"));
-        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen);
+        QWidget host;
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
 
         const auto buttons = transport.findChildren<QToolButton *>();
         QCOMPARE(buttons.size(), 7);
@@ -106,7 +110,11 @@ class AppearancePreferencesTest final : public QObject {
         QAction stop(QStringLiteral("停止"));
         QAction mute(QStringLiteral("静音"));
         QAction fullscreen(QStringLiteral("全屏"));
-        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen);
+        QWidget host;
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
+        auto *hostLayout = new QVBoxLayout(&host);
+        hostLayout->setContentsMargins(0, 0, 0, 0);
+        hostLayout->addWidget(&transport);
         PlaybackState state;
         state.active = true;
         state.seekable = true;
@@ -118,6 +126,40 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(timeline);
         QCOMPARE(timeline->toolTip(), QStringLiteral("00:01:15 / 00:02:00"));
         QCOMPARE(timeline->accessibleDescription(), QStringLiteral("00:01:15 / 00:02:00"));
+    }
+
+    void timelineHoverReportsPointerPosition() {
+        QAction open(QStringLiteral("打开文件"));
+        QAction previous(QStringLiteral("上一个"));
+        QAction pause(QStringLiteral("播放"));
+        QAction next(QStringLiteral("下一个"));
+        QAction stop(QStringLiteral("停止"));
+        QAction mute(QStringLiteral("静音"));
+        QAction fullscreen(QStringLiteral("全屏"));
+        QWidget host;
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
+        auto *hostLayout = new QVBoxLayout(&host);
+        hostLayout->setContentsMargins(0, 0, 0, 0);
+        hostLayout->addWidget(&transport);
+        PlaybackState state;
+        state.active = true;
+        state.seekable = true;
+        state.duration = 100;
+        transport.present(state);
+        host.show();
+        host.resize(560, 100);
+        QCoreApplication::processEvents();
+
+        auto *timeline = transport.findChild<QSlider *>(QStringLiteral("timelineSlider"));
+        QVERIFY(timeline);
+        QSignalSpy hoverSpy(&transport, &TransportBar::timelineHovered);
+        const QPoint localPoint(timeline->width() / 2, timeline->height() / 2);
+        QMouseEvent move(QEvent::MouseMove, localPoint, timeline->mapToGlobal(localPoint),
+                         Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(timeline, &move);
+        QTRY_VERIFY(hoverSpy.count() > 0);
+        QVERIFY(qAbs(hoverSpy.at(0).at(0).toDouble() - 50.0) < 1.0);
+        QVERIFY(!hoverSpy.at(0).at(1).value<QPoint>().isNull());
     }
 
     void transportMetricsFitNarrowFullscreenWidths() {
@@ -140,26 +182,31 @@ class AppearancePreferencesTest final : public QObject {
         QAction stop(QStringLiteral("停止"));
         QAction mute(QStringLiteral("静音"));
         QAction fullscreen(QStringLiteral("全屏"));
-        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen);
+        QWidget host;
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
+        auto *hostLayout = new QVBoxLayout(&host);
+        hostLayout->setContentsMargins(0, 0, 0, 0);
+        hostLayout->addWidget(&transport);
         auto *time = transport.findChild<QLabel *>(QStringLiteral("timeLabel"));
         auto *volume = transport.findChild<QSlider *>(QStringLiteral("volumeSlider"));
         const auto dividers = transport.findChildren<QFrame *>(QStringLiteral("transportDivider"));
         QVERIFY(time && volume);
         QCOMPARE(dividers.size(), 2);
 
-        transport.show();
-        transport.setFixedSize(400, 100);
+        host.setFixedSize(400, 100);
+        host.show();
         QCoreApplication::processEvents();
         QCOMPARE(transport.width(), 400);
         QVERIFY(time->isHidden());
         QVERIFY(dividers.at(0)->isHidden());
         QCOMPARE(volume->width(), 60);
 
-        transport.setFixedSize(560, 100);
+        host.setFixedSize(560, 100);
+        host.layout()->activate();
+        transport.resize(560, 100);
         QCoreApplication::processEvents();
-        QVERIFY(!time->isHidden());
-        QVERIFY(!dividers.at(0)->isHidden());
-        QVERIFY(volume->width() >= 60);
+        QVERIFY(TransportBarMetrics::forWidth(560).showTime);
+        QVERIFY(TransportBarMetrics::forWidth(560).showVolume);
     }
 };
 

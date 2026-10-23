@@ -13,8 +13,10 @@
 #include "playbackoverlay.h"
 #include "playlist/m3u8store.h"
 #include "playlistpane.h"
+#include "preview/thumbnailservice.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
+#include "thumbnailpreview.h"
 #include "transportbar.h"
 #include "welcomepanel.h"
 
@@ -23,16 +25,19 @@
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListView>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMimeData>
+#include <QScreen>
 #include <QStatusBar>
 #include <QStyle>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <algorithm>
 #include <utility>
 
 namespace {
@@ -98,6 +103,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     bodyLayout->addWidget(playlistPane_);
     transport_ = new TransportBar(openAction_, previousAction_, pauseAction_, nextAction_,
                                   stopAction_, muteAction_, fullscreenAction_, content);
+    thumbnailService_ = new ThumbnailService(this);
+    thumbnailPreview_ = new ThumbnailPreview(this);
     fullscreenControls_ = new FullscreenControls(*transport_, *video_, *centralLayout_, this);
     layout->addWidget(body, 1);
     layout->addWidget(transport_);
@@ -106,6 +113,12 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     statusBar()->showMessage(tr("就绪 · Qt 6 + libmpv"));
     connect(controller_.get(), &MpvController::stateChanged, this, &MainWindow::updateState);
     connect(controller_.get(), &MpvController::errorOccurred, this, &MainWindow::showError);
+    connect(controller_.get(), &MpvController::fileOpenRequested, this,
+            &MainWindow::hideThumbnailPreview);
+    connect(controller_.get(), &MpvController::stopRequested, this,
+            &MainWindow::hideThumbnailPreview);
+    connect(controller_.get(), &MpvController::mediaLoadFailed, this,
+            &MainWindow::hideThumbnailPreview);
     connect(controller_.get(), &MpvController::fileLoaded, this, [this] {
         recentMedia_->remember(controller_->state().path);
         statusBar()->showMessage(
@@ -157,6 +170,10 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
     });
+    connect(transport_, &TransportBar::timelineHovered, this, &MainWindow::requestThumbnailPreview);
+    connect(transport_, &TransportBar::timelineHoverEnded, this, &MainWindow::hideThumbnailPreview);
+    connect(thumbnailService_, &ThumbnailService::thumbnailReady, this,
+            &MainWindow::showThumbnailPreview);
     controlsTimer_.setSingleShot(true);
     controlsTimer_.setInterval(2200);
     connect(&controlsTimer_, &QTimer::timeout, this, [this] {
@@ -368,6 +385,53 @@ void MainWindow::showSeekFeedback(const QString &message) {
         feedbackOverlay_->clearMessage();
     else
         showActionFeedback(message);
+}
+
+void MainWindow::requestThumbnailPreview(double seconds, QPoint globalPosition) {
+    const auto &state = controller_->state();
+    if (!state.active || state.path.isEmpty() || !state.seekable || state.duration <= 0.0 ||
+        !ThumbnailService::isLocalSource(state.path)) {
+        hideThumbnailPreview();
+        return;
+    }
+    thumbnailAnchor_ = globalPosition;
+    thumbnailPreview_->hide();
+    const auto requestId = thumbnailService_->request(
+        state.path, std::clamp(seconds, 0.0, state.duration), QSize(232, 130));
+    Q_UNUSED(requestId)
+}
+
+void MainWindow::hideThumbnailPreview() {
+    if (thumbnailService_)
+        thumbnailService_->cancel();
+    if (thumbnailPreview_)
+        thumbnailPreview_->clear();
+}
+
+void MainWindow::showThumbnailPreview(quint64 requestId, const QString &source,
+                                      double requestedSeconds, ThumbnailResult result) {
+    Q_UNUSED(requestId)
+    const auto &state = controller_->state();
+    if (!result.succeeded() || !state.active || source != state.path)
+        return;
+    thumbnailPreview_->present(result.image, requestedSeconds);
+    const auto timeline = transport_->timelineGlobalGeometry();
+    const auto size = thumbnailPreview_->sizeHint();
+    const auto *screen = QGuiApplication::screenAt(timeline.center());
+    if (!screen)
+        screen = QGuiApplication::primaryScreen();
+    if (!screen)
+        return;
+    const auto available = screen->availableGeometry();
+    const auto anchor = thumbnailAnchor_.isNull() ? timeline.center() : thumbnailAnchor_;
+    const auto x = std::clamp(anchor.x() - size.width() / 2, available.left(),
+                              available.right() - size.width() + 1);
+    auto y = timeline.top() - size.height() - 10;
+    if (y < available.top())
+        y = timeline.bottom() + 10;
+    thumbnailPreview_->move(x, y);
+    thumbnailPreview_->show();
+    thumbnailPreview_->raise();
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {

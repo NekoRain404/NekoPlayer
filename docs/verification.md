@@ -12,6 +12,9 @@ Timeline thumbnail preview stage (2026-10-23):
 - `appearance-preferences`, `thumbnail-preview`, `thumbnail-service`, `thumbnail-decoder` and
   `code-size` passed. Formatting and `git diff --check` passed; no libmpv, HDR, OpenGL or Wayland
   video-frame path changed.
+- The complete non-window Debug collection passed **48/49** in **55.10 seconds**; the existing
+  `video-framing` test had one timing-sensitive failure during the parallel run and passed on the
+  immediate focused rerun. No new failure was observed in the thumbnail or UI tests.
 
 Thumbnail request service stage (2026-10-23):
 

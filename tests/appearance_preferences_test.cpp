@@ -5,6 +5,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QFrame>
 #include <QLabel>
 #include <QPalette>
 #include <QSlider>
@@ -44,6 +45,7 @@ class AppearancePreferencesTest final : public QObject {
         const auto style = qApp->styleSheet();
         QVERIFY(style.contains(QStringLiteral("QWidget#playlistPane")));
         QVERIFY(style.contains(QStringLiteral("QWidget#transportBar")));
+        QVERIFY(style.contains(QStringLiteral("QFrame#transportDivider")));
         QVERIFY(style.contains(QStringLiteral("QLabel#timeLabel")));
         QVERIFY(style.contains(QStringLiteral("QSlider#volumeSlider")));
         QVERIFY(style.contains(QStringLiteral("QWidget#welcomePanel")));
@@ -68,6 +70,7 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(lightStyle.contains(QStringLiteral("QListView#playlistView::item:selected")));
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider#timelineSlider")));
         QVERIFY(lightStyle.contains(QStringLiteral("QWidget#welcomePanel")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QFrame#transportDivider")));
         QVERIFY(lightStyle.contains(QStringLiteral("QLabel#timeLabel")));
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider#volumeSlider")));
         QVERIFY(lightStyle.contains(QStringLiteral("QPushButton#welcomeOpenButton")));
@@ -140,18 +143,22 @@ class AppearancePreferencesTest final : public QObject {
         TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen);
         auto *time = transport.findChild<QLabel *>(QStringLiteral("timeLabel"));
         auto *volume = transport.findChild<QSlider *>(QStringLiteral("volumeSlider"));
+        const auto dividers = transport.findChildren<QFrame *>(QStringLiteral("transportDivider"));
         QVERIFY(time && volume);
+        QCOMPARE(dividers.size(), 2);
 
         transport.show();
         transport.setFixedSize(400, 100);
         QCoreApplication::processEvents();
         QCOMPARE(transport.width(), 400);
         QVERIFY(time->isHidden());
+        QVERIFY(dividers.at(0)->isHidden());
         QCOMPARE(volume->width(), 60);
 
         transport.setFixedSize(560, 100);
         QCoreApplication::processEvents();
         QVERIFY(!time->isHidden());
+        QVERIFY(!dividers.at(0)->isHidden());
         QVERIFY(volume->width() >= 60);
     }
 };

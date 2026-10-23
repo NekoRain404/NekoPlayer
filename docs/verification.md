@@ -1,5 +1,14 @@
 # Verification Record
 
+Transport grouping polish stage (2026-10-23):
+
+- The bottom transport now separates playback controls, time readout and audio/window controls
+  with stable, theme-aware dividers. The time divider follows the responsive visibility policy,
+  so narrow windows do not leave an orphaned line or shift the control row.
+- `appearance-preferences` passed with the new dark/light style contracts. Code-size, Clang
+  formatting and `git diff --check` passed. No playback commands, layout geometry of the video
+  surface, decoder settings or GPU rendering path changed.
+
 Thumbnail decoder foundation stage (2026-10-23):
 
 - Added an isolated FFmpeg thumbnail decoder for local media. It owns one format/codec/scaler

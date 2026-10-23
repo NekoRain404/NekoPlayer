@@ -6,6 +6,7 @@
 #include <QAction>
 #include <QCursor>
 #include <QEvent>
+#include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QMouseEvent>
@@ -140,12 +141,23 @@ QToolButton *button(QAction *action, QWidget *parent) {
     QObject::connect(action, &QAction::changed, result, updateDescription);
     return result;
 }
+
+QFrame *divider(QWidget *parent) {
+    auto *result = new QFrame(parent);
+    result->setObjectName(QStringLiteral("transportDivider"));
+    result->setFrameShape(QFrame::VLine);
+    result->setFrameShadow(QFrame::Plain);
+    result->setFixedWidth(1);
+    result->setMinimumHeight(18);
+    result->setMaximumHeight(22);
+    return result;
+}
 } // namespace
 
 TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAction *next,
                            QAction *stop, QAction *mute, QAction *fullscreen, QWidget *parent)
     : QWidget(parent), timeline_(new SeekSlider(this)), volume_(new QSlider(Qt::Horizontal, this)),
-      time_(new QLabel(this)) {
+      time_(new QLabel(this)), timeDivider_(divider(this)), audioDivider_(divider(this)) {
     setObjectName(QStringLiteral("transportBar"));
     timeline_->setObjectName(QStringLiteral("timelineSlider"));
     timeline_->setRange(0, 10000);
@@ -172,8 +184,12 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     row->addWidget(button(stop, this));
     row->addWidget(button(open, this));
     row->addSpacing(10);
+    row->addWidget(timeDivider_);
+    row->addSpacing(2);
     row->addWidget(time_);
     row->addStretch();
+    row->addWidget(audioDivider_);
+    row->addSpacing(2);
     row->addWidget(button(mute, this));
     row->addWidget(volume_);
     row->addSpacing(8);
@@ -227,6 +243,7 @@ void TransportBar::applyResponsiveMetrics() {
     volume_->setVisible(metrics.showVolume);
     volume_->setFixedWidth(metrics.showVolume ? metrics.volumeWidth : 0);
     time_->setVisible(metrics.showTime);
+    timeDivider_->setVisible(metrics.showTime);
     time_->setMinimumWidth(metrics.showTime ? metrics.timeWidth : 0);
     time_->setMaximumWidth(metrics.showTime ? metrics.timeWidth : 0);
 }

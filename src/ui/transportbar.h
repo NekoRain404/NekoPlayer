@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class QAction;
+class QFrame;
 class QLabel;
 class QSlider;
 class QEvent;
@@ -30,5 +31,7 @@ class TransportBar final : public QWidget {
     QSlider *timeline_;
     QSlider *volume_;
     QLabel *time_;
+    QFrame *timeDivider_;
+    QFrame *audioDivider_;
     double duration_ = 0;
 };

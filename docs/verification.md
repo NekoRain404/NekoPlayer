@@ -1,5 +1,10 @@
 # Verification Record
 
+Playlist navigation window-test readiness stage (2026-10-23):
+
+- The `playlist-window` shuffle/navigation case previously expected navigation actions to be enabled before its `QOpenGLWidget` renderer existed. The test now verifies actions remain disabled before renderer readiness, then waits for the visible renderer and checks the queue-dependent action state. This matches the documented playback-entry readiness boundary; production behavior was unchanged.
+- `playlist-window` passed five consecutive repetitions after the fixture correction. Fresh focused `playlist-window`, `window` and `code-size` results are recorded with this commit. The unrelated `file-drop-window` exposure failure from the earlier full-suite run was not part of this correction.
+
 Fullscreen presentation and preview lifecycle stage (2026-10-23):
 
 - `cmake --build --preset debug --target fullscreen_feedback_window_test window_test -j2` succeeded. `ctest --test-dir build/debug -R '^(fullscreen-feedback-window|window|code-size)$' --output-on-failure` passed 3/3. `clang-format --dry-run --Werror` and `git diff --check` passed.

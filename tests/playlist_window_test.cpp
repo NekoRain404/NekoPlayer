@@ -1,6 +1,7 @@
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
+#include "playback/videowidget.h"
 #include "ui/mainwindow.h"
 #include "ui/playlistpane.h"
 
@@ -74,6 +75,9 @@ class PlaylistWindowTest final : public QObject {
         QVERIFY(shuffle && repeat && next && previous && menu);
         QVERIFY(menu->actions().contains(shuffle) && window.actions().contains(shuffle));
         QCOMPARE(shuffle->shortcut(), QKeySequence(Qt::SHIFT | Qt::Key_R));
+        QVERIFY(!next->isEnabled() && !previous->isEnabled());
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
         QVERIFY(!shuffle->isChecked() && !next->isEnabled() && previous->isEnabled());
         shuffle->trigger();
         QVERIFY(queue->shuffleEnabled());

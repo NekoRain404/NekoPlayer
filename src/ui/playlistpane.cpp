@@ -53,6 +53,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     setMinimumWidth(240);
     view_->setObjectName(QStringLiteral("playlistView"));
     view_->setModel(model);
+    view_->setTextElideMode(Qt::ElideMiddle);
     view_->setItemDelegate(new CurrentItemDelegate(view_));
     view_->setSelectionMode(QAbstractItemView::SingleSelection);
     view_->setDragDropMode(QAbstractItemView::InternalMove);

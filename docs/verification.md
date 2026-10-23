@@ -1,5 +1,15 @@
 # Verification Record
 
+Playlist narrow text stage (2026-10-23):
+
+- Playlist rows now use middle elision so long entries retain both the meaningful filename prefix
+  and the extension at the 240 px pane minimum. The model's full normalized path remains available
+  through `Qt::ToolTipRole`; queue order, drag/drop and playback behavior are unchanged.
+- The new narrow-pane regression failed against Qt's default `ElideRight` and passes with the
+  explicit policy. `ui-surface` and the full non-window Debug selection (`ctest --test-dir
+  build/debug -E 'window|startup'`) passed **46/46** in **54.66 seconds**; code-size, formatting
+  and `git diff --check` passed. Native Wayland text rasterization remains desktop verification.
+
 Runtime language refresh stage (2026-10-23):
 
 - Settings now retranslate as one subtree when the language changes at runtime: theme menu items,

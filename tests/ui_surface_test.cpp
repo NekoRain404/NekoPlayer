@@ -1,11 +1,13 @@
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
+#include "playback/playlistmodel.h"
 #include "ui/playlistpane.h"
 #include "ui/welcomepanel.h"
 
 #include <QAction>
 #include <QBoxLayout>
 #include <QLabel>
+#include <QListView>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTranslator>
@@ -141,6 +143,23 @@ class UiSurfaceTest final : public QObject {
         QCOMPARE(count->text(), QStringLiteral("2 项"));
         queue.clear();
         QCOMPARE(count->text(), QStringLiteral("0 项"));
+    }
+
+    void playlistRowsKeepFilenameEndsAtNarrowWidth() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QAction append, previous, next, clear;
+        PlaylistPane pane(queue, &append, &previous, &next, &clear);
+        const auto path = QStringLiteral("/media/very-long-season-name/episode-01-final.mkv");
+        queue.restoreFiles({path}, 0);
+
+        auto *view = pane.view();
+        QVERIFY(view);
+        pane.resize(240, 280);
+        pane.show();
+        QCoreApplication::processEvents();
+        QCOMPARE(view->textElideMode(), Qt::ElideMiddle);
+        QCOMPARE(queue.model()->index(0).data(Qt::ToolTipRole).toString(), path);
     }
 
     void welcomePanelRetranslatesAtRuntime() {

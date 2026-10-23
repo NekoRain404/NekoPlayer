@@ -43,6 +43,9 @@ class AppearancePreferencesTest final : public QObject {
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);
         const auto style = qApp->styleSheet();
         QVERIFY(style.contains(QStringLiteral("QWidget#playlistPane")));
+        QVERIFY(style.contains(QStringLiteral("QWidget#transportBar")));
+        QVERIFY(style.contains(QStringLiteral("QLabel#timeLabel")));
+        QVERIFY(style.contains(QStringLiteral("QSlider#volumeSlider")));
         QVERIFY(style.contains(QStringLiteral("QWidget#welcomePanel")));
         QVERIFY(style.contains(QStringLiteral("QLabel#playlistCount")));
         QVERIFY(style.contains(QStringLiteral("QPushButton#welcomeOpenButton")));
@@ -65,6 +68,8 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(lightStyle.contains(QStringLiteral("QListView#playlistView::item:selected")));
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider#timelineSlider")));
         QVERIFY(lightStyle.contains(QStringLiteral("QWidget#welcomePanel")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QLabel#timeLabel")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QSlider#volumeSlider")));
         QVERIFY(lightStyle.contains(QStringLiteral("QPushButton#welcomeOpenButton")));
         QVERIFY(lightStyle.contains(QStringLiteral("QPushButton:pressed")));
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider::handle:horizontal:pressed")));

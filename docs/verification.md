@@ -1,5 +1,16 @@
 # Verification Record
 
+Transport hierarchy stage (2026-10-23):
+
+- The transport bar now has a restrained top separator in both themes, a distinct monospace time
+  readout, and an independently styled volume slider. Timeline sizing, direct seek behavior,
+  keyboard shortcuts and shared QAction wiring are unchanged.
+- The appearance regression now asserts the transport, time and volume style contracts. The full
+  non-window Debug selection (`ctest --test-dir build/debug -E 'window|startup'`) passed **46/46**
+  in **55.29 seconds**; code-size, Clang formatting and `git diff --check` passed.
+- No libmpv commands, decoder settings, GPU render path, CPU frame copies, HDR handling or
+  playback polling changed. Native Wayland pixels and pointer hover rendering remain unverified.
+
 Welcome panel hierarchy stage (2026-10-23):
 
 - The empty-state surface now has a small NekoPlayer brand mark, more deliberate vertical rhythm,

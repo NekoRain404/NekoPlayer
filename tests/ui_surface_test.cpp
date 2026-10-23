@@ -55,11 +55,20 @@ class UiSurfaceTest final : public QObject {
         auto *second = panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction2"));
         QVERIFY(heading && first && second);
         QVERIFY(!heading->isHidden());
-        QVERIFY(first->text().contains(QStringLiteral("Film One")));
-        QVERIFY(second->text().contains(QStringLiteral("episode")));
-        QVERIFY(!first->icon().isNull());
-        QVERIFY(!second->icon().isNull());
-        QCOMPARE(first->iconSize(), QSize(16, 16));
+        QVERIFY(panel.findChild<QLabel *>(QStringLiteral("welcomeRecentTitle1"))
+                    ->text()
+                    .contains(QStringLiteral("Film One")));
+        QVERIFY(panel.findChild<QLabel *>(QStringLiteral("welcomeRecentTitle2"))
+                    ->text()
+                    .contains(QStringLiteral("episode")));
+        QVERIFY(!panel.findChild<QLabel *>(QStringLiteral("welcomeRecentMediaIcon1"))
+                     ->pixmap()
+                     .isNull());
+        QVERIFY(!panel.findChild<QLabel *>(QStringLiteral("welcomeRecentMediaIcon2"))
+                     ->pixmap()
+                     .isNull());
+        QCOMPARE(panel.findChild<QLabel *>(QStringLiteral("welcomeRecentLocation2"))->text(),
+                 QStringLiteral("https://example.test/series/episode.mkv"));
         QVERIFY(second->accessibleName().contains(QStringLiteral("episode")));
         QVERIFY(!second->toolTip().contains(QStringLiteral("?")));
         QVERIFY(second->property("welcomeRecentAction").toBool());
@@ -70,6 +79,23 @@ class UiSurfaceTest final : public QObject {
 
         panel.setRecentSources({});
         QVERIFY(!panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1")));
+    }
+
+    void welcomeRecentRowsShowTitleAndSanitizedLocation() {
+        QAction open(QStringLiteral("打开文件…"));
+        QAction network(QStringLiteral("打开网络地址…"));
+        WelcomePanel panel(&open, &network);
+        const auto source =
+            QStringLiteral("https://user:secret@example.test/video/Episode.mkv?token=private");
+        panel.setRecentSources({source});
+
+        auto *title = panel.findChild<QLabel *>(QStringLiteral("welcomeRecentTitle1"));
+        auto *location = panel.findChild<QLabel *>(QStringLiteral("welcomeRecentLocation1"));
+        QVERIFY(title && location);
+        QCOMPARE(title->text(), QStringLiteral("Episode.mkv"));
+        QCOMPARE(location->text(), QStringLiteral("https://example.test/video/Episode.mkv"));
+        QVERIFY(!location->text().contains(QStringLiteral("secret")));
+        QVERIFY(!location->text().contains(QStringLiteral("token")));
     }
 
     void welcomePanelPrioritizesPlaybackActionsWhenShort() {

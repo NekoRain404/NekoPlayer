@@ -8,6 +8,7 @@
 #include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPixmap>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSizePolicy>
@@ -17,6 +18,13 @@
 #include <algorithm>
 
 namespace {
+QString safeLocation(const QString &source, bool networkSource) {
+    if (!networkSource)
+        return source;
+    return QUrl(source).toDisplayString(QUrl::RemoveUserInfo | QUrl::RemoveQuery |
+                                        QUrl::RemoveFragment);
+}
+
 void bindButton(QPushButton *button, QAction *action) {
     button->setText(action->text());
     button->setIcon(action->icon());
@@ -65,17 +73,17 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     layout->addWidget(subtitle);
 
     buttonsLayout_ = new QHBoxLayout;
-    buttonsLayout_->setContentsMargins(0, 11, 0, 5);
-    buttonsLayout_->setSpacing(9);
+    buttonsLayout_->setContentsMargins(0, 14, 0, 10);
+    buttonsLayout_->setSpacing(10);
     auto *openButton = new QPushButton(this);
     openButton->setObjectName(QStringLiteral("welcomeOpenButton"));
     bindButton(openButton, open);
-    openButton->setMinimumHeight(38);
+    openButton->setMinimumHeight(44);
     openButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     auto *networkButton = new QPushButton(this);
     networkButton->setObjectName(QStringLiteral("welcomeNetworkButton"));
     bindButton(networkButton, network);
-    networkButton->setMinimumHeight(38);
+    networkButton->setMinimumHeight(44);
     networkButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     buttonsLayout_->addWidget(openButton);
     buttonsLayout_->addWidget(networkButton);
@@ -89,7 +97,7 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     layout->addWidget(recentHeading);
     recentLayout_ = new QVBoxLayout;
     recentLayout_->setContentsMargins(0, 0, 0, 0);
-    recentLayout_->setSpacing(4);
+    recentLayout_->setSpacing(7);
     layout->addLayout(recentLayout_);
 
     auto *hint = new QLabel(this);
@@ -149,21 +157,54 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
         auto *button = new QPushButton(this);
         button->setObjectName(QStringLiteral("welcomeRecentAction%1").arg(index + 1));
         button->setProperty("welcomeRecentAction", true);
-        button->setMinimumHeight(40);
+        button->setMinimumHeight(60);
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         const auto networkSource = MediaSource::isNetwork(source);
-        const auto location =
-            networkSource ? QUrl(source).toDisplayString(QUrl::RemoveUserInfo | QUrl::RemoveQuery |
-                                                         QUrl::RemoveFragment)
-                          : source;
-        button->setIcon(
-            style()->standardIcon(networkSource ? QStyle::SP_DriveNetIcon : QStyle::SP_FileIcon));
-        button->setIconSize(QSize(16, 16));
+        const auto location = safeLocation(source, networkSource);
+        auto *rowLayout = new QHBoxLayout(button);
+        rowLayout->setContentsMargins(12, 8, 12, 8);
+        rowLayout->setSpacing(12);
+
+        auto *icon = new QLabel(button);
+        icon->setObjectName(QStringLiteral("welcomeRecentMediaIcon%1").arg(index + 1));
+        icon->setProperty("welcomeMediaIcon", true);
+        icon->setAttribute(Qt::WA_TransparentForMouseEvents);
+        icon->setAlignment(Qt::AlignCenter);
+        icon->setFixedSize(30, 30);
+        const auto mediaIcon =
+            style()->standardIcon(networkSource ? QStyle::SP_DriveNetIcon : QStyle::SP_FileIcon);
+        icon->setPixmap(mediaIcon.pixmap(18, 18));
+        rowLayout->addWidget(icon, 0, Qt::AlignVCenter);
+
+        auto *textLayout = new QVBoxLayout;
+        textLayout->setContentsMargins(0, 0, 0, 0);
+        textLayout->setSpacing(3);
+        auto *title = new QLabel(button);
+        title->setObjectName(QStringLiteral("welcomeRecentTitle%1").arg(index + 1));
+        title->setProperty("welcomeRecentTitle", true);
+        title->setAttribute(Qt::WA_TransparentForMouseEvents);
+        auto *locationLabel = new QLabel(button);
+        locationLabel->setObjectName(QStringLiteral("welcomeRecentLocation%1").arg(index + 1));
+        locationLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
+        locationLabel->setProperty("welcomeRecentLocation", true);
+        title->setText(MediaSource::displayName(source));
+        locationLabel->setText(location);
+        textLayout->addWidget(title);
+        textLayout->addWidget(locationLabel);
+        rowLayout->addLayout(textLayout, 1);
+
+        auto *chevron = new QLabel(QStringLiteral("›"), button);
+        chevron->setObjectName(QStringLiteral("welcomeRecentChevron"));
+        chevron->setAttribute(Qt::WA_TransparentForMouseEvents);
+        chevron->setAlignment(Qt::AlignCenter);
+        rowLayout->addWidget(chevron, 0, Qt::AlignVCenter);
         button->setCursor(Qt::PointingHandCursor);
+        button->setFocusPolicy(Qt::StrongFocus);
         button->setProperty("welcomeRecentNetwork", networkSource);
         button->setToolTip(location);
         button->setAccessibleName(
-            tr(networkSource ? "网络媒体：%1" : "本地媒体：%1").arg(location));
+            tr(networkSource ? "网络媒体：%1" : "本地媒体：%1")
+                .arg(MediaSource::displayName(source) + QStringLiteral("，") + location));
         connect(button, &QPushButton::clicked, this,
                 [this, source] { emit recentSourceRequested(source); });
         recentLayout_->addWidget(button);
@@ -173,24 +214,26 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
 }
 
 void WelcomePanel::updateRecentButtonLabels() {
-    const auto availableWidth = std::max(0, width() - 80);
+    const auto availableWidth = std::max(0, width() - 156);
     const QFontMetrics metrics(font());
     for (qsizetype index = 0; index < recentSources_.size(); ++index) {
+        const auto suffix = QString::number(index + 1);
         auto *button =
-            findChild<QPushButton *>(QStringLiteral("welcomeRecentAction%1").arg(index + 1));
+            findChild<QPushButton *>(QStringLiteral("welcomeRecentAction%1").arg(suffix));
+        auto *title = findChild<QLabel *>(QStringLiteral("welcomeRecentTitle%1").arg(suffix));
+        auto *locationLabel =
+            findChild<QLabel *>(QStringLiteral("welcomeRecentLocation%1").arg(suffix));
+        if (!button || !title || !locationLabel)
+            continue;
         auto label = MediaSource::displayName(recentSources_.at(index));
         if (label.isEmpty())
             label = tr("未命名媒体");
-        label.replace(QLatin1Char('&'), QStringLiteral("&&"));
-        button->setText(metrics.elidedText(label, Qt::ElideMiddle, availableWidth));
         const auto networkSource = button->property("welcomeRecentNetwork").toBool();
-        const auto location = networkSource
-                                  ? QUrl(recentSources_.at(index))
-                                        .toDisplayString(QUrl::RemoveUserInfo | QUrl::RemoveQuery |
-                                                         QUrl::RemoveFragment)
-                                  : recentSources_.at(index);
-        button->setAccessibleName(
-            tr(networkSource ? "网络媒体：%1" : "本地媒体：%1").arg(location));
+        const auto location = safeLocation(recentSources_.at(index), networkSource);
+        title->setText(metrics.elidedText(label, Qt::ElideMiddle, availableWidth));
+        locationLabel->setText(metrics.elidedText(location, Qt::ElideMiddle, availableWidth));
+        button->setAccessibleName(tr(networkSource ? "网络媒体：%1" : "本地媒体：%1")
+                                      .arg(label + QStringLiteral("，") + location));
     }
 }
 

@@ -1,5 +1,11 @@
 # Verification Record
 
+HDR 元数据测试与硬解隔离阶段（2026-10-24）：
+
+- HDR 元数据用例在打开合成样本前显式关闭硬件解码，避免测试结果受 GPU／驱动初始化耗时影响；生产播放默认值及 HDR 渲染路径不变。
+- 定向媒体信息测试在 Debug 下通过（2.27 秒），在 ASan/UBSan 下通过（2.63 秒）。完整 Debug 非窗口套件通过 **50/50**；完整 ASan/UBSan 非窗口套件通过 **50/50**（61.01 秒，`ASAN_OPTIONS=detect_leaks=0`）。
+- `code-size`、`clang-format --dry-run --Werror` 和 `git diff --check` 通过。按用户要求未运行窗口行为测试；这不构成真实 Wayland、GPU 或 HDR 输出验收。
+
 媒体文件筛选器一致性阶段（2026-10-24）：
 
 - 将视频与音频支持扩展名集中到 `mediafiletypes.cpp`；目录扫描以及打开/添加文件对话框复用同一集合，防止可扫描文件被选择器过滤掉。回归测试逐项核对 30 种扩展名及对话框通配符。

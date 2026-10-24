@@ -333,7 +333,7 @@ void WelcomePanel::updateRecentButtonLabels() {
 
 void WelcomePanel::updateVerticalDensity() {
     const bool showRecent = height() >= 260;
-    const bool showSupportingText = height() >= 215;
+    const bool showSupportingText = height() >= 260;
     const bool showBrand = height() >= 165;
     const bool showContinue = height() >= 360;
     if (auto *brand = findChild<QLabel *>(QStringLiteral("welcomeBrand")))

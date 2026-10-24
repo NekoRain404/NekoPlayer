@@ -211,6 +211,38 @@ class UiSurfaceTest final : public QObject {
         QVERIFY(heading->isHidden());
     }
 
+    void welcomePanelKeepsDropHintBelowPrimaryActionsWhenResized() {
+        QAction open(QStringLiteral("Open File…"));
+        QAction network(QStringLiteral("Open Network URL…"));
+        WelcomePanel panel(&open, &network);
+        panel.setRecentSources(
+            {QStringLiteral("/media/one.mkv"), QStringLiteral("/media/two.mkv")});
+        const QList<QSize> sizes{{400, 215}, {400, 230}, {400, 240}, {400, 250},
+                                 {400, 259}, {400, 260}, {400, 261}, {400, 270},
+                                 {500, 300}, {500, 320}, {500, 360}, {500, 380}};
+        for (const auto &size : sizes) {
+            panel.resize(size);
+            panel.show();
+            QCoreApplication::processEvents();
+            panel.layout()->activate();
+
+            const auto *openButton =
+                panel.findChild<QPushButton *>(QStringLiteral("welcomeOpenButton"));
+            const auto *networkButton =
+                panel.findChild<QPushButton *>(QStringLiteral("welcomeNetworkButton"));
+            const auto *hint = panel.findChild<QLabel *>(QStringLiteral("welcomeDropHint"));
+            QVERIFY(openButton && networkButton && hint);
+            if (!hint->isHidden()) {
+                const auto buttonsBottom =
+                    std::max(openButton->geometry().bottom(), networkButton->geometry().bottom());
+                QVERIFY2(hint->geometry().top() > buttonsBottom,
+                         qPrintable(QStringLiteral("hint overlaps actions at %1x%2")
+                                        .arg(size.width())
+                                        .arg(size.height())));
+            }
+        }
+    }
+
     void welcomePanelKeepsActionsReadableAtNarrowWidth() {
         QAction open(QStringLiteral("Open File…"));
         QAction network(QStringLiteral("Open Network URL…"));

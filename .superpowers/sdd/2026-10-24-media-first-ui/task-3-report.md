@@ -12,4 +12,4 @@ Line counts: `appearanceicons.h` 31; `appearanceicons.cpp` 164; `windowactions.c
 
 Limitations: the explicit symbol list has no dedicated seek-direction or volume-direction variants. Seek-back/forward use the distinct `Previous`/`Next` arrows; volume-up/down use `Add`/`Remove`. Several source-era standard icons had no exact semantic counterpart and were mapped to the closest enumerated symbol.
 
-Commit: `aad2b85` (`feat(ui): unify main window iconography`).
+Commit: `6894923` (`feat(ui): unify main window iconography`).

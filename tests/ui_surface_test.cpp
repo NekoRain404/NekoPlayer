@@ -215,8 +215,11 @@ class UiSurfaceTest final : public QObject {
         QAction open(QStringLiteral("Open File…"));
         QAction network(QStringLiteral("Open Network URL…"));
         WelcomePanel panel(&open, &network);
-        panel.setRecentSources(
-            {QStringLiteral("/media/one.mkv"), QStringLiteral("/media/two.mkv")});
+        panel.setRecentSources({QStringLiteral("/media/one.mkv"), QStringLiteral("/media/two.mkv"),
+                                QStringLiteral("/media/three.mkv")});
+        panel.setResumeEntries({{QStringLiteral("/media/one.mkv"), 10.0, 100.0, 3},
+                                {QStringLiteral("/media/two.mkv"), 20.0, 100.0, 2},
+                                {QStringLiteral("/media/three.mkv"), 30.0, 100.0, 1}});
         const QList<QSize> sizes{{400, 215}, {400, 230}, {400, 240}, {400, 250},
                                  {400, 259}, {400, 260}, {400, 261}, {400, 270},
                                  {500, 300}, {500, 320}, {500, 360}, {500, 380}};

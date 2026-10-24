@@ -6,6 +6,8 @@
 #include "ui/languagemanager.h"
 #include "ui/mainwindow.h"
 #include "ui/playbacksettingsdialog.h"
+#include "ui/preferencescoordinator.h"
+#include "ui/preferencesdialog.h"
 #include "ui/timeseekdialog.h"
 #include <QAction>
 #include <QComboBox>
@@ -696,6 +698,26 @@ class WindowTest final : public QObject {
         QCOMPARE(pause->property(appearanceIconSymbolProperty), pauseSymbol);
         QCOMPARE(pause->property(appearanceIconPaletteCacheProperty), pausePaletteCache);
         QCOMPARE(window.windowTitle(), title);
+    }
+
+    void sessionLessSeekStepUsesRememberedFallback() {
+        MainWindow window(true);
+        auto *coordinator = window.findChild<PreferencesCoordinator *>();
+        QVERIFY(coordinator);
+        auto first = coordinator->createDialog(&window, PreferencesDialog::Category::Playback);
+        auto *firstChoice = first->findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+        QVERIFY(firstChoice);
+        QCOMPARE(firstChoice->currentData().toInt(), 5);
+        firstChoice->setCurrentIndex(firstChoice->findData(10));
+        auto *back = action(window, "seekBackAction");
+        auto *forward = action(window, "seekForwardAction");
+        QVERIFY(back && forward);
+        QCOMPARE(back->text(), QStringLiteral("后退 10 秒"));
+        QCOMPARE(forward->text(), QStringLiteral("前进 10 秒"));
+        auto second = coordinator->createDialog(&window, PreferencesDialog::Category::Playback);
+        auto *secondChoice = second->findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+        QVERIFY(secondChoice);
+        QCOMPARE(secondChoice->currentData().toInt(), 10);
     }
 
     void reportsMissingGraphicsContext() {

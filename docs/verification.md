@@ -1,5 +1,12 @@
 # Verification Record
 
+完整非窗口回归阶段（2026-10-24）：
+
+- 在容器-size 收尾提交后重新构建完整 Debug 目标；`ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` 通过 **49/49**（63.50 秒）。
+- 完整 ASan/UBSan 目标构建成功；相同的非窗口 CTest 选择在 `ASAN_OPTIONS=detect_leaks=0` 下通过 **49/49**（80.87 秒）。保持 ASan/UBSan 的地址与未定义行为检测；关闭进程退出泄漏检查是为了避开 Qt Wayland 客户端、GTK/Pango/fontconfig 等平台库保留的外部缓存/代理分配。未据此宣称泄漏检查通过。
+- 单独复跑首轮出现外部退出泄漏报告的 UI 与缩略图测试，四项通过 **4/4**。其中 `ui-surface` 的窄宽布局用例在 sanitizer 的原始宿主 GTK 环境偶发未满足方向断言，在规定的 generic Qt 主题下通过。
+- 按用户要求未运行窗口行为测试；Wayland 实机布局、输入路由、GPU、HDR 输出与硬件解码仍未由本轮验收。测试选择包含 `code-size`、主题/图标、网络、缩略图、截图、逐帧、区间循环、播放列表、续播、轨道/字幕、文件拖放路由及视频色彩控制器等 49 个非窗口测试。
+
 Container-size conversion cleanup stage (2026-10-24):
 
 - `ThumbnailService::cacheSize()` now exposes Qt's `qsizetype` rather than narrowing a container size to `int`; a compile-time API regression check guards that contract. Session path normalization also tracks Qt list positions as `qsizetype` and converts only at the existing `int` index boundary.

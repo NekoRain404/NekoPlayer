@@ -35,6 +35,8 @@ class PreferencesDialogTest final : public QObject {
         QVERIFY(dialog.findChild<QCheckBox *>(QStringLiteral("recursiveFolderScanChoice")));
         QVERIFY(dialog.findChild<QCheckBox *>(QStringLiteral("mediaScanningEnabledChoice"))
                     ->isChecked());
+        QVERIFY(dialog.findChild<QCheckBox *>(QStringLiteral("resumePlaybackPositionChoice"))
+                    ->isChecked());
     }
 
     void opensRequestedCategory() {
@@ -64,6 +66,22 @@ class PreferencesDialogTest final : public QObject {
         const auto arguments = changed.takeFirst();
         QVERIFY(!arguments.at(0).toBool());
         QVERIFY(arguments.at(1).toBool());
+    }
+
+    void appliesResumePositionPreference() {
+        MpvController player(true, true);
+        PreferencesDialog dialog(player);
+        auto *resume = dialog.findChild<QCheckBox *>(
+            QStringLiteral("resumePlaybackPositionChoice"));
+        QVERIFY(resume);
+        QSignalSpy changed(&dialog, &PreferencesDialog::resumePlaybackPositionChanged);
+        resume->setChecked(false);
+        QVERIFY(changed.isEmpty());
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(buttons);
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(changed.count(), 1);
+        QVERIFY(!changed.constFirst().constFirst().toBool());
     }
 
     void namesEveryPreferenceControlForAssistiveTechnology() {

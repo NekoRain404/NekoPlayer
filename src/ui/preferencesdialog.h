@@ -18,11 +18,13 @@ class PreferencesDialog final : public QDialog {
     enum class Category { Playback, Audio, Subtitles, MediaLibrary };
 
     explicit PreferencesDialog(MpvController &player, QWidget *parent = nullptr,
-                               MediaLibraryPreferences mediaLibrary = {});
+                               MediaLibraryPreferences mediaLibrary = {},
+                               bool resumePlaybackPosition = true);
     void selectCategory(Category category);
 
   signals:
     void mediaLibraryPreferencesChanged(bool scanningEnabled, bool recursiveByDefault);
+    void resumePlaybackPositionChanged(bool enabled);
 
   private:
     void apply();
@@ -41,7 +43,9 @@ class PreferencesDialog final : public QDialog {
     QFontComboBox *subtitleFont_;
     QCheckBox *mediaScanningEnabled_;
     QCheckBox *recursiveFolderScan_;
+    QCheckBox *resumePlaybackPosition_;
     MediaLibraryPreferences mediaLibraryPreferences_;
+    bool resumePlaybackPositionDefault_ = true;
     QPushButton *applyButton_;
     QPushButton *restoreDefaultsButton_;
     QString lastDecoder_;

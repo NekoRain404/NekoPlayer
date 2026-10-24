@@ -114,6 +114,8 @@ SessionLoadResult SessionStore::load() const {
         settings.value(QStringLiteral("audio/outputDevice"), QStringLiteral("auto")).toString();
     state.hardwareDecodingEnabled =
         readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
+    state.resumePlaybackPosition =
+        readBool(settings, QStringLiteral("playback/resumePosition"), true);
     state.mediaLibrary.scanningEnabled =
         readBool(settings, QStringLiteral("library/scanningEnabled"), true);
     state.mediaLibrary.recursiveByDefault =
@@ -174,6 +176,7 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("audio/muted"), saved.audio.muted);
     settings.setValue(QStringLiteral("audio/outputDevice"), saved.audio.outputDevice);
     settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
+    settings.setValue(QStringLiteral("playback/resumePosition"), saved.resumePlaybackPosition);
     settings.setValue(QStringLiteral("library/scanningEnabled"),
                       saved.mediaLibrary.scanningEnabled);
     settings.setValue(QStringLiteral("library/recursiveByDefault"),

@@ -4,6 +4,7 @@
 <context>
     <name>PreferencesDialog</name>
     <message><source>偏好设置</source><translation>Preferences</translation></message>
+    <message><source>恢复上次播放位置</source><translation>Resume from the last playback position</translation></message>
     <message><source>媒体库</source><translation>Media Library</translation></message>
     <message><source>允许扫描文件夹中的媒体文件</source><translation>Allow scanning folders for media files</translation></message>
     <message><source>默认包含子文件夹</source><translation>Include subfolders by default</translation></message>

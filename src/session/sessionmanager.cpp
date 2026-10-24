@@ -77,7 +77,9 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
                 emit playbackHistoryChanged();
             });
     playlist_.setResumePositionResolver([this](const QString &path) {
-        return resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0);
+        return resumePlaybackPositionEnabled_
+                   ? resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0)
+                   : 0.0;
     });
 }
 
@@ -105,8 +107,9 @@ SessionLoadResult SessionManager::restore() {
     emit playbackHistoryChanged();
     mediaDirectory_ = loaded.state.window.mediaDirectory;
     mediaLibraryPreferences_ = loaded.state.mediaLibrary;
+    resumePlaybackPositionEnabled_ = loaded.state.resumePlaybackPosition;
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
-                           loaded.state.resumePosition);
+                           resumePlaybackPositionEnabled_ ? loaded.state.resumePosition : 0);
     player_.setVolume(audio_.volume);
     player_.setMuted(audio_.muted);
     player_.setHardwareDecodingEnabled(loaded.state.hardwareDecodingEnabled);
@@ -129,7 +132,9 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
         rememberPlaybackPosition(state.path, position, state.duration);
     }
     window.mediaDirectory = mediaDirectory_;
-    const auto position = player_.state().path == playlist_.model()->currentPath()
+    const auto position = !resumePlaybackPositionEnabled_
+                              ? 0.0
+                          : player_.state().path == playlist_.model()->currentPath()
                               ? player_.resumePosition()
                               : playlist_.pendingResumePosition();
     SessionState saved;
@@ -143,6 +148,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.tuning = tuning_;
     saved.videoColor = player_.videoColorAdjustment();
     saved.mediaLibrary = mediaLibraryPreferences_;
+    saved.resumePlaybackPosition = resumePlaybackPositionEnabled_;
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     if (!sessionError.isEmpty())
@@ -330,6 +336,14 @@ QString SessionManager::saveTrackPreferences() {
 }
 
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }
+
+bool SessionManager::resumePlaybackPositionEnabled() const {
+    return resumePlaybackPositionEnabled_;
+}
+
+void SessionManager::setResumePlaybackPositionEnabled(bool enabled) {
+    resumePlaybackPositionEnabled_ = enabled;
+}
 
 MediaLibraryPreferences SessionManager::mediaLibraryPreferences() const {
     return mediaLibraryPreferences_;

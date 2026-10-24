@@ -245,13 +245,19 @@ void MainWindow::createActions() {
     view->addAction(showPlaylistAction_);
     auto *settings = menuBar()->addMenu(tr("设置(&S)"));
     const auto showPreferences = [this](PreferencesDialog::Category category) {
-        PreferencesDialog dialog(*controller_, this, folderMenu_->mediaLibraryPreferences());
+        PreferencesDialog dialog(*controller_, this, folderMenu_->mediaLibraryPreferences(),
+                                 session_ ? session_->resumePlaybackPositionEnabled() : true);
         connect(&dialog, &PreferencesDialog::mediaLibraryPreferencesChanged, this,
                 [this](bool scanningEnabled, bool recursiveByDefault) {
                     const MediaLibraryPreferences preferences{scanningEnabled, recursiveByDefault};
                     folderMenu_->setMediaLibraryPreferences(preferences);
                     if (session_)
                         session_->setMediaLibraryPreferences(preferences);
+                });
+        connect(&dialog, &PreferencesDialog::resumePlaybackPositionChanged, this,
+                [this](bool enabled) {
+                    if (session_)
+                        session_->setResumePlaybackPositionEnabled(enabled);
                 });
         dialog.selectCategory(category);
         dialog.exec();

@@ -41,6 +41,7 @@ struct SessionState {
     TuningPreferences tuning;
     VideoColorAdjustment videoColor;
     MediaLibraryPreferences mediaLibrary;
+    bool resumePlaybackPosition = true;
 };
 
 struct SessionLoadResult {

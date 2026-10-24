@@ -19,6 +19,8 @@ class SessionManager final : public QObject {
     [[nodiscard]] QString mediaDirectory() const;
     [[nodiscard]] MediaLibraryPreferences mediaLibraryPreferences() const;
     void setMediaLibraryPreferences(MediaLibraryPreferences preferences);
+    [[nodiscard]] bool resumePlaybackPositionEnabled() const;
+    void setResumePlaybackPositionEnabled(bool enabled);
     [[nodiscard]] QList<PlaybackHistoryEntry> playbackHistory() const;
     void rememberMedia(const QString &path);
 
@@ -38,6 +40,7 @@ class SessionManager final : public QObject {
     TuningPreferences tuning_;
     QString mediaDirectory_;
     MediaLibraryPreferences mediaLibraryPreferences_;
+    bool resumePlaybackPositionEnabled_ = true;
     QString loadError_;
     QString historyError_;
     bool stopRequested_ = false;

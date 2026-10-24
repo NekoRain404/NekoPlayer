@@ -16,7 +16,8 @@
 #include <QVBoxLayout>
 
 PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
-                                     MediaLibraryPreferences initialMediaLibrary)
+                                     MediaLibraryPreferences initialMediaLibrary,
+                                     bool resumePlaybackPosition)
     : QDialog(parent), player_(player), tabs_(new QTabWidget(this)),
       hardwareDecoding_(new QComboBox(this)), actualDecoder_(new QLabel(this)),
       audioDevice_(new QComboBox(this)), subtitleVisible_(new QCheckBox(tr("显示字幕"), this)),
@@ -24,7 +25,9 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       subtitleFont_(new QFontComboBox(this)),
       mediaScanningEnabled_(new QCheckBox(tr("允许扫描文件夹中的媒体文件"), this)),
       recursiveFolderScan_(new QCheckBox(tr("默认包含子文件夹"), this)),
-      mediaLibraryPreferences_(initialMediaLibrary) {
+      resumePlaybackPosition_(new QCheckBox(tr("恢复上次播放位置"), this)),
+      mediaLibraryPreferences_(initialMediaLibrary),
+      resumePlaybackPositionDefault_(resumePlaybackPosition) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
@@ -36,6 +39,10 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     hardwareDecoding_->addItem(tr("软件解码"), false);
     hardwareDecoding_->setCurrentIndex(player_.hardwareDecodingEnabled() ? 0 : 1);
     playbackForm->addRow(tr("视频解码方式(&D)："), hardwareDecoding_);
+    resumePlaybackPosition_->setObjectName(QStringLiteral("resumePlaybackPositionChoice"));
+    resumePlaybackPosition_->setAccessibleName(tr("恢复上次播放位置"));
+    resumePlaybackPosition_->setChecked(resumePlaybackPosition);
+    playbackForm->addRow(resumePlaybackPosition_);
     actualDecoder_->setObjectName(QStringLiteral("actualDecoder"));
     actualDecoder_->setTextFormat(Qt::PlainText);
     actualDecoder_->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -132,6 +139,8 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             &PreferencesDialog::refreshAudioDevices);
     connect(hardwareDecoding_, &QComboBox::currentIndexChanged, this,
             &PreferencesDialog::updateApplyButton);
+    connect(resumePlaybackPosition_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
     connect(subtitleVisible_, &QCheckBox::toggled, this, &PreferencesDialog::updateApplyButton);
     connect(subtitleScale_, &QDoubleSpinBox::valueChanged, this,
             &PreferencesDialog::updateApplyButton);
@@ -177,6 +186,10 @@ void PreferencesDialog::apply() {
         hardwareDecoding_->currentData().toBool() != player_.hardwareDecodingEnabled();
     if (decodingChanged)
         player_.setHardwareDecodingEnabled(hardwareDecoding_->currentData().toBool());
+    if (resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_) {
+        resumePlaybackPositionDefault_ = resumePlaybackPosition_->isChecked();
+        emit resumePlaybackPositionChanged(resumePlaybackPositionDefault_);
+    }
     subtitleScale_->interpretText();
     subtitlePosition_->interpretText();
     const SubtitlePreferences draft{subtitleVisible_->isChecked(), subtitleScale_->value(),
@@ -204,7 +217,8 @@ void PreferencesDialog::updateApplyButton() {
         mediaScanningEnabled_->isChecked() != mediaLibraryPreferences_.scanningEnabled ||
         recursiveFolderScan_->isChecked() != mediaLibraryPreferences_.recursiveByDefault;
     const bool playbackChange =
-        decodingChanged || draft.normalized() != player_.subtitlePreferences();
+        decodingChanged || draft.normalized() != player_.subtitlePreferences() ||
+        resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_;
     applyButton_->setEnabled(mediaLibraryChanged || (player_.isReady() && playbackChange));
 }
 

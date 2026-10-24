@@ -73,6 +73,7 @@ class SessionTest final : public QObject {
         saved.audio = {37.5, true};
         saved.mediaLibrary.scanningEnabled = false;
         saved.mediaLibrary.recursiveByDefault = true;
+        saved.resumePlaybackPosition = false;
         saved.window = {QByteArray::fromHex("00ff0012"), true, temporary.path()};
         QVERIFY(SessionStore(file).save(saved).isEmpty());
         const auto loaded = SessionStore(file).load();
@@ -86,6 +87,7 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.window.mediaDirectory, temporary.path());
         QVERIFY(!loaded.state.mediaLibrary.scanningEnabled);
         QVERIFY(loaded.state.mediaLibrary.recursiveByDefault);
+        QVERIFY(!loaded.state.resumePlaybackPosition);
         QCOMPARE(loaded.state.tuning.playbackSpeed, 1.0);
         QCOMPARE(loaded.state.tuning.audioDelay, 0.0);
         QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);

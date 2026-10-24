@@ -35,6 +35,7 @@
 #include <QStatusBar>
 #include <QStyle>
 #include <QtGlobal>
+#include <utility>
 
 void MainWindow::createActions() {
     const auto make = [this](const QString &text, const char *name, QKeySequence shortcut) {
@@ -102,12 +103,14 @@ void MainWindow::createActions() {
     setAppearanceIcon(back, AppearanceIcons::Symbol::SeekBackward);
     setAppearanceIcon(forward, AppearanceIcons::Symbol::SeekForward);
     connect(back, &QAction::triggered, this, [this] {
-        controller_->seekRelative(-5);
-        showSeekFeedback(ActionFeedbackText::seek(-5));
+        const auto seconds = session_ ? session_->seekStepSeconds() : 5;
+        controller_->seekRelative(-seconds);
+        showSeekFeedback(ActionFeedbackText::seek(-seconds));
     });
     connect(forward, &QAction::triggered, this, [this] {
-        controller_->seekRelative(5);
-        showSeekFeedback(ActionFeedbackText::seek(5));
+        const auto seconds = session_ ? session_->seekStepSeconds() : 5;
+        controller_->seekRelative(seconds);
+        showSeekFeedback(ActionFeedbackText::seek(seconds));
     });
     auto *louder = make(tr("增加音量"), "volumeUpAction", QKeySequence(Qt::Key_Up));
     auto *quieter = make(tr("降低音量"), "volumeDownAction", QKeySequence(Qt::Key_Down));
@@ -246,7 +249,8 @@ void MainWindow::createActions() {
     auto *settings = menuBar()->addMenu(tr("设置(&S)"));
     const auto showPreferences = [this](PreferencesDialog::Category category) {
         PreferencesDialog dialog(*controller_, this, folderMenu_->mediaLibraryPreferences(),
-                                 session_ ? session_->resumePlaybackPositionEnabled() : true);
+                                 session_ ? session_->resumePlaybackPositionEnabled() : true,
+                                 session_ ? session_->seekStepSeconds() : 5);
         connect(&dialog, &PreferencesDialog::mediaLibraryPreferencesChanged, this,
                 [this](bool scanningEnabled, bool recursiveByDefault) {
                     const MediaLibraryPreferences preferences{scanningEnabled, recursiveByDefault};
@@ -258,6 +262,12 @@ void MainWindow::createActions() {
                 [this](bool enabled) {
                     if (session_)
                         session_->setResumePlaybackPositionEnabled(enabled);
+                });
+        connect(&dialog, &PreferencesDialog::seekStepSecondsChanged, this,
+                [this](int seconds) {
+                    if (session_)
+                        session_->setSeekStepSeconds(seconds);
+                    updateSeekActionLabels(seconds);
                 });
         dialog.selectCategory(category);
         dialog.exec();
@@ -369,6 +379,19 @@ void MainWindow::createActions() {
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this,
             [this](const QPoint &point) { contextMenu_->popup(mapToGlobal(point)); });
+}
+
+void MainWindow::updateSeekActionLabels(int seconds) {
+    for (const auto &[name, direction] :
+         {std::pair{"seekBackAction", -1}, std::pair{"seekForwardAction", 1}}) {
+        if (auto *action = findChild<QAction *>(QString::fromLatin1(name))) {
+            const auto label = direction < 0 ? tr("后退 %1 秒").arg(seconds)
+                                             : tr("前进 %1 秒").arg(seconds);
+            action->setText(label);
+            action->setToolTip(label);
+            action->setStatusTip(label);
+        }
+    }
 }
 
 void MainWindow::setAppearanceIcon(QAction *action, AppearanceIcons::Symbol symbol) {

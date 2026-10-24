@@ -56,6 +56,7 @@ class MainWindow final : public QMainWindow {
 
   private:
     void createActions();
+    void updateSeekActionLabels(int seconds);
     void setAppearanceIcon(QAction *action, AppearanceIcons::Symbol symbol);
     void refreshAppearanceIcons();
     void chooseFile();

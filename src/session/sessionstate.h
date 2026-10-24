@@ -42,6 +42,7 @@ struct SessionState {
     VideoColorAdjustment videoColor;
     MediaLibraryPreferences mediaLibrary;
     bool resumePlaybackPosition = true;
+    int seekStepSeconds = 5;
 };
 
 struct SessionLoadResult {

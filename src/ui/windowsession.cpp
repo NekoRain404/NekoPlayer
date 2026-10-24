@@ -29,6 +29,7 @@ void MainWindow::restoreSession(const QString &path) {
         return;
     }
     folderMenu_->setMediaLibraryPreferences(loaded.state.mediaLibrary);
+    updateSeekActionLabels(loaded.state.seekStepSeconds);
     connect(session_.get(), &SessionManager::playbackHistoryChanged, this, [this] {
         if (welcomePanel_)
             welcomePanel_->setResumeEntries(session_->playbackHistory());

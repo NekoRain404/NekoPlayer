@@ -19,12 +19,13 @@ class PreferencesDialog final : public QDialog {
 
     explicit PreferencesDialog(MpvController &player, QWidget *parent = nullptr,
                                MediaLibraryPreferences mediaLibrary = {},
-                               bool resumePlaybackPosition = true);
+                               bool resumePlaybackPosition = true, int seekStepSeconds = 5);
     void selectCategory(Category category);
 
   signals:
     void mediaLibraryPreferencesChanged(bool scanningEnabled, bool recursiveByDefault);
     void resumePlaybackPositionChanged(bool enabled);
+    void seekStepSecondsChanged(int seconds);
 
   private:
     void apply();
@@ -44,8 +45,10 @@ class PreferencesDialog final : public QDialog {
     QCheckBox *mediaScanningEnabled_;
     QCheckBox *recursiveFolderScan_;
     QCheckBox *resumePlaybackPosition_;
+    QComboBox *seekStepSeconds_;
     MediaLibraryPreferences mediaLibraryPreferences_;
     bool resumePlaybackPositionDefault_ = true;
+    int seekStepSecondsDefault_ = 5;
     QPushButton *applyButton_;
     QPushButton *restoreDefaultsButton_;
     QString lastDecoder_;

@@ -74,6 +74,7 @@ class SessionTest final : public QObject {
         saved.mediaLibrary.scanningEnabled = false;
         saved.mediaLibrary.recursiveByDefault = true;
         saved.resumePlaybackPosition = false;
+        saved.seekStepSeconds = 30;
         saved.window = {QByteArray::fromHex("00ff0012"), true, temporary.path()};
         QVERIFY(SessionStore(file).save(saved).isEmpty());
         const auto loaded = SessionStore(file).load();
@@ -88,6 +89,9 @@ class SessionTest final : public QObject {
         QVERIFY(!loaded.state.mediaLibrary.scanningEnabled);
         QVERIFY(loaded.state.mediaLibrary.recursiveByDefault);
         QVERIFY(!loaded.state.resumePlaybackPosition);
+        QSettings persisted(file, QSettings::IniFormat);
+        QCOMPARE(persisted.value(QStringLiteral("playback/seekStepSeconds")).toInt(), 30);
+        QCOMPARE(loaded.state.seekStepSeconds, 30);
         QCOMPARE(loaded.state.tuning.playbackSpeed, 1.0);
         QCOMPARE(loaded.state.tuning.audioDelay, 0.0);
         QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
@@ -326,6 +330,7 @@ class SessionTest final : public QObject {
             settings.setValue(QStringLiteral("playback/speed"), 99.0);
             settings.setValue(QStringLiteral("playback/audioDelay"), -99.0);
             settings.setValue(QStringLiteral("playback/subtitleDelay"), QStringLiteral("nan"));
+            settings.setValue(QStringLiteral("playback/seekStepSeconds"), 15);
             settings.sync();
         }
         const auto loaded = SessionStore(file).load();
@@ -338,6 +343,7 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.tuning.playbackSpeed, 4.0);
         QCOMPARE(loaded.state.tuning.audioDelay, -10.0);
         QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
+        QCOMPARE(loaded.state.seekStepSeconds, 5);
     }
 
     void inaccessibleDestinationReportsFailure() {

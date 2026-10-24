@@ -17,7 +17,7 @@
 
 PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
                                      MediaLibraryPreferences initialMediaLibrary,
-                                     bool resumePlaybackPosition)
+                                     bool resumePlaybackPosition, int seekStepSeconds)
     : QDialog(parent), player_(player), tabs_(new QTabWidget(this)),
       hardwareDecoding_(new QComboBox(this)), actualDecoder_(new QLabel(this)),
       audioDevice_(new QComboBox(this)), subtitleVisible_(new QCheckBox(tr("显示字幕"), this)),
@@ -26,8 +26,10 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       mediaScanningEnabled_(new QCheckBox(tr("允许扫描文件夹中的媒体文件"), this)),
       recursiveFolderScan_(new QCheckBox(tr("默认包含子文件夹"), this)),
       resumePlaybackPosition_(new QCheckBox(tr("恢复上次播放位置"), this)),
+      seekStepSeconds_(new QComboBox(this)),
       mediaLibraryPreferences_(initialMediaLibrary),
-      resumePlaybackPositionDefault_(resumePlaybackPosition) {
+      resumePlaybackPositionDefault_(resumePlaybackPosition),
+      seekStepSecondsDefault_(seekStepSeconds) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
@@ -43,6 +45,13 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     resumePlaybackPosition_->setAccessibleName(tr("恢复上次播放位置"));
     resumePlaybackPosition_->setChecked(resumePlaybackPosition);
     playbackForm->addRow(resumePlaybackPosition_);
+    seekStepSeconds_->setObjectName(QStringLiteral("seekStepChoice"));
+    seekStepSeconds_->setAccessibleName(tr("左右键跳转时长"));
+    for (const int seconds : {5, 10, 30})
+        seekStepSeconds_->addItem(tr("%1 秒").arg(seconds), seconds);
+    const auto seekIndex = seekStepSeconds_->findData(seekStepSeconds);
+    seekStepSeconds_->setCurrentIndex(seekIndex >= 0 ? seekIndex : 0);
+    playbackForm->addRow(tr("左右键跳转时长："), seekStepSeconds_);
     actualDecoder_->setObjectName(QStringLiteral("actualDecoder"));
     actualDecoder_->setTextFormat(Qt::PlainText);
     actualDecoder_->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -141,6 +150,8 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             &PreferencesDialog::updateApplyButton);
     connect(resumePlaybackPosition_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
+    connect(seekStepSeconds_, &QComboBox::currentIndexChanged, this,
+            &PreferencesDialog::updateApplyButton);
     connect(subtitleVisible_, &QCheckBox::toggled, this, &PreferencesDialog::updateApplyButton);
     connect(subtitleScale_, &QDoubleSpinBox::valueChanged, this,
             &PreferencesDialog::updateApplyButton);
@@ -171,6 +182,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
         subtitleScale_->setValue(1.0);
         subtitlePosition_->setValue(100.0);
         subtitleFont_->setEditText(QString());
+        seekStepSeconds_->setCurrentIndex(seekStepSeconds_->findData(5));
     });
     updateApplyButton();
     updateActualDecoder();
@@ -189,6 +201,11 @@ void PreferencesDialog::apply() {
     if (resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_) {
         resumePlaybackPositionDefault_ = resumePlaybackPosition_->isChecked();
         emit resumePlaybackPositionChanged(resumePlaybackPositionDefault_);
+    }
+    const auto seekStep = seekStepSeconds_->currentData().toInt();
+    if (seekStep != seekStepSecondsDefault_) {
+        seekStepSecondsDefault_ = seekStep;
+        emit seekStepSecondsChanged(seekStep);
     }
     subtitleScale_->interpretText();
     subtitlePosition_->interpretText();
@@ -218,7 +235,8 @@ void PreferencesDialog::updateApplyButton() {
         recursiveFolderScan_->isChecked() != mediaLibraryPreferences_.recursiveByDefault;
     const bool playbackChange =
         decodingChanged || draft.normalized() != player_.subtitlePreferences() ||
-        resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_;
+        resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_ ||
+        seekStepSeconds_->currentData().toInt() != seekStepSecondsDefault_;
     applyButton_->setEnabled(mediaLibraryChanged || (player_.isReady() && playbackChange));
 }
 

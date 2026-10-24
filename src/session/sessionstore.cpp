@@ -57,6 +57,9 @@ SessionState normalized(SessionState state) {
     state.subtitles = state.subtitles.normalized();
     state.tuning = state.tuning.normalized();
     state.videoColor = state.videoColor.normalized();
+    if (state.seekStepSeconds != 5 && state.seekStepSeconds != 10 &&
+        state.seekStepSeconds != 30)
+        state.seekStepSeconds = 5;
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
     if (state.audio.outputDevice.isEmpty() || state.audio.outputDevice.contains(QChar::Null))
@@ -116,6 +119,10 @@ SessionLoadResult SessionStore::load() const {
         readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
     state.resumePlaybackPosition =
         readBool(settings, QStringLiteral("playback/resumePosition"), true);
+    const auto seekStep = settings.value(QStringLiteral("playback/seekStepSeconds"), 5).toInt(&valid);
+    state.seekStepSeconds = valid && (seekStep == 5 || seekStep == 10 || seekStep == 30)
+                                ? seekStep
+                                : 5;
     state.mediaLibrary.scanningEnabled =
         readBool(settings, QStringLiteral("library/scanningEnabled"), true);
     state.mediaLibrary.recursiveByDefault =
@@ -177,6 +184,7 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("audio/outputDevice"), saved.audio.outputDevice);
     settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
     settings.setValue(QStringLiteral("playback/resumePosition"), saved.resumePlaybackPosition);
+    settings.setValue(QStringLiteral("playback/seekStepSeconds"), saved.seekStepSeconds);
     settings.setValue(QStringLiteral("library/scanningEnabled"),
                       saved.mediaLibrary.scanningEnabled);
     settings.setValue(QStringLiteral("library/recursiveByDefault"),

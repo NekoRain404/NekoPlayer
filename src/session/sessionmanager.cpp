@@ -108,6 +108,7 @@ SessionLoadResult SessionManager::restore() {
     mediaDirectory_ = loaded.state.window.mediaDirectory;
     mediaLibraryPreferences_ = loaded.state.mediaLibrary;
     resumePlaybackPositionEnabled_ = loaded.state.resumePlaybackPosition;
+    seekStepSeconds_ = loaded.state.seekStepSeconds;
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
                            resumePlaybackPositionEnabled_ ? loaded.state.resumePosition : 0);
     player_.setVolume(audio_.volume);
@@ -149,6 +150,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.videoColor = player_.videoColorAdjustment();
     saved.mediaLibrary = mediaLibraryPreferences_;
     saved.resumePlaybackPosition = resumePlaybackPositionEnabled_;
+    saved.seekStepSeconds = seekStepSeconds_;
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     if (!sessionError.isEmpty())
@@ -339,6 +341,13 @@ QString SessionManager::mediaDirectory() const { return mediaDirectory_; }
 
 bool SessionManager::resumePlaybackPositionEnabled() const {
     return resumePlaybackPositionEnabled_;
+}
+
+int SessionManager::seekStepSeconds() const { return seekStepSeconds_; }
+
+void SessionManager::setSeekStepSeconds(int seconds) {
+    if (seconds == 5 || seconds == 10 || seconds == 30)
+        seekStepSeconds_ = seconds;
 }
 
 void SessionManager::setResumePlaybackPositionEnabled(bool enabled) {

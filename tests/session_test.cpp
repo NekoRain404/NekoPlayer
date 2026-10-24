@@ -199,7 +199,7 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.interaction.wheelVolumeStep, 20);
     }
 
-    void interactionPreferencesNormalizeAndCompareAllFields() {
+    void interactionPreferencesNormalizeWheelStepAndDefaultEquality() {
         InteractionPreferences preferences;
         preferences.wheelVolumeStep = 0;
         QCOMPARE(preferences.normalized().wheelVolumeStep, 1);

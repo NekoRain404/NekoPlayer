@@ -211,6 +211,10 @@ class UiSurfaceTest final : public QObject {
         QCOMPARE(single.count(), 0);
         sendButton(QEvent::MouseButtonRelease, Qt::NoButton);
         QTRY_COMPARE(single.count(), 1);
+        sendButton(QEvent::MouseButtonDblClick, Qt::LeftButton);
+        sendButton(QEvent::MouseButtonRelease, Qt::NoButton);
+        QTest::qWait(QApplication::doubleClickInterval() + 50);
+        QCOMPARE(single.count(), 1);
     }
 
     void welcomePanelPaintsItsThemeSurface() {

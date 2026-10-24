@@ -291,6 +291,11 @@ libmpv client API: %2</translation></message>
     <message><source>播放进度</source><translation>Playback position</translation></message>
     <message><source>音量</source><translation>Volume</translation></message>
     <message><source>音量 %1%</source><translation>Volume %1%</translation></message>
+    <message><source>已播放 %1</source><translation>Played %1</translation></message>
+    <message><source>剩余 %1</source><translation>Remaining %1</translation></message>
+    <message><source>按空格键或回车键切换为已播放时间</source><translation>Press Space or Return to switch to elapsed time</translation></message>
+    <message><source>按空格键或回车键切换为剩余时间</source><translation>Press Space or Return to switch to remaining time</translation></message>
+    <message><source>点击切换时间显示</source><translation>Click to toggle the time display</translation></message>
 </context>
 <context>
     <name>VideoMenu</name>

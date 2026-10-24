@@ -388,8 +388,9 @@ void TransportBar::updateTimeLabel() {
     const auto action = timeShowsRemaining_ ? tr("按空格键或回车键切换为已播放时间")
                                             : tr("按空格键或回车键切换为剩余时间");
     const auto description = reading + QLatin1Char('\n') + alternate + QLatin1Char('\n') + action;
+    const auto toolTip = description + QLatin1Char('\n') + tr("点击切换时间显示");
     time_->setText(reading);
-    time_->setToolTip(description);
+    time_->setToolTip(toolTip);
     time_->setAccessibleDescription(description);
 }
 

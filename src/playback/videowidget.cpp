@@ -136,6 +136,7 @@ void VideoWidget::cleanup() {
 
 void VideoWidget::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
+        suppressReleaseClick_ = false;
         event->accept();
     } else if (event->button() == Qt::MiddleButton) {
         emit middleClicked();

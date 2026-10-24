@@ -8,6 +8,51 @@
 #include <QtGlobal>
 #include <mpv/client.h>
 
+QList<AppearancePreferences::Accent> AppearancePreferences::accents() {
+    return {Accent::Ocean, Accent::Emerald, Accent::Violet, Accent::Rose, Accent::Amber};
+}
+
+QString AppearancePreferences::accentName(Accent accent) {
+    switch (accent) {
+    case Accent::Ocean:
+        return QObject::tr("Ocean");
+    case Accent::Emerald:
+        return QObject::tr("Emerald");
+    case Accent::Violet:
+        return QObject::tr("Violet");
+    case Accent::Rose:
+        return QObject::tr("Rose");
+    case Accent::Amber:
+        return QObject::tr("Amber");
+    }
+    return QObject::tr("Ocean");
+}
+
+QString AppearancePreferences::accentKey(Accent accent) {
+    switch (accent) {
+    case Accent::Ocean:
+        return QStringLiteral("ocean");
+    case Accent::Emerald:
+        return QStringLiteral("emerald");
+    case Accent::Violet:
+        return QStringLiteral("violet");
+    case Accent::Rose:
+        return QStringLiteral("rose");
+    case Accent::Amber:
+        return QStringLiteral("amber");
+    }
+    return QStringLiteral("ocean");
+}
+
+AppearancePreferences::Accent AppearancePreferences::accentFromKey(const QString &key) {
+    for (const auto accent : accents()) {
+        if (accentKey(accent) == key) {
+            return accent;
+        }
+    }
+    return Accent::Ocean;
+}
+
 QList<AppearancePreferences::Theme> AppearancePreferences::themes() {
     return {Theme::Dark, Theme::Light, Theme::System};
 }

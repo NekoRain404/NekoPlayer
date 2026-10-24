@@ -2,17 +2,33 @@
 
 namespace {
 QString color(const QColor &value) { return value.name(QColor::HexRgb); }
+
+QString translucent(const QColor &value, int alpha) {
+    return QStringLiteral("rgba(%1,%2,%3,%4)")
+        .arg(value.red())
+        .arg(value.green())
+        .arg(value.blue())
+        .arg(alpha);
+}
+
+QString panelFill(const QColor &value, bool glassEnabled) {
+    if (!glassEnabled) {
+        return color(value);
+    }
+    return QStringLiteral("qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 %1,stop:1 %2)")
+        .arg(translucent(value.lighter(108), 238), translucent(value, 218));
+}
 } // namespace
 
-QString appearanceStyleSheet(const AppearanceTokens &t) {
+QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled) {
     const auto unit = t.spaceUnit;
     return QStringLiteral(
                "QMainWindow{background:%1;color:%2;}"
-               "QWidget#transportBar{background:%1;color:%2;border-top:1px solid %3;}"
+               "QWidget#transportBar{background:%27;color:%2;border-top:1px solid %3;}"
                "QFrame#transportDivider{background:%3;color:%3;}"
-               "QWidget#playlistPane{background:%4;border-left:1px solid %3;}"
+               "QWidget#playlistPane{background:%28;border-left:1px solid %3;}"
                "QWidget#playlistHeader{border-bottom:1px solid %3;}"
-               "QWidget#welcomePanel{background:%5;border:1px solid %3;border-radius:%6px;}"
+               "QWidget#welcomePanel{background:%29;border:1px solid %3;border-radius:%6px;}"
                "QLabel{color:%7;} "
                "QLabel#timeLabel{color:%7;font-family:monospace;font-size:12px;padding:0 %8px;}"
                "QLabel#playlistTitle,QLabel#welcomeTitle{color:%2;font-weight:600;}"
@@ -97,5 +113,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t) {
              QString::number(unit * 3), color(t.hoverSurface), color(t.pressedSurface),
              color(t.disabledText), color(t.focus), color(t.accentText), color(t.accentHover),
              color(t.accentHover), color(t.accentPressed), QString::number(unit + 1),
-             color(t.selection), QString::number(unit * 7), color(t.selectedText));
+             color(t.selection), QString::number(unit * 7), color(t.selectedText),
+             panelFill(t.canvas, glassEnabled), panelFill(t.raisedSurface, glassEnabled),
+             panelFill(t.surface, glassEnabled));
 }

@@ -4,4 +4,5 @@
 
 #include <QString>
 
-[[nodiscard]] QString appearanceStyleSheet(const AppearanceTokens &tokens);
+[[nodiscard]] QString appearanceStyleSheet(const AppearanceTokens &tokens,
+                                           bool glassEnabled = false);

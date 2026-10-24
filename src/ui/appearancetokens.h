@@ -29,5 +29,7 @@ struct AppearanceTokens {
     int transportHitTarget = 32;
 };
 
-[[nodiscard]] AppearanceTokens appearanceTokens(AppearancePreferences::Theme theme);
+[[nodiscard]] AppearanceTokens
+appearanceTokens(AppearancePreferences::Theme theme,
+                 AppearancePreferences::Accent accent = AppearancePreferences::Accent::Ocean);
 [[nodiscard]] QPalette paletteForTokens(const AppearanceTokens &tokens);

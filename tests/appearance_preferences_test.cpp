@@ -11,8 +11,10 @@
 #include <QLabel>
 #include <QMouseEvent>
 #include <QPalette>
+#include <QRegularExpression>
 #include <QSignalSpy>
 #include <QSlider>
+#include <QStyle>
 #include <QToolButton>
 #include <QTranslator>
 #include <QVBoxLayout>
@@ -24,6 +26,91 @@
 class AppearancePreferencesTest final : public QObject {
     Q_OBJECT
   private slots:
+    void accentKeysRoundTripAndUnknownKeysFallBackToOcean() {
+        using Accent = AppearancePreferences::Accent;
+        QCOMPARE(AppearancePreferences::accents().size(), 5);
+        const QStringList keys{QStringLiteral("ocean"), QStringLiteral("emerald"),
+                               QStringLiteral("violet"), QStringLiteral("rose"),
+                               QStringLiteral("amber")};
+        for (qsizetype i = 0; i < keys.size(); ++i) {
+            const auto accent = AppearancePreferences::accents().at(i);
+            QCOMPARE(AppearancePreferences::accentKey(accent), keys.at(i));
+            QCOMPARE(AppearancePreferences::accentFromKey(keys.at(i)), accent);
+            QVERIFY(!AppearancePreferences::accentName(accent).isEmpty());
+        }
+        QCOMPARE(AppearancePreferences::accentFromKey({}), Accent::Ocean);
+        QCOMPARE(AppearancePreferences::accentFromKey(QStringLiteral("unknown")), Accent::Ocean);
+    }
+
+    void accentsShareBaseSurfacesAndProvideDistinctInteractiveColors() {
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light}) {
+            const auto base = appearanceTokens(theme);
+            QList<QColor> accents;
+            QList<QColor> selections;
+            for (const auto accent : AppearancePreferences::accents()) {
+                const auto tokens = appearanceTokens(theme, accent);
+                QCOMPARE(tokens.canvas, base.canvas);
+                QCOMPARE(tokens.surface, base.surface);
+                QCOMPARE(tokens.raisedSurface, base.raisedSurface);
+                QCOMPARE(tokens.primaryText, base.primaryText);
+                QVERIFY(!accents.contains(tokens.accent));
+                accents.append(tokens.accent);
+                QVERIFY(!selections.contains(tokens.selection));
+                selections.append(tokens.selection);
+                QCOMPARE(tokens.focus, tokens.accent);
+                QVERIFY(tokens.accentHover != tokens.accent);
+                QVERIFY(tokens.accentPressed != tokens.accent);
+            }
+        }
+    }
+
+    void systemTokensUseStandardPaletteAndSelectedAccent() {
+        const auto previous = qApp->palette();
+        qApp->setPalette(paletteForTokens(appearanceTokens(AppearancePreferences::Theme::Dark)));
+        const auto standard = qApp->style()->standardPalette();
+        QList<QColor> accents;
+        for (const auto accent : AppearancePreferences::accents()) {
+            const auto tokens = appearanceTokens(AppearancePreferences::Theme::System, accent);
+            QCOMPARE(tokens.canvas, standard.color(QPalette::Window));
+            QCOMPARE(tokens.surface, standard.color(QPalette::Base));
+            QCOMPARE(tokens.raisedSurface, standard.color(QPalette::AlternateBase));
+            QCOMPARE(tokens.primaryText, standard.color(QPalette::WindowText));
+            QVERIFY(!accents.contains(tokens.accent));
+            accents.append(tokens.accent);
+        }
+        qApp->setPalette(previous);
+    }
+
+    void glassStylesUseTranslucentUiPanelsAndOpaqueFallback() {
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light,
+              AppearancePreferences::Theme::System}) {
+            const auto tokens = appearanceTokens(theme);
+            const auto glass = appearanceStyleSheet(tokens, true);
+            const auto opaque = appearanceStyleSheet(tokens, false);
+            for (const auto &selector :
+                 {QStringLiteral("QWidget#playlistPane"), QStringLiteral("QWidget#transportBar"),
+                  QStringLiteral("QWidget#welcomePanel")}) {
+                const auto rule = glass.mid(glass.indexOf(selector)).section('}', 0, 0);
+                const QRegularExpression rgba(QStringLiteral("rgba\\(\\d+,\\d+,\\d+,(\\d+)\\)"));
+                const auto match = rgba.match(rule);
+                QVERIFY(match.hasMatch());
+                QVERIFY(match.captured(1).toInt() > 0);
+                QVERIFY(match.captured(1).toInt() < 255);
+            }
+            QVERIFY(glass.contains(QStringLiteral("qlineargradient(")));
+            QVERIFY(!opaque.contains(QStringLiteral("rgba(")));
+            QVERIFY(!opaque.contains(QStringLiteral("qlineargradient(")));
+            for (const auto &style : {glass, opaque}) {
+                QVERIFY(!style.contains(QStringLiteral("VideoWidget")));
+                QVERIFY(!style.contains(QStringLiteral("QOpenGLWidget")));
+                QVERIFY(!style.contains(QStringLiteral("PlaybackOverlay")));
+                QVERIFY(!style.contains(QStringLiteral("QWidget{")));
+            }
+        }
+    }
+
     void darkAndLightTokensKeepSemanticContrastAndSharedMetrics() {
         const auto dark = appearanceTokens(AppearancePreferences::Theme::Dark);
         const auto light = appearanceTokens(AppearancePreferences::Theme::Light);
@@ -51,17 +138,25 @@ class AppearancePreferencesTest final : public QObject {
         };
         for (const auto theme :
              {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light}) {
-            const auto tokens = appearanceTokens(theme);
-            QVERIFY2(contrast(tokens.accentText, tokens.accent) >= 4.5,
-                     "Primary-action text must meet WCAG AA contrast");
-            QVERIFY2(contrast(tokens.mutedText, tokens.canvas) >= 4.5,
-                     "Muted text must meet WCAG AA contrast on the canvas");
-            QVERIFY2(contrast(tokens.mutedText, tokens.surface) >= 4.5,
-                     "Muted text must meet WCAG AA contrast on surfaces");
-            const auto style = appearanceStyleSheet(tokens);
-            QVERIFY(style.contains(
-                QStringLiteral("QToolButton#transportPrimaryButton:checked{color:%1;")
-                    .arg(tokens.accentText.name(QColor::HexRgb))));
+            for (const auto accent : AppearancePreferences::accents()) {
+                const auto tokens = appearanceTokens(theme, accent);
+                QVERIFY2(contrast(tokens.accentText, tokens.accent) >= 4.5,
+                         "Primary-action text must meet WCAG AA contrast");
+                QVERIFY2(contrast(tokens.accentText, tokens.accentHover) >= 4.5,
+                         "Hovered primary-action text must meet WCAG AA contrast");
+                QVERIFY2(contrast(tokens.accentText, tokens.accentPressed) >= 4.5,
+                         "Pressed primary-action text must meet WCAG AA contrast");
+                QVERIFY2(contrast(tokens.selectedText, tokens.selection) >= 4.5,
+                         "Selection text must meet WCAG AA contrast");
+                QVERIFY2(contrast(tokens.mutedText, tokens.canvas) >= 4.5,
+                         "Muted text must meet WCAG AA contrast on the canvas");
+                QVERIFY2(contrast(tokens.mutedText, tokens.surface) >= 4.5,
+                         "Muted text must meet WCAG AA contrast on surfaces");
+                const auto style = appearanceStyleSheet(tokens);
+                QVERIFY(style.contains(
+                    QStringLiteral("QToolButton#transportPrimaryButton:checked{color:%1;")
+                        .arg(tokens.accentText.name(QColor::HexRgb))));
+            }
         }
     }
 

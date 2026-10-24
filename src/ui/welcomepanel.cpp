@@ -8,6 +8,9 @@
 #include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPaintEvent>
+#include <QPainter>
+#include <QPainterPath>
 #include <QPixmap>
 #include <QPushButton>
 #include <QResizeEvent>
@@ -114,6 +117,15 @@ void WelcomePanel::changeEvent(QEvent *event) {
     QWidget::changeEvent(event);
     if (event->type() == QEvent::LanguageChange)
         retranslateUi();
+}
+
+void WelcomePanel::paintEvent(QPaintEvent *event) {
+    Q_UNUSED(event)
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QPainterPath surface;
+    surface.addRoundedRect(rect().adjusted(0, 0, -1, -1), 14, 14);
+    painter.fillPath(surface, palette().color(QPalette::Window));
 }
 
 void WelcomePanel::resizeEvent(QResizeEvent *event) {

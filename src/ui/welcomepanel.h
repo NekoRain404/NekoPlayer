@@ -5,6 +5,7 @@
 
 class QAction;
 class QBoxLayout;
+class QPaintEvent;
 class QResizeEvent;
 class QVBoxLayout;
 
@@ -20,6 +21,7 @@ class WelcomePanel final : public QWidget {
 
   protected:
     void changeEvent(QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
 
   private:

@@ -1,4 +1,5 @@
 #include "playlistpane.h"
+#include "playlistitemdelegate.h"
 
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
@@ -9,23 +10,10 @@
 #include <QLabel>
 #include <QListView>
 #include <QStyle>
-#include <QStyledItemDelegate>
 #include <QToolButton>
 #include <QVBoxLayout>
 
 namespace {
-class CurrentItemDelegate final : public QStyledItemDelegate {
-  public:
-    using QStyledItemDelegate::QStyledItemDelegate;
-
-  protected:
-    void initStyleOption(QStyleOptionViewItem *option, const QModelIndex &index) const override {
-        QStyledItemDelegate::initStyleOption(option, index);
-        if (index.data(PlaylistModel::CurrentRole).toBool())
-            option->font.setBold(true);
-    }
-};
-
 QToolButton *actionButton(QAction *action, QWidget *parent) {
     auto *button = new QToolButton(parent);
     button->setDefaultAction(action);
@@ -54,7 +42,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     view_->setObjectName(QStringLiteral("playlistView"));
     view_->setModel(model);
     view_->setTextElideMode(Qt::ElideMiddle);
-    view_->setItemDelegate(new CurrentItemDelegate(view_));
+    view_->setItemDelegate(new PlaylistItemDelegate(view_));
     view_->setSelectionMode(QAbstractItemView::SingleSelection);
     view_->setDragDropMode(QAbstractItemView::InternalMove);
     view_->setDefaultDropAction(Qt::MoveAction);

@@ -4,6 +4,7 @@
 #include "playback/videowidget.h"
 #include "ui/mainwindow.h"
 #include "ui/playlistpane.h"
+#include "ui/playlistitemdelegate.h"
 
 #include <QAction>
 #include <QListView>
@@ -13,6 +14,26 @@
 class PlaylistWindowTest final : public QObject {
     Q_OBJECT
   private slots:
+    void currentItemHasVisiblePlaybackMarkerWithoutChangingModelText() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QAction append, previous, next, clear;
+        PlaylistPane pane(queue, &append, &previous, &next, &clear);
+        queue.restoreFiles({"a.mkv", "b.mkv"}, 1);
+
+        auto *delegate = qobject_cast<PlaylistItemDelegate *>(pane.view()->itemDelegate());
+        QVERIFY(delegate);
+        QStyleOptionViewItem playingOption;
+        delegate->initStyleOption(&playingOption, queue.model()->index(1));
+        QVERIFY(playingOption.text.startsWith(QStringLiteral("▶ ")));
+        QVERIFY(playingOption.font.bold());
+        QCOMPARE(queue.model()->data(queue.model()->index(1)).toString(), QStringLiteral("b.mkv"));
+
+        QStyleOptionViewItem idleOption;
+        delegate->initStyleOption(&idleOption, queue.model()->index(0));
+        QCOMPARE(idleOption.text, QStringLiteral("a.mkv"));
+    }
+
     void editSelectionIsIndependentFromPlayback() {
         MpvController player(true, true);
         PlaylistController queue(player);

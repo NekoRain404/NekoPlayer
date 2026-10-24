@@ -148,6 +148,17 @@ class ClickableTimeLabel final : public QLabel {
     std::function<void()> onActivate;
 
   protected:
+    bool event(QEvent *event) override {
+        if (event->type() == QEvent::ShortcutOverride && hasFocus()) {
+            const auto *keyEvent = static_cast<QKeyEvent *>(event);
+            if (isActivationKey(keyEvent->key())) {
+                event->accept();
+                return true;
+            }
+        }
+        return QLabel::event(event);
+    }
+
     void mouseReleaseEvent(QMouseEvent *event) override {
         if (event->button() == Qt::LeftButton && rect().contains(event->pos())) {
             event->accept();
@@ -158,20 +169,20 @@ class ClickableTimeLabel final : public QLabel {
     }
 
     void keyPressEvent(QKeyEvent *event) override {
-        switch (event->key()) {
-        case Qt::Key_Space:
-        case Qt::Key_Return:
-        case Qt::Key_Enter:
-            event->accept();
-            activate();
-            return;
-        default:
+        if (!isActivationKey(event->key())) {
             QLabel::keyPressEvent(event);
             return;
         }
+        event->accept();
+        if (!event->isAutoRepeat())
+            activate();
     }
 
   private:
+    static bool isActivationKey(int key) {
+        return key == Qt::Key_Space || key == Qt::Key_Return || key == Qt::Key_Enter;
+    }
+
     void activate() {
         if (onActivate)
             onActivate();

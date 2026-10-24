@@ -130,6 +130,18 @@ class TransportBarTest final : public QObject {
         QAction fullscreen(QStringLiteral("全屏"));
         QWidget host;
         TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
+        auto *hostLayout = new QVBoxLayout(&host);
+        hostLayout->setContentsMargins(0, 0, 0, 0);
+        hostLayout->addWidget(&transport);
+        host.setFocusPolicy(Qt::StrongFocus);
+        pause.setShortcut(QKeySequence(Qt::Key_Space));
+        host.addAction(&pause);
+        int pauseTriggers = 0;
+        connect(&pause, &QAction::triggered, &host, [&pauseTriggers] { ++pauseTriggers; });
+        host.resize(560, 100);
+        host.show();
+        host.activateWindow();
+        QCoreApplication::processEvents();
         PlaybackState state;
         state.active = true;
         state.seekable = true;
@@ -141,18 +153,35 @@ class TransportBarTest final : public QObject {
         QVERIFY(time);
         QCOMPARE(time->accessibleName(), QStringLiteral("播放时间"));
         QVERIFY(time->focusPolicy() != Qt::NoFocus);
+        time->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        QVERIFY(time->hasFocus());
 
-        QKeyEvent space(QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier);
-        QCoreApplication::sendEvent(time, &space);
+        QKeyEvent overrideEvent(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &overrideEvent);
+        QVERIFY(overrideEvent.isAccepted());
+
+        QTest::keyClick(time, Qt::Key_Space);
+        QCoreApplication::processEvents();
         QCOMPARE(time->text(), QStringLiteral("-00:00:30 / 00:02:00"));
+        QCOMPARE(pauseTriggers, 0);
 
-        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-        QCoreApplication::sendEvent(time, &enter);
+        QTest::keyClick(time, Qt::Key_Return);
         QCOMPARE(time->text(), QStringLiteral("00:01:30 / 00:02:00"));
 
-        QKeyEvent keypadEnter(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
-        QCoreApplication::sendEvent(time, &keypadEnter);
+        QTest::keyClick(time, Qt::Key_Enter);
         QCOMPARE(time->text(), QStringLiteral("-00:00:30 / 00:02:00"));
+
+        QKeyEvent repeat(QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier, QString(), true);
+        QCoreApplication::sendEvent(time, &repeat);
+        QCOMPARE(time->text(), QStringLiteral("-00:00:30 / 00:02:00"));
+
+        host.setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        QCOMPARE(QApplication::focusWidget(), &host);
+        QTest::keyClick(&host, Qt::Key_Space);
+        QCoreApplication::processEvents();
+        QCOMPARE(pauseTriggers, 1);
     }
 
     void timelineHoverReportsPointerPosition() {

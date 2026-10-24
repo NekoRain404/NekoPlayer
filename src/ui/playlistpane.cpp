@@ -6,10 +6,12 @@
 #include "playback/playlistmodel.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListView>
+#include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -35,7 +37,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
                            QAction *next, QAction *clear, QWidget *parent)
     : QWidget(parent), queue_(queue), view_(new QListView(this)),
       remove_(new QAction(tr("从列表移除"), this)), moveUp_(new QAction(tr("上移所选项"), this)),
-      moveDown_(new QAction(tr("下移所选项"), this)) {
+      moveDown_(new QAction(tr("下移所选项"), this)), singleClickTimer_(new QTimer(this)) {
     auto *model = queue_.model();
     setObjectName(QStringLiteral("playlistPane"));
     setMinimumWidth(240);
@@ -113,8 +115,28 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     buttons->addWidget(actionButton(remove_, this));
     buttons->addWidget(actionButton(clear, this));
     layout->addLayout(buttons);
-    connect(view_, &QListView::activated, this,
-            [this](const QModelIndex &index) { emit playRequested(index.row()); });
+    singleClickTimer_->setSingleShot(true);
+    connect(singleClickTimer_, &QTimer::timeout, this, [this] {
+        const auto pending = pendingClickIndex_;
+        pendingClickIndex_ = QPersistentModelIndex{};
+        if (pending.isValid())
+            emit playRequested(pending.row());
+    });
+    connect(view_, &QListView::clicked, this, [this](const QModelIndex &index) {
+        if (!singleClickActivation_)
+            return;
+        pendingClickIndex_ = index;
+        singleClickTimer_->start(QApplication::doubleClickInterval());
+    });
+    connect(view_, &QListView::doubleClicked, this, [this] {
+        singleClickTimer_->stop();
+        pendingClickIndex_ = QPersistentModelIndex{};
+    });
+    connect(view_, &QListView::activated, this, [this](const QModelIndex &index) {
+        singleClickTimer_->stop();
+        pendingClickIndex_ = QPersistentModelIndex{};
+        emit playRequested(index.row());
+    });
     synchronizeCurrent();
     updateItemCount();
     updateEditingActions();
@@ -123,6 +145,16 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
 QListView *PlaylistPane::view() const { return view_; }
 
 QList<QAction *> PlaylistPane::editingActions() const { return {remove_, moveUp_, moveDown_}; }
+
+void PlaylistPane::setSingleClickActivation(bool enabled) {
+    if (singleClickActivation_ == enabled)
+        return;
+    singleClickActivation_ = enabled;
+    if (!enabled) {
+        singleClickTimer_->stop();
+        pendingClickIndex_ = QPersistentModelIndex{};
+    }
+}
 
 void PlaylistPane::changeEvent(QEvent *event) {
     QWidget::changeEvent(event);

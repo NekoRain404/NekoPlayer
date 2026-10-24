@@ -199,6 +199,66 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.interaction.wheelVolumeStep, 20);
     }
 
+    void windowPlaylistWidthDefaultsToZero() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("schemaVersion"), 1);
+            settings.sync();
+        }
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QCOMPARE(loaded.state.window.playlistWidth, 0);
+    }
+
+    void windowPlaylistWidthRoundTrips() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionState saved;
+        saved.window.playlistWidth = 360;
+        QVERIFY(SessionStore(path).save(saved).isEmpty());
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QCOMPARE(loaded.state.window.playlistWidth, 360);
+        QSettings persisted(path, QSettings::IniFormat);
+        QCOMPARE(persisted.value(QStringLiteral("window/playlistWidth")).toInt(), 360);
+    }
+
+    void windowPlaylistWidthClampsNonZeroValues() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        QSettings settings(path, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("schemaVersion"), 1);
+        settings.setValue(QStringLiteral("window/playlistWidth"), 100);
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 240);
+
+        settings.setValue(QStringLiteral("window/playlistWidth"), 5000);
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 1000);
+
+        settings.setValue(QStringLiteral("window/playlistWidth"), 0);
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 0);
+
+        settings.setValue(QStringLiteral("window/playlistWidth"), -20);
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 240);
+
+        settings.setValue(QStringLiteral("window/playlistWidth"), QStringLiteral("garbage"));
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 0);
+
+        SessionState oversized;
+        oversized.window.playlistWidth = 1200;
+        QVERIFY(SessionStore(path).save(oversized).isEmpty());
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 1000);
+    }
+
     void legacyConfigurationDefaultsToEnabledOnDemandScanning() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

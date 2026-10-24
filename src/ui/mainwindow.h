@@ -26,6 +26,7 @@ class RecentMediaHistory;
 class FullscreenControls;
 class PreferencesCoordinator;
 class QVBoxLayout;
+class QSplitter;
 class ThumbnailPreview;
 class ThumbnailService;
 struct ThumbnailResult;
@@ -75,6 +76,7 @@ class MainWindow final : public QMainWindow {
     void showSeekFeedback(const QString &message);
     void setFullscreen(bool enabled);
     void setMiniPlayer(bool enabled);
+    void applyPlaylistWidth();
     void revealControls();
     void applyInteractionPreferences(const InteractionPreferences &preferences);
     void restoreSession(const QString &path);
@@ -95,6 +97,8 @@ class MainWindow final : public QMainWindow {
     QVBoxLayout *centralLayout_ = nullptr;
     TrackMenus *trackMenus_ = nullptr;
     PlaylistPane *playlistPane_ = nullptr;
+    QSplitter *splitter_ = nullptr;
+    int playlistWidth_ = 0;
     LocalFileDrop *fileDrop_ = nullptr;
     WelcomePanel *welcomePanel_ = nullptr;
     ActionFeedbackOverlay *feedbackOverlay_ = nullptr;

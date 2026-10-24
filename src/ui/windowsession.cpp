@@ -1,5 +1,6 @@
 #include "foldermenu.h"
 #include "mainwindow.h"
+#include "playlistpane.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 #include "welcomepanel.h"
@@ -42,6 +43,8 @@ void MainWindow::restoreSession(const QString &path) {
         setWindowState(windowState() & ~Qt::WindowFullScreen);
     }
     showPlaylistAction_->setChecked(loaded.state.window.playlistVisible);
+    playlistWidth_ = loaded.state.window.playlistWidth;
+    applyPlaylistWidth();
     if (!loaded.state.paths.isEmpty())
         statusBar()->showMessage(loaded.state.resumePosition > 0
                                      ? tr("已恢复播放列表 · 按空格从上次位置继续播放")
@@ -57,6 +60,9 @@ QString MainWindow::saveSession() {
                       : isFullScreen()  ? normalGeometry_
                                         : saveGeometry();
     window.playlistVisible = showPlaylistAction_->isChecked();
+    if (playlistPane_->isVisible() && playlistPane_->width() > 0)
+        playlistWidth_ = playlistPane_->width();
+    window.playlistWidth = playlistWidth_;
     const auto sessionError = session_->save(std::move(window), pendingPaths_);
     if (recentError.isEmpty())
         return sessionError;

@@ -249,8 +249,11 @@ void MainWindow::createActions() {
         make(tr("显示播放列表"), "showPlaylistAction", QKeySequence(Qt::CTRL | Qt::Key_L));
     showPlaylistAction_->setCheckable(true);
     setAppearanceIcon(showPlaylistAction_, AppearanceIcons::Symbol::Playlist);
-    connect(showPlaylistAction_, &QAction::toggled, this,
-            [this](bool visible) { playlistPane_->setVisible(visible); });
+    connect(showPlaylistAction_, &QAction::toggled, this, [this](bool visible) {
+        playlistPane_->setVisible(visible);
+        if (visible)
+            applyPlaylistWidth();
+    });
     view->addAction(showPlaylistAction_);
     auto *settings = menuBar()->addMenu(tr("设置(&S)"));
     QSettings appearanceSettings;

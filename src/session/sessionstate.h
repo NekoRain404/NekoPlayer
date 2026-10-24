@@ -23,6 +23,7 @@ struct WindowPreferences {
     QByteArray geometry;
     bool playlistVisible = false;
     QString mediaDirectory;
+    int playlistWidth = 0; // 0 = default width.
 };
 
 struct MediaLibraryPreferences {

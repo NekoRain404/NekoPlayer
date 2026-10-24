@@ -13,6 +13,7 @@
 #include "ui/welcomepanel.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QBoxLayout>
 #include <QDialog>
 #include <QGraphicsOpacityEffect>
@@ -448,6 +449,48 @@ class UiSurfaceTest final : public QObject {
         QCoreApplication::processEvents();
         QCOMPARE(view->textElideMode(), Qt::ElideMiddle);
         QCOMPARE(queue.model()->index(0).data(Qt::ToolTipRole).toString(), path);
+    }
+
+    void playlistSingleClickActivationDefersAndCoexistsWithDoubleClick() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QAction append, previous, next, clear;
+        PlaylistPane pane(queue, &append, &previous, &next, &clear);
+        queue.restoreFiles({QStringLiteral("first.mkv"), QStringLiteral("second.mkv")}, -1);
+        pane.resize(320, 320);
+        pane.show();
+        QCoreApplication::processEvents();
+
+        auto *view = pane.view();
+        const auto target = queue.model()->index(1);
+        const auto position = view->visualRect(target).center();
+        QCOMPARE(view->indexAt(position), target);
+        QSignalSpy plays(&pane, &PlaylistPane::playRequested);
+
+        // Opt-in: the default keeps single clicks inert.
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QTest::qWait(QApplication::doubleClickInterval() + 100);
+        QVERIFY(plays.isEmpty());
+
+        pane.setSingleClickActivation(true);
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QCOMPARE(plays.count(), 0); // Deferred for the double-click interval.
+        QTRY_COMPARE_WITH_TIMEOUT(plays.count(), 1, 2000);
+        QCOMPARE(plays.at(0).at(0).toInt(), 1);
+
+        // A double click plays once through activation without a late single-click replay.
+        plays.clear();
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QTest::mouseDClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QTRY_COMPARE_WITH_TIMEOUT(plays.count(), 1, 1000);
+        QTest::qWait(QApplication::doubleClickInterval() + 100);
+        QCOMPARE(plays.count(), 1);
+
+        pane.setSingleClickActivation(false);
+        plays.clear();
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QTest::qWait(QApplication::doubleClickInterval() + 100);
+        QVERIFY(plays.isEmpty());
     }
 
     void welcomePanelRetranslatesAtRuntime() {

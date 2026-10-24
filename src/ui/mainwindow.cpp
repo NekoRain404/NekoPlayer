@@ -30,13 +30,13 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QListView>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMimeData>
 #include <QScreen>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QStyle>
 #include <QUrl>
@@ -105,18 +105,20 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     playlistMenu_->addSeparator();
     playlistMenu_->addActions(playlistPane_->editingActions());
     playlistPane_->hide();
-    auto *body = new QWidget(content);
-    auto *bodyLayout = new QHBoxLayout(body);
-    bodyLayout->setContentsMargins(0, 0, 0, 0);
-    bodyLayout->setSpacing(0);
-    bodyLayout->addWidget(video_, 1);
-    bodyLayout->addWidget(playlistPane_);
+    splitter_ = new QSplitter(Qt::Horizontal, content);
+    splitter_->setObjectName(QStringLiteral("bodySplitter"));
+    splitter_->addWidget(video_);
+    splitter_->addWidget(playlistPane_);
+    splitter_->setStretchFactor(0, 1);
+    splitter_->setStretchFactor(1, 0);
+    splitter_->setCollapsible(0, false);
+    splitter_->setCollapsible(1, false);
     transport_ = new TransportBar(openAction_, previousAction_, pauseAction_, nextAction_,
                                   stopAction_, muteAction_, fullscreenAction_, content);
     thumbnailService_ = new ThumbnailService(this);
     thumbnailPreview_ = new ThumbnailPreview(this);
     fullscreenControls_ = new FullscreenControls(*transport_, *video_, *centralLayout_, this);
-    layout->addWidget(body, 1);
+    layout->addWidget(splitter_, 1);
     layout->addWidget(transport_);
     setCentralWidget(content);
     statusBar()->setSizeGripEnabled(false);
@@ -547,6 +549,7 @@ void MainWindow::setFullscreen(bool enabled) {
             statusBar()->show();
             showPlaylistAction_->setEnabled(true);
             playlistPane_->setVisible(showPlaylistAction_->isChecked());
+            applyPlaylistWidth();
         }
     }
     fullscreenAction_->setChecked(enabled);
@@ -594,6 +597,7 @@ void MainWindow::setMiniPlayer(bool enabled) {
         if (miniPlayerMaximized_)
             showMaximized();
         playlistPane_->setVisible(showPlaylistAction_->isChecked());
+        applyPlaylistWidth();
     }
     if (action) {
         action->setChecked(enabled);
@@ -603,6 +607,16 @@ void MainWindow::setMiniPlayer(bool enabled) {
         setAppearanceIcon(action, enabled ? AppearanceIcons::Symbol::Remove
                                           : AppearanceIcons::Symbol::Restore);
     }
+}
+
+void MainWindow::applyPlaylistWidth() {
+    if (!splitter_ || playlistWidth_ <= 0)
+        return;
+    // Use the window width as well: the splitter is not laid out until the window is shown.
+    const int available = std::max({splitter_->width(), width(), minimumWidth()});
+    const int requested = std::clamp(playlistWidth_, 240, 1000);
+    const int effective = std::min(requested, std::max(240, available - 1));
+    splitter_->setSizes({std::max(1, available - effective), effective});
 }
 
 void MainWindow::revealControls() {
@@ -617,6 +631,8 @@ void MainWindow::applyInteractionPreferences(const InteractionPreferences &prefe
     interactionPreferences_ = preferences;
     interactionPreferences_.wheelVolumeStep =
         std::clamp(interactionPreferences_.wheelVolumeStep, 1, 20);
+    if (playlistPane_)
+        playlistPane_->setSingleClickActivation(interactionPreferences_.playlistSingleClick);
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {

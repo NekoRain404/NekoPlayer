@@ -8,6 +8,7 @@ class PlaylistController;
 class QListView;
 class QLabel;
 class QEvent;
+class QTimer;
 
 class PlaylistPane final : public QWidget {
     Q_OBJECT
@@ -17,6 +18,7 @@ class PlaylistPane final : public QWidget {
 
     [[nodiscard]] QListView *view() const;
     [[nodiscard]] QList<QAction *> editingActions() const;
+    void setSingleClickActivation(bool enabled);
 
   protected:
     void changeEvent(QEvent *event) override;
@@ -35,4 +37,7 @@ class PlaylistPane final : public QWidget {
     QAction *moveUp_;
     QAction *moveDown_;
     QPersistentModelIndex playingIndex_;
+    QTimer *singleClickTimer_;
+    QPersistentModelIndex pendingClickIndex_;
+    bool singleClickActivation_ = false;
 };

@@ -1,5 +1,11 @@
 # Verification Record
 
+完整 Debug 非窗口回归复核（2026-10-24）：
+
+- `cmake --build --preset debug -j4` 完成，播放器与全部测试目标均构建成功。
+- `ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` 通过 **50/50**（54.13 秒），包含 code-size、UI 主题/图标、媒体扫描、网络播放、缩略图、逐帧、播放列表、续播、字幕、音轨、视频呈现与色彩控制等测试。
+- 按用户要求未运行窗口行为测试。此次结果不验证原生 Wayland 窗口交互、实际 HDR 输出、GPU 硬解或真实音频设备表现；这些仍需桌面环境专项验收。
+
 First playable verification and static-analysis closure (2026-10-24):
 
 - Fixed a Clang-only most-vexing-parse issue in `mediafolderscan.cpp` by using brace initialization for `QCollator`; the independent Clang build of `neko_input` and that file's Clang-Tidy check passed.

@@ -77,6 +77,7 @@ class MainWindow final : public QMainWindow {
     void setFullscreen(bool enabled);
     void setMiniPlayer(bool enabled);
     void applyPlaylistWidth();
+    void rememberPlaylistWidth();
     void revealControls();
     void applyInteractionPreferences(const InteractionPreferences &preferences);
     void restoreSession(const QString &path);

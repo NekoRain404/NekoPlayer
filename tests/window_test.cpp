@@ -22,6 +22,7 @@
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QSlider>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QTemporaryDir>
 #include <QVariant>
@@ -194,6 +195,55 @@ class WindowTest final : public QObject {
         window.close();
 
         QCOMPARE(SessionStore(sessionPath).load().state.window.geometry, normalGeometry);
+    }
+
+    void playlistWidthTracksLiveResizeAndTransitions() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto sessionPath = temporary.filePath(QStringLiteral("playlist-width.ini"));
+        SessionState saved;
+        saved.window.playlistVisible = true;
+        saved.window.playlistWidth = 400;
+        QVERIFY(SessionStore(sessionPath).save(saved).isEmpty());
+        {
+            MainWindow window(true, sessionPath);
+            auto *splitter = window.findChild<QSplitter *>(QStringLiteral("bodySplitter"));
+            auto *pane = window.findChild<QWidget *>(QStringLiteral("playlistPane"));
+            auto *showPlaylist = action(window, "showPlaylistAction");
+            QVERIFY(splitter && pane && showPlaylist);
+            window.show();
+            QTRY_VERIFY(showPlaylist->isChecked());
+            QTRY_COMPARE(pane->width(), 400);
+
+            // A user drag updates the stored width through splitterMoved.
+            splitter->setSizes({500, 600});
+            emit splitter->splitterMoved(600, 1);
+            QCOMPARE(pane->width(), 600);
+
+            showPlaylist->trigger();
+            QVERIFY(!pane->isVisible());
+            showPlaylist->trigger();
+            QVERIFY(pane->isVisible());
+            QTRY_COMPARE(pane->width(), 600);
+
+            action(window, "fullscreenAction")->trigger();
+            QTRY_VERIFY(window.isFullScreen());
+            action(window, "fullscreenAction")->trigger();
+            QTRY_VERIFY(!window.isFullScreen());
+            QTRY_COMPARE(pane->width(), 600);
+
+            action(window, "miniPlayerAction")->trigger();
+            QVERIFY(!pane->isVisible());
+            action(window, "miniPlayerAction")->trigger();
+            QVERIFY(pane->isVisible());
+            QTRY_COMPARE(pane->width(), 600);
+
+            // Hiding before close must retain the live width captured at hide time.
+            showPlaylist->trigger();
+            QVERIFY(!pane->isVisible());
+            window.close();
+        }
+        QCOMPARE(SessionStore(sessionPath).load().state.window.playlistWidth, 600);
     }
 
     void chapterActionsFollowSelectionAndKeepPause() {

@@ -60,8 +60,8 @@ QString MainWindow::saveSession() {
                       : isFullScreen()  ? normalGeometry_
                                         : saveGeometry();
     window.playlistVisible = showPlaylistAction_->isChecked();
-    if (playlistPane_->isVisible() && playlistPane_->width() > 0)
-        playlistWidth_ = playlistPane_->width();
+    if (playlistPane_->isVisible())
+        rememberPlaylistWidth();
     window.playlistWidth = playlistWidth_;
     const auto sessionError = session_->save(std::move(window), pendingPaths_);
     if (recentError.isEmpty())

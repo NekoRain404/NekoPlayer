@@ -113,6 +113,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     splitter_->setStretchFactor(1, 0);
     splitter_->setCollapsible(0, false);
     splitter_->setCollapsible(1, false);
+    connect(splitter_, &QSplitter::splitterMoved, this, [this] { rememberPlaylistWidth(); });
     transport_ = new TransportBar(openAction_, previousAction_, pauseAction_, nextAction_,
                                   stopAction_, muteAction_, fullscreenAction_, content);
     thumbnailService_ = new ThumbnailService(this);
@@ -612,11 +613,22 @@ void MainWindow::setMiniPlayer(bool enabled) {
 void MainWindow::applyPlaylistWidth() {
     if (!splitter_ || playlistWidth_ <= 0)
         return;
-    // Use the window width as well: the splitter is not laid out until the window is shown.
-    const int available = std::max({splitter_->width(), width(), minimumWidth()});
+    // The splitter has no layout geometry until the window is shown; use the
+    // window width only for that initial restore.
+    const int available = splitter_->isVisible() ? splitter_->width() : width();
+    if (available <= 1)
+        return;
     const int requested = std::clamp(playlistWidth_, 240, 1000);
     const int effective = std::min(requested, std::max(240, available - 1));
-    splitter_->setSizes({std::max(1, available - effective), effective});
+    splitter_->setSizes({available - effective, effective});
+}
+
+void MainWindow::rememberPlaylistWidth() {
+    if (!playlistPane_)
+        return;
+    const int width = playlistPane_->width();
+    if (width > 0)
+        playlistWidth_ = std::clamp(width, 240, 1000);
 }
 
 void MainWindow::revealControls() {
@@ -640,6 +652,8 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
         feedbackOverlay_->setGeometry(video_->rect());
         playbackOverlay_->setGeometry(video_->rect());
     }
+    if (watched == playlistPane_ && event->type() == QEvent::Hide)
+        rememberPlaylistWidth();
     if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress ||
         event->type() == QEvent::Wheel)
         revealControls();

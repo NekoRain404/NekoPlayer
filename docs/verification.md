@@ -2,7 +2,7 @@
 
 Media-first UI visual foundation stage (2026-10-24):
 
-- Added semantic Dark/Light tokens, token-generated main-window styling, WCAG AA primary-action contrast, and shared DPR-aware vector icons. The icon review regression verifies outline interiors remain transparent and seek directions differ.
+- Added semantic Dark/Light tokens, token-generated main-window styling, WCAG AA primary-action and muted-text contrast, and shared DPR-aware vector icons. The icon review regression verifies outline interiors remain transparent and seek directions differ. Dark/Light primary-action contrast is 6.84:1 / 5.04:1; Light muted text is 4.64:1 on the canvas and 5.02:1 on the surface.
 - `cmake --build --preset debug -j4` succeeded. `ctest --test-dir build/debug -R '^(code-size|appearance-preferences|ui-surface)$' --output-on-failure` passed **3/3**. `git diff --check` and changed-line `git clang-format` checks passed. Ordinary handwritten files remain within the 500-line limit; the existing `mainwindow.cpp` exception is 581/800 lines.
 - Native Wayland visual inspection was not performed. The session advertises `WAYLAND_DISPLAY=wayland-1`, but no screenshot utility is installed in this environment; per the user's instruction, window-behavior tests were not run. The test evidence is automated contract/build coverage, not visual/GPU acceptance.
 

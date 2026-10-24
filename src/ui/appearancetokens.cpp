@@ -31,7 +31,7 @@ AppearanceTokens lightTokens() {
             QColor(240, 241, 244),
             QColor(32, 35, 40),
             QColor(85, 91, 100),
-            QColor(133, 139, 149),
+            QColor(104, 112, 122),
             QColor(214, 219, 227),
             QColor(40, 111, 197),
             QColor(255, 255, 255),

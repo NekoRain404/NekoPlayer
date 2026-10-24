@@ -54,6 +54,10 @@ class AppearancePreferencesTest final : public QObject {
             const auto tokens = appearanceTokens(theme);
             QVERIFY2(contrast(tokens.accentText, tokens.accent) >= 4.5,
                      "Primary-action text must meet WCAG AA contrast");
+            QVERIFY2(contrast(tokens.mutedText, tokens.canvas) >= 4.5,
+                     "Muted text must meet WCAG AA contrast on the canvas");
+            QVERIFY2(contrast(tokens.mutedText, tokens.surface) >= 4.5,
+                     "Muted text must meet WCAG AA contrast on surfaces");
             const auto style = appearanceStyleSheet(tokens);
             QVERIFY(style.contains(
                 QStringLiteral("QToolButton#transportPrimaryButton:checked{color:%1;")

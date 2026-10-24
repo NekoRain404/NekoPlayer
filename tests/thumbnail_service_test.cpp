@@ -2,6 +2,11 @@
 
 #include <QSignalSpy>
 #include <QtTest>
+#include <type_traits>
+#include <utility>
+
+static_assert(
+    std::is_same_v<decltype(std::declval<const ThumbnailService &>().cacheSize()), qsizetype>);
 
 class ThumbnailServiceTest final : public QObject {
     Q_OBJECT

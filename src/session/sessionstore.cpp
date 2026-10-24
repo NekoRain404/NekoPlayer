@@ -62,7 +62,7 @@ SessionState normalized(SessionState state) {
     if (state.audio.outputDevice.isEmpty() || state.audio.outputDevice.contains(QChar::Null))
         state.audio.outputDevice = QStringLiteral("auto");
     QStringList paths;
-    int current = -1;
+    qsizetype current = -1;
     for (qsizetype row = 0; row < state.paths.size(); ++row) {
         const auto &path = state.paths.at(row);
         // Persisted local paths must remain independent of the working directory.
@@ -79,7 +79,8 @@ SessionState normalized(SessionState state) {
     if (current < 0 || !std::isfinite(state.resumePosition) || state.resumePosition < 0 ||
         MediaSource::isNetwork(state.paths.at(current)))
         state.resumePosition = 0;
-    state.currentIndex = current >= 0 ? current : (state.paths.isEmpty() ? -1 : 0);
+    state.currentIndex =
+        current >= 0 ? static_cast<int>(current) : (state.paths.isEmpty() ? -1 : 0);
     const QFileInfo directory(state.window.mediaDirectory);
     if (!directory.isAbsolute() || !directory.isDir())
         state.window.mediaDirectory.clear();

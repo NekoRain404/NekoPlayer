@@ -24,7 +24,7 @@ class ThumbnailService final : public QObject {
     void cancel();
     void clearCache();
 
-    [[nodiscard]] int cacheSize() const;
+    [[nodiscard]] qsizetype cacheSize() const;
     [[nodiscard]] static bool isLocalSource(const QString &source);
 
   signals:

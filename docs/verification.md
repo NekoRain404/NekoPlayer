@@ -1,5 +1,11 @@
 # Verification Record
 
+Container-size conversion cleanup stage (2026-10-24):
+
+- `ThumbnailService::cacheSize()` now exposes Qt's `qsizetype` rather than narrowing a container size to `int`; a compile-time API regression check guards that contract. Session path normalization also tracks Qt list positions as `qsizetype` and converts only at the existing `int` index boundary.
+- Full Debug build succeeded; `thumbnail-service`, `session`, and `code-size` passed **3/3**. The corresponding ASan/UBSan tests passed **2/2**. Clang's `bugprone-narrowing-conversions` check reported no findings in the two affected translation units; changed-file formatting and `git diff --check` passed.
+- Window behavior tests were not run. This is a type-safety cleanup only and does not validate native Wayland, graphics, or hardware playback behavior.
+
 HDR 元数据测试与硬解隔离阶段（2026-10-24）：
 
 - HDR 元数据用例在打开合成样本前显式关闭硬件解码，避免测试结果受 GPU／驱动初始化耗时影响；生产播放默认值及 HDR 渲染路径不变。

@@ -122,7 +122,7 @@ void ThumbnailService::clearCache() {
     cacheOrder_.clear();
 }
 
-int ThumbnailService::cacheSize() const {
+qsizetype ThumbnailService::cacheSize() const {
     Q_ASSERT(thread() == QThread::currentThread());
     return cache_.size();
 }

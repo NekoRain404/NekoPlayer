@@ -99,7 +99,7 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 
 此前 `SubtitleDisplayMenu` 的“字幕显示设置”会自行创建 `PreferencesDialog`，没有把当前 `AppearancePreferences::Settings` 传给新对话框，也没有连接 `appearancePreferencesChanged`；从该入口修改主题可能只改变预览，重启后不保留。
 
-现在 F5、F6 和“设置”菜单都通过 `PreferencesCoordinator` 构造共享对话框，打开时读取当前外观、媒体库、续播位置、定位步长和交互值，Apply 统一经 `AppearanceMenu::setSettings()` 应用并按 `configurationEnabled` 持久化，Cancel 回滚。`preferences-coordinator`、`preferences-dialog`、`appearance-preferences` 与 `ui-surface` 测试覆盖当前值传递、Apply 信号和 `--no-config` 回退。该缺口已关闭。
+现在 F5、F6 和“设置”菜单都通过 `PreferencesCoordinator` 构造共享对话框，打开时读取当前外观、媒体库、续播位置、定位步长和交互值，Apply 统一经 `AppearanceMenu::setSettings()` 应用并按 `configurationEnabled` 持久化，Cancel 回滚。`preferences-coordinator`、`preferences-dialog`、`appearance-preferences` 与 `ui-surface` 测试覆盖当前值传递与 Apply 信号；`--no-config` 的会话缺失回退没有自动化运行证据，窗口套件中的无会话断言仅编译、不执行。该缺口已关闭。
 
 ### P1：安排一次原生 Wayland 视觉验收
 

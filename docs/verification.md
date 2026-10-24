@@ -1,5 +1,10 @@
 # Verification Record
 
+Release-readiness known limitations after final review (2026-10-24):
+
+- Narrow-width transport label: at 480–639 px the transport band caps the time label at 100 px, while the displayed text needs roughly 137–144 px. The elapsed/remaining toggle can therefore clip in its remaining-time mode at the narrowest widths. Layout metrics were intentionally not changed in the final fix wave; this remains an open visual limitation pending a layout decision.
+- Test-file size headroom: `tests/ui_surface_test.cpp` is exactly 550 lines and `tests/session_test.cpp` is 538 lines against the 550-line ordinary-file hard limit. The next addition to either suite must split it by responsibility or revisit the guard; do not compress formatting to fit.
+
 Release-readiness final verification (2026-10-24, code at `ebfbb21`):
 
 - Scope: six-page unified preferences dialog, configurable click/wheel interaction, clickable transport time, resizable playlist with persisted width, and the GUI-thread performance caches. No production code changed in this round except the missing English entry for `播放时间`.

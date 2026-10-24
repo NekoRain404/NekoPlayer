@@ -291,11 +291,9 @@ void MainWindow::createActions() {
     auto *themeGroup = new QActionGroup(themeMenu);
     themeGroup->setExclusive(true);
     QSettings appearanceSettings;
-    const auto savedTheme =
-        qApp->property("configurationEnabled").toBool()
-            ? appearanceSettings.value(QStringLiteral("appearance/theme"), QStringLiteral("dark"))
-                  .toString()
-            : QStringLiteral("dark");
+    const auto savedAppearance = qApp->property("configurationEnabled").toBool()
+                                     ? AppearancePreferences::loadSettings(appearanceSettings)
+                                     : AppearancePreferences::Settings{};
     for (const auto theme : AppearancePreferences::themes()) {
         auto *action = themeMenu->addAction(AppearancePreferences::themeName(theme));
         const auto key = theme == AppearancePreferences::Theme::Dark    ? QStringLiteral("dark")
@@ -307,14 +305,17 @@ void MainWindow::createActions() {
                                                                        : QStringLiteral("System")));
         action->setCheckable(true);
         themeGroup->addAction(action);
-        action->setChecked(savedTheme == key);
-        connect(action, &QAction::triggered, this, [this, theme, key] {
+        action->setChecked(savedAppearance.theme == theme);
+        connect(action, &QAction::triggered, this, [theme] {
+            QSettings preferences;
+            const bool useConfig = qApp->property("configurationEnabled").toBool();
+            auto appearance = useConfig ? AppearancePreferences::loadSettings(preferences)
+                                        : AppearancePreferences::Settings{};
+            appearance.theme = theme;
             if (auto *application = qobject_cast<QApplication *>(qApp))
-                AppearancePreferences::applyTheme(*application, theme);
-            if (qApp->property("configurationEnabled").toBool()) {
-                QSettings preferences;
-                preferences.setValue(QStringLiteral("appearance/theme"), key);
-            }
+                AppearancePreferences::applySettings(*application, appearance);
+            if (useConfig)
+                AppearancePreferences::saveSettings(preferences, appearance);
         });
     }
     auto *languageMenu = settings->addMenu(tr("语言"));

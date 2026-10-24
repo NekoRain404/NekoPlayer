@@ -4,9 +4,41 @@
 
 #include <QApplication>
 #include <QMessageBox>
+#include <QSettings>
 #include <QStyle>
 #include <QtGlobal>
 #include <mpv/client.h>
+
+AppearancePreferences::Settings AppearancePreferences::loadSettings(QSettings &settings) {
+    Settings appearance;
+    const auto theme = settings.value(QStringLiteral("appearance/theme"), QStringLiteral("dark"));
+    if (theme.toString() == QLatin1String("light"))
+        appearance.theme = Theme::Light;
+    else if (theme.toString() == QLatin1String("system"))
+        appearance.theme = Theme::System;
+    appearance.accent =
+        accentFromKey(settings.value(QStringLiteral("appearance/accent")).toString());
+    appearance.glassEnabled =
+        settings.value(QStringLiteral("appearance/glassEnabled"), true).toBool();
+    return appearance;
+}
+
+void AppearancePreferences::saveSettings(QSettings &settings, const Settings &appearance) {
+    const auto theme = appearance.theme == Theme::Light    ? QStringLiteral("light")
+                       : appearance.theme == Theme::System ? QStringLiteral("system")
+                                                           : QStringLiteral("dark");
+    settings.setValue(QStringLiteral("appearance/theme"), theme);
+    settings.setValue(QStringLiteral("appearance/accent"), accentKey(appearance.accent));
+    settings.setValue(QStringLiteral("appearance/glassEnabled"), appearance.glassEnabled);
+}
+
+void AppearancePreferences::applySettings(QApplication &application, const Settings &appearance) {
+    const auto tokens = appearanceTokens(appearance.theme, appearance.accent);
+    application.setPalette(appearance.theme == Theme::System
+                               ? application.style()->standardPalette()
+                               : paletteForTokens(tokens));
+    application.setStyleSheet(appearanceStyleSheet(tokens, appearance.glassEnabled));
+}
 
 QList<AppearancePreferences::Accent> AppearancePreferences::accents() {
     return {Accent::Ocean, Accent::Emerald, Accent::Violet, Accent::Rose, Accent::Amber};

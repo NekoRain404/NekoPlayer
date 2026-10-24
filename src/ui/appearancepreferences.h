@@ -4,12 +4,23 @@
 #include <QString>
 
 class QApplication;
+class QSettings;
 class QWidget;
 
 class AppearancePreferences final {
   public:
     enum class Theme { Dark, Light, System };
     enum class Accent { Ocean, Emerald, Violet, Rose, Amber };
+
+    struct Settings {
+        Theme theme = Theme::Dark;
+        Accent accent = Accent::Ocean;
+        bool glassEnabled = true;
+    };
+
+    [[nodiscard]] static Settings loadSettings(QSettings &settings);
+    static void saveSettings(QSettings &settings, const Settings &appearance);
+    static void applySettings(QApplication &application, const Settings &appearance);
 
     [[nodiscard]] static QList<Accent> accents();
     [[nodiscard]] static QString accentName(Accent accent);

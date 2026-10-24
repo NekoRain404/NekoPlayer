@@ -62,16 +62,9 @@ int main(int argc, char *argv[]) {
     app->setProperty("languageManager",
                      QVariant::fromValue(static_cast<QObject *>(&languageManager)));
     if (auto *gui = qobject_cast<QApplication *>(app.get())) {
-        const auto themeName =
-            useConfig ? settings.value(QStringLiteral("appearance/theme"), QStringLiteral("dark"))
-                            .toString()
-                      : QStringLiteral("dark");
-        auto theme = AppearancePreferences::Theme::Dark;
-        if (themeName == QLatin1String("light"))
-            theme = AppearancePreferences::Theme::Light;
-        else if (themeName == QLatin1String("system"))
-            theme = AppearancePreferences::Theme::System;
-        AppearancePreferences::applyTheme(*gui, theme);
+        const auto appearance = useConfig ? AppearancePreferences::loadSettings(settings)
+                                          : AppearancePreferences::Settings{};
+        AppearancePreferences::applySettings(*gui, appearance);
     }
     const auto sessionPath =
         useConfig ? QDir(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation))

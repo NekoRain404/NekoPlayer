@@ -12,9 +12,11 @@
 #include <QMouseEvent>
 #include <QPalette>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QSlider>
 #include <QStyle>
+#include <QTemporaryDir>
 #include <QToolButton>
 #include <QTranslator>
 #include <QVBoxLayout>
@@ -26,6 +28,106 @@
 class AppearancePreferencesTest final : public QObject {
     Q_OBJECT
   private slots:
+    void missingAppearanceSettingsUseDefaults() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        QSettings store(directory.filePath(QStringLiteral("appearance.ini")), QSettings::IniFormat);
+        const auto settings = AppearancePreferences::loadSettings(store);
+        QCOMPARE(settings.theme, AppearancePreferences::Theme::Dark);
+        QCOMPARE(settings.accent, AppearancePreferences::Accent::Ocean);
+        QVERIFY(settings.glassEnabled);
+        QVERIFY(store.allKeys().isEmpty());
+    }
+
+    void appearanceSettingsRoundTripIndependently() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto path = directory.filePath(QStringLiteral("appearance.ini"));
+        for (const auto theme : AppearancePreferences::themes()) {
+            for (const auto accent : AppearancePreferences::accents()) {
+                for (const bool glass : {false, true}) {
+                    {
+                        QSettings store(path, QSettings::IniFormat);
+                        AppearancePreferences::saveSettings(store, {theme, accent, glass});
+                        store.sync();
+                        QCOMPARE(store.status(), QSettings::NoError);
+                        QCOMPARE(store.value(QStringLiteral("appearance/glassEnabled")).toBool(),
+                                 glass);
+                    }
+                    QSettings store(path, QSettings::IniFormat);
+                    const auto settings = AppearancePreferences::loadSettings(store);
+                    QCOMPARE(settings.theme, theme);
+                    QCOMPARE(settings.accent, accent);
+                    QCOMPARE(settings.glassEnabled, glass);
+                }
+            }
+        }
+    }
+
+    void invalidAccentPreservesOtherSettingsAndLegacyThemeKey() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        QSettings store(directory.filePath(QStringLiteral("appearance.ini")), QSettings::IniFormat);
+        store.setValue(QStringLiteral("appearance/theme"), QStringLiteral("light"));
+        store.setValue(QStringLiteral("appearance/accent"), QStringLiteral("invalid"));
+        store.setValue(QStringLiteral("appearance/glassEnabled"), false);
+        auto settings = AppearancePreferences::loadSettings(store);
+        QCOMPARE(settings.theme, AppearancePreferences::Theme::Light);
+        QCOMPARE(settings.accent, AppearancePreferences::Accent::Ocean);
+        QVERIFY(!settings.glassEnabled);
+        store.setValue(QStringLiteral("appearance/theme"), QStringLiteral("invalid"));
+        settings = AppearancePreferences::loadSettings(store);
+        QCOMPARE(settings.theme, AppearancePreferences::Theme::Dark);
+    }
+
+    void savesStableAppearanceKeysWithoutReplacingOtherPreferences() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        QSettings store(directory.filePath(QStringLiteral("appearance.ini")), QSettings::IniFormat);
+        store.setValue(QStringLiteral("appearance/language"), QStringLiteral("en"));
+        AppearancePreferences::saveSettings(store, {AppearancePreferences::Theme::System,
+                                                    AppearancePreferences::Accent::Violet, false});
+        QCOMPARE(store.value(QStringLiteral("appearance/theme")).toString(),
+                 QStringLiteral("system"));
+        QCOMPARE(store.value(QStringLiteral("appearance/accent")).toString(),
+                 QStringLiteral("violet"));
+        QVERIFY(!store.value(QStringLiteral("appearance/glassEnabled")).toBool());
+        QCOMPARE(store.value(QStringLiteral("appearance/language")).toString(),
+                 QStringLiteral("en"));
+    }
+
+    void appliesSettingsAcrossThemesAndRestoresFullSystemPalette() {
+        const auto previousPalette = qApp->palette();
+        const auto previousStyle = qApp->styleSheet();
+        for (const auto theme : AppearancePreferences::themes()) {
+            AppearancePreferences::applySettings(
+                *qApp, {theme, AppearancePreferences::Accent::Rose, true});
+            const auto palette = qApp->palette();
+            const bool dark = palette.color(QPalette::Window).lightnessF() < 0.5;
+            if (theme == AppearancePreferences::Theme::System) {
+                const auto standard = qApp->style()->standardPalette();
+                for (const auto group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled})
+                    for (int role = 0; role < QPalette::NColorRoles; ++role)
+                        QCOMPARE(palette.brush(group, QPalette::ColorRole(role)),
+                                 standard.brush(group, QPalette::ColorRole(role)));
+            } else {
+                QCOMPARE(palette.color(QPalette::Link), theme == AppearancePreferences::Theme::Dark
+                                                            ? QColor("#ec96b7")
+                                                            : QColor("#b33c6d"));
+            }
+            QVERIFY(qApp->styleSheet().contains(QStringLiteral("rgba(")));
+            QVERIFY(qApp->styleSheet().contains(dark ? QStringLiteral("#ec96b7")
+                                                     : QStringLiteral("#b33c6d")));
+            AppearancePreferences::applySettings(
+                *qApp, {theme, AppearancePreferences::Accent::Emerald, false});
+            QVERIFY(!qApp->styleSheet().contains(QStringLiteral("rgba(")));
+            QVERIFY(qApp->styleSheet().contains(dark ? QStringLiteral("#73cfb0")
+                                                     : QStringLiteral("#187653")));
+        }
+        qApp->setStyleSheet(previousStyle);
+        qApp->setPalette(previousPalette);
+    }
+
     void accentKeysRoundTripAndUnknownKeysFallBackToOcean() {
         using Accent = AppearancePreferences::Accent;
         QCOMPARE(AppearancePreferences::accents().size(), 5);

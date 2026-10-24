@@ -5,6 +5,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QFrame>
+#include <QImage>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMouseEvent>
@@ -100,6 +101,9 @@ class TransportBarTest final : public QObject {
         QVERIFY(time->accessibleDescription().contains(time->text()));
         QVERIFY(time->toolTip().contains(QStringLiteral("切换")));
         QVERIFY(time->accessibleDescription().contains(QStringLiteral("切换")));
+        QVERIFY(time->toolTip().contains(QStringLiteral("00:00:45")));
+        QVERIFY(time->accessibleDescription().contains(QStringLiteral("00:00:45")));
+        QVERIFY(time->accessibleDescription().contains(QStringLiteral("回车键")));
 
         const QPoint center = time->rect().center();
         QMouseEvent press(QEvent::MouseButtonPress, center, time->mapToGlobal(center),
@@ -113,6 +117,8 @@ class TransportBarTest final : public QObject {
         QVERIFY(time->toolTip().contains(time->text()));
         QVERIFY(time->accessibleDescription().contains(time->text()));
         QVERIFY(time->accessibleDescription().contains(QStringLiteral("已播放")));
+        QVERIFY(time->toolTip().contains(QStringLiteral("00:01:15")));
+        QVERIFY(time->accessibleDescription().contains(QStringLiteral("00:01:15")));
 
         state.position = 90;
         transport.present(state);
@@ -153,9 +159,11 @@ class TransportBarTest final : public QObject {
         QVERIFY(time);
         QCOMPARE(time->accessibleName(), QStringLiteral("播放时间"));
         QVERIFY(time->focusPolicy() != Qt::NoFocus);
+        const auto unfocused = time->grab().toImage();
         time->setFocus(Qt::OtherFocusReason);
         QCoreApplication::processEvents();
         QVERIFY(time->hasFocus());
+        QVERIFY(time->grab().toImage() != unfocused);
 
         QKeyEvent overrideEvent(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier);
         QCoreApplication::sendEvent(time, &overrideEvent);

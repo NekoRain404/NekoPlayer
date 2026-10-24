@@ -12,6 +12,8 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QPaintEvent>
+#include <QPainter>
 #include <QResizeEvent>
 #include <QSignalBlocker>
 #include <QSizePolicy>
@@ -166,6 +168,15 @@ class ClickableTimeLabel final : public QLabel {
             return;
         }
         QLabel::mouseReleaseEvent(event);
+    }
+
+    void paintEvent(QPaintEvent *event) override {
+        QLabel::paintEvent(event);
+        if (!hasFocus())
+            return;
+        QPainter painter(this);
+        painter.setPen(palette().color(QPalette::Highlight));
+        painter.drawRect(rect().adjusted(0, 0, -1, -1));
     }
 
     void keyPressEvent(QKeyEvent *event) override {
@@ -368,13 +379,15 @@ void TransportBar::present(const PlaybackState &state) {
 
 void TransportBar::updateTimeLabel() {
     const auto total = timeText(duration_);
-    const QString reading =
-        timeShowsRemaining_
-            ? QStringLiteral("-%1 / %2").arg(timeText(std::max(0.0, duration_ - position_)), total)
-            : QStringLiteral("%1 / %2").arg(timeText(position_), total);
-    const auto action = timeShowsRemaining_ ? tr("点击或按空格键切换为已播放时间")
-                                            : tr("点击或按空格键切换为剩余时间");
-    const auto description = reading + QLatin1Char('\n') + action;
+    const auto remaining = timeText(std::max(0.0, duration_ - position_));
+    const QString reading = timeShowsRemaining_
+                                ? QStringLiteral("-%1 / %2").arg(remaining, total)
+                                : QStringLiteral("%1 / %2").arg(timeText(position_), total);
+    const auto alternate = timeShowsRemaining_ ? tr("已播放 %1").arg(timeText(position_))
+                                               : tr("剩余 %1").arg(remaining);
+    const auto action = timeShowsRemaining_ ? tr("按空格键或回车键切换为已播放时间")
+                                            : tr("按空格键或回车键切换为剩余时间");
+    const auto description = reading + QLatin1Char('\n') + alternate + QLatin1Char('\n') + action;
     time_->setText(reading);
     time_->setToolTip(description);
     time_->setAccessibleDescription(description);

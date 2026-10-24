@@ -22,6 +22,7 @@ VideoWidget::VideoWidget(MpvController &controller, QWidget *parent)
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
     singleClickTimer_.setSingleShot(true);
+    singleClickTimer_.setTimerType(Qt::PreciseTimer);
     connect(&singleClickTimer_, &QTimer::timeout, this, &VideoWidget::singleClicked);
 }
 
@@ -135,8 +136,6 @@ void VideoWidget::cleanup() {
 
 void VideoWidget::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
-        // Wait for the double-click interval so a double click does not pause too.
-        singleClickTimer_.start(QApplication::doubleClickInterval());
         event->accept();
     } else if (event->button() == Qt::MiddleButton) {
         emit middleClicked();
@@ -146,9 +145,25 @@ void VideoWidget::mousePressEvent(QMouseEvent *event) {
     }
 }
 
+void VideoWidget::mouseReleaseEvent(QMouseEvent *event) {
+    if (event->button() != Qt::LeftButton) {
+        QOpenGLWidget::mouseReleaseEvent(event);
+        return;
+    }
+    event->accept();
+    if (suppressReleaseClick_) {
+        suppressReleaseClick_ = false;
+        return;
+    }
+    // Start after release so a held press cannot count as a click; the delay
+    // still lets a following double click cancel the single-click action.
+    singleClickTimer_.start(QApplication::doubleClickInterval());
+}
+
 void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event) {
     singleClickTimer_.stop();
     if (event->button() == Qt::LeftButton) {
+        suppressReleaseClick_ = true;
         emit doubleClicked();
         event->accept();
     } else {
@@ -157,6 +172,8 @@ void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event) {
 }
 
 void VideoWidget::wheelEvent(QWheelEvent *event) {
-    emit wheelScrolled(event->angleDelta().y());
+    const int deltaY = event->angleDelta().y();
+    if (deltaY != 0)
+        emit wheelScrolled(deltaY);
     event->accept();
 }

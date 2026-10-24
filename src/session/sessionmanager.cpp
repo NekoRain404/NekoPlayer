@@ -109,7 +109,7 @@ SessionLoadResult SessionManager::restore() {
     mediaLibraryPreferences_ = loaded.state.mediaLibrary;
     resumePlaybackPositionEnabled_ = loaded.state.resumePlaybackPosition;
     seekStepSeconds_ = loaded.state.seekStepSeconds;
-    interaction_ = loaded.state.interaction;
+    interaction_ = loaded.state.interaction.normalized();
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
                            resumePlaybackPositionEnabled_ ? loaded.state.resumePosition : 0);
     player_.setVolume(audio_.volume);
@@ -362,8 +362,7 @@ MediaLibraryPreferences SessionManager::mediaLibraryPreferences() const {
 InteractionPreferences SessionManager::interactionPreferences() const { return interaction_; }
 
 void SessionManager::setInteractionPreferences(InteractionPreferences preferences) {
-    preferences.wheelVolumeStep = std::clamp(preferences.wheelVolumeStep, 1, 20);
-    interaction_ = preferences;
+    interaction_ = preferences.normalized();
 }
 
 void SessionManager::setMediaLibraryPreferences(MediaLibraryPreferences preferences) {

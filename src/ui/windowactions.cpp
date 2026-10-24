@@ -300,7 +300,8 @@ void MainWindow::createActions() {
              },
          .interaction =
              [this] {
-                 return session_ ? session_->interactionPreferences() : interactionPreferences_;
+                 return session_ ? session_->interactionPreferences().normalized()
+                                 : interactionPreferences_.normalized();
              },
          .setInteraction =
              [this](InteractionPreferences preferences) {

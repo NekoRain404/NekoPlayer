@@ -21,12 +21,14 @@
 #include <QLabel>
 #include <QListView>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QProgressBar>
 #include <QPropertyAnimation>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTranslator>
+#include <QWheelEvent>
 #include <QtTest>
 
 class UiSurfaceTest final : public QObject {
@@ -162,20 +164,14 @@ class UiSurfaceTest final : public QObject {
         const auto networkImage = network.pixmap(QSize(24, 24)).toImage();
         QVERIFY(networkImage.pixelColor(12, 7).alpha() == 0);
 
-        const auto settings =
-            AppearanceIcons::icon(AppearanceIcons::Symbol::Settings, palette).pixmap(24, 24);
-        QVERIFY(!settings.isNull());
-        const auto settingsImage = settings.toImage();
-        bool settingsPainted = false;
-        for (int y = 0; y < settingsImage.height() && !settingsPainted; ++y) {
-            for (int x = 0; x < settingsImage.width(); ++x) {
-                if (settingsImage.pixelColor(x, y).alpha() > 0) {
-                    settingsPainted = true;
-                    break;
-                }
-            }
-        }
-        QVERIFY(settingsPainted);
+        const auto settingsImage = AppearanceIcons::icon(AppearanceIcons::Symbol::Settings, palette)
+                                       .pixmap(QSize(24, 24))
+                                       .toImage();
+        QVERIFY(!settingsImage.isNull());
+        const auto playImage = native.toImage();
+        QVERIFY(settingsImage != playImage);
+        QVERIFY(settingsImage.pixelColor(5, 12).alpha() > 0);
+        QCOMPARE(playImage.pixelColor(5, 12).alpha(), 0);
 
         const auto seekBack =
             AppearanceIcons::icon(AppearanceIcons::Symbol::SeekBackward, palette).pixmap(24, 24);
@@ -186,6 +182,35 @@ class UiSurfaceTest final : public QObject {
         const auto disabled = play.pixmap(QSize(24, 24), QIcon::Disabled, QIcon::Off);
         QVERIFY(!disabled.isNull());
         QCOMPARE(disabled.size(), QSize(24, 24));
+    }
+
+    void videoSurfaceStartsClickTimerOnReleaseAndIgnoresEmptyWheel() {
+        MpvController player(true, true);
+        VideoWidget video(player);
+        QSignalSpy wheel(&video, &VideoWidget::wheelScrolled);
+        QSignalSpy single(&video, &VideoWidget::singleClicked);
+        const QPointF local(20, 20);
+        const auto global = video.mapToGlobal(local.toPoint());
+        const auto sendWheel = [&video, local, global](int deltaY) {
+            QWheelEvent event(local, global, QPoint(), QPoint(0, deltaY), Qt::NoButton,
+                              Qt::NoModifier, Qt::NoScrollPhase, false);
+            QCoreApplication::sendEvent(&video, &event);
+        };
+        sendWheel(0);
+        QCOMPARE(wheel.count(), 0);
+        sendWheel(120);
+        QCOMPARE(wheel.count(), 1);
+        QCOMPARE(wheel.constFirst().constFirst().toInt(), 120);
+        const auto sendButton = [&video, local, global](QEvent::Type type,
+                                                        Qt::MouseButtons buttons) {
+            QMouseEvent event(type, local, global, Qt::LeftButton, buttons, Qt::NoModifier);
+            QCoreApplication::sendEvent(&video, &event);
+        };
+        sendButton(QEvent::MouseButtonPress, Qt::LeftButton);
+        QTest::qWait(QApplication::doubleClickInterval() + 50);
+        QCOMPARE(single.count(), 0);
+        sendButton(QEvent::MouseButtonRelease, Qt::NoButton);
+        QTRY_COMPARE(single.count(), 1);
     }
 
     void welcomePanelPaintsItsThemeSurface() {

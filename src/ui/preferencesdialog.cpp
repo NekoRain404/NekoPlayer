@@ -15,7 +15,6 @@
 #include <QStyle>
 #include <QTabWidget>
 #include <QVBoxLayout>
-#include <algorithm>
 
 PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
                                      MediaLibraryPreferences initialMediaLibrary,
@@ -433,9 +432,7 @@ void PreferencesDialog::createInteractionPage(InteractionPreferences interaction
     help->setWordWrap(true);
     form->addRow(help);
     tabs_->addTab(page, style()->standardIcon(QStyle::SP_FileDialogListView), tr("交互"));
-    interactionPreferences_ = interaction;
-    interactionPreferences_.wheelVolumeStep =
-        std::clamp(interactionPreferences_.wheelVolumeStep, 1, 20);
+    interactionPreferences_ = interaction.normalized();
     displayInteractionPreferences(interactionPreferences_);
 }
 
@@ -447,29 +444,24 @@ void PreferencesDialog::displayInteractionPreferences(const InteractionPreferenc
     interactionMiddleClick_->setCurrentIndex(middleIndex >= 0 ? middleIndex : 0);
     interactionWheelVolume_->setChecked(preferences.wheelAdjustsVolume);
     const auto stepIndex = interactionWheelStep_->findData(preferences.wheelVolumeStep);
-    interactionWheelStep_->setCurrentIndex(stepIndex >= 0 ? stepIndex : 4);
+    interactionWheelStep_->setCurrentIndex(
+        stepIndex >= 0 ? stepIndex
+                       : interactionWheelStep_->findData(InteractionPreferences{}.wheelVolumeStep));
     interactionWheelSeek_->setChecked(preferences.wheelSeeksTimeline);
     interactionPlaylistClick_->setChecked(preferences.playlistSingleClick);
 }
 
 InteractionPreferences PreferencesDialog::interactionDraft() const {
-    return {interactionSingleClick_->isChecked(),
-            interactionDoubleClick_->isChecked(),
-            static_cast<MiddleClickAction>(interactionMiddleClick_->currentData().toInt()),
-            interactionWheelVolume_->isChecked(),
-            interactionWheelStep_->currentData().toInt(),
-            interactionWheelSeek_->isChecked(),
-            interactionPlaylistClick_->isChecked()};
+    return {.singleClickPlayPause = interactionSingleClick_->isChecked(),
+            .doubleClickFullscreen = interactionDoubleClick_->isChecked(),
+            .middleClick =
+                static_cast<MiddleClickAction>(interactionMiddleClick_->currentData().toInt()),
+            .wheelAdjustsVolume = interactionWheelVolume_->isChecked(),
+            .wheelVolumeStep = interactionWheelStep_->currentData().toInt(),
+            .wheelSeeksTimeline = interactionWheelSeek_->isChecked(),
+            .playlistSingleClick = interactionPlaylistClick_->isChecked()};
 }
 
 bool PreferencesDialog::interactionChanged() const {
-    const auto draft = interactionDraft();
-    const auto &saved = interactionPreferences_;
-    return draft.singleClickPlayPause != saved.singleClickPlayPause ||
-           draft.doubleClickFullscreen != saved.doubleClickFullscreen ||
-           draft.middleClick != saved.middleClick ||
-           draft.wheelAdjustsVolume != saved.wheelAdjustsVolume ||
-           draft.wheelVolumeStep != saved.wheelVolumeStep ||
-           draft.wheelSeeksTimeline != saved.wheelSeeksTimeline ||
-           draft.playlistSingleClick != saved.playlistSingleClick;
+    return interactionDraft() != interactionPreferences_;
 }

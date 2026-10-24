@@ -199,6 +199,20 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.interaction.wheelVolumeStep, 20);
     }
 
+    void interactionPreferencesNormalizeAndCompareAllFields() {
+        InteractionPreferences preferences;
+        preferences.wheelVolumeStep = 0;
+        QCOMPARE(preferences.normalized().wheelVolumeStep, 1);
+        preferences.wheelVolumeStep = 99;
+        QCOMPARE(preferences.normalized().wheelVolumeStep, 20);
+        InteractionPreferences equal;
+        QVERIFY(preferences != equal);
+        equal.wheelVolumeStep = 20;
+        QCOMPARE(preferences.normalized(), equal.normalized());
+        equal.playlistSingleClick = true;
+        QVERIFY(preferences != equal);
+    }
+
     void windowPlaylistWidthDefaultsToZero() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

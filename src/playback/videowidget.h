@@ -31,6 +31,7 @@ class VideoWidget final : public QOpenGLWidget {
     void initializeGL() override;
     void paintGL() override;
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void showEvent(QShowEvent *event) override;
@@ -43,5 +44,6 @@ class VideoWidget final : public QOpenGLWidget {
     mpv_render_context *renderer_ = nullptr;
     std::atomic_bool closing_{false};
     QTimer singleClickTimer_;
+    bool suppressReleaseClick_ = false;
     bool failed_ = false;
 };

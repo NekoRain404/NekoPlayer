@@ -41,6 +41,9 @@ struct InteractionPreferences {
     int wheelVolumeStep = 5; // 1..20
     bool wheelSeeksTimeline = true;
     bool playlistSingleClick = false;
+
+    [[nodiscard]] InteractionPreferences normalized() const;
+    bool operator==(const InteractionPreferences &) const = default;
 };
 
 struct SessionState {

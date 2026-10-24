@@ -189,7 +189,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         }
     });
     connect(video_, &VideoWidget::wheelScrolled, this, [this](int deltaY) {
-        if (!interactionPreferences_.wheelAdjustsVolume)
+        if (deltaY == 0 || !interactionPreferences_.wheelAdjustsVolume || !controller_->isReady() ||
+            !controller_->state().active)
             return;
         const auto volume = volumeAfterWheel(controller_->state().volume, deltaY,
                                              interactionPreferences_.wheelVolumeStep);
@@ -642,9 +643,7 @@ void MainWindow::revealControls() {
 }
 
 void MainWindow::applyInteractionPreferences(const InteractionPreferences &preferences) {
-    interactionPreferences_ = preferences;
-    interactionPreferences_.wheelVolumeStep =
-        std::clamp(interactionPreferences_.wheelVolumeStep, 1, 20);
+    interactionPreferences_ = preferences.normalized();
     if (playlistPane_)
         playlistPane_->setSingleClickActivation(interactionPreferences_.playlistSingleClick);
 }

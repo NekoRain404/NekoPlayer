@@ -82,7 +82,7 @@ SessionState normalized(SessionState state) {
     state.subtitles = state.subtitles.normalized();
     state.tuning = state.tuning.normalized();
     state.videoColor = state.videoColor.normalized();
-    state.interaction.wheelVolumeStep = std::clamp(state.interaction.wheelVolumeStep, 1, 20);
+    state.interaction = state.interaction.normalized();
     if (state.seekStepSeconds != 5 && state.seekStepSeconds != 10 && state.seekStepSeconds != 30)
         state.seekStepSeconds = 5;
     state.audio.volume =
@@ -124,6 +124,12 @@ TuningPreferences TuningPreferences::normalized() const {
         std::isfinite(audioDelay) ? std::clamp(audioDelay, -10.0, 10.0) : 0.0,
         std::isfinite(subtitleDelay) ? std::clamp(subtitleDelay, -600.0, 600.0) : 0.0,
     };
+}
+
+InteractionPreferences InteractionPreferences::normalized() const {
+    auto result = *this;
+    result.wheelVolumeStep = std::clamp(result.wheelVolumeStep, 1, 20);
+    return result;
 }
 
 SessionStore::SessionStore(QString filePath) : filePath_(std::move(filePath)) {}

@@ -387,6 +387,21 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(dialog.findChild<QFontComboBox *>(QStringLiteral("subtitleFontChoice"))
                      ->accessibleName(),
                  QStringLiteral("默认字幕字体"));
+        const QList<QPair<QString, QString>> interactionNames{
+            {QStringLiteral("interactionSingleClickChoice"),
+             QStringLiteral("单击视频时播放或暂停")},
+            {QStringLiteral("interactionDoubleClickChoice"), QStringLiteral("双击视频时切换全屏")},
+            {QStringLiteral("interactionMiddleClickChoice"), QStringLiteral("中键单击操作")},
+            {QStringLiteral("interactionWheelVolumeChoice"), QStringLiteral("滚轮调节音量")},
+            {QStringLiteral("interactionWheelStepChoice"), QStringLiteral("滚轮音量步长")},
+            {QStringLiteral("interactionWheelSeekChoice"), QStringLiteral("时间轴滚轮跳转")},
+            {QStringLiteral("interactionPlaylistClickChoice"), QStringLiteral("播放列表单击播放")},
+        };
+        for (const auto &[objectName, name] : interactionNames) {
+            auto *control = dialog.findChild<QWidget *>(objectName);
+            QVERIFY2(control, qPrintable(objectName));
+            QCOMPARE(control->accessibleName(), name);
+        }
     }
 };
 

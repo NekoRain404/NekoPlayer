@@ -289,6 +289,7 @@ libmpv client API: %2</translation></message>
 <context>
     <name>TransportBar</name>
     <message><source>播放进度</source><translation>Playback position</translation></message>
+    <message><source>播放时间</source><translation>Playback time</translation></message>
     <message><source>音量</source><translation>Volume</translation></message>
     <message><source>音量 %1%</source><translation>Volume %1%</translation></message>
     <message><source>已播放 %1</source><translation>Played %1</translation></message>

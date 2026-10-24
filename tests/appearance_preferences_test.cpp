@@ -1,4 +1,5 @@
 #include "playback/mpvcontroller.h"
+#include "ui/appearancetokens.h"
 #include "ui/appearancepreferences.h"
 #include "ui/transportbar.h"
 #include "ui/transportbarmetrics.h"
@@ -19,6 +20,17 @@
 class AppearancePreferencesTest final : public QObject {
     Q_OBJECT
   private slots:
+    void darkAndLightTokensKeepSemanticContrastAndSharedMetrics() {
+        const auto dark = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto light = appearanceTokens(AppearancePreferences::Theme::Light);
+        QVERIFY(dark.canvas.value() < dark.primaryText.value());
+        QVERIFY(light.canvas.value() > light.primaryText.value());
+        QVERIFY(dark.accent != dark.canvas);
+        QVERIFY(light.accent != light.canvas);
+        QCOMPARE(dark.spaceUnit, light.spaceUnit);
+        QCOMPARE(dark.transportHitTarget, 32);
+    }
+
     void exposesThreeThemesAndAppliesPalettes() {
         QCOMPARE(AppearancePreferences::themes().size(), 3);
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);

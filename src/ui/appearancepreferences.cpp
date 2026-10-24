@@ -1,54 +1,13 @@
 #include "appearancepreferences.h"
+#include "appearancetokens.h"
 
 #include <QApplication>
-#include <QColor>
 #include <QMessageBox>
-#include <QPalette>
 #include <QStyle>
 #include <QtGlobal>
 #include <mpv/client.h>
 
 namespace {
-QPalette darkPalette() {
-    QPalette palette;
-    palette.setColor(QPalette::Window, QColor(31, 34, 40));
-    palette.setColor(QPalette::WindowText, QColor(232, 234, 238));
-    palette.setColor(QPalette::Base, QColor(22, 24, 29));
-    palette.setColor(QPalette::AlternateBase, QColor(38, 41, 48));
-    palette.setColor(QPalette::ToolTipBase, QColor(38, 41, 48));
-    palette.setColor(QPalette::ToolTipText, QColor(245, 246, 248));
-    palette.setColor(QPalette::Text, QColor(232, 234, 238));
-    palette.setColor(QPalette::Button, QColor(43, 47, 55));
-    palette.setColor(QPalette::ButtonText, QColor(232, 234, 238));
-    palette.setColor(QPalette::BrightText, QColor(255, 100, 100));
-    palette.setColor(QPalette::Link, QColor(100, 170, 255));
-    palette.setColor(QPalette::Highlight, QColor(48, 125, 220));
-    palette.setColor(QPalette::HighlightedText, Qt::white);
-    palette.setColor(QPalette::Disabled, QPalette::Text, QColor(130, 133, 140));
-    palette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(130, 133, 140));
-    return palette;
-}
-
-QPalette lightPalette() {
-    QPalette palette;
-    palette.setColor(QPalette::Window, QColor(245, 246, 248));
-    palette.setColor(QPalette::WindowText, QColor(32, 35, 40));
-    palette.setColor(QPalette::Base, Qt::white);
-    palette.setColor(QPalette::AlternateBase, QColor(237, 239, 242));
-    palette.setColor(QPalette::ToolTipBase, QColor(255, 255, 220));
-    palette.setColor(QPalette::ToolTipText, QColor(32, 35, 40));
-    palette.setColor(QPalette::Text, QColor(32, 35, 40));
-    palette.setColor(QPalette::Button, QColor(235, 237, 240));
-    palette.setColor(QPalette::ButtonText, QColor(32, 35, 40));
-    palette.setColor(QPalette::BrightText, QColor(190, 30, 30));
-    palette.setColor(QPalette::Link, QColor(20, 95, 185));
-    palette.setColor(QPalette::Highlight, QColor(48, 125, 220));
-    palette.setColor(QPalette::HighlightedText, Qt::white);
-    palette.setColor(QPalette::Disabled, QPalette::Text, QColor(145, 148, 153));
-    palette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(145, 148, 153));
-    return palette;
-}
-
 QString themeStyleSheet(AppearancePreferences::Theme theme) {
     if (theme == AppearancePreferences::Theme::Dark) {
         return QStringLiteral(
@@ -280,7 +239,7 @@ void AppearancePreferences::applyTheme(QApplication &application, Theme theme) {
         return;
     }
 
-    application.setPalette(theme == Theme::Dark ? darkPalette() : lightPalette());
+    application.setPalette(paletteForTokens(appearanceTokens(theme)));
     application.setStyleSheet(themeStyleSheet(theme));
 }
 

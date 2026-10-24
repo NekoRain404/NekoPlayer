@@ -220,8 +220,10 @@ class UiSurfaceTest final : public QObject {
         panel.setResumeEntries({{QStringLiteral("/media/one.mkv"), 10.0, 100.0, 3},
                                 {QStringLiteral("/media/two.mkv"), 20.0, 100.0, 2},
                                 {QStringLiteral("/media/three.mkv"), 30.0, 100.0, 1}});
-        const QList<QSize> sizes{{400, 215}, {400, 230}, {400, 240}, {400, 250},
-                                 {400, 259}, {400, 260}, {400, 261}, {400, 270},
+        const QList<QSize> sizes{{236, 215}, {236, 260}, {236, 320}, {236, 380}, {280, 215},
+                                 {280, 260}, {280, 320}, {280, 380}, {360, 215}, {360, 260},
+                                 {360, 320}, {360, 380}, {400, 215}, {400, 230}, {400, 240},
+                                 {400, 250}, {400, 259}, {400, 260}, {400, 261}, {400, 270},
                                  {500, 300}, {500, 320}, {500, 360}, {500, 380}};
         for (const auto &size : sizes) {
             panel.resize(size);

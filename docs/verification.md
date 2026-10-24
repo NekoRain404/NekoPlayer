@@ -1,9 +1,9 @@
 # Verification Record
 
-Welcome-panel vertical-overflow correction (2026-10-24):
+Welcome-panel vertical-overflow correction and width-boundary regression (2026-10-24):
 
 - A new offscreen geometry regression reproduced the drop-hint intersection with the primary buttons at a 400×215 logical-pixel card height. The cause was showing supporting copy at a height where the visible labels and buttons could not fit.
-- Supporting copy now remains hidden until 260 px. The regression checks 12 heights from 215 to 380 px with the maximum three recent-media and three resume rows present, and confirms that any visible hint begins below both primary actions.
+- Supporting copy now remains hidden until 260 px. The regression checks 24 size combinations across widths 236–500 px and heights 215–380 px, with the maximum three recent-media and three resume rows present; any visible hint must begin below both primary actions.
 - `ui-surface` and `code-size` passed; changed-file Clang formatting and `git diff --check` passed. No window-behavior tests were run. This confirms widget geometry under Qt offscreen, not the final native Wayland composition; visual desktop recheck remains outstanding.
 
 完整 Debug 非窗口回归复核（2026-10-24）：

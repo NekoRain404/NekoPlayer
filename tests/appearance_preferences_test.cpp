@@ -182,6 +182,7 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(!narrow.showTime);
         QVERIFY(narrow.showVolume);
         QVERIFY(narrow.minimumRowWidth <= 400);
+        QCOMPARE(narrow.buttonExtent, 32);
     }
 
     void transportBarHidesOptionalLabelsWhenNarrow() {
@@ -210,6 +211,10 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(time->isHidden());
         QVERIFY(dividers.at(0)->isHidden());
         QCOMPARE(volume->width(), 60);
+        for (auto *button : transport.findChildren<QToolButton *>()) {
+            QCOMPARE(button->width(), 32);
+            QCOMPARE(button->height(), 32);
+        }
 
         host.setFixedSize(560, 100);
         host.layout()->activate();

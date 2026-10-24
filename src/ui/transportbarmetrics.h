@@ -13,15 +13,14 @@ struct Metrics {
 inline Metrics forWidth(int width) {
     Metrics metrics;
     if (width < 360) {
-        metrics.buttonExtent = 28;
+        metrics.buttonExtent = 32;
         metrics.showTime = false;
         metrics.showVolume = false;
     } else if (width < 480) {
-        metrics.buttonExtent = 28;
+        metrics.buttonExtent = 32;
         metrics.volumeWidth = 60;
         metrics.showTime = false;
     } else if (width < 640) {
-        metrics.buttonExtent = 32;
         metrics.volumeWidth = 76;
         metrics.timeWidth = 100;
     }

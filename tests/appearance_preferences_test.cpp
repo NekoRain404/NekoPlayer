@@ -1,5 +1,6 @@
 #include "playback/mpvcontroller.h"
 #include "ui/appearancetokens.h"
+#include "ui/appearancestylesheet.h"
 #include "ui/appearancepreferences.h"
 #include "ui/transportbar.h"
 #include "ui/transportbarmetrics.h"
@@ -56,8 +57,8 @@ class AppearancePreferencesTest final : public QObject {
     }
 
     void exposesContentFirstInteractionStyle() {
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);
-        const auto style = qApp->styleSheet();
+        const auto darkTokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(darkTokens);
         QVERIFY(style.contains(QStringLiteral("QWidget#playlistPane")));
         QVERIFY(style.contains(QStringLiteral("QWidget#transportBar")));
         QVERIFY(style.contains(QStringLiteral("QFrame#transportDivider")));
@@ -80,9 +81,14 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:disabled")));
         QVERIFY(style.contains(QStringLiteral("QMenu::item:disabled")));
         QVERIFY(style.contains(QStringLiteral("QFocusFrame")));
+        QVERIFY(style.contains(QStringLiteral("QToolButton:disabled")));
+        QVERIFY(style.contains(QStringLiteral("QPushButton:disabled")));
+        QVERIFY(style.contains(QStringLiteral("QToolButton:hover")));
+        QVERIFY(style.contains(QStringLiteral("QToolButton#transportPrimaryButton:pressed")));
+        QVERIFY(style.contains(QStringLiteral("QListView#playlistView:focus")));
 
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Light);
-        const auto lightStyle = qApp->styleSheet();
+        const auto lightTokens = appearanceTokens(AppearancePreferences::Theme::Light);
+        const auto lightStyle = appearanceStyleSheet(lightTokens);
         QVERIFY(lightStyle.contains(QStringLiteral("QToolButton:pressed")));
         QVERIFY(lightStyle.contains(QStringLiteral("QToolButton#transportPrimaryButton:hover")));
         QVERIFY(lightStyle.contains(QStringLiteral("QToolButton#transportPrimaryButton:checked")));
@@ -96,6 +102,12 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(lightStyle.contains(QStringLiteral("QPushButton:pressed")));
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider::handle:horizontal:pressed")));
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider::handle:horizontal:disabled")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QToolButton:disabled")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QPushButton:disabled")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QToolButton:hover")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QToolButton:checked")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QToolButton#transportPrimaryButton:pressed")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QListView#playlistView:focus")));
     }
 
     void transportButtonsAreKeyboardAndScreenReaderAccessible() {

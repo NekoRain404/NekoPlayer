@@ -75,7 +75,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/thumbnailpreview.cpp
     src/ui/recentmediamenu.cpp
     src/ui/currentmediamenu.cpp src/ui/fullscreencontrols.cpp src/ui/appearancepreferences.cpp
-    src/ui/appearancetokens.cpp
+    src/ui/appearancetokens.cpp src/ui/appearancestylesheet.cpp
     src/ui/languagemanager.cpp
     src/ui/videoframingmenu.cpp
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp

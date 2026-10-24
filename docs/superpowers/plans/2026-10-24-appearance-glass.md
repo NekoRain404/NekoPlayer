@@ -35,12 +35,12 @@
 - Derive tokens from the selected base theme and accent, then produce glass-enabled or opaque style values; System uses the platform standard palette as its base and still honors the selected accent.
 - Generate opaque style values when glass is disabled and layered UI-only fills when enabled. Do not apply alpha or effects to the video widget.
 
-- [ ] **Step 1: Add failing token tests** for all five accents in dark and light bases, asserting shared base surface colors, distinct accent colors, preserved contrast, and System retaining the application standard base palette while honoring its accent.
-- [ ] **Step 2: Add failing stylesheet tests** asserting glass-enabled UI rules contain translucent panel fills while the disabled form is opaque; assert no style targets `VideoWidget` or an OpenGL/video surface.
-- [ ] **Step 3: Run the focused appearance test** with `ctest --test-dir build/debug -R '^appearance-preferences$' --output-on-failure` and confirm the new API/tests fail before implementation.
-- [ ] **Step 4: Implement the accent enum, labels, parser fallback, token derivation, and glass-aware stylesheet** in the listed appearance files. Keep accent-specific values centralized rather than branching in widgets.
-- [ ] **Step 5: Build and run the focused appearance test**, then verify every new source file remains below 500 lines.
-- [ ] **Step 6: Commit** as `feat: add accent palettes and glass UI tokens`.
+- [x] **Step 1: Add failing token tests** for all five accents in dark and light bases, asserting shared base surface colors, distinct accent colors, preserved contrast, and System retaining the application standard base palette while honoring its accent.
+- [x] **Step 2: Add failing stylesheet tests** asserting glass-enabled UI rules contain translucent panel fills while the disabled form is opaque; assert no style targets `VideoWidget` or an OpenGL/video surface.
+- [x] **Step 3: Run the focused appearance test** with `ctest --test-dir build/debug -R '^appearance-preferences$' --output-on-failure` and confirm the new API/tests fail before implementation.
+- [x] **Step 4: Implement the accent enum, labels, parser fallback, token derivation, and glass-aware stylesheet** in the listed appearance files. Keep accent-specific values centralized rather than branching in widgets.
+- [x] **Step 5: Build and run the focused appearance test**, then verify every new source file remains below 500 lines.
+- [x] **Step 6: Commit** as `feat: add accent palettes and glass UI tokens`.
 
 ### Task 2: Appearance preference model and startup/menu persistence
 
@@ -56,13 +56,13 @@
 - Add `loadSettings(QSettings&)`, `saveSettings(QSettings&, const Settings&)`, and `applySettings(QApplication&, const Settings&)` so startup, menu, and Preferences use one interpretation of keys.
 - Keep `appearance/theme`; add `appearance/accent` and `appearance/glassEnabled`. Unknown accent keys resolve to Ocean. When configuration is disabled, do not persist changes.
 
-- [ ] **Step 1: Add failing QSettings tests** using a temporary INI file for defaults, round-trip persistence, invalid accent fallback, and independent theme/accent/glass values.
-- [ ] **Step 2: Add a failing application test** confirming applying System restores the standard palette and applying Dark/Light uses the requested accent and glass stylesheet.
-- [ ] **Step 3: Run the focused appearance test** with `ctest --test-dir build/debug -R '^appearance-preferences$' --output-on-failure` and confirm the new model/helper behavior is absent.
-- [ ] **Step 4: Implement `Settings` and the three settings helpers** in `AppearancePreferences`; do not add QSettings parsing to widgets.
-- [ ] **Step 5: Update startup in `main.cpp`** to load/apply all appearance values once while preserving `--no-config` behavior.
-- [ ] **Step 6: Update the existing theme menu** to read the common settings model and apply/save only the changed base theme while preserving selected action state.
-- [ ] **Step 7: Run appearance tests and build**, then commit as `feat: persist appearance settings`.
+- [x] **Step 1: Add failing QSettings tests** using a temporary INI file for defaults, round-trip persistence, invalid accent fallback, and independent theme/accent/glass values.
+- [x] **Step 2: Add a failing application test** confirming applying System restores the standard palette and applying Dark/Light uses the requested accent and glass stylesheet.
+- [x] **Step 3: Run the focused appearance test** with `ctest --test-dir build/debug -R '^appearance-preferences$' --output-on-failure` and confirm the new model/helper behavior is absent.
+- [x] **Step 4: Implement `Settings` and the three settings helpers** in `AppearancePreferences`; do not add QSettings parsing to widgets.
+- [x] **Step 5: Update startup in `main.cpp`** to load/apply all appearance values once while preserving `--no-config` behavior.
+- [x] **Step 6: Update the existing theme menu** to read the common settings model and apply/save only the changed base theme while preserving selected action state.
+- [x] **Step 7: Run appearance tests and build**, then commit as `feat: persist appearance settings`.
 
 ### Task 3: Appearance page with immediate preview and apply/revert behavior
 
@@ -78,13 +78,13 @@
 - Add optional initial appearance settings to `PreferencesDialog` and an `appearancePreferencesChanged(Settings)` signal emitted after applying values.
 - Expose named controls `appearanceThemeChoice`, `appearanceAccentChoice`, and `appearanceGlassChoice` for stable tests/accessibility.
 
-- [ ] **Step 1: Add failing Preferences tests** for the fifth tab, all theme/accent options, glass checkbox default, object names/accessibility names, Apply persistence signal, and Cancel restoring the previewed appearance.
-- [ ] **Step 2: Run `preferences-dialog` focused test** and confirm it fails on the missing category/controls.
-- [ ] **Step 3: Add the Appearance page** with base-theme and accent combo boxes plus a glass-effect checkbox, accessible names, explanatory fallback text, and live preview using `AppearancePreferences::applySettings`.
-- [ ] **Step 4: Implement Apply/Cancel semantics:** Apply emits the completed settings for persistence; Cancel restores the original appearance snapshot; Restore Defaults is available only on Appearance and resets Dark/Ocean/enabled.
-- [ ] **Step 5: Connect settings-menu Preferences launch to load current values and save emitted appearance changes only when configuration is enabled.** Keep other Preferences call sites on their current defaults/selection flow.
-- [ ] **Step 6: Add English translations** for every new visible string in `translations/NekoPlayer_en.ts`; use the repository's Qt translation update target if available and verify the English catalog compiles.
-- [ ] **Step 7: Run focused preference/appearance tests and build**, check file lengths, and commit as `feat: add appearance preferences`.
+- [x] **Step 1: Add failing Preferences tests** for the fifth tab, all theme/accent options, glass checkbox default, object names/accessibility names, Apply persistence signal, and Cancel restoring the previewed appearance.
+- [x] **Step 2: Run `preferences-dialog` focused test** and confirm it fails on the missing category/controls.
+- [x] **Step 3: Add the Appearance page** with base-theme and accent combo boxes plus a glass-effect checkbox, accessible names, explanatory fallback text, and live preview using `AppearancePreferences::applySettings`.
+- [x] **Step 4: Implement Apply/Cancel semantics:** Apply emits the completed settings for persistence; Cancel restores the original appearance snapshot; Restore Defaults is available on Appearance and resets Dark/Ocean/enabled while retaining the existing Subtitle defaults behavior.
+- [x] **Step 5: Connect settings-menu Preferences launch to load current values and save emitted appearance changes only when configuration is enabled.** Keep the subtitle-display shortcut's existing independent dialog flow unchanged.
+- [x] **Step 6: Add English translations** for every new visible string in `translations/NekoPlayer_en.ts`; use the repository's Qt translation update target if available and verify the English catalog compiles.
+- [x] **Step 7: Run focused preference/appearance tests and build**, check file lengths, and commit as `feat: add appearance preferences`.
 
 ### Task 4: UI surface coverage and playback isolation regression checks
 
@@ -98,19 +98,19 @@
 - Apply tokens to existing object names for welcome, playlist, menu/dialog, and transport surfaces; avoid adding visual effects to `VideoWidget`, `PlaybackOverlay`, or `ActionFeedbackOverlay`.
 - Keep the fullscreen transport's existing opacity animation independent from the glass preference.
 
-- [ ] **Step 1: Add regression assertions** that appearance styles cover the named UI panels and controls but do not install a graphics effect or translucency attribute on `VideoWidget`.
-- [ ] **Step 2: Add/adjust style rules** for translucent layered fills, borders, and subtle shadows on UI-only surfaces; maintain an opaque style branch for disabled glass.
-- [ ] **Step 3: Verify the transport bar changes style without changing fullscreen fade behavior** using existing non-window tests and direct style assertions.
-- [ ] **Step 4: Run focused UI appearance tests**, then build and check `git diff --check`.
-- [ ] **Step 5: Commit** as `feat: polish glass surfaces without affecting video`.
+- [x] **Step 1: Add regression assertions** that appearance styles cover the named UI panels and controls but do not install a graphics effect or translucency attribute on `VideoWidget`.
+- [x] **Step 2: Add/adjust style rules** for translucent layered fills, borders, and subtle shadows on UI-only surfaces; maintain an opaque style branch for disabled glass.
+- [x] **Step 3: Verify the transport bar changes style without changing fullscreen fade behavior** using existing non-window tests and direct style assertions.
+- [x] **Step 4: Run focused UI appearance tests**, then build and check `git diff --check`.
+- [x] **Step 5: Commit** as `feat: polish glass surfaces without affecting video`.
 
 ### Task 5: Full verification and handoff
 
 **Files:**
 - Modify: `docs/verification.md` only if the repository records new test coverage or known compositor limitations there.
 
-- [ ] **Step 1: Configure/build the Debug tree** using the repository's existing build directory and CMake preset/command; do not create a separate worktree.
-- [ ] **Step 2: Run all non-window CTest tests**, excluding targets named for window behavior as documented in `docs/verification.md`.
-- [ ] **Step 3: Run the code-size test and `git diff --check`**; report any known non-blocking failures without claiming the suite passed.
-- [ ] **Step 4: Inspect the final diff** to confirm no playback, mpv, HDR, or decoding files changed and the appearance settings persist correctly.
-- [ ] **Step 5: Commit any documentation-only verification update** as `docs: record appearance verification`, then hand off the completed changes with exact test results.
+- [x] **Step 1: Configure/build the Debug tree** using the repository's existing build directory and CMake preset/command; do not create a separate worktree.
+- [x] **Step 2: Run all non-window CTest tests**, excluding targets named for window behavior as documented in `docs/verification.md`.
+- [x] **Step 3: Run the code-size test and `git diff --check`**; report any known non-blocking failures without claiming the suite passed.
+- [x] **Step 4: Inspect the final diff** to confirm no playback, mpv, HDR, or decoding files changed and the appearance settings persist correctly.
+- [x] **Step 5: Commit any documentation-only verification update** as `docs: hand off appearance implementation`, then hand off the completed changes with exact test results.

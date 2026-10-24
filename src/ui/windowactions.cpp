@@ -249,8 +249,8 @@ void MainWindow::createActions() {
     view->addAction(showPlaylistAction_);
     auto *settings = menuBar()->addMenu(tr("设置(&S)"));
     QSettings appearanceSettings;
-    auto *appearanceMenu = new AppearanceMenu(
-        this, appearanceSettings, qApp->property("configurationEnabled").toBool());
+    auto *appearanceMenu = new AppearanceMenu(this, appearanceSettings,
+                                              qApp->property("configurationEnabled").toBool());
     const auto showPreferences = [this, appearanceMenu](PreferencesDialog::Category category) {
         PreferencesDialog dialog(*controller_, this, folderMenu_->mediaLibraryPreferences(),
                                  session_ ? session_->resumePlaybackPositionEnabled() : true,
@@ -294,9 +294,8 @@ void MainWindow::createActions() {
     settings->addAction(subtitleDisplay->settingsAction());
     auto *appearanceSettingsAction = settings->addAction(tr("外观设置…"));
     appearanceSettingsAction->setObjectName(QStringLiteral("appearanceSettingsAction"));
-    connect(appearanceSettingsAction, &QAction::triggered, this, [showPreferences] {
-        showPreferences(PreferencesDialog::Category::Appearance);
-    });
+    connect(appearanceSettingsAction, &QAction::triggered, this,
+            [showPreferences] { showPreferences(PreferencesDialog::Category::Appearance); });
     settings->addSeparator();
     auto *themeMenu = appearanceMenu->menu();
     themeMenu->setTitle(tr("主题"));

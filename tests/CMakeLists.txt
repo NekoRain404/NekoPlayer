@@ -116,7 +116,8 @@ add_custom_command(OUTPUT "${TEST_MEDIA}"
 add_custom_target(test_media DEPENDS "${TEST_MEDIA}")
 add_executable(thumbnail_decoder_test thumbnail_decoder_test.cpp)
 target_link_libraries(thumbnail_decoder_test PRIVATE neko_preview Qt6::Test)
-target_compile_definitions(thumbnail_decoder_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+target_compile_definitions(thumbnail_decoder_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}"
+    FFMPEG_EXECUTABLE="${FFMPEG_EXECUTABLE}")
 add_dependencies(thumbnail_decoder_test test_media)
 add_test(NAME thumbnail-decoder COMMAND thumbnail_decoder_test)
 set_tests_properties(thumbnail-decoder PROPERTIES TIMEOUT 30)

@@ -1,5 +1,18 @@
 # Verification Record
 
+Thumbnail timestamp origin correction stage (2026-10-24):
+
+- FFmpeg thumbnail seek targets and returned timestamps now use media-relative time even when a
+  stream's container timestamps begin at a non-zero offset. A generated 10-second-offset MKV
+  regression failed before the correction (`0.8 s` preview returned a timestamp above `1.0 s`)
+  and passed afterward. Overflow while adding the stream origin is rejected explicitly.
+- The complete Debug build succeeded. Focused `thumbnail-decoder`, `thumbnail-service`,
+  `thumbnail-preview`, and `frame-step` tests passed **4/4**; ASan/UBSan decoder, service and
+  frame-step tests passed **3/3**. The full non-window Debug selection passed **49/49** in
+  **53.55 seconds**. `code-size`, Clang formatting and `git diff --check` passed.
+- Window behavior tests were not run, per the standing preference. The generated fixture uses
+  FFmpeg and is independent of Wayland, libmpv rendering and hardware decoding.
+
 首页续看历史阶段（2026-10-24）：
 
 - 欢迎页新增“继续观看”区块，消费 `SessionManager` 已加载／更新的本地续播记录；最多展示 3 项，排除非法路径、无效时长、越界位置以及距片尾不超过 1 秒的条目。按钮沿用已有 `openFile` 和播放队列续播解析，不建立第二份存储，也不触碰网络媒体。

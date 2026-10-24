@@ -142,8 +142,18 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
         avformat_close_input(&format);
         return result;
     }
-    const auto timestamp = av_rescale_q(static_cast<int64_t>(request.seconds * AV_TIME_BASE),
-                                        AVRational{1, AV_TIME_BASE}, stream->time_base);
+    const auto streamStart = stream->start_time == AV_NOPTS_VALUE ? 0 : stream->start_time;
+    const auto relativeTimestamp =
+        av_rescale_q(static_cast<int64_t>(request.seconds * AV_TIME_BASE),
+                     AVRational{1, AV_TIME_BASE}, stream->time_base);
+    if (relativeTimestamp > 0 &&
+        streamStart > std::numeric_limits<int64_t>::max() - relativeTimestamp) {
+        result.error = QStringLiteral("thumbnail timestamp is too large");
+        avcodec_free_context(&decoder);
+        avformat_close_input(&format);
+        return result;
+    }
+    const auto timestamp = streamStart + relativeTimestamp;
     error = av_seek_frame(format, streamIndex, timestamp, AVSEEK_FLAG_BACKWARD);
     if (error < 0) {
         result.error = ffmpegError(error);
@@ -160,9 +170,11 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
     double candidateTimestamp = 0.0;
     QImage candidateImage;
     const auto considerFrame = [&] {
-        const auto frameTimestamp = frame->best_effort_timestamp == AV_NOPTS_VALUE
-                                        ? request.seconds
-                                        : frame->best_effort_timestamp * av_q2d(stream->time_base);
+        const auto timeBaseSeconds = av_q2d(stream->time_base);
+        const auto frameTimestamp =
+            frame->best_effort_timestamp == AV_NOPTS_VALUE
+                ? request.seconds
+                : (frame->best_effort_timestamp * timeBaseSeconds - streamStart * timeBaseSeconds);
         const bool isCloser = !decoded || std::abs(frameTimestamp - request.seconds) <
                                               std::abs(candidateTimestamp - request.seconds);
         if (isCloser) {

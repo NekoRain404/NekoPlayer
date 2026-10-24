@@ -11,6 +11,7 @@
 #include <QSlider>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QWheelEvent>
 #include <QtTest>
 
 class TransportBarTest final : public QObject {
@@ -100,6 +101,45 @@ class TransportBarTest final : public QObject {
         QTRY_VERIFY(hoverSpy.count() > 0);
         QVERIFY(qAbs(hoverSpy.at(0).at(0).toDouble() - 50.0) < 1.0);
         QVERIFY(!hoverSpy.at(0).at(1).value<QPoint>().isNull());
+    }
+
+    void timelineWheelReportsDirectionWithoutMovingTheSlider() {
+        QAction open(QStringLiteral("打开文件"));
+        QAction previous(QStringLiteral("上一个"));
+        QAction pause(QStringLiteral("播放"));
+        QAction next(QStringLiteral("下一个"));
+        QAction stop(QStringLiteral("停止"));
+        QAction mute(QStringLiteral("静音"));
+        QAction fullscreen(QStringLiteral("全屏"));
+        QWidget host;
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
+        PlaybackState state;
+        state.active = true;
+        state.seekable = true;
+        state.position = 50;
+        state.duration = 100;
+        transport.present(state);
+
+        auto *timeline = transport.findChild<QSlider *>(QStringLiteral("timelineSlider"));
+        QVERIFY(timeline);
+        QSignalSpy seekSpy(&transport, &TransportBar::wheelSeekRequested);
+        const auto sendWheel = [timeline](int deltaY) {
+            const QPointF localPoint(timeline->width() / 2.0, timeline->height() / 2.0);
+            QWheelEvent wheel(localPoint, timeline->mapToGlobal(localPoint), QPoint(),
+                              QPoint(0, deltaY), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
+                              false);
+            QCoreApplication::sendEvent(timeline, &wheel);
+        };
+
+        const int before = timeline->value();
+        sendWheel(120);
+        sendWheel(-120);
+        sendWheel(30);
+        QCOMPARE(seekSpy.count(), 3);
+        QCOMPARE(seekSpy.at(0).at(0).toInt(), 1);
+        QCOMPARE(seekSpy.at(1).at(0).toInt(), -1);
+        QCOMPARE(seekSpy.at(2).at(0).toInt(), 1);
+        QCOMPARE(timeline->value(), before);
     }
 
     void metricsFitNarrowFullscreenWidths() {

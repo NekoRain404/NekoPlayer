@@ -1,4 +1,5 @@
 #include "transportbar.h"
+#include "interactionpolicy.h"
 #include "playback/mpvcontroller.h"
 #include "seekslidergeometry.h"
 #include "transportbarmetrics.h"
@@ -19,6 +20,7 @@
 #include <QToolButton>
 #include <QToolTip>
 #include <QVBoxLayout>
+#include <QWheelEvent>
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -32,6 +34,7 @@ class SeekSlider final : public QSlider {
     std::function<void(int)> onDirectSeek;
     std::function<void(int, QPoint)> onHover;
     std::function<void()> onHoverEnd;
+    std::function<void(int)> onWheel;
 
   protected:
     void mousePressEvent(QMouseEvent *event) override {
@@ -91,6 +94,14 @@ class SeekSlider final : public QSlider {
         if (onHoverEnd)
             onHoverEnd();
         QSlider::leaveEvent(event);
+    }
+
+    void wheelEvent(QWheelEvent *event) override {
+        // Never fall through to QSlider's hidden single-step seek; the window
+        // decides whether timeline wheel seeking is enabled.
+        event->accept();
+        if (onWheel)
+            onWheel(event->angleDelta().y());
     }
 
   public:
@@ -241,6 +252,11 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
         emit timelineHovered(duration_ * value / 10000.0, globalPosition);
     };
     static_cast<SeekSlider *>(timeline_)->onHoverEnd = [this] { emit timelineHoverEnded(); };
+    static_cast<SeekSlider *>(timeline_)->onWheel = [this](int deltaY) {
+        const int notches = wheelNotches(deltaY);
+        if (notches != 0)
+            emit wheelSeekRequested(notches > 0 ? 1 : -1);
+    };
     applyResponsiveMetrics();
 }
 

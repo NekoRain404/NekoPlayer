@@ -28,6 +28,7 @@ class TransportBar final : public QWidget {
   signals:
     void seekRequested(double seconds);
     void volumeRequested(double volume);
+    void wheelSeekRequested(int direction);
     void timelineHovered(double seconds, QPoint globalPosition);
     void timelineHoverEnded();
 

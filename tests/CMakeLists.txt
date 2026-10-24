@@ -46,6 +46,14 @@ qt_add_translations(appearance_preferences_test TS_FILES ../translations/NekoPla
 add_test(NAME appearance-preferences COMMAND appearance_preferences_test)
 set_tests_properties(appearance-preferences PROPERTIES TIMEOUT 20)
 
+add_executable(interaction_policy_test interaction_policy_test.cpp
+    ../src/ui/interactionpolicy.cpp)
+target_include_directories(interaction_policy_test PRIVATE ../src)
+target_link_libraries(interaction_policy_test PRIVATE Qt6::Core Qt6::Test)
+add_test(NAME interaction-policy COMMAND interaction_policy_test)
+set_tests_properties(interaction-policy PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(transport_bar_test transport_bar_test.cpp)
 target_link_libraries(transport_bar_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME transport-bar COMMAND transport_bar_test)

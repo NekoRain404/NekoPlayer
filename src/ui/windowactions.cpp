@@ -292,14 +292,13 @@ void MainWindow::createActions() {
              },
          .interaction =
              [this] {
-                 return session_ ? session_->interactionPreferences()
-                                 : interactionPreferencesDefault_;
+                 return session_ ? session_->interactionPreferences() : interactionPreferences_;
              },
          .setInteraction =
              [this](InteractionPreferences preferences) {
-                 interactionPreferencesDefault_ = preferences;
+                 applyInteractionPreferences(preferences);
                  if (session_)
-                     session_->setInteractionPreferences(preferences);
+                     session_->setInteractionPreferences(interactionPreferences_);
              }},
         this);
     const auto showPreferences = [this](PreferencesDialog::Category category) {

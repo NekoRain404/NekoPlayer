@@ -1,10 +1,12 @@
 #include "videowidget.h"
 #include "mpvcontroller.h"
 
+#include <QApplication>
 #include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QTimer>
+#include <QWheelEvent>
 #include <mpv/render_gl.h>
 
 namespace {
@@ -19,6 +21,8 @@ VideoWidget::VideoWidget(MpvController &controller, QWidget *parent)
     setMinimumSize(320, 180);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
+    singleClickTimer_.setSingleShot(true);
+    connect(&singleClickTimer_, &QTimer::timeout, this, &VideoWidget::singleClicked);
 }
 
 VideoWidget::~VideoWidget() {
@@ -129,11 +133,30 @@ void VideoWidget::cleanup() {
     disconnect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &VideoWidget::cleanup);
 }
 
+void VideoWidget::mousePressEvent(QMouseEvent *event) {
+    if (event->button() == Qt::LeftButton) {
+        // Wait for the double-click interval so a double click does not pause too.
+        singleClickTimer_.start(QApplication::doubleClickInterval());
+        event->accept();
+    } else if (event->button() == Qt::MiddleButton) {
+        emit middleClicked();
+        event->accept();
+    } else {
+        QOpenGLWidget::mousePressEvent(event);
+    }
+}
+
 void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event) {
+    singleClickTimer_.stop();
     if (event->button() == Qt::LeftButton) {
         emit doubleClicked();
         event->accept();
     } else {
         QOpenGLWidget::mouseDoubleClickEvent(event);
     }
+}
+
+void VideoWidget::wheelEvent(QWheelEvent *event) {
+    emit wheelScrolled(event->angleDelta().y());
+    event->accept();
 }

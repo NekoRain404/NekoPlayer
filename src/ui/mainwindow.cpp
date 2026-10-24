@@ -6,6 +6,7 @@
 #include "fullscreencontrols.h"
 #include "input/localfiledrop.h"
 #include "input/mediafiletypes.h"
+#include "interactionpolicy.h"
 #include "networkopendialog.h"
 #include "playback/mediasource.h"
 #include "playback/mpvcontroller.h"
@@ -72,8 +73,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(folderMenu_, &FolderMenu::mediaLibraryPreferencesChanged, this,
             [this](bool scanningEnabled, bool recursiveByDefault) {
                 if (session_)
-                    session_->setMediaLibraryPreferences(
-                        {scanningEnabled, recursiveByDefault});
+                    session_->setMediaLibraryPreferences({scanningEnabled, recursiveByDefault});
             });
     connect(fileDrop_, &LocalFileDrop::foldersDropped, this, [this](const QStringList &paths) {
         folderMenu_->start(paths, true, folderMenu_->recursiveEnabled());
@@ -161,7 +161,37 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     });
     connect(video_, &VideoWidget::contextResetting, controller_.get(),
             &MpvController::prepareForRendererReset);
-    connect(video_, &VideoWidget::doubleClicked, fullscreenAction_, &QAction::trigger);
+    connect(video_, &VideoWidget::singleClicked, this, [this] {
+        if (interactionPreferences_.singleClickPlayPause)
+            pauseAction_->trigger();
+    });
+    connect(video_, &VideoWidget::doubleClicked, this, [this] {
+        if (interactionPreferences_.doubleClickFullscreen)
+            fullscreenAction_->trigger();
+    });
+    connect(video_, &VideoWidget::middleClicked, this, [this] {
+        switch (interactionPreferences_.middleClick) {
+        case MiddleClickAction::None:
+            break;
+        case MiddleClickAction::PlayPause:
+            pauseAction_->trigger();
+            break;
+        case MiddleClickAction::Mute:
+            muteAction_->trigger();
+            break;
+        case MiddleClickAction::Fullscreen:
+            fullscreenAction_->trigger();
+            break;
+        }
+    });
+    connect(video_, &VideoWidget::wheelScrolled, this, [this](int deltaY) {
+        if (!interactionPreferences_.wheelAdjustsVolume)
+            return;
+        const auto volume = volumeAfterWheel(controller_->state().volume, deltaY,
+                                             interactionPreferences_.wheelVolumeStep);
+        controller_->setVolume(volume);
+        showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
     connect(video_, &VideoWidget::ready, this, [this] {
         const auto pendingPlaylistIndex =
             std::exchange(pendingPlaylistIndex_, QPersistentModelIndex{});
@@ -181,6 +211,13 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(transport_, &TransportBar::volumeRequested, this, [this](double volume) {
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
+    connect(transport_, &TransportBar::wheelSeekRequested, this, [this](int direction) {
+        if (!interactionPreferences_.wheelSeeksTimeline)
+            return;
+        const auto seconds = session_ ? session_->seekStepSeconds() : seekStepSecondsDefault_;
+        controller_->seekRelative(direction * seconds);
+        showSeekFeedback(ActionFeedbackText::seek(direction * seconds));
     });
     connect(transport_, &TransportBar::timelineHovered, this, &MainWindow::requestThumbnailPreview);
     connect(transport_, &TransportBar::timelineHoverEnded, this, &MainWindow::hideThumbnailPreview);
@@ -576,12 +613,19 @@ void MainWindow::revealControls() {
     controlsTimer_.start();
 }
 
+void MainWindow::applyInteractionPreferences(const InteractionPreferences &preferences) {
+    interactionPreferences_ = preferences;
+    interactionPreferences_.wheelVolumeStep =
+        std::clamp(interactionPreferences_.wheelVolumeStep, 1, 20);
+}
+
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
     if (watched == video_ && event->type() == QEvent::Resize) {
         feedbackOverlay_->setGeometry(video_->rect());
         playbackOverlay_->setGeometry(video_->rect());
     }
-    if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress)
+    if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress ||
+        event->type() == QEvent::Wheel)
         revealControls();
     return QMainWindow::eventFilter(watched, event);
 }

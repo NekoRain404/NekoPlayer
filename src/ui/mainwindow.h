@@ -76,6 +76,7 @@ class MainWindow final : public QMainWindow {
     void setFullscreen(bool enabled);
     void setMiniPlayer(bool enabled);
     void revealControls();
+    void applyInteractionPreferences(const InteractionPreferences &preferences);
     void restoreSession(const QString &path);
     QString saveSession();
     void requestThumbnailPreview(double seconds, QPoint globalPosition);
@@ -132,5 +133,5 @@ class MainWindow final : public QMainWindow {
     // Session-only fallbacks used when --no-config leaves session_ null.
     bool resumePlaybackPositionDefault_ = true;
     int seekStepSecondsDefault_ = 5;
-    InteractionPreferences interactionPreferencesDefault_;
+    InteractionPreferences interactionPreferences_;
 };

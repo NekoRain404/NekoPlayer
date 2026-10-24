@@ -19,6 +19,7 @@ struct PreferencesState {
     MediaLibraryPreferences mediaLibrary;
     bool resumePlaybackPosition = true;
     int seekStepSeconds = 5;
+    InteractionPreferences interaction;
 };
 
 std::unique_ptr<PreferencesCoordinator> coordinatorFor(MpvController &player,
@@ -38,7 +39,10 @@ std::unique_ptr<PreferencesCoordinator> coordinatorFor(MpvController &player,
             .setResumePlaybackPosition =
                 [&state](bool enabled) { state.resumePlaybackPosition = enabled; },
             .seekStepSeconds = [&state] { return state.seekStepSeconds; },
-            .setSeekStepSeconds = [&state](int seconds) { state.seekStepSeconds = seconds; }},
+            .setSeekStepSeconds = [&state](int seconds) { state.seekStepSeconds = seconds; },
+            .interaction = [&state] { return state.interaction; },
+            .setInteraction =
+                [&state](InteractionPreferences preferences) { state.interaction = preferences; }},
         nullptr);
 }
 } // namespace
@@ -54,6 +58,10 @@ class PreferencesCoordinatorTest final : public QObject {
         state.mediaLibrary = {false, true};
         state.resumePlaybackPosition = false;
         state.seekStepSeconds = 10;
+        state.interaction.singleClickPlayPause = false;
+        state.interaction.middleClick = MiddleClickAction::Fullscreen;
+        state.interaction.wheelVolumeStep = 8;
+        state.interaction.playlistSingleClick = true;
         auto coordinator = coordinatorFor(player, state);
         auto dialog = coordinator->createDialog(nullptr, PreferencesDialog::Category::MediaLibrary);
         QVERIFY(dialog);
@@ -68,8 +76,17 @@ class PreferencesCoordinatorTest final : public QObject {
         auto *resume =
             dialog->findChild<QCheckBox *>(QStringLiteral("resumePlaybackPositionChoice"));
         auto *seek = dialog->findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+        auto *single =
+            dialog->findChild<QCheckBox *>(QStringLiteral("interactionSingleClickChoice"));
+        auto *middle =
+            dialog->findChild<QComboBox *>(QStringLiteral("interactionMiddleClickChoice"));
+        auto *wheelStep =
+            dialog->findChild<QComboBox *>(QStringLiteral("interactionWheelStepChoice"));
+        auto *playlist =
+            dialog->findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
         auto *tabs = dialog->findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
-        QVERIFY(theme && accent && glass && scanning && recursive && resume && seek && tabs);
+        QVERIFY(theme && accent && glass && scanning && recursive && resume && seek && single &&
+                middle && wheelStep && playlist && tabs);
 
         QCOMPARE(theme->currentData().toInt(), static_cast<int>(Appearance::Theme::Light));
         QCOMPARE(accent->currentData().toInt(), static_cast<int>(Appearance::Accent::Amber));
@@ -78,6 +95,10 @@ class PreferencesCoordinatorTest final : public QObject {
         QVERIFY(recursive->isChecked());
         QVERIFY(!resume->isChecked());
         QCOMPARE(seek->currentData().toInt(), 10);
+        QVERIFY(!single->isChecked());
+        QCOMPARE(middle->currentData().toInt(), static_cast<int>(MiddleClickAction::Fullscreen));
+        QCOMPARE(wheelStep->currentData().toInt(), 8);
+        QVERIFY(playlist->isChecked());
         QCOMPARE(tabs->currentIndex(), static_cast<int>(PreferencesDialog::Category::MediaLibrary));
     }
 
@@ -102,9 +123,22 @@ class PreferencesCoordinatorTest final : public QObject {
             auto *resume =
                 dialog->findChild<QCheckBox *>(QStringLiteral("resumePlaybackPositionChoice"));
             auto *seek = dialog->findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+            auto *single =
+                dialog->findChild<QCheckBox *>(QStringLiteral("interactionSingleClickChoice"));
+            auto *middle =
+                dialog->findChild<QComboBox *>(QStringLiteral("interactionMiddleClickChoice"));
+            auto *wheelVolume =
+                dialog->findChild<QCheckBox *>(QStringLiteral("interactionWheelVolumeChoice"));
+            auto *wheelStep =
+                dialog->findChild<QComboBox *>(QStringLiteral("interactionWheelStepChoice"));
+            auto *wheelSeek =
+                dialog->findChild<QCheckBox *>(QStringLiteral("interactionWheelSeekChoice"));
+            auto *playlist =
+                dialog->findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
             auto *buttons =
                 dialog->findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
-            QVERIFY(theme && accent && glass && scanning && recursive && resume && seek && buttons);
+            QVERIFY(theme && accent && glass && scanning && recursive && resume && seek && single &&
+                    middle && wheelVolume && wheelStep && wheelSeek && playlist && buttons);
 
             theme->setCurrentIndex(theme->findData(static_cast<int>(Appearance::Theme::Light)));
             accent->setCurrentIndex(accent->findData(static_cast<int>(Appearance::Accent::Amber)));
@@ -113,6 +147,12 @@ class PreferencesCoordinatorTest final : public QObject {
             recursive->setChecked(true);
             resume->setChecked(false);
             seek->setCurrentIndex(seek->findData(10));
+            single->setChecked(false);
+            middle->setCurrentIndex(middle->findData(static_cast<int>(MiddleClickAction::Mute)));
+            wheelVolume->setChecked(false);
+            wheelStep->setCurrentIndex(wheelStep->findData(13));
+            wheelSeek->setChecked(false);
+            playlist->setChecked(true);
             buttons->button(QDialogButtonBox::Apply)->click();
 
             QCOMPARE(state.appearance.theme, Appearance::Theme::Light);
@@ -122,6 +162,12 @@ class PreferencesCoordinatorTest final : public QObject {
             QVERIFY(state.mediaLibrary.recursiveByDefault);
             QVERIFY(!state.resumePlaybackPosition);
             QCOMPARE(state.seekStepSeconds, 10);
+            QVERIFY(!state.interaction.singleClickPlayPause);
+            QCOMPARE(state.interaction.middleClick, MiddleClickAction::Mute);
+            QVERIFY(!state.interaction.wheelAdjustsVolume);
+            QCOMPARE(state.interaction.wheelVolumeStep, 13);
+            QVERIFY(!state.interaction.wheelSeeksTimeline);
+            QVERIFY(state.interaction.playlistSingleClick);
         }
         qApp->setPalette(originalPalette);
         qApp->setStyleSheet(originalStyle);

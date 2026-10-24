@@ -16,9 +16,12 @@ PreferencesCoordinator::createDialog(QWidget *parent, PreferencesDialog::Categor
     const int seekStepSeconds = handlers_.seekStepSeconds ? handlers_.seekStepSeconds() : 5;
     const AppearancePreferences::Settings appearance =
         handlers_.appearance ? handlers_.appearance() : AppearancePreferences::Settings{};
+    const InteractionPreferences interaction =
+        handlers_.interaction ? handlers_.interaction() : InteractionPreferences{};
 
-    auto dialog = std::make_unique<PreferencesDialog>(
-        player_, parent, mediaLibrary, resumePlaybackPosition, seekStepSeconds, appearance);
+    auto dialog =
+        std::make_unique<PreferencesDialog>(player_, parent, mediaLibrary, resumePlaybackPosition,
+                                            seekStepSeconds, appearance, interaction);
 
     connect(dialog.get(), &PreferencesDialog::appearancePreferencesChanged, dialog.get(),
             [handler = handlers_.setAppearance](AppearancePreferences::Settings settings) {
@@ -39,6 +42,11 @@ PreferencesCoordinator::createDialog(QWidget *parent, PreferencesDialog::Categor
             [handler = handlers_.setSeekStepSeconds](int seconds) {
                 if (handler)
                     handler(seconds);
+            });
+    connect(dialog.get(), &PreferencesDialog::interactionPreferencesChanged, dialog.get(),
+            [handler = handlers_.setInteraction](InteractionPreferences preferences) {
+                if (handler)
+                    handler(preferences);
             });
 
     dialog->selectCategory(category);

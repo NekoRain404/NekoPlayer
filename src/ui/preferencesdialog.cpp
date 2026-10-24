@@ -15,11 +15,13 @@
 #include <QStyle>
 #include <QTabWidget>
 #include <QVBoxLayout>
+#include <algorithm>
 
 PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
                                      MediaLibraryPreferences initialMediaLibrary,
                                      bool resumePlaybackPosition, int seekStepSeconds,
-                                     AppearancePreferences::Settings appearance)
+                                     AppearancePreferences::Settings appearance,
+                                     InteractionPreferences interaction)
     : QDialog(parent), appearanceBaseline_(appearance), appearancePalette_(qApp->palette()),
       appearanceStyleSheet_(qApp->styleSheet()), player_(player), tabs_(new QTabWidget(this)),
       hardwareDecoding_(new QComboBox(this)), actualDecoder_(new QLabel(this)),
@@ -125,6 +127,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     mediaLibraryForm->addRow(scanHelp);
     tabs_->addTab(mediaLibraryPage, style()->standardIcon(QStyle::SP_DirOpenIcon), tr("媒体库"));
     createAppearancePage();
+    createInteractionPage(interaction);
 
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(tabs_);
@@ -139,7 +142,8 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     layout->addWidget(buttons);
     connect(tabs_, &QTabWidget::currentChanged, this, [this](int index) {
         restoreDefaultsButton_->setVisible(index == static_cast<int>(Category::Subtitles) ||
-                                           index == static_cast<int>(Category::Appearance));
+                                           index == static_cast<int>(Category::Appearance) ||
+                                           index == static_cast<int>(Category::Interaction));
     });
 
     refreshAudioDevices();
@@ -166,6 +170,20 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     connect(mediaScanningEnabled_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
     connect(recursiveFolderScan_, &QCheckBox::toggled, this, &PreferencesDialog::updateApplyButton);
+    connect(interactionSingleClick_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionDoubleClick_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionMiddleClick_, &QComboBox::currentIndexChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionWheelVolume_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionWheelStep_, &QComboBox::currentIndexChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionWheelSeek_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionPlaylistClick_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::hardwareDecodingPreferenceChanged, this,
             &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::subtitlePreferencesChanged, this,
@@ -189,6 +207,10 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             appearanceTheme_->setCurrentIndex(0);
             appearanceAccent_->setCurrentIndex(0);
             appearanceGlass_->setChecked(true);
+            return;
+        }
+        if (tabs_->currentIndex() == static_cast<int>(Category::Interaction)) {
+            displayInteractionPreferences(InteractionPreferences{});
             return;
         }
         subtitleVisible_->setChecked(true);
@@ -241,6 +263,10 @@ void PreferencesDialog::apply() {
         emit mediaLibraryPreferencesChanged(mediaLibraryDraft.scanningEnabled,
                                             mediaLibraryDraft.recursiveByDefault);
     }
+    if (interactionChanged()) {
+        interactionPreferences_ = interactionDraft();
+        emit interactionPreferencesChanged(interactionPreferences_);
+    }
     displaySubtitlePreferences();
     updateApplyButton();
 }
@@ -257,7 +283,7 @@ void PreferencesDialog::updateApplyButton() {
         decodingChanged || draft.normalized() != player_.subtitlePreferences() ||
         resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_ ||
         seekStepSeconds_->currentData().toInt() != seekStepSecondsDefault_;
-    applyButton_->setEnabled(appearanceChanged() || mediaLibraryChanged ||
+    applyButton_->setEnabled(appearanceChanged() || mediaLibraryChanged || interactionChanged() ||
                              (player_.isReady() && playbackChange));
 }
 
@@ -353,4 +379,89 @@ void PreferencesDialog::displaySubtitlePreferences() {
     subtitleScale_->setValue(preferences.scale);
     subtitlePosition_->setValue(preferences.position);
     subtitleFont_->setEditText(preferences.font);
+}
+
+void PreferencesDialog::createInteractionPage(InteractionPreferences interaction) {
+    auto *page = new QWidget(tabs_);
+    auto *form = new QFormLayout(page);
+    interactionSingleClick_ = new QCheckBox(tr("单击视频时播放或暂停"), page);
+    interactionSingleClick_->setObjectName(QStringLiteral("interactionSingleClickChoice"));
+    interactionSingleClick_->setAccessibleName(tr("单击视频时播放或暂停"));
+    interactionDoubleClick_ = new QCheckBox(tr("双击视频时切换全屏"), page);
+    interactionDoubleClick_->setObjectName(QStringLiteral("interactionDoubleClickChoice"));
+    interactionDoubleClick_->setAccessibleName(tr("双击视频时切换全屏"));
+    interactionMiddleClick_ = new QComboBox(page);
+    interactionMiddleClick_->setObjectName(QStringLiteral("interactionMiddleClickChoice"));
+    interactionMiddleClick_->setAccessibleName(tr("中键单击操作"));
+    interactionMiddleClick_->addItem(tr("无操作"), static_cast<int>(MiddleClickAction::None));
+    interactionMiddleClick_->addItem(tr("播放/暂停"),
+                                     static_cast<int>(MiddleClickAction::PlayPause));
+    interactionMiddleClick_->addItem(tr("静音"), static_cast<int>(MiddleClickAction::Mute));
+    interactionMiddleClick_->addItem(tr("全屏"), static_cast<int>(MiddleClickAction::Fullscreen));
+    interactionWheelVolume_ = new QCheckBox(tr("滚轮调节音量"), page);
+    interactionWheelVolume_->setObjectName(QStringLiteral("interactionWheelVolumeChoice"));
+    interactionWheelVolume_->setAccessibleName(tr("滚轮调节音量"));
+    interactionWheelStep_ = new QComboBox(page);
+    interactionWheelStep_->setObjectName(QStringLiteral("interactionWheelStepChoice"));
+    interactionWheelStep_->setAccessibleName(tr("滚轮音量步长"));
+    for (int step = 1; step <= 20; ++step)
+        interactionWheelStep_->addItem(tr("%1%").arg(step), step);
+    interactionWheelSeek_ = new QCheckBox(tr("时间轴滚轮跳转"), page);
+    interactionWheelSeek_->setObjectName(QStringLiteral("interactionWheelSeekChoice"));
+    interactionWheelSeek_->setAccessibleName(tr("时间轴滚轮跳转"));
+    interactionPlaylistClick_ = new QCheckBox(tr("播放列表单击播放"), page);
+    interactionPlaylistClick_->setObjectName(QStringLiteral("interactionPlaylistClickChoice"));
+    interactionPlaylistClick_->setAccessibleName(tr("播放列表单击播放"));
+    form->addRow(interactionSingleClick_);
+    form->addRow(interactionDoubleClick_);
+    form->addRow(tr("中键单击："), interactionMiddleClick_);
+    form->addRow(interactionWheelVolume_);
+    form->addRow(tr("每次调节："), interactionWheelStep_);
+    form->addRow(interactionWheelSeek_);
+    form->addRow(interactionPlaylistClick_);
+    auto *help = new QLabel(tr("单击会等待双击间隔，避免双击时也触发播放/暂停；关闭对应选项后，"
+                               "该操作保持默认。"),
+                            page);
+    help->setWordWrap(true);
+    form->addRow(help);
+    tabs_->addTab(page, style()->standardIcon(QStyle::SP_FileDialogListView), tr("交互"));
+    interactionPreferences_ = interaction;
+    interactionPreferences_.wheelVolumeStep =
+        std::clamp(interactionPreferences_.wheelVolumeStep, 1, 20);
+    displayInteractionPreferences(interactionPreferences_);
+}
+
+void PreferencesDialog::displayInteractionPreferences(const InteractionPreferences &preferences) {
+    interactionSingleClick_->setChecked(preferences.singleClickPlayPause);
+    interactionDoubleClick_->setChecked(preferences.doubleClickFullscreen);
+    const auto middleIndex =
+        interactionMiddleClick_->findData(static_cast<int>(preferences.middleClick));
+    interactionMiddleClick_->setCurrentIndex(middleIndex >= 0 ? middleIndex : 0);
+    interactionWheelVolume_->setChecked(preferences.wheelAdjustsVolume);
+    const auto stepIndex = interactionWheelStep_->findData(preferences.wheelVolumeStep);
+    interactionWheelStep_->setCurrentIndex(stepIndex >= 0 ? stepIndex : 4);
+    interactionWheelSeek_->setChecked(preferences.wheelSeeksTimeline);
+    interactionPlaylistClick_->setChecked(preferences.playlistSingleClick);
+}
+
+InteractionPreferences PreferencesDialog::interactionDraft() const {
+    return {interactionSingleClick_->isChecked(),
+            interactionDoubleClick_->isChecked(),
+            static_cast<MiddleClickAction>(interactionMiddleClick_->currentData().toInt()),
+            interactionWheelVolume_->isChecked(),
+            interactionWheelStep_->currentData().toInt(),
+            interactionWheelSeek_->isChecked(),
+            interactionPlaylistClick_->isChecked()};
+}
+
+bool PreferencesDialog::interactionChanged() const {
+    const auto draft = interactionDraft();
+    const auto &saved = interactionPreferences_;
+    return draft.singleClickPlayPause != saved.singleClickPlayPause ||
+           draft.doubleClickFullscreen != saved.doubleClickFullscreen ||
+           draft.middleClick != saved.middleClick ||
+           draft.wheelAdjustsVolume != saved.wheelAdjustsVolume ||
+           draft.wheelVolumeStep != saved.wheelVolumeStep ||
+           draft.wheelSeeksTimeline != saved.wheelSeeksTimeline ||
+           draft.playlistSingleClick != saved.playlistSingleClick;
 }

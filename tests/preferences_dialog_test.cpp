@@ -16,6 +16,7 @@
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QtTest>
+#include <optional>
 
 class PreferencesDialogTest final : public QObject {
     Q_OBJECT
@@ -127,16 +128,18 @@ class PreferencesDialogTest final : public QObject {
         PreferencesDialog dialog(player);
         auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
         QVERIFY(tabs);
-        QCOMPARE(tabs->count(), 5);
+        QCOMPARE(tabs->count(), 6);
         QCOMPARE(tabs->tabText(0), QStringLiteral("播放"));
         QCOMPARE(tabs->tabText(1), QStringLiteral("音频"));
         QCOMPARE(tabs->tabText(2), QStringLiteral("字幕"));
         QCOMPARE(tabs->tabText(3), QStringLiteral("媒体库"));
         QCOMPARE(tabs->tabText(4), QStringLiteral("外观"));
+        QCOMPARE(tabs->tabText(5), QStringLiteral("交互"));
         QVERIFY(!tabs->tabIcon(0).isNull());
         QVERIFY(!tabs->tabIcon(1).isNull());
         QVERIFY(!tabs->tabIcon(2).isNull());
         QVERIFY(!tabs->tabIcon(3).isNull());
+        QVERIFY(!tabs->tabIcon(5).isNull());
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice")));
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("audioOutputDeviceChoice")));
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("subtitleFontChoice")));
@@ -214,6 +217,156 @@ class PreferencesDialogTest final : public QObject {
         buttons->button(QDialogButtonBox::Apply)->click();
         QCOMPARE(changed.count(), 1);
         QCOMPARE(changed.constFirst().constFirst().toInt(), 10);
+    }
+
+    void interactionCategoryExposesCurrentValues() {
+        MpvController player(true, true);
+        InteractionPreferences interaction;
+        interaction.singleClickPlayPause = false;
+        interaction.doubleClickFullscreen = false;
+        interaction.middleClick = MiddleClickAction::Mute;
+        interaction.wheelAdjustsVolume = false;
+        interaction.wheelVolumeStep = 12;
+        interaction.wheelSeeksTimeline = false;
+        interaction.playlistSingleClick = true;
+        PreferencesDialog dialog(player, nullptr, {}, true, 5, {}, interaction);
+        auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
+        auto *single =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionSingleClickChoice"));
+        auto *doubleClick =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionDoubleClickChoice"));
+        auto *middle =
+            dialog.findChild<QComboBox *>(QStringLiteral("interactionMiddleClickChoice"));
+        auto *wheelVolume =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelVolumeChoice"));
+        auto *wheelStep =
+            dialog.findChild<QComboBox *>(QStringLiteral("interactionWheelStepChoice"));
+        auto *wheelSeek =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelSeekChoice"));
+        auto *playlist =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
+        QVERIFY(tabs && single && doubleClick && middle && wheelVolume && wheelStep && wheelSeek &&
+                playlist);
+        QCOMPARE(tabs->count(), 6);
+        QCOMPARE(tabs->tabText(5), QStringLiteral("交互"));
+        QVERIFY(!single->isChecked());
+        QVERIFY(!doubleClick->isChecked());
+        QCOMPARE(middle->count(), 4);
+        QCOMPARE(middle->currentData().toInt(), static_cast<int>(MiddleClickAction::Mute));
+        QVERIFY(!wheelVolume->isChecked());
+        QCOMPARE(wheelStep->currentData().toInt(), 12);
+        QVERIFY(!wheelSeek->isChecked());
+        QVERIFY(playlist->isChecked());
+        QCOMPARE(single->accessibleName(), QStringLiteral("单击视频时播放或暂停"));
+        QCOMPARE(middle->accessibleName(), QStringLiteral("中键单击操作"));
+        QCOMPARE(wheelStep->accessibleName(), QStringLiteral("滚轮音量步长"));
+    }
+
+    void appliesInteractionPreferencesOnceWhenChanged() {
+        MpvController player(true, true);
+        PreferencesDialog dialog(player);
+        auto *single =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionSingleClickChoice"));
+        auto *doubleClick =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionDoubleClickChoice"));
+        auto *middle =
+            dialog.findChild<QComboBox *>(QStringLiteral("interactionMiddleClickChoice"));
+        auto *wheelVolume =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelVolumeChoice"));
+        auto *wheelStep =
+            dialog.findChild<QComboBox *>(QStringLiteral("interactionWheelStepChoice"));
+        auto *wheelSeek =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelSeekChoice"));
+        auto *playlist =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(single && doubleClick && middle && wheelVolume && wheelStep && wheelSeek &&
+                playlist && buttons);
+        std::optional<InteractionPreferences> applied;
+        int emissions = 0;
+        connect(&dialog, &PreferencesDialog::interactionPreferencesChanged, &dialog,
+                [&applied, &emissions](InteractionPreferences preferences) {
+                    applied = preferences;
+                    ++emissions;
+                });
+
+        single->setChecked(false);
+        doubleClick->setChecked(false);
+        middle->setCurrentIndex(middle->findData(static_cast<int>(MiddleClickAction::Fullscreen)));
+        wheelVolume->setChecked(false);
+        wheelStep->setCurrentIndex(wheelStep->findData(9));
+        wheelSeek->setChecked(false);
+        playlist->setChecked(true);
+        QCOMPARE(emissions, 0);
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(emissions, 1);
+        QVERIFY(applied.has_value());
+        QVERIFY(!applied->singleClickPlayPause);
+        QVERIFY(!applied->doubleClickFullscreen);
+        QCOMPARE(applied->middleClick, MiddleClickAction::Fullscreen);
+        QVERIFY(!applied->wheelAdjustsVolume);
+        QCOMPARE(applied->wheelVolumeStep, 9);
+        QVERIFY(!applied->wheelSeeksTimeline);
+        QVERIFY(applied->playlistSingleClick);
+
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(emissions, 1);
+    }
+
+    void interactionRestoreDefaultsResetsThisPage() {
+        MpvController player(true, true);
+        InteractionPreferences interaction;
+        interaction.singleClickPlayPause = false;
+        interaction.doubleClickFullscreen = false;
+        interaction.middleClick = MiddleClickAction::Fullscreen;
+        interaction.wheelAdjustsVolume = false;
+        interaction.wheelVolumeStep = 17;
+        interaction.wheelSeeksTimeline = false;
+        interaction.playlistSingleClick = true;
+        PreferencesDialog dialog(player, nullptr, {}, true, 5, {}, interaction);
+        auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
+        auto *single =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionSingleClickChoice"));
+        auto *doubleClick =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionDoubleClickChoice"));
+        auto *middle =
+            dialog.findChild<QComboBox *>(QStringLiteral("interactionMiddleClickChoice"));
+        auto *wheelVolume =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelVolumeChoice"));
+        auto *wheelStep =
+            dialog.findChild<QComboBox *>(QStringLiteral("interactionWheelStepChoice"));
+        auto *wheelSeek =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelSeekChoice"));
+        auto *playlist =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(tabs && single && doubleClick && middle && wheelVolume && wheelStep && wheelSeek &&
+                playlist && buttons);
+        dialog.selectCategory(PreferencesDialog::Category::Interaction);
+        QCOMPARE(tabs->currentIndex(), 5);
+        auto *restore = buttons->button(QDialogButtonBox::RestoreDefaults);
+        QVERIFY(!restore->isHidden());
+        restore->click();
+        QVERIFY(single->isChecked());
+        QVERIFY(doubleClick->isChecked());
+        QCOMPARE(middle->currentData().toInt(), static_cast<int>(MiddleClickAction::None));
+        QVERIFY(wheelVolume->isChecked());
+        QCOMPARE(wheelStep->currentData().toInt(), 5);
+        QVERIFY(wheelSeek->isChecked());
+        QVERIFY(!playlist->isChecked());
+
+        std::optional<InteractionPreferences> applied;
+        connect(&dialog, &PreferencesDialog::interactionPreferencesChanged, &dialog,
+                [&applied](InteractionPreferences preferences) { applied = preferences; });
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QVERIFY(applied.has_value());
+        QVERIFY(applied->singleClickPlayPause);
+        QVERIFY(applied->doubleClickFullscreen);
+        QCOMPARE(applied->middleClick, MiddleClickAction::None);
+        QVERIFY(applied->wheelAdjustsVolume);
+        QCOMPARE(applied->wheelVolumeStep, 5);
+        QVERIFY(applied->wheelSeeksTimeline);
+        QVERIFY(!applied->playlistSingleClick);
     }
 
     void namesEveryPreferenceControlForAssistiveTechnology() {

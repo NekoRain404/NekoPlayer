@@ -23,6 +23,8 @@ class PreferencesCoordinator final : public QObject {
         std::function<void(bool)> setResumePlaybackPosition;
         std::function<int()> seekStepSeconds;
         std::function<void(int)> setSeekStepSeconds;
+        std::function<InteractionPreferences()> interaction;
+        std::function<void(InteractionPreferences)> setInteraction;
     };
 
     explicit PreferencesCoordinator(MpvController &player, Handlers handlers,

@@ -289,6 +289,17 @@ void MainWindow::createActions() {
                  if (session_)
                      session_->setSeekStepSeconds(seconds);
                  updateSeekActionLabels(seconds);
+             },
+         .interaction =
+             [this] {
+                 return session_ ? session_->interactionPreferences()
+                                 : interactionPreferencesDefault_;
+             },
+         .setInteraction =
+             [this](InteractionPreferences preferences) {
+                 interactionPreferencesDefault_ = preferences;
+                 if (session_)
+                     session_->setInteractionPreferences(preferences);
              }},
         this);
     const auto showPreferences = [this](PreferencesDialog::Category category) {
@@ -309,6 +320,10 @@ void MainWindow::createActions() {
     appearanceSettingsAction->setObjectName(QStringLiteral("appearanceSettingsAction"));
     connect(appearanceSettingsAction, &QAction::triggered, this,
             [showPreferences] { showPreferences(PreferencesDialog::Category::Appearance); });
+    auto *interactionSettings = settings->addAction(tr("交互设置…"));
+    interactionSettings->setObjectName(QStringLiteral("interactionSettingsAction"));
+    connect(interactionSettings, &QAction::triggered, this,
+            [showPreferences] { showPreferences(PreferencesDialog::Category::Interaction); });
     settings->addSeparator();
     auto *themeMenu = appearanceMenu->menu();
     themeMenu->setTitle(tr("主题"));
@@ -453,6 +468,7 @@ void MainWindow::changeEvent(QEvent *event) {
     setActionText("playbackSettingsAction", tr("播放设置…"));
     setActionText("mediaLibrarySettingsAction", tr("媒体库设置…"));
     setActionText("appearanceSettingsAction", tr("外观设置…"));
+    setActionText("interactionSettingsAction", tr("交互设置…"));
     setActionText("aboutAction", tr("关于 NekoPlayer…"));
     setActionText("themeDarkAction",
                   AppearancePreferences::themeName(AppearancePreferences::Theme::Dark));

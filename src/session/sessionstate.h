@@ -30,6 +30,18 @@ struct MediaLibraryPreferences {
     bool recursiveByDefault = false;
 };
 
+enum class MiddleClickAction { None, PlayPause, Mute, Fullscreen };
+
+struct InteractionPreferences {
+    bool singleClickPlayPause = true;
+    bool doubleClickFullscreen = true;
+    MiddleClickAction middleClick = MiddleClickAction::None;
+    bool wheelAdjustsVolume = true;
+    int wheelVolumeStep = 5; // 1..20
+    bool wheelSeeksTimeline = true;
+    bool playlistSingleClick = false;
+};
+
 struct SessionState {
     AudioPreferences audio;
     WindowPreferences window;
@@ -43,6 +55,7 @@ struct SessionState {
     MediaLibraryPreferences mediaLibrary;
     bool resumePlaybackPosition = true;
     int seekStepSeconds = 5;
+    InteractionPreferences interaction;
 };
 
 struct SessionLoadResult {

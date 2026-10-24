@@ -16,12 +16,13 @@ class QTabWidget;
 class PreferencesDialog final : public QDialog {
     Q_OBJECT
   public:
-    enum class Category { Playback, Audio, Subtitles, MediaLibrary, Appearance };
+    enum class Category { Playback, Audio, Subtitles, MediaLibrary, Appearance, Interaction };
 
     explicit PreferencesDialog(MpvController &player, QWidget *parent = nullptr,
                                MediaLibraryPreferences mediaLibrary = {},
                                bool resumePlaybackPosition = true, int seekStepSeconds = 5,
-                               AppearancePreferences::Settings appearance = {});
+                               AppearancePreferences::Settings appearance = {},
+                               InteractionPreferences interaction = {});
     void selectCategory(Category category);
 
   signals:
@@ -29,6 +30,7 @@ class PreferencesDialog final : public QDialog {
     void resumePlaybackPositionChanged(bool enabled);
     void seekStepSecondsChanged(int seconds);
     void appearancePreferencesChanged(AppearancePreferences::Settings appearance);
+    void interactionPreferencesChanged(InteractionPreferences preferences);
 
   private:
     void apply();
@@ -37,6 +39,10 @@ class PreferencesDialog final : public QDialog {
     void refreshAudioDevices();
     void displaySubtitlePreferences();
     void createAppearancePage();
+    void createInteractionPage(InteractionPreferences interaction);
+    void displayInteractionPreferences(const InteractionPreferences &preferences);
+    [[nodiscard]] InteractionPreferences interactionDraft() const;
+    [[nodiscard]] bool interactionChanged() const;
     void previewAppearance();
     AppearancePreferences::Settings appearanceDraft() const;
     bool appearanceChanged() const;
@@ -62,6 +68,14 @@ class PreferencesDialog final : public QDialog {
     MediaLibraryPreferences mediaLibraryPreferences_;
     bool resumePlaybackPositionDefault_ = true;
     int seekStepSecondsDefault_ = 5;
+    InteractionPreferences interactionPreferences_;
+    QCheckBox *interactionSingleClick_ = nullptr;
+    QCheckBox *interactionDoubleClick_ = nullptr;
+    QComboBox *interactionMiddleClick_ = nullptr;
+    QCheckBox *interactionWheelVolume_ = nullptr;
+    QComboBox *interactionWheelStep_ = nullptr;
+    QCheckBox *interactionWheelSeek_ = nullptr;
+    QCheckBox *interactionPlaylistClick_ = nullptr;
     QPushButton *applyButton_;
     QPushButton *restoreDefaultsButton_;
     QString lastDecoder_;

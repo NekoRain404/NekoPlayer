@@ -19,11 +19,28 @@
     <message><source>允许扫描文件夹中的媒体文件</source><translation>Allow scanning folders for media files</translation></message>
     <message><source>默认包含子文件夹</source><translation>Include subfolders by default</translation></message>
     <message><source>扫描仅在你打开、添加或拖入文件夹时进行，不会在启动时自动遍历目录。关闭后，文件夹扫描入口将停用；直接打开媒体文件仍可使用。</source><translation>Scanning runs only when you open, add, or drop a folder; directories are not scanned automatically at startup. When disabled, folder scanning is unavailable, while opening media files directly remains available.</translation></message>
+    <message><source>交互</source><translation>Interaction</translation></message>
+    <message><source>单击视频时播放或暂停</source><translation>Click video to play or pause</translation></message>
+    <message><source>双击视频时切换全屏</source><translation>Double-click video to toggle fullscreen</translation></message>
+    <message><source>中键单击操作</source><translation>Middle-click action</translation></message>
+    <message><source>无操作</source><translation>Do nothing</translation></message>
+    <message><source>播放/暂停</source><translation>Play/pause</translation></message>
+    <message><source>静音</source><translation>Mute</translation></message>
+    <message><source>全屏</source><translation>Fullscreen</translation></message>
+    <message><source>滚轮调节音量</source><translation>Adjust volume with the wheel</translation></message>
+    <message><source>滚轮音量步长</source><translation>Wheel volume step</translation></message>
+    <message><source>时间轴滚轮跳转</source><translation>Seek with the timeline wheel</translation></message>
+    <message><source>播放列表单击播放</source><translation>Play playlist item on single click</translation></message>
+    <message><source>中键单击：</source><translation>Middle click:</translation></message>
+    <message><source>每次调节：</source><translation>Step per notch:</translation></message>
+    <message><source>%1%</source><translation>%1%</translation></message>
+    <message><source>单击会等待双击间隔，避免双击时也触发播放/暂停；关闭对应选项后，该操作保持默认。</source><translation>Single clicks wait for the double-click interval so a double click does not also play or pause. Disabled actions keep their default behavior.</translation></message>
 </context>
 <context>
     <name>MainWindow</name>
     <message><source>外观设置…</source><translation>Appearance Settings…</translation></message>
     <message><source>媒体库设置…</source><translation>Media Library Settings…</translation></message>
+    <message><source>交互设置…</source><translation>Interaction Settings…</translation></message>
 </context>
 <context>
     <name>FolderMenu</name>

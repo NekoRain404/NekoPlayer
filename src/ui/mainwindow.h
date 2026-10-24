@@ -1,5 +1,6 @@
 #pragma once
 
+#include "session/sessionstate.h"
 #include <QMainWindow>
 #include <QPersistentModelIndex>
 #include <QPoint>
@@ -131,4 +132,5 @@ class MainWindow final : public QMainWindow {
     // Session-only fallbacks used when --no-config leaves session_ null.
     bool resumePlaybackPositionDefault_ = true;
     int seekStepSecondsDefault_ = 5;
+    InteractionPreferences interactionPreferencesDefault_;
 };

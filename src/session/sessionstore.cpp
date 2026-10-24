@@ -53,12 +53,37 @@ bool readBool(QSettings &settings, const QString &key, bool fallback = false) {
     return fallback;
 }
 
+MiddleClickAction readMiddleClickAction(QSettings &settings, const QString &key) {
+    const auto value = settings.value(key).toString();
+    if (value == QLatin1String("playPause"))
+        return MiddleClickAction::PlayPause;
+    if (value == QLatin1String("mute"))
+        return MiddleClickAction::Mute;
+    if (value == QLatin1String("fullscreen"))
+        return MiddleClickAction::Fullscreen;
+    return MiddleClickAction::None;
+}
+
+QString middleClickActionKey(MiddleClickAction action) {
+    switch (action) {
+    case MiddleClickAction::PlayPause:
+        return QStringLiteral("playPause");
+    case MiddleClickAction::Mute:
+        return QStringLiteral("mute");
+    case MiddleClickAction::Fullscreen:
+        return QStringLiteral("fullscreen");
+    case MiddleClickAction::None:
+        break;
+    }
+    return QStringLiteral("none");
+}
+
 SessionState normalized(SessionState state) {
     state.subtitles = state.subtitles.normalized();
     state.tuning = state.tuning.normalized();
     state.videoColor = state.videoColor.normalized();
-    if (state.seekStepSeconds != 5 && state.seekStepSeconds != 10 &&
-        state.seekStepSeconds != 30)
+    state.interaction.wheelVolumeStep = std::clamp(state.interaction.wheelVolumeStep, 1, 20);
+    if (state.seekStepSeconds != 5 && state.seekStepSeconds != 10 && state.seekStepSeconds != 30)
         state.seekStepSeconds = 5;
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
@@ -119,10 +144,25 @@ SessionLoadResult SessionStore::load() const {
         readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
     state.resumePlaybackPosition =
         readBool(settings, QStringLiteral("playback/resumePosition"), true);
-    const auto seekStep = settings.value(QStringLiteral("playback/seekStepSeconds"), 5).toInt(&valid);
-    state.seekStepSeconds = valid && (seekStep == 5 || seekStep == 10 || seekStep == 30)
-                                ? seekStep
-                                : 5;
+    const auto seekStep =
+        settings.value(QStringLiteral("playback/seekStepSeconds"), 5).toInt(&valid);
+    state.seekStepSeconds =
+        valid && (seekStep == 5 || seekStep == 10 || seekStep == 30) ? seekStep : 5;
+    state.interaction.singleClickPlayPause =
+        readBool(settings, QStringLiteral("interaction/singleClickPlayPause"), true);
+    state.interaction.doubleClickFullscreen =
+        readBool(settings, QStringLiteral("interaction/doubleClickFullscreen"), true);
+    state.interaction.middleClick =
+        readMiddleClickAction(settings, QStringLiteral("interaction/middleClick"));
+    state.interaction.wheelAdjustsVolume =
+        readBool(settings, QStringLiteral("interaction/wheelAdjustsVolume"), true);
+    const auto wheelStep =
+        settings.value(QStringLiteral("interaction/wheelVolumeStep"), 5).toInt(&valid);
+    state.interaction.wheelVolumeStep = valid ? wheelStep : 5;
+    state.interaction.wheelSeeksTimeline =
+        readBool(settings, QStringLiteral("interaction/wheelSeeksTimeline"), true);
+    state.interaction.playlistSingleClick =
+        readBool(settings, QStringLiteral("interaction/playlistSingleClick"));
     state.mediaLibrary.scanningEnabled =
         readBool(settings, QStringLiteral("library/scanningEnabled"), true);
     state.mediaLibrary.recursiveByDefault =
@@ -185,6 +225,20 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
     settings.setValue(QStringLiteral("playback/resumePosition"), saved.resumePlaybackPosition);
     settings.setValue(QStringLiteral("playback/seekStepSeconds"), saved.seekStepSeconds);
+    settings.setValue(QStringLiteral("interaction/singleClickPlayPause"),
+                      saved.interaction.singleClickPlayPause);
+    settings.setValue(QStringLiteral("interaction/doubleClickFullscreen"),
+                      saved.interaction.doubleClickFullscreen);
+    settings.setValue(QStringLiteral("interaction/middleClick"),
+                      middleClickActionKey(saved.interaction.middleClick));
+    settings.setValue(QStringLiteral("interaction/wheelAdjustsVolume"),
+                      saved.interaction.wheelAdjustsVolume);
+    settings.setValue(QStringLiteral("interaction/wheelVolumeStep"),
+                      saved.interaction.wheelVolumeStep);
+    settings.setValue(QStringLiteral("interaction/wheelSeeksTimeline"),
+                      saved.interaction.wheelSeeksTimeline);
+    settings.setValue(QStringLiteral("interaction/playlistSingleClick"),
+                      saved.interaction.playlistSingleClick);
     settings.setValue(QStringLiteral("library/scanningEnabled"),
                       saved.mediaLibrary.scanningEnabled);
     settings.setValue(QStringLiteral("library/recursiveByDefault"),

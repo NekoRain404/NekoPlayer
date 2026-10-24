@@ -109,6 +109,7 @@ SessionLoadResult SessionManager::restore() {
     mediaLibraryPreferences_ = loaded.state.mediaLibrary;
     resumePlaybackPositionEnabled_ = loaded.state.resumePlaybackPosition;
     seekStepSeconds_ = loaded.state.seekStepSeconds;
+    interaction_ = loaded.state.interaction;
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
                            resumePlaybackPositionEnabled_ ? loaded.state.resumePosition : 0);
     player_.setVolume(audio_.volume);
@@ -133,8 +134,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
         rememberPlaybackPosition(state.path, position, state.duration);
     }
     window.mediaDirectory = mediaDirectory_;
-    const auto position = !resumePlaybackPositionEnabled_
-                              ? 0.0
+    const auto position = !resumePlaybackPositionEnabled_ ? 0.0
                           : player_.state().path == playlist_.model()->currentPath()
                               ? player_.resumePosition()
                               : playlist_.pendingResumePosition();
@@ -151,6 +151,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.mediaLibrary = mediaLibraryPreferences_;
     saved.resumePlaybackPosition = resumePlaybackPositionEnabled_;
     saved.seekStepSeconds = seekStepSeconds_;
+    saved.interaction = interaction_;
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     if (!sessionError.isEmpty())
@@ -356,6 +357,13 @@ void SessionManager::setResumePlaybackPositionEnabled(bool enabled) {
 
 MediaLibraryPreferences SessionManager::mediaLibraryPreferences() const {
     return mediaLibraryPreferences_;
+}
+
+InteractionPreferences SessionManager::interactionPreferences() const { return interaction_; }
+
+void SessionManager::setInteractionPreferences(InteractionPreferences preferences) {
+    preferences.wheelVolumeStep = std::clamp(preferences.wheelVolumeStep, 1, 20);
+    interaction_ = preferences;
 }
 
 void SessionManager::setMediaLibraryPreferences(MediaLibraryPreferences preferences) {

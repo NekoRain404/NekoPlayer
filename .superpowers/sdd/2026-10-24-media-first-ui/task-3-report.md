@@ -12,4 +12,6 @@ Line counts: `appearanceicons.h` 31; `appearanceicons.cpp` 164; `windowactions.c
 
 Limitations: the explicit symbol list has no dedicated seek-direction or volume-direction variants. Seek-back/forward use the distinct `Previous`/`Next` arrows; volume-up/down use `Add`/`Remove`. Several source-era standard icons had no exact semantic counterpart and were mapped to the closest enumerated symbol.
 
+Review correction: first review found outline shapes were filled because the icon engine applied a solid brush globally. Added pixel-alpha assertions for media/network interiors and independent seek-direction symbols. The test failed on the filled interior before the fix. The renderer now defaults to `Qt::NoBrush`, filling only polygon glyphs. Routed seek actions to `SeekBackward`/`SeekForward`; rebuilt and reran the focused test set successfully.
+
 Commit: `6894923` (`feat(ui): unify main window iconography`).

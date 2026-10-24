@@ -248,10 +248,10 @@ Ctrl+U to open a network URL</translation></message>
     <message><source>NekoPlayer 0.1.0
 
 Qt runtime: %1
-libmpv client API: %2.%3</source><translation>NekoPlayer 0.1.0
+libmpv client API: %2</source><translation>NekoPlayer 0.1.0
 
 Qt runtime: %1
-libmpv client API: %2.%3</translation></message>
+libmpv client API: %2</translation></message>
     <message><source>关于 NekoPlayer</source><translation>About NekoPlayer</translation></message>
 </context>
 <context>

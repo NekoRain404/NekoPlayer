@@ -46,6 +46,12 @@ qt_add_translations(appearance_preferences_test TS_FILES ../translations/NekoPla
 add_test(NAME appearance-preferences COMMAND appearance_preferences_test)
 set_tests_properties(appearance-preferences PROPERTIES TIMEOUT 20)
 
+add_executable(window_title_test window_title_test.cpp ../src/ui/windowtitle.cpp)
+target_include_directories(window_title_test PRIVATE ../src)
+target_link_libraries(window_title_test PRIVATE neko_playback Qt6::Test)
+add_test(NAME window-title COMMAND window_title_test)
+set_tests_properties(window-title PROPERTIES TIMEOUT 20)
+
 add_executable(interaction_policy_test interaction_policy_test.cpp
     ../src/ui/interactionpolicy.cpp)
 target_include_directories(interaction_policy_test PRIVATE ../src)

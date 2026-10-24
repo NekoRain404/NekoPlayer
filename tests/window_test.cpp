@@ -673,6 +673,29 @@ class WindowTest final : public QObject {
                  qPrintable(errors.isEmpty() ? QString() : errors.front().front().toString()));
     }
 
+    void repeatedStateTicksReuseIconsAndTitle() {
+        MainWindow window(true);
+        auto *pause = action(window, "pauseAction");
+        auto *mute = action(window, "muteAction");
+        QVERIFY(pause && mute);
+        const auto pauseIcon = pause->icon();
+        const auto muteIcon = mute->icon();
+        const auto pauseSymbol = pause->property("appearanceIconSymbol");
+        const auto pausePaletteCache = pause->property("appearanceIconPaletteCache");
+        const auto title = window.windowTitle();
+        QVERIFY(!pauseIcon.isNull() && !muteIcon.isNull());
+
+        // time-pos keeps stateChanged hot; unchanged symbols and path must reuse
+        // the existing icon engines and window caption.
+        for (int tick = 0; tick < 5; ++tick)
+            window.controller()->stateChanged();
+        QCOMPARE(pause->icon().cacheKey(), pauseIcon.cacheKey());
+        QCOMPARE(mute->icon().cacheKey(), muteIcon.cacheKey());
+        QCOMPARE(pause->property("appearanceIconSymbol"), pauseSymbol);
+        QCOMPARE(pause->property("appearanceIconPaletteCache"), pausePaletteCache);
+        QCOMPARE(window.windowTitle(), title);
+    }
+
     void reportsMissingGraphicsContext() {
         QProcess process;
         auto environment = QProcessEnvironment::systemEnvironment();

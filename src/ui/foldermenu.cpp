@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QMenu>
 #include <QProgressDialog>
+#include <QSignalBlocker>
 #include <QWidget>
 #include <utility>
 
@@ -26,8 +27,8 @@ FolderMenu::FolderMenu(QWidget *window, std::function<QString()> initialDirector
         connect(action, &QAction::triggered, this, [this, append] { chooseDirectory(append); });
         return action;
     };
-    openAction_ = add(tr("打开文件夹…"), "openFolderAction", QKeySequence(Qt::CTRL | Qt::Key_D),
-                      false);
+    openAction_ =
+        add(tr("打开文件夹…"), "openFolderAction", QKeySequence(Qt::CTRL | Qt::Key_D), false);
     appendAction_ = add(tr("添加文件夹…"), "appendFolderAction",
                         QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D), true);
     menu_->addSeparator();
@@ -83,6 +84,9 @@ void FolderMenu::setMediaLibraryPreferences(MediaLibraryPreferences preferences)
     recursiveAction_->setEnabled(scanningEnabled_);
     if (!scanningEnabled_)
         cancel();
+    // Applying the stored preference must not look like a user toggle: the
+    // caller already owns persisting the session value.
+    const QSignalBlocker blocker(recursiveAction_);
     recursiveAction_->setChecked(preferences.recursiveByDefault);
 }
 

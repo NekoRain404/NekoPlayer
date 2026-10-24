@@ -124,6 +124,7 @@ class MainWindow final : public QMainWindow {
     QMenu *contextMenu_ = nullptr;
     QMenu *playlistMenu_ = nullptr;
     QTimer controlsTimer_;
+    QString lastTitlePath_;
     QStringList pendingPaths_;
     QPersistentModelIndex pendingPlaylistIndex_;
     QByteArray normalGeometry_;

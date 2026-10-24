@@ -80,4 +80,5 @@ class PreferencesDialog final : public QDialog {
     QPushButton *restoreDefaultsButton_;
     QString lastDecoder_;
     bool lastActive_ = false;
+    bool lastApplyActive_ = false;
 };

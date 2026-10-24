@@ -411,7 +411,15 @@ void MainWindow::updateSeekActionLabels(int seconds) {
 }
 
 void MainWindow::setAppearanceIcon(QAction *action, AppearanceIcons::Symbol symbol) {
+    const auto paletteCacheKey = palette().cacheKey();
+    const auto storedSymbol = action->property("appearanceIconSymbol");
+    const auto storedPaletteCache = action->property("appearanceIconPaletteCache");
+    if (storedSymbol.isValid() && storedPaletteCache.isValid() &&
+        storedSymbol.toInt() == static_cast<int>(symbol) &&
+        storedPaletteCache.toLongLong() == paletteCacheKey)
+        return;
     action->setProperty("appearanceIconSymbol", static_cast<int>(symbol));
+    action->setProperty("appearanceIconPaletteCache", paletteCacheKey);
     action->setIcon(AppearanceIcons::icon(symbol, palette()));
 }
 
@@ -419,8 +427,7 @@ void MainWindow::refreshAppearanceIcons() {
     for (auto *action : findChildren<QAction *>()) {
         const auto symbol = action->property("appearanceIconSymbol");
         if (symbol.isValid())
-            action->setIcon(AppearanceIcons::icon(
-                static_cast<AppearanceIcons::Symbol>(symbol.toInt()), palette()));
+            setAppearanceIcon(action, static_cast<AppearanceIcons::Symbol>(symbol.toInt()));
     }
 }
 

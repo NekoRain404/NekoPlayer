@@ -1,4 +1,5 @@
 #include "playback/mpvcontroller.h"
+#include "ui/appearancemenu.h"
 #include "ui/preferencescoordinator.h"
 #include "ui/preferencesdialog.h"
 #include "ui/subtitledisplaymenu.h"
@@ -8,7 +9,9 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QPushButton>
+#include <QSettings>
 #include <QTabWidget>
+#include <QTemporaryDir>
 #include <QWidget>
 #include <QtTest>
 #include <optional>
@@ -168,6 +171,61 @@ class PreferencesCoordinatorTest final : public QObject {
             QCOMPARE(state.interaction.wheelVolumeStep, 13);
             QVERIFY(!state.interaction.wheelSeeksTimeline);
             QVERIFY(state.interaction.playlistSingleClick);
+        }
+        qApp->setPalette(originalPalette);
+        qApp->setStyleSheet(originalStyle);
+    }
+
+    void appearanceApplyPersistsThroughTheAppearanceOwner() {
+        using Appearance = AppearancePreferences;
+        MpvController player(true, true);
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto settingsPath = directory.filePath(QStringLiteral("appearance.ini"));
+        QSettings store(settingsPath, QSettings::IniFormat);
+        QWidget parent;
+        AppearanceMenu menu(&parent, store, true);
+        const auto originalPalette = qApp->palette();
+        const auto originalStyle = qApp->styleSheet();
+        {
+            PreferencesCoordinator coordinator(
+                player,
+                {.appearance = [&menu] { return menu.settings(); },
+                 .setAppearance =
+                     [&menu](Appearance::Settings appearance) { menu.setSettings(appearance); },
+                 .mediaLibrary = [] { return MediaLibraryPreferences{}; },
+                 .setMediaLibrary = [](MediaLibraryPreferences) {},
+                 .resumePlaybackPosition = [] { return true; },
+                 .setResumePlaybackPosition = [](bool) {},
+                 .seekStepSeconds = [] { return 5; },
+                 .setSeekStepSeconds = [](int) {},
+                 .interaction = [] { return InteractionPreferences{}; },
+                 .setInteraction = [](InteractionPreferences) {}},
+                nullptr);
+            auto dialog =
+                coordinator.createDialog(nullptr, PreferencesDialog::Category::Appearance);
+            auto *theme = dialog->findChild<QComboBox *>(QStringLiteral("appearanceThemeChoice"));
+            auto *accent = dialog->findChild<QComboBox *>(QStringLiteral("appearanceAccentChoice"));
+            auto *glass = dialog->findChild<QCheckBox *>(QStringLiteral("appearanceGlassChoice"));
+            auto *buttons =
+                dialog->findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+            QVERIFY(theme && accent && glass && buttons);
+
+            // Changing a control previews the draft; Apply must leave the
+            // committed value with the single persistence owner.
+            theme->setCurrentIndex(theme->findData(static_cast<int>(Appearance::Theme::Light)));
+            accent->setCurrentIndex(accent->findData(static_cast<int>(Appearance::Accent::Amber)));
+            glass->setChecked(false);
+            buttons->button(QDialogButtonBox::Apply)->click();
+
+            QCOMPARE(menu.settings().theme, Appearance::Theme::Light);
+            QCOMPARE(menu.settings().accent, Appearance::Accent::Amber);
+            QVERIFY(!menu.settings().glassEnabled);
+            QSettings persisted(settingsPath, QSettings::IniFormat);
+            const auto saved = AppearancePreferences::loadSettings(persisted);
+            QCOMPARE(saved.theme, Appearance::Theme::Light);
+            QCOMPARE(saved.accent, Appearance::Accent::Amber);
+            QVERIFY(!saved.glassEnabled);
         }
         qApp->setPalette(originalPalette);
         qApp->setStyleSheet(originalStyle);

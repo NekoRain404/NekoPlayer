@@ -1,13 +1,13 @@
 #include "appearancepreferences.h"
 #include "appearancestylesheet.h"
 #include "appearancetokens.h"
+#include "playback/backendinfo.h"
 
 #include <QApplication>
 #include <QMessageBox>
 #include <QSettings>
 #include <QStyle>
 #include <QtGlobal>
-#include <mpv/client.h>
 
 AppearancePreferences::Settings AppearancePreferences::loadSettings(QSettings &settings) {
     Settings appearance;
@@ -124,12 +124,8 @@ void AppearancePreferences::applyTheme(QApplication &application, Theme theme) {
 }
 
 void AppearancePreferences::showAboutDialog(QWidget *parent) {
-    const auto apiVersion = mpv_client_api_version();
-    const auto apiMajor = static_cast<qulonglong>(apiVersion >> 16U);
-    const auto apiMinor = static_cast<qulonglong>(apiVersion & 0xffffU);
-    const auto text = QObject::tr("NekoPlayer 0.1.0\n\nQt runtime: %1\nlibmpv client API: %2.%3")
+    const auto text = QObject::tr("NekoPlayer 0.1.0\n\nQt runtime: %1\nlibmpv client API: %2")
                           .arg(QString::fromLatin1(qVersion()))
-                          .arg(apiMajor)
-                          .arg(apiMinor);
+                          .arg(BackendInfo::clientApiVersion());
     QMessageBox::about(parent, QObject::tr("关于 NekoPlayer"), text);
 }

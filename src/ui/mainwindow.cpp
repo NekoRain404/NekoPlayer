@@ -23,6 +23,7 @@
 #include "thumbnailpreviewpolicy.h"
 #include "transportbar.h"
 #include "welcomepanel.h"
+#include "windowtitle.h"
 
 #include <QAction>
 #include <QDragEnterEvent>
@@ -408,9 +409,10 @@ void MainWindow::updateState() {
                                      !pendingPaths_.isEmpty());
     transport_->present(state);
     welcomePanel_->setVisible(!state.active);
-    setWindowTitle(state.path.isEmpty()
-                       ? QStringLiteral("NekoPlayer")
-                       : MediaSource::displayName(state.path) + QStringLiteral(" — NekoPlayer"));
+    if (state.path != lastTitlePath_) {
+        lastTitlePath_ = state.path;
+        setWindowTitle(windowTitleForPath(lastTitlePath_));
+    }
 }
 
 void MainWindow::showError(const QString &message) {

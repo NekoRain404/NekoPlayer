@@ -33,7 +33,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       resumePlaybackPosition_(new QCheckBox(tr("恢复上次播放位置"), this)),
       seekStepSeconds_(new QComboBox(this)), mediaLibraryPreferences_(initialMediaLibrary),
       resumePlaybackPositionDefault_(resumePlaybackPosition),
-      seekStepSecondsDefault_(seekStepSeconds) {
+      seekStepSecondsDefault_(seekStepSeconds), lastApplyActive_(player.state().active) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
@@ -189,7 +189,13 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     connect(&player_, &MpvController::subtitlePreferencesChanged, this,
             &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::stateChanged, this, [this] {
-        updateApplyButton();
+        // Position ticks fire continuously; only an active-state transition
+        // can change the Apply draft. Decoder text keeps its own early-out.
+        const bool active = player_.state().active;
+        if (active != lastApplyActive_) {
+            lastApplyActive_ = active;
+            updateApplyButton();
+        }
         updateActualDecoder();
     });
     connect(applyButton_, &QPushButton::clicked, this, &PreferencesDialog::apply);
@@ -231,7 +237,9 @@ void PreferencesDialog::selectCategory(Category category) {
 void PreferencesDialog::apply() {
     if (appearanceChanged()) {
         appearanceBaseline_ = appearanceDraft();
-        AppearancePreferences::applySettings(*qApp, appearanceBaseline_);
+        // The draft is already live through previewAppearance(); snapshot that
+        // state so Cancel after Apply returns to the committed appearance. The
+        // appearance owner handles the final apply and persistence below.
         appearancePalette_ = qApp->palette();
         appearanceStyleSheet_ = qApp->styleSheet();
         emit appearancePreferencesChanged(appearanceBaseline_);

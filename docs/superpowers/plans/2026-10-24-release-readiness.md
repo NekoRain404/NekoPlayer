@@ -6,6 +6,8 @@
 
 **Baseline:** `feat/first-playable` at the commit that finishes the System-palette accent fix. All work stays on this branch; no worktree, no push, no merge.
 
+**Status (2026-10-24):** Tasks 1–7 complete. Task 8 verification and documentation complete at `ebfbb21`; the separate fresh whole-branch reviewer pass is still open (see Task 8 step 3). Native Wayland visual/input acceptance and HDR/hardware-decoding/physical-audio/Windows checks remain outstanding.
+
 ## Global Constraints
 
 - C++20 / Qt 6 Widgets / libmpv; keep the single playback engine and the existing render path.
@@ -48,12 +50,12 @@
 - `MainWindow` builds the handlers with lambdas that read `session_` lazily, so `--no-config` still gets session-only changes.
 
 **Steps:**
-- [ ] Add the coordinator and its tests before wiring the menus.
-- [ ] Replace the `showPreferences` lambda in `windowactions.cpp` with the coordinator; pass its callback to `SubtitleDisplayMenu`.
-- [ ] Keep `PreferencesDialog` as the only page implementation; do not duplicate page construction.
-- [ ] Test: current values reach the dialog; Apply propagates each preference through its handler; F6 invokes the shared callback with `Category::Subtitles`.
-- [ ] Run focused `preferences-coordinator`, `preferences-dialog`, `appearance-preferences`, `code-size`; build all.
-- [ ] Commit as `fix(ui): unify preferences entry and preserve current values`.
+- [x] Add the coordinator and its tests before wiring the menus.
+- [x] Replace the `showPreferences` lambda in `windowactions.cpp` with the coordinator; pass its callback to `SubtitleDisplayMenu`.
+- [x] Keep `PreferencesDialog` as the only page implementation; do not duplicate page construction.
+- [x] Test: current values reach the dialog; Apply propagates each preference through its handler; F6 invokes the shared callback with `Category::Subtitles`.
+- [x] Run focused `preferences-coordinator`, `preferences-dialog`, `appearance-preferences`, `code-size`; build all.
+- [x] Commit as `fix(ui): unify preferences entry and preserve current values`.
 
 ## Task 2: Interaction preferences persistence and settings page
 
@@ -96,13 +98,13 @@
 - `PreferencesCoordinator::Handlers` gains the interaction getter/setter.
 
 **Steps:**
-- [ ] Add failing session-store tests for defaults, round trip, invalid step clamping, and old session files.
-- [ ] Add failing dialog tests for the sixth category, control values, Apply signal, and Restore Defaults.
-- [ ] Implement persistence and the page; keep existing category indices stable.
-- [ ] Wire the coordinator and Settings menu.
-- [ ] Add English translations for the new strings.
-- [ ] Run `session`, `preferences-dialog`, `preferences-coordinator`, `code-size`; build all.
-- [ ] Commit as `feat(settings): add configurable playback interaction`.
+- [x] Add failing session-store tests for defaults, round trip, invalid step clamping, and old session files.
+- [x] Add failing dialog tests for the sixth category, control values, Apply signal, and Restore Defaults.
+- [x] Implement persistence and the page; keep existing category indices stable.
+- [x] Wire the coordinator and Settings menu.
+- [x] Add English translations for the new strings.
+- [x] Run `session`, `preferences-dialog`, `preferences-coordinator`, `code-size`; build all.
+- [x] Commit as `feat(settings): add configurable playback interaction`.
 
 ## Task 3: Mouse and wheel behavior
 
@@ -138,11 +140,11 @@
 - Feedback continues to use the existing `ActionFeedbackOverlay` / seek feedback.
 
 **Steps:**
-- [ ] Add policy tests and a transport-bar wheel signal test first.
-- [ ] Implement the widget signals and timer; keep `VideoWidget` free of mpv and preferences logic.
-- [ ] Wire MainWindow; do not add polling or frame copies.
-- [ ] Run `interaction-policy`, `transport-bar`, `preferences-dialog`, `session`, `code-size`; build all.
-- [ ] Commit as `feat(ui): add configurable click and wheel interaction`.
+- [x] Add policy tests and a transport-bar wheel signal test first.
+- [x] Implement the widget signals and timer; keep `VideoWidget` free of mpv and preferences logic.
+- [x] Wire MainWindow; do not add polling or frame copies.
+- [x] Run `interaction-policy`, `transport-bar`, `preferences-dialog`, `session`, `code-size`; build all.
+- [x] Commit as `feat(ui): add configurable click and wheel interaction`.
 
 ## Task 4: High-visibility UI polish
 
@@ -163,11 +165,11 @@
 - Do not alter layout metrics, QSS selectors, or the fullscreen fade behavior.
 
 **Steps:**
-- [ ] Add a transport-bar test for the time-mode toggle and the new tooltip/accessible text.
-- [ ] Add a focused icon test if the new symbol is not covered by existing contracts.
-- [ ] Implement the label toggle and settings icons.
-- [ ] Run `transport-bar`, `appearance-preferences`, `ui-surface`, `code-size`; build all.
-- [ ] Commit as `feat(ui): polish transport time and settings icons`.
+- [x] Add a transport-bar test for the time-mode toggle and the new tooltip/accessible text.
+- [x] Add a focused icon test if the new symbol is not covered by existing contracts.
+- [x] Implement the label toggle and settings icons.
+- [x] Run `transport-bar`, `appearance-preferences`, `ui-surface`, `code-size`; build all.
+- [x] Commit as `feat(ui): polish transport time and settings icons`.
 
 ## Task 5: Playlist ergonomics
 
@@ -195,12 +197,12 @@
 - Add a header search field? Do not add a proxy model in this phase: it would complicate current-row identity, drag/drop, and failure history. Record the search field as a follow-up instead.
 
 **Steps:**
-- [ ] Add session-store tests for default/invalid/round-trip playlist width.
-- [ ] Add a focused PlaylistPane test for single-click activation if it can be done without a live renderer.
-- [ ] Replace the fixed horizontal layout with the splitter; restore and save width.
-- [ ] Wire `playlistSingleClick` from `InteractionPreferences`.
-- [ ] Run `session`, `playlist-edit`, `transport-bar`, `code-size`; build all.
-- [ ] Commit as `feat(ui): make the playlist resizable and click-configurable`.
+- [x] Add session-store tests for default/invalid/round-trip playlist width.
+- [x] Add a focused PlaylistPane test for single-click activation if it can be done without a live renderer.
+- [x] Replace the fixed horizontal layout with the splitter; restore and save width.
+- [x] Wire `playlistSingleClick` from `InteractionPreferences`.
+- [x] Run `session`, `playlist-edit`, `transport-bar`, `code-size`; build all.
+- [x] Commit as `feat(ui): make the playlist resizable and click-configurable`.
 
 ## Task 6: Performance and boundary cleanup
 
@@ -226,11 +228,11 @@
 - Do not change the render path, polling behavior, or playback semantics.
 
 **Steps:**
-- [ ] Add focused regressions for icon/title stability across repeated `updateState()` ticks and for preference-dialog state gating where feasible without window tests.
-- [ ] Implement the caches and single-owner appearance apply.
-- [ ] Move the client API version query behind the playback boundary.
-- [ ] Run focused `preferences-dialog`, `appearance-preferences`, `ui-surface`, `code-size`; build all.
-- [ ] Commit as `perf(ui): remove per-tick churn and duplicated applies`.
+- [x] Add focused regressions for icon/title stability across repeated `updateState()` ticks and for preference-dialog state gating where feasible without window tests.
+- [x] Implement the caches and single-owner appearance apply.
+- [x] Move the client API version query behind the playback boundary.
+- [x] Run focused `preferences-dialog`, `appearance-preferences`, `ui-surface`, `code-size`; build all.
+- [x] Commit as `perf(ui): remove per-tick churn and duplicated applies`.
 
 ## Task 7: Interaction polish from review findings
 
@@ -260,10 +262,10 @@
 - Extend the accessibility-name test to all seven Interaction controls.
 
 **Steps:**
-- [ ] Add or extend focused tests for the normalized preferences, the time-label focus/description, and the icon distinction.
-- [ ] Implement the polish items; keep behavior changes narrow.
-- [ ] Run `preferences-dialog`, `preferences-coordinator`, `transport-bar`, `ui-surface`, `interaction-policy`, `session`, `code-size`; build all.
-- [ ] Commit as `polish(ui): harden interaction details from review`.
+- [x] Add or extend focused tests for the normalized preferences, the time-label focus/description, and the icon distinction.
+- [x] Implement the polish items; keep behavior changes narrow.
+- [x] Run `preferences-dialog`, `preferences-coordinator`, `transport-bar`, `ui-surface`, `interaction-policy`, `session`, `code-size`; build all.
+- [x] Commit as `polish(ui): harden interaction details from review`.
 
 ## Task 8: Documentation, verification, and final review
 
@@ -275,18 +277,18 @@
 - Create `docs/superpowers/specs/2026-10-24-release-readiness-design.md` if it is not already present.
 
 **Steps:**
-- [ ] Document the unified preferences entry, interaction settings, time toggle, and current line-count policy.
-- [ ] Record exact commands and results for Debug non-window tests, focused sanitizer tests, formatting, and `git diff --check`.
-- [ ] Run a whole-branch review with a fresh reviewer subagent; fix or record every Critical/Important finding.
-- [ ] Run the complete non-window Debug suite; run the relevant sanitizer tests for session/preferences changes.
-- [ ] Commit as `docs: record release-readiness verification`.
+- [x] Document the unified preferences entry, interaction settings, time toggle, and current line-count policy.
+- [x] Record exact commands and results for Debug non-window tests, focused sanitizer tests, formatting, and `git diff --check`.
+- [ ] Run a whole-branch review with a fresh reviewer subagent; fix or record every Critical/Important finding. (Not executed in this session: the Task 8 controller prohibited subagent dispatch. Task-level reviews are recorded in `.superpowers/sdd/2026-10-24-release-readiness/`; a separate fresh whole-branch reviewer remains for the controller.)
+- [x] Run the complete non-window Debug suite; run the relevant sanitizer tests for session/preferences changes.
+- [x] Commit as `docs: record release-readiness verification`.
 
 ## Verification Checklist
 
-- [ ] `cmake --build --preset debug -j4` succeeds.
-- [ ] `ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passes.
-- [ ] `ctest --test-dir build/debug -R '^code-size$' --output-on-failure` passes.
-- [ ] Focused sanitizer tests for session/preferences/policy pass with leak detection disabled only for documented platform-library noise.
-- [ ] `clang-format --dry-run --Werror` on changed files and `git diff --check` pass.
-- [ ] Window behavior tests compile but are not run.
-- [ ] No raw mpv commands in UI code; no CPU frame copies or new polling.
+- [x] `cmake --build --preset debug -j4` succeeds.
+- [x] `ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passes.
+- [x] `ctest --test-dir build/debug -R '^code-size$' --output-on-failure` passes.
+- [x] Focused sanitizer tests for session/preferences/policy pass with leak detection disabled only for documented platform-library noise.
+- [x] `clang-format --dry-run --Werror` on changed files and `git diff --check` pass.
+- [x] Window behavior tests compile but are not run.
+- [x] No raw mpv commands in UI code; no CPU frame copies or new polling.

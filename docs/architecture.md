@@ -20,10 +20,12 @@
 | `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环／随机策略与有界失败恢复 | 依赖播放业务 API、队列模型和 `ShuffleOrder`，不依赖 UI |
 | `ShuffleOrder` | 随机候选池、实际访问历史与前后导航 | Qt Core 持久模型索引，不控制播放器，不改变显示顺序 |
 | `VideoWidget` | GL 上下文、物理像素 FBO、帧更新、隐藏时跳帧、资源释放 | 只处理渲染，不提交播放命令 |
-| `TransportBar` | 展示时间/进度/音量，拖动预览，发出定位和音量意图 | 状态快照和 QAction，不操作 mpv |
+| `TransportBar` | 展示时间/进度/音量，拖动与时间条滚轮定位意图，时间显示切换 | 状态快照和 QAction，不操作 mpv；滚轮档位由纯 `interactionpolicy` 提供 |
+| `InteractionPolicy` / `interactionpolicy.cpp` | 将滚轮 delta 归一化为档位，并按档位计算夹在 0–100 的音量 | Qt Core 纯函数，不依赖控件、偏好或 mpv |
 | `ThumbnailPreviewPolicy` | 校验本地动态视频预览条件，避免对音频、网络或不可定位媒体启动解码 | 只读取播放状态与动态视频可用性，不访问帧或播放器句柄 |
+| `ThumbnailService` / `ffmpegthumbnaildecoder` / `ThumbnailPreview` | 有界后台缩略图解码、缓存、取消与时间条悬停预览 | 独立 FFmpeg 解码实例，不触碰主 libmpv client 或视频帧；预览控件只显示 QImage |
 | `PlaybackOverlay` / `playbackoverlaytext.cpp` | Tab 常驻播放信息与独立、自动隐藏的定位进度 | 只读取控制器快照；纯文本格式化与 Qt Widgets 分离，不调用 mpv |
-| `PlaylistPane` | 队列视图、独立编辑选择、当前项标识及编辑动作入口 | 通过队列业务 API 和共享 QAction 操作，不接触 mpv |
+| `PlaylistPane` | 队列视图、独立编辑选择、当前项标识、编辑动作入口及可选单击激活 | 通过队列业务 API 和共享 QAction 操作，不接触 mpv；分隔条宽度由 MainWindow 持有 |
 | `TrackMenus` | 音轨、字幕菜单和外挂音轨／字幕文件入口；文件选择期间检查媒体代次 | 依赖控制器快照与业务接口，不接触 mpv handle |
 | `mpvcontroller_externaltracks.cpp` | 类型化外挂加载与渲染恢复队列，按规范化文件路径去重、按类型恢复流序号 | 同一 client 的异步命令，不依赖 UI 或增加解码器 |
 | `AudioDeviceMenu` | 当前输出设备选择；菜单栏与右键菜单复用同一菜单 | 只读取拥有数据的设备快照并调用控制器业务 API |
@@ -35,16 +37,20 @@
 | `PlaybackSettingsDialog` | 解码方式草稿、应用／取消与实际解码状态 | 仅调用控制器业务 API，QObject 接收上下文随对话框销毁 |
 | `SubtitlePreferences` | 字幕可见性、缩放、位置及默认字体；统一归一化 | Qt Core 值类型，不依赖 mpv 或 UI |
 | `SubtitleDisplayMenu` / `SubtitleSettingsDialog` | 共享字幕显示动作、快捷键和应用／取消草稿 | 只使用字幕偏好与控制器业务 API，不订阅播放进度 |
+| `PreferencesCoordinator` | 按当前值装配共享 `PreferencesDialog` 并转发各页变更 | 依赖控制器公开接口与 MainWindow 提供的窄 getter/setter，不持有偏好存储或播放逻辑 |
+| `AppearancePreferences` / `AppearanceTokens` / `AppearanceStylesheet` / `AppearanceMenu` | Dark/Light/System 语义色、强调色派生、QSS 生成、启动/预览应用与持久化 | Qt Widgets 样式与调色板；System 保留平台标准调色板并覆盖强调色相关 role；不触碰 `VideoWidget`、libmpv 或渲染路径 |
 | `VideoPresentation` / `mpvcontroller_video.cpp` | 本次运行的画面比例与四分之一圈旋转意图、校验及异步提交 | 值类型不依赖 UI；实现只使用同一 mpv client |
 | `VideoMenu` | 互斥比例动作、旋转快捷键与共享菜单 | 仅调用控制器业务 API，按专用信号刷新 |
 | `ScreenshotMenu` / `mpvcontroller_screenshot.cpp` | 含字幕／无字幕截图入口、保存位置选择与原生命令完成确认 | UI 不读取帧；控制器校验目标与视频状态，通过同一 client 异步编码保存 |
-| `SessionState` / `SessionStore` | 音频、输出设备、解码、字幕、倍速／延迟、窗口偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
+| `SessionState` / `SessionStore` | 音频、输出设备、解码、字幕、倍速／延迟、窗口偏好（含播放列表宽度）、交互偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
 | `PlaybackHistoryStore` | 独立版本化 INI 文件；按规范化绝对路径保存最近 100 个媒体位置 | Qt Core，不依赖队列、播放控制器或 UI |
 | `RecentMediaHistory` | 独立版本化 JSON；保留最近成功播放的 20 个来源、去重、清空与原子保存 | Qt Core / MediaSource；不查找媒体文件、不联网，与续播位置分离 |
 | `RecentMediaMenu` | 文件／右键共享最近播放菜单及重开快捷键 | 只读取历史并发出打开意图，复用 MainWindow 原有入口；菜单打开时才构建条目 |
 | `CurrentMediaMenu` | 共享当前媒体来源／时间复制与本地文件夹入口 | 只读取控制器快照；Qt 剪贴板与 QDesktopServices，不调用 mpv、不拼接 shell 命令 |
-| `SessionManager` | 恢复空闲队列、播放偏好、逐文件位置及媒体级轨道选择，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
-| `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调 | 通过队列和控制器接口发出业务操作 |
+| `SessionManager` | 恢复空闲队列、播放偏好、逐文件位置、交互偏好及媒体级轨道选择，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
+| `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏和生命周期协调；持有 `PreferencesCoordinator` 与交互/列表宽度状态 | 通过队列和控制器接口发出业务操作 |
+| `WelcomePanel` | 空闲首页的打开/网络入口、最近来源与“继续观看” | 只发出来源意图，动作由 MainWindow 拥有；不访问播放器或存储 |
+| `BackendInfo` / `backendinfo.cpp` | 通过播放层报告 libmpv client API 版本 | 封装 `mpv_client_api_version`，UI 不直接包含 `mpv/client.h` |
 | `LocalFileDrop` | 完整校验一批本地拖放；区分单字幕、媒体队列和一个或多个文件夹意图 | Qt Core；通过类型化控制器加载字幕，通过信号请求媒体追加或后台目录扫描 |
 | `mediafolderscan.cpp` / `FolderScanJob` | 有界目录发现、批量自然排序、后台任务和取消代次 | Qt Core / Concurrent；工作线程只持有路径与共享原子取消标志，不接触 QObject、播放器或 UI |
 | `FolderMenu` | 共享文件夹入口、递归选项与可取消进度窗口 | 只向 MainWindow 发布完整结果，再复用原有打开／追加队列入口 |
@@ -102,7 +108,13 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 
 上次选中条目的续播位置是 schema 1 的可选字段，旧配置默认从零开始；非有限／负值和不属于有效选中条目的位置归零。队列用 `QPersistentModelIndex` 绑定尚未消费的续播位置，跟随移动并区分重复路径；停止、打开其他媒体或删除条目使其失效。第一次播放通过类型化 `openFileAtPosition` 提交该次 `loadfile` 的 `start` 文件选项，避免先从头播放再定位；后续普通重播从零开始，原生单曲循环仍回到影片开头。控制器保留加载中的目标位置，实际位置观察到达后使用可定位媒体的当前位置，距末尾不超过一秒则归零。会话只在正常保存时采集，不逐帧写盘；尚未播放便退出保留原续播位置。
 
-偏好设置由 `PreferencesDialog` 按播放、音频和字幕分组；F5/F6 复用同一模态窗口并选择对应页面，音频设备依旧可通过右键菜单快速访问。草稿页只在 Apply/OK 时提交解码和字幕显示偏好，音频设备选择即时提交；这保留各控制器接口现有语义且不引入第二份状态。当前 HDR 阶段由 libmpv 观察 PQ/HLG 与原色属性，`VideoMenu` 通过 `tone-mapping` 提供自动、BT.2390 和剪裁三种 GPU/libplacebo 意图。项目需区分 HDR 内容识别、色彩映射和显示器 HDR 输出：不能只因输入为 HDR 就假设屏幕或合成器可呈现 HDR。原生 Wayland HDR 色彩管理仍需目标驱动、显示器和合成器专项验证；正常播放继续复用 libmpv GPU 路径，不增加 CPU 帧回拷，并对 SDR 显示器依赖色调映射回退。插件框架、多引擎和完整主题系统不属于当前单内核播放器范围。逐文件播放历史由 `PlaybackHistoryStore` 单独持久化，不依赖主会话书签。
+偏好设置由 `PreferencesCoordinator` 统一装配：`MainWindow` 注入外观、媒体库、续播位置、定位步长和交互偏好的窄 getter/setter，F5、F6 与“设置”菜单都走同一 `createDialog/show` 路径，打开时把当前值交给 `PreferencesDialog`。对话框包含播放、音频、字幕、媒体库、外观、交互六个页面，`Category` 顺序保持稳定；草稿页只在 Apply/OK 时提交解码、字幕显示和交互偏好，音频设备选择即时提交。这样 F6 不会再以默认值覆盖真实偏好，`--no-config` 仍使用会话内回退值。当前 HDR 阶段由 libmpv 观察 PQ/HLG 与原色属性，`VideoMenu` 通过 `tone-mapping` 提供自动、BT.2390 和剪裁三种 GPU/libplacebo 意图。项目需区分 HDR 内容识别、色彩映射和显示器 HDR 输出：不能只因输入为 HDR 就假设屏幕或合成器可呈现 HDR。原生 Wayland HDR 色彩管理仍需目标驱动、显示器和合成器专项验证；正常播放继续复用 libmpv GPU 路径，不增加 CPU 帧回拷，并对 SDR 显示器依赖色调映射回退。插件框架、多引擎和完整主题系统不属于当前单内核播放器范围。逐文件播放历史由 `PlaybackHistoryStore` 单独持久化，不依赖主会话书签。
+
+外观子系统由 `AppearancePreferences`、`AppearanceTokens`、`AppearanceStylesheet` 和 `AppearanceMenu` 组成：值类型负责读写与启动应用，tokens 生成 Dark/Light/System 语义颜色和强调色派生，stylesheet 只从 tokens 生成 Widgets QSS。System 主题保留 Qt style 的 `standardPalette()` 底色，同时覆盖 `Highlight`、`HighlightedText` 和 `Link` 等强调色 role。`AppearanceMenu::setSettings()` 是应用与持久化的唯一所有者；偏好页用草稿即时预览，Apply 只提交一次，Cancel 回滚到打开前值。所谓“玻璃”只是控件半透明渐变与明暗边缘，不是窗口内背景模糊；该路径不改变 `VideoWidget`、libmpv 渲染、硬解或 HDR。
+
+交互层把策略与控件分开：`interactionpolicy` 提供纯函数 `wheelNotches` 和 `volumeAfterWheel`，控件只发出意图信号。`VideoWidget` 在释放后启动 `Qt::PreciseTimer` 单次计时，双击到来时取消，避免双击同时触发暂停；它不知道 mpv 或偏好。`MainWindow` 读取规范化后的 `InteractionPreferences`，将单击、双击、中键映射到共享 QAction，滚轮按 1–20 步进调节音量，时间条滚轮发出 ±1 方向并按定位步长 seek。时间条滚轮不会落入 QSlider 的隐藏单步 seek；禁用时完全不定位。此路径没有新增轮询、CPU 帧复制或渲染改动。
+
+性能边界集中在 GUI 线程的重复工作：`MainWindow::setAppearanceIcon()` 按符号和 palette cache key 缓存每个 QAction 的图标，窗口标题按路径缓存，避免每个 `time-pos` tick 重新分配。`PreferencesDialog` 只在 active/实际解码器或专用偏好信号变化时重算草稿和 Apply 状态，播放位置变化不驱动对话框工作。`FolderMenu` 在程序化设置勾选时阻断 `toggled`，防止同一变更写两次会话。libmpv client API 版本查询移入 `BackendInfo`，UI 不再为 About 文本包含 `mpv/client.h`。这些优化不改变命令语义、轮询行为或渲染路径。
 视频去隔行同样由 `VideoMenu` 作为轻量意图层管理，`Off/Auto/On` 映射为 libmpv 的 `no/auto/yes`，不引入 Qt 侧帧处理或额外的 CPU 复制路径。
 
 画面比例与旋转使用独立的 `VideoPresentation` 值和 `mpvcontroller_video.cpp`，不与播放进度、字幕或持久配置耦合。`VideoAspect` 限定六种模式，控制器将其映射为 `video-aspect-override` 和 `keepaspect`；离开拉伸时恢复保留比例，原始比例及拉伸均清除旧比例覆盖。旋转只接受 90° 的整数倍并归一化到 0／90／180／270，使用 `video-rotate` 叠加文件方向元数据，拒绝任意角度以符合无回拷硬解的限制。状态表示成功入队的最新意图，快速连按立即累积；异步执行错误仍通过已有信号报告。两条比例命令不构成事务：回复队列耗尽可导致部分提交并提示错误，菜单恢复上次完整提交的勾选，用户重新选择任一比例会再次提交两项设置以恢复。`VideoMenu` 在菜单栏与右键菜单复用同一菜单和 QAction，在专用变更信号及比例动作结束时刷新互斥勾选、标题和重置可用性，不订阅逐帧进度，不重载文件，不插入 CPU 视频滤镜。偏好仅本次运行有效，停止、换片及渲染恢复不清除。

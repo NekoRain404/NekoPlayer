@@ -1,5 +1,19 @@
 # Verification Record
 
+Release-readiness final verification (2026-10-24, code at `ebfbb21`):
+
+- Scope: six-page unified preferences dialog, configurable click/wheel interaction, clickable transport time, resizable playlist with persisted width, and the GUI-thread performance caches. No production code changed in this round except the missing English entry for `播放时间`.
+- `cmake --preset debug` succeeded. `cmake --build --preset debug --clean-first -j4` rebuilt every target, including `window_test`; the translation resources were regenerated. Window-behavior tests were compiled but not executed.
+- `LC_ALL=C LANG=C ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passed **54/54** in **57.50 s** on the clean rebuild. `LC_ALL=C` is required because the host's non-C locale makes mpv reject playback.
+- Focused selection `LC_ALL=C LANG=C ctest --test-dir build/debug -R '^(code-size|preferences-dialog|preferences-coordinator|appearance-preferences|ui-surface|transport-bar|interaction-policy|session|folder-menu|title-format|playlist-edit)$' --output-on-failure` passed **11/11** in **6.56 s**.
+- `cmake --preset sanitizers` and `cmake --build --preset sanitizers --target preferences_dialog_test preferences_coordinator_test interaction_policy_test transport_bar_test session_test folder_menu_test -j4` succeeded. `LC_ALL=C LANG=C ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/sanitizers -R '^(preferences-dialog|preferences-coordinator|interaction-policy|transport-bar|session|folder-menu)$' --output-on-failure` passed **6/6** in **2.46 s** with no ASan/UBSan reports. Leak detection was disabled only to exclude documented platform-library exit allocations (Qt Wayland client, GTK/Pango/fontconfig); this result does not claim leak-free execution.
+- `ctest --test-dir build/debug -R '^code-size$' --output-on-failure` passed **1/1** (0.33 s). The guard enforces a 500-line target, 550-line ordinary hard limit, and 800 lines for the listed `mainwindow.cpp` / `window_test.cpp` exceptions.
+- `clang-format --dry-run --Werror` (clang-format 23.1.3) passed for all **40** C++ source/header files changed by `332f08d..ebfbb21`. `git diff --check -- . ':(exclude)docs/skills.md'` passed.
+- Translation catalog `translations/NekoPlayer_en.ts` now contains the `TransportBar` entry `播放时间` → `Playback time`. `lrelease` reported **277 finished, 0 unfinished** translations, and the build regenerated `NekoPlayer_en.qm` (28,744 bytes).
+- Boundary checks: no `mpv_`/`MPV_`/`mpv/client.h` usage in `src/ui/`; the new click timers are single-shot disambiguation, not polling; no CPU frame copies or render-path changes.
+- Not verified by this round: native Wayland visual/keyboard/pointer behavior, real HDR output and tone mapping on a HDR display, GPU hardware decoding, physical audio devices, multi-monitor mixed scaling, and Windows packaging. Window-behavior tests were not run.
+- This section supersedes the older three-page preferences descriptions in earlier records; historical entries below are left unchanged.
+
 Welcome-panel vertical-overflow correction and width-boundary regression (2026-10-24):
 
 - A new offscreen geometry regression reproduced the drop-hint intersection with the primary buttons at a 400×215 logical-pixel card height. The cause was showing supporting copy at a height where the visible labels and buttons could not fit.

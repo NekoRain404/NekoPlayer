@@ -3,17 +3,17 @@
 更新时间：2026-10-24
 仓库：`/home/nekorain/Development/NekoPlayer`
 分支：`feat/first-playable`
-外观实现提交：`6aa897e`。交接文档提交：`a41468d`。当前工作区另有一项未提交的 System palette 修正及其回归测试；全量验证被用户要求停止，不能视为最终完成。
+外观实现提交：`6aa897e`。交接文档提交：`a41468d`。System palette 强调色 role 修正已提交为 `332f08d`；发布准备轮次已完成最终非窗口验证（54/54），但原生 Wayland 视觉验收仍未进行。
 
 ## 1. 交接结论
 
-外观偏好阶段已实现并提交。用户可选择 Dark、Light、System 三种基础主题，Ocean、Emerald、Violet、Rose、Amber 五种强调色，以及 UI 玻璃式半透明样式开关。偏好页支持即时预览、Apply 持久化和 Cancel 回滚；Settings 菜单中的旧主题菜单继续可用，并与新偏好页共用状态。整体审查发现 System 主题原先没有把强调色写进原生 palette role；当前工作区已有一版修正，但尚未完成全量验证，也尚未提交。
+外观偏好阶段已实现并提交。用户可选择 Dark、Light、System 三种基础主题，Ocean、Emerald、Violet、Rose、Amber 五种强调色，以及 UI 玻璃式半透明样式开关。偏好页支持即时预览、Apply 持久化和 Cancel 回滚；Settings 菜单中的旧主题菜单继续可用，并与新偏好页共用状态。整体审查发现 System 主题原先没有把强调色写进原生 palette role；该修正已提交为 `332f08d`，并包含在最终验证中。
 
-“玻璃”在本实现里指 UI 控件的半透明渐变、边缘明暗和主题色表面，不是真正的背景模糊。视频帧、libmpv 渲染、硬件解码和 HDR 路径没有为了外观效果而改动。Debug 构建通过，标准非窗口 CTest 集合通过 50/50；窗口行为测试按用户要求没有运行。
+“玻璃”在本实现里指 UI 控件的半透明渐变、边缘明暗和主题色表面，不是真正的背景模糊。视频帧、libmpv 渲染、硬件解码和 HDR 路径没有为了外观效果而改动。最终 Debug 构建通过，标准非窗口 CTest 集合通过 54/54；窗口行为测试只编译，未按项目要求运行。
 
 ## 2. 已交付内容与提交
 
-本阶段代码范围从 `1a645de`（计划提交）起；外观实现至 `6aa897e`，交接说明提交为 `a41468d`。当前未提交修正不计入这些提交：
+本阶段代码范围从 `1a645de`（计划提交）起；外观实现至 `6aa897e`，交接说明提交为 `a41468d`。后续修正：
 
 | 提交 | 内容 |
 | --- | --- |
@@ -21,7 +21,8 @@
 | `e091006` | 外观配置读写、启动应用和主题菜单状态 |
 | `2d46cd9` | 偏好设置外观页、即时预览、Apply/Cancel、英文翻译 |
 | `6aa897e` | UI 表面覆盖和视频/全屏反馈隔离回归测试 |
-| 工作区未提交 | System 保留平台标准调色板，同时应用强调色选择/链接 role；补充回归测试（定向测试通过，全量回归被停止） |
+| `332f08d` | System 保留平台标准调色板，同时应用强调色选择/链接 role；补充回归测试 |
+| `4cd7108` | 统一偏好设置入口：F5/F6/设置菜单共用 `PreferencesCoordinator`，保留当前外观等值并统一 Apply/Cancel |
 
 主要实现位置：
 
@@ -33,7 +34,7 @@
 - [main.cpp](/home/nekorain/Development/NekoPlayer/src/main.cpp)：启动时读入并应用外观设置；`--no-config` 使用默认进程内值且不持久化。
 - 测试：`tests/appearance_preferences_test.cpp`、`tests/preferences_dialog_test.cpp`、`tests/ui_surface_test.cpp`。
 
-普通手写代码文件均不超过 500 行。本阶段 `windowactions.cpp` 为 462 行；外观测试文件为 488 行，后续添加测试前要优先拆分测试文件，避免越过 500 行约束。项目仅允许明确列出的协调/桌面集成文件在有理由时达到 800 行，不能把限制当作目标。
+普通手写代码文件以 500 行为目标，自动检查允许少量超出至 550 行。少数明确列入 `cmake/CheckCodeSize.cmake` 的窗口协调/桌面集成文件可不超过 800 行，新增例外必须附带理由；不能把限制当作目标。本阶段 `windowactions.cpp` 当时为 462 行；外观测试文件后续有增长，添加测试前仍优先拆分。
 
 ## 3. 设计和运行契约
 
@@ -63,24 +64,27 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 
 ## 4. 当前验证证据
 
-本次交接运行的命令和结果：
+本次发布准备轮次运行的命令和结果：
 
 | 检查 | 结果 |
 | --- | --- |
 | `cmake --preset debug` | 成功 |
-| `cmake --build --preset debug -j4` | 成功；Ninja 显示 `no work to do`，所有目标已是最新 |
-| `ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` | 基础实现阶段 **50/50 通过，54.37 秒**。本次 System palette 修正后重跑到 45/50 时按用户要求中断；前 45 项通过，剩余 5 项未完成，因此不能声称修正后的全量套件通过 |
-| System palette 修正的 `appearance-preferences` 定向测试 | **1/1 通过**；修正前新增断言按预期失败 |
-| `ctest --test-dir build/debug -R '^code-size$' --output-on-failure` | **1/1 通过**（也包含在上述 50 项中） |
-| `git diff --check 1a645de..6aa897e` | 通过 |
-| Appearance 相关源文件及测试 `clang-format --dry-run --Werror` | 通过；`windowactions.cpp` 全文件另有基线遗留格式告警，详见下文 |
+| `cmake --build --preset debug --clean-first -j4` | 成功；全部目标（含 `window_test`）重新构建，翻译资源重新生成 |
+| `LC_ALL=C LANG=C ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` | **54/54 通过，57.50 秒** |
+| 聚焦 Debug 选择（`code-size`、偏好、外观、UI、时间条、交互策略、会话、文件夹、标题、列表编辑） | **11/11 通过，6.56 秒** |
+| 聚焦 ASan/UBSan 选择（偏好对话框/协调器、交互策略、时间条、会话、文件夹菜单） | **6/6 通过，2.46 秒**；设置 `ASAN_OPTIONS=detect_leaks=0` 以排除平台库退出分配，不宣称泄漏检查通过 |
+| System palette 强调色 role 修正 | 已提交 `332f08d`，定向与全量非窗口测试均通过 |
+| `ctest --test-dir build/debug -R '^code-size$' --output-on-failure` | **1/1 通过**（0.33 秒） |
+| 本阶段 40 个 C++ 文件的 `clang-format --dry-run --Werror` | 通过 |
+| `git diff --check -- . ':(exclude)docs/skills.md'` | 通过 |
+| 翻译目录 | `播放时间` → `Playback time` 已补充；`lrelease` 报告 277 finished / 0 unfinished |
 | Task 4 独立只读审查 | 无 Critical、Important、Minor 发现；判定 Ready |
 
-整分支审查补充发现 System palette 未采用 accent 的 Highlight/HighlightedText/Link role（P2）。当前工作区已有测试优先的修正版：保留 standard palette 的其余 role，并覆盖上述三项 accent role；定向测试已通过，但完整非窗口 CTest 在 45/50 处被用户要求中止，修正仍未提交。下一位开发者应先审查当前 diff，再决定继续全量验证/提交或调整方案。审查还指出设计规格提到 soft shadows，但当前 QSS 没有真实投影。Qt Widgets QSS 无可移植 `box-shadow`；当前只有渐变下缘的轻量明暗模拟，因此此项作为明确的设计限制记录，不额外添加逐控件 graphics effect 或第二条绘制路径。
+整分支审查补充发现 System palette 未采用 accent 的 Highlight/HighlightedText/Link role（P2）。该修正已以测试优先方式提交为 `332f08d`：保留 standard palette 的其余 role，并覆盖上述三项 accent role。定向测试与最终非窗口套件（54/54）均通过。审查还指出设计规格提到 soft shadows，但当前 QSS 没有真实投影。Qt Widgets QSS 无可移植 `box-shadow`；当前只有渐变下缘的轻量明暗模拟，因此此项作为明确的设计限制记录，不额外添加逐控件 graphics effect 或第二条绘制路径。
 
 非窗口测试集合明确排除了含 `window` 的目标，以及 `file-startup`、`preferences-dialog`、`video-color-dialog`。这是按项目既有验证记录使用的选择；本次完整结果不能替代偏好对话框交互或原生桌面行为验收。Task 3 之前对偏好页定向测试曾通过 5/5，但那不是本次全量回归结果。
 
-`windowactions.cpp` 的格式检查需要谨慎解读：本阶段新增/修改行已按 `git clang-format` 格式化；全文件 dry-run 仍在若干未由外观阶段引入的旧行报格式错误。对 `1a645de` 基线文件做同一检查可复现同样的遗留错误，因此没有借交接任务顺带重排整份文件。
+`windowactions.cpp` 的格式检查在早期交接时曾报告基线遗留告警；发布准备轮次对 `332f08d..ebfbb21` 的 40 个变更 C++ 文件执行 `clang-format --dry-run --Werror` 已全部通过。
 
 以下内容没有被本轮测试证明：
 
@@ -91,11 +95,11 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 
 ## 5. 已知缺口与后续优先级
 
-### P1：统一偏好设置入口并修正字幕快捷入口同步
+### 已解决：统一偏好设置入口（`4cd7108`）
 
-`SubtitleDisplayMenu` 的“字幕显示设置”仍会自行创建 `PreferencesDialog`，没有把当前 `AppearancePreferences::Settings` 传给新对话框，也没有连接 `appearancePreferencesChanged`。从这个独立入口进入 Appearance 后更改主题，可能只改变当前 QApplication 预览；它不会经共享 `AppearanceMenu` 更新保存值/菜单勾选状态，重启也不会保留。
+此前 `SubtitleDisplayMenu` 的“字幕显示设置”会自行创建 `PreferencesDialog`，没有把当前 `AppearancePreferences::Settings` 传给新对话框，也没有连接 `appearancePreferencesChanged`；从该入口修改主题可能只改变预览，重启后不保留。
 
-后续应让所有偏好页入口走同一个 Preferences 展示/装配函数，或注入一个窄的偏好服务：打开时加载当前值，Apply 后统一应用并按 `configurationEnabled` 持久化，Cancel 恢复本次打开前的外观。补测试覆盖 Settings 菜单、F6/字幕设置入口、Apply、Cancel、`--no-config` 和主题菜单勾选同步。
+现在 F5、F6 和“设置”菜单都通过 `PreferencesCoordinator` 构造共享对话框，打开时读取当前外观、媒体库、续播位置、定位步长和交互值，Apply 统一经 `AppearanceMenu::setSettings()` 应用并按 `configurationEnabled` 持久化，Cancel 回滚。`preferences-coordinator`、`preferences-dialog`、`appearance-preferences` 与 `ui-surface` 测试覆盖当前值传递、Apply 信号和 `--no-config` 回退。该缺口已关闭。
 
 ### P1：安排一次原生 Wayland 视觉验收
 
@@ -107,7 +111,7 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 
 ### P2：校验翻译和可访问性文案
 
-外观控件提供 objectName/accessibilityName，英文目录已添加新文案。继续增加强调色/材质说明或本地化时，应更新翻译 catalog 并验证其编译；玻璃解释需清楚写“半透明/柔化表面”，不要误译成真实背景模糊。验证键盘导航、焦点边框与浅色主题文字对比度。
+外观控件提供 objectName/accessibilityName，英文目录已添加新文案。发布准备轮次补充了 `播放时间` → `Playback time`，最终 `lrelease` 报告 277 finished / 0 unfinished。继续增加强调色/材质说明或本地化时，应更新翻译 catalog 并验证其编译；玻璃解释需清楚写“半透明/柔化表面”，不要误译成真实背景模糊。验证键盘导航、焦点边框与浅色主题文字对比度。
 
 ### P3：若产品坚持真正的 blur，先做平台能力/设计评估
 
@@ -122,9 +126,9 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 ## 6. 接手建议
 
 1. 先运行 `git status --short --branch`。当前共享工作区有一个用户已有的 `docs/skills.md` 修改，必须保留，不要重置、覆盖或顺手纳入外观提交。
-2. 确认 `feat/first-playable` 上已经包含上述四个外观提交。不要自行 merge 或 push。
-3. 从 P1 的统一 Preferences 入口开始；先补失败测试，再改入口装配，控制每个源文件在 500 行内。
-4. 该修复结束后做定向偏好测试和完整非窗口 Debug 集合，再做可选 Wayland 人工验收；分别报告自动化与人工证据。
+2. 确认 `feat/first-playable` 上已经包含上述外观提交、统一入口（`4cd7108`）和发布准备提交。不要自行 merge 或 push。
+3. 统一 Preferences 入口已由 `4cd7108` 完成。下一步优先安排在目标 Wayland 桌面做视觉与输入验收；若发现问题，再按窄范围补测试和修正。
+4. 验收后按 `docs/verification.md` 的发布准备记录复核构建、非窗口套件、聚焦 sanitizer、格式和 diff 检查；分别报告自动化与人工证据。
 5. 除非用户另行要求，不要改动 mpv、HDR、硬解或 OpenGL 呈现实现来追求 UI blur。
 
 ## 7. 本次交接文件自身状态

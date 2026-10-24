@@ -87,4 +87,4 @@ Interaction preferences live in the existing session INI under `interaction/*`, 
 - Time-mode toggle is session-only, not persisted, because it is a transient reading preference.
 - The timeline wheel never falls through to QSlider's hidden one-step seek; disabled means no seek.
 - The middle-click action defaults off to avoid surprising users.
-- The line-count grace is 525 for ordinary files; the two registered 800-line exceptions remain unchanged.
+- The line-count grace is 550 for ordinary files; the two registered 800-line exceptions remain unchanged.

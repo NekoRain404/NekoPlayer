@@ -53,6 +53,20 @@ SubtitleDisplayMenu::SubtitleDisplayMenu(MpvController &controller, QWidget *win
 QMenu *SubtitleDisplayMenu::menu() const { return menu_; }
 QAction *SubtitleDisplayMenu::settingsAction() const { return settings_; }
 
+void SubtitleDisplayMenu::retranslate() {
+    menu_->setTitle(tr("字幕显示"));
+    const auto setText = [this](const char *name, const QString &text) {
+        if (auto *action = findChild<QAction *>(QString::fromLatin1(name)))
+            action->setText(text);
+    };
+    setText("subtitleVisibleAction", tr("显示字幕"));
+    setText("subtitleScaleUpAction", tr("放大字幕"));
+    setText("subtitleScaleDownAction", tr("缩小字幕"));
+    setText("subtitleMoveUpAction", tr("上移字幕"));
+    setText("subtitleMoveDownAction", tr("下移字幕"));
+    setText("subtitleSettingsAction", tr("字幕显示设置…"));
+}
+
 void SubtitleDisplayMenu::update() {
     visible_->setChecked(controller_.subtitlePreferences().visible);
     for (auto *action : {visible_, settings_})

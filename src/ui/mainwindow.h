@@ -2,6 +2,7 @@
 
 #include <QMainWindow>
 #include <QPersistentModelIndex>
+#include <QPoint>
 #include <QTimer>
 #include <memory>
 
@@ -15,6 +16,7 @@ class PlaylistPane;
 class QAction;
 class QMenu;
 class QLabel;
+class WelcomePanel;
 class LocalFileDrop;
 class ActionFeedbackOverlay;
 class PlaybackOverlay;
@@ -22,6 +24,12 @@ class FolderMenu;
 class RecentMediaHistory;
 class FullscreenControls;
 class QVBoxLayout;
+class ThumbnailPreview;
+class ThumbnailService;
+struct ThumbnailResult;
+namespace AppearanceIcons {
+enum class Symbol;
+}
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -48,6 +56,9 @@ class MainWindow final : public QMainWindow {
 
   private:
     void createActions();
+    void updateSeekActionLabels(int seconds);
+    void setAppearanceIcon(QAction *action, AppearanceIcons::Symbol symbol);
+    void refreshAppearanceIcons();
     void chooseFile();
     void chooseNetworkUrl();
     void chooseFilesToAppend();
@@ -61,9 +72,14 @@ class MainWindow final : public QMainWindow {
     void showActionFeedback(const QString &message, int durationMs = 2500);
     void showSeekFeedback(const QString &message);
     void setFullscreen(bool enabled);
+    void setMiniPlayer(bool enabled);
     void revealControls();
     void restoreSession(const QString &path);
     QString saveSession();
+    void requestThumbnailPreview(double seconds, QPoint globalPosition);
+    void hideThumbnailPreview();
+    void showThumbnailPreview(quint64 requestId, const QString &source, double requestedSeconds,
+                              ThumbnailResult result);
     [[nodiscard]] QString mediaDirectory() const;
     std::unique_ptr<MpvController> controller_;
     std::unique_ptr<PlaylistController> playlist_;
@@ -76,9 +92,12 @@ class MainWindow final : public QMainWindow {
     TrackMenus *trackMenus_ = nullptr;
     PlaylistPane *playlistPane_ = nullptr;
     LocalFileDrop *fileDrop_ = nullptr;
-    QLabel *emptyHint_ = nullptr;
+    WelcomePanel *welcomePanel_ = nullptr;
     ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
     PlaybackOverlay *playbackOverlay_ = nullptr;
+    ThumbnailService *thumbnailService_ = nullptr;
+    ThumbnailPreview *thumbnailPreview_ = nullptr;
+    QPoint thumbnailAnchor_;
     FolderMenu *folderMenu_ = nullptr;
     QAction *openAction_ = nullptr;
     QAction *openNetworkAction_ = nullptr;
@@ -99,6 +118,12 @@ class MainWindow final : public QMainWindow {
     QStringList pendingPaths_;
     QPersistentModelIndex pendingPlaylistIndex_;
     QByteArray normalGeometry_;
+    QByteArray miniPlayerSavedGeometry_;
     bool normalMaximized_ = false;
+    bool fullscreenPresentationActive_ = false;
+    bool syncingWindowState_ = false;
+    QRect miniPlayerGeometry_;
+    bool miniPlayerMaximized_ = false;
+    bool miniPlayerActive_ = false;
     bool sessionSaveAttempted_ = false;
 };

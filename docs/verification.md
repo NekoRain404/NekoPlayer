@@ -1,5 +1,272 @@
 # Verification Record
 
+Welcome-panel vertical-overflow correction and width-boundary regression (2026-10-24):
+
+- A new offscreen geometry regression reproduced the drop-hint intersection with the primary buttons at a 400×215 logical-pixel card height. The cause was showing supporting copy at a height where the visible labels and buttons could not fit.
+- Supporting copy now remains hidden until 260 px. The regression checks 24 size combinations across widths 236–500 px and heights 215–380 px, with the maximum three recent-media and three resume rows present; any visible hint must begin below both primary actions.
+- `ui-surface` and `code-size` passed; changed-file Clang formatting and `git diff --check` passed. No window-behavior tests were run. This confirms widget geometry under Qt offscreen, not the final native Wayland composition; visual desktop recheck remains outstanding.
+
+完整 Debug 非窗口回归复核（2026-10-24）：
+
+- `cmake --build --preset debug -j4` 完成，播放器与全部测试目标均构建成功。
+- `ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` 通过 **50/50**（54.13 秒），包含 code-size、UI 主题/图标、媒体扫描、网络播放、缩略图、逐帧、播放列表、续播、字幕、音轨、视频呈现与色彩控制等测试。
+- 按用户要求未运行窗口行为测试。此次结果不验证原生 Wayland 窗口交互、实际 HDR 输出、GPU 硬解或真实音频设备表现；这些仍需桌面环境专项验收。
+
+完整 ASan/UBSan 非窗口回归复核（2026-10-24）：
+
+- `cmake --build --preset sanitizers -j4` 完成，播放器及全部测试目标均构建成功。
+- `ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/sanitizers --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` 通过 **50/50**（65.29 秒），未报告 ASan/UBSan 错误。关闭进程退出泄漏检查是为了排除先前记录的平台库缓存分配；本结果不表示泄漏检测通过。
+- 按用户要求未运行窗口行为测试。此次结果不验证原生 Wayland 窗口交互、实际 HDR 输出、GPU 硬解或真实音频设备表现；这些仍需桌面环境专项验收。
+
+First playable verification and static-analysis closure (2026-10-24):
+
+- Fixed a Clang-only most-vexing-parse issue in `mediafolderscan.cpp` by using brace initialization for `QCollator`; the independent Clang build of `neko_input` and that file's Clang-Tidy check passed.
+- Full Debug build and all **49/49 non-window tests** passed. Full ASan/UBSan build and the same **49/49 non-window tests** passed with `ASAN_OPTIONS=detect_leaks=0`. A run without that setting reported process-exit allocations rooted in host GTK/Pango/fontconfig platform libraries, so it was stopped and not counted as a project leak result.
+- Clang-Tidy processed all **80 production `.cpp` files** with `clang-analyzer-*` and `bugprone-narrowing-conversions`. No optional-access or unsafe-path findings were emitted. The folder-scan watcher leak warning is a Qt-parent-ownership false positive: `QFutureWatcher` is constructed with the job as QObject parent and also `deleteLater()`'d when its future finishes. Reviewed narrowing reports cover Qt model APIs whose row counts are `int`, timestamp-to-seconds and byte-size display conversions, and Qt key-sequence construction; these are bounded/interface or intentional precision conversions, not blindly rewritten. The analyzer also reports private `MpvController::Impl` padding; this per-player aggregate is dominated by Qt containers/strings and was not reordered without evidence of a meaningful performance gain.
+- `code-size`, `clang-format --dry-run --Werror` for the changed source, and `git diff --check` passed. No GUI/window tests were run, per user request.
+
+完整非窗口回归阶段（2026-10-24）：
+
+- 在容器-size 收尾提交后重新构建完整 Debug 目标；`ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` 通过 **49/49**（63.50 秒）。
+- 完整 ASan/UBSan 目标构建成功；相同的非窗口 CTest 选择在 `ASAN_OPTIONS=detect_leaks=0` 下通过 **49/49**（80.87 秒）。保持 ASan/UBSan 的地址与未定义行为检测；关闭进程退出泄漏检查是为了避开 Qt Wayland 客户端、GTK/Pango/fontconfig 等平台库保留的外部缓存/代理分配。未据此宣称泄漏检查通过。
+- 单独复跑首轮出现外部退出泄漏报告的 UI 与缩略图测试，四项通过 **4/4**。其中 `ui-surface` 的窄宽布局用例在 sanitizer 的原始宿主 GTK 环境偶发未满足方向断言，在规定的 generic Qt 主题下通过。
+- 按用户要求未运行窗口行为测试；Wayland 实机布局、输入路由、GPU、HDR 输出与硬件解码仍未由本轮验收。测试选择包含 `code-size`、主题/图标、网络、缩略图、截图、逐帧、区间循环、播放列表、续播、轨道/字幕、文件拖放路由及视频色彩控制器等 49 个非窗口测试。
+
+Container-size conversion cleanup stage (2026-10-24):
+
+- `ThumbnailService::cacheSize()` now exposes Qt's `qsizetype` rather than narrowing a container size to `int`; a compile-time API regression check guards that contract. Session path normalization also tracks Qt list positions as `qsizetype` and converts only at the existing `int` index boundary.
+- Full Debug build succeeded; `thumbnail-service`, `session`, and `code-size` passed **3/3**. The corresponding ASan/UBSan tests passed **2/2**. Clang's `bugprone-narrowing-conversions` check reported no findings in the two affected translation units; changed-file formatting and `git diff --check` passed.
+- Window behavior tests were not run. This is a type-safety cleanup only and does not validate native Wayland, graphics, or hardware playback behavior.
+
+HDR 元数据测试与硬解隔离阶段（2026-10-24）：
+
+- HDR 元数据用例在打开合成样本前显式关闭硬件解码，避免测试结果受 GPU／驱动初始化耗时影响；生产播放默认值及 HDR 渲染路径不变。
+- 定向媒体信息测试在 Debug 下通过（2.27 秒），在 ASan/UBSan 下通过（2.63 秒）。完整 Debug 非窗口套件通过 **50/50**；完整 ASan/UBSan 非窗口套件通过 **50/50**（61.01 秒，`ASAN_OPTIONS=detect_leaks=0`）。
+- `code-size`、`clang-format --dry-run --Werror` 和 `git diff --check` 通过。按用户要求未运行窗口行为测试；这不构成真实 Wayland、GPU 或 HDR 输出验收。
+
+媒体文件筛选器一致性阶段（2026-10-24）：
+
+- 将视频与音频支持扩展名集中到 `mediafiletypes.cpp`；目录扫描以及打开/添加文件对话框复用同一集合，防止可扫描文件被选择器过滤掉。回归测试逐项核对 30 种扩展名及对话框通配符。
+- Debug 全量构建通过；`ctest --test-dir build/debug -E 'window|startup' --output-on-failure` 通过 **50/50**。`code-size` 在该测试集中通过；`clang-format --dry-run --Werror` 与 `git diff --check` 通过。
+- 按用户要求未运行窗口行为测试。验证覆盖过滤器和目录扫描契约，不代表真实 Wayland 文件选择器视觉验收；播放队列语义及 libmpv/GPU 路径未改变。
+
+Thumbnail timestamp origin correction stage (2026-10-24):
+
+- FFmpeg thumbnail seek targets and returned timestamps now use media-relative time even when a
+  stream's container timestamps begin at a non-zero offset. A generated 10-second-offset MKV
+  regression failed before the correction (`0.8 s` preview returned a timestamp above `1.0 s`)
+  and passed afterward. Overflow while adding the stream origin is rejected explicitly.
+- The complete Debug build succeeded. Focused `thumbnail-decoder`, `thumbnail-service`,
+  `thumbnail-preview`, and `frame-step` tests passed **4/4**; ASan/UBSan decoder, service and
+  frame-step tests passed **3/3**. The full non-window Debug selection passed **49/49** in
+  **53.55 seconds**. `code-size`, Clang formatting and `git diff --check` passed.
+- Window behavior tests were not run, per the standing preference. The generated fixture uses
+  FFmpeg and is independent of Wayland, libmpv rendering and hardware decoding.
+
+Thumbnail preview eligibility stage (2026-10-24):
+
+- Timeline hover now requests thumbnails only for active, seekable local media with a finite
+  positive duration and an available motion-video stream. Seekable audio no longer starts a
+  decoder task on every hover; network preview remains intentionally unsupported.
+- The new policy regression covers audio-only media, valid local video, network sources, and
+  inactive/non-seekable/zero-duration playback. The full Debug build and non-window suite passed
+  **50/50** in **53.23 seconds**; ASan/UBSan policy test passed **1/1**. `code-size`, Clang
+  formatting and `git diff --check` passed.
+- Window behavior tests were not run. The contract test exercises the eligibility decision only;
+  actual Wayland popup positioning and FFmpeg cancellation latency remain desktop/runtime checks.
+
+首页续看历史阶段（2026-10-24）：
+
+- 欢迎页新增“继续观看”区块，消费 `SessionManager` 已加载／更新的本地续播记录；最多展示 3 项，排除非法路径、无效时长、越界位置以及距片尾不超过 1 秒的条目。按钮沿用已有 `openFile` 和播放队列续播解析，不建立第二份存储，也不触碰网络媒体。
+- 完整 Debug 构建通过；`ui-surface`、`appearance-preferences`、`playback-history-store`、`playback-history-session`、`session`、`code-size` 共 **6/6** 通过。修改文件的 clang-format 与 `git diff --check` 通过，普通代码文件均低于 500 行。
+- 未运行窗口行为测试；首页在真实 Wayland 下的布局/视觉及跨会话桌面验收仍未覆盖。本阶段不改变 mpv 命令、解码器、HDR 或视频渲染路径。
+
+Media-first UI visual foundation stage (2026-10-24):
+
+- Added semantic Dark/Light tokens, token-generated main-window styling, WCAG AA primary-action and muted-text contrast, and shared DPR-aware vector icons. The icon review regression verifies outline interiors remain transparent and seek directions differ. Dark/Light primary-action contrast is 6.84:1 / 5.04:1; Light muted text is 4.64:1 on the canvas and 5.02:1 on the surface.
+- `cmake --build --preset debug -j4` succeeded. `ctest --test-dir build/debug -R '^(code-size|appearance-preferences|ui-surface)$' --output-on-failure` passed **3/3**. `git diff --check` and changed-line `git clang-format` checks passed. Ordinary handwritten files remain within the 500-line limit; the existing `mainwindow.cpp` exception is 581/800 lines.
+- A later static capture on native Wayland (`eDP-1`, 2880×1800) using `wf-recorder` showed the welcome-panel drop/shortcut hint visually colliding with the bottom edge of the two primary entry buttons. This fails visual acceptance; widget-geometry intersection has not yet been measured, so the underlying layout cause remains to be reproduced and confirmed before fixing. The capture was inspected from a `--no-config` launch; no menu/playback interaction was performed and no window-behavior tests were run. No screenshot is committed because the desktop capture contains unrelated host UI.
+- A second static capture used the generated `猫 sample [1].mkv` fixture from the command line. It showed a real video frame and the transport bar on Wayland, but the frame timestamp was 3.960 seconds at the four-second fixture's end; this verifies a rendered frame was visible, not a stable in-progress playback state. A folder-scan progress dialog was also visible, but no initiating action could be established from the capture; code inspection shows scan starts are connected to explicit folder actions/drop handling, so no causal attribution is recorded.
+- At the time of this capture, the welcome-surface collision had not yet been resolved. The 2026-10-24 geometry-correction entry above records the later fix and its offscreen regression coverage; native Wayland visual recheck remains outstanding. No stable in-progress playback, light-theme, narrow-window, or alternate-scale capture has been accepted. `wf-recorder` is present in the current environment.
+
+Transport-bar visual hierarchy stage (2026-10-24):
+
+- The play/pause control is now a distinct primary action with a larger icon and theme-aware
+  resting, hover, pressed and checked states. Secondary controls retain their compact sizing;
+  row spacing is slightly more generous without changing responsive hide/show thresholds or
+  playback wiring.
+- `cmake --build build/debug -j4` succeeded. `ctest --test-dir build/debug -R
+  '^(code-size|appearance-preferences|ui-surface|fullscreen-feedback-window)$'` passed **4/4**.
+- The primary-action contract verifies the button still invokes the pause QAction and is visually
+  distinguished by its icon size. Appearance checks exercise both dark and light primary states;
+  the fullscreen feedback test covers the existing overlay/control lifecycle.
+- Formatting, `git diff --check` and the 500/800-line checker passed. Real Wayland visual
+  inspection of color/contrast and hover/focus presentation remains outstanding.
+
+Reply-queue exhaustion test stabilization (2026-10-24):
+
+- Repeated testing exposed that a single event-pump/probe sequence did not guarantee libmpv's
+  bounded reply queue had room for all three retry commands. The regression test now retries each
+  identical framing request until that specific request is accepted, then verifies native values.
+- `video-framing` passed five consecutive focused runs. The full non-window Debug selection
+  (`ctest --test-dir build/debug -E 'window|startup' --output-on-failure`) passed **49/49**.
+- Formatting and `git diff --check` passed. Production behavior was unchanged.
+
+Wayland file-drop window-test readiness stage (2026-10-23):
+
+- Removed a redundant `qWaitForWindowExposed()` assertion from the desktop drag/drop integration test. Under the configured native Wayland backend it timed out even though the scenario's actual prerequisite is successful `VideoWidget` renderer initialization; the test now waits for that concrete condition before exercising file-drop routing.
+- `file-drop-window` passed ten consecutive repetitions. The full Debug suite subsequently passed **62/62** in **87.89 seconds**; the transient `track-preference-session` and `video-framing` failures from the preceding run did not recur. The changed window checks and `code-size` also passed in focused runs. `clang-format --dry-run --Werror` and `git diff --check` passed.
+
+Playlist navigation window-test readiness stage (2026-10-23):
+
+- The `playlist-window` shuffle/navigation case previously expected navigation actions to be enabled before its `QOpenGLWidget` renderer existed. The test now verifies actions remain disabled before renderer readiness, then waits for the visible renderer and checks the queue-dependent action state. This matches the documented playback-entry readiness boundary; production behavior was unchanged.
+- `playlist-window` passed five consecutive repetitions after the fixture correction. It and the general `window` suite passed in focused runs; see the full 62/62 result above.
+
+Fullscreen presentation and preview lifecycle stage (2026-10-23):
+
+- `cmake --build --preset debug --target fullscreen_feedback_window_test window_test -j2` succeeded. `ctest --test-dir build/debug -R '^(fullscreen-feedback-window|window|code-size)$' --output-on-failure` passed 3/3. `clang-format --dry-run --Werror` and `git diff --check` passed.
+- The full `ctest --preset debug --output-on-failure` run passed 60/62. Two unrelated desktop-test failures remain: `file-drop-window` could not expose its window in this environment (`qWaitForWindowExposed`), and `playlist-window` failed its shuffle/navigation assertion. The changed fullscreen and general window suites both passed in the same run.
+- New regressions cover direct external fullscreen/normal state synchronization, playlist/menu/status restoration, preview dismissal on fullscreen/mini/seek-press/playback-finish, and clean transitions between mini-player and fullscreen in both directions. The fullscreen transport assertion reflects the tested behavior: controls are visible on entry and subsequently fade.
+- This verifies Qt window state in the configured desktop test runner, not popup positioning or animation under a real Wayland compositor. Hardware video rendering and HDR are outside this UI lifecycle stage.
+
+Timeline thumbnail preview stage (2026-10-23):
+
+- The transport timeline now reports hover time plus global pointer position. `MainWindow` uses
+  that signal to request a local thumbnail and presents it in a non-activating floating preview;
+  the popup is clamped to the active screen and falls below the timeline when there is no room
+  above it. Fullscreen reparenting remains geometry-safe because the anchor is mapped globally.
+- Preview painting stays on the GUI thread and consumes `QImage` from the isolated service. Source
+  replacement, stop and timeline leave cancel pending work, while stale results are rejected by
+  the service generation and current media path. Network thumbnails remain intentionally disabled.
+- `appearance-preferences`, `thumbnail-preview`, `thumbnail-service`, `thumbnail-decoder` and
+  `code-size` passed. Formatting and `git diff --check` passed; no libmpv, HDR, OpenGL or Wayland
+  video-frame path changed.
+- The complete non-window Debug collection passed **48/49** in **55.10 seconds**; the existing
+  `video-framing` test had one timing-sensitive failure during the parallel run and passed on the
+  immediate focused rerun. No new failure was observed in the thumbnail or UI tests.
+
+Thumbnail request service stage (2026-10-23):
+
+- Added a single-worker `ThumbnailService` with cancellation, generation checks, local-file policy,
+  bounded in-memory cache and GUI-thread result delivery. Network URLs are rejected deliberately
+  until preview access can share mpv authentication and buffering policy.
+- `thumbnail-service`, `thumbnail-decoder` and `code-size` passed. The service regression covers
+  network rejection, latest-request wins, cancellation suppression and cache reuse. Formatting and
+  `git diff --check` passed; the primary libmpv hardware decode, HDR and Wayland render paths are
+  untouched.
+
+Transport grouping polish stage (2026-10-23):
+
+- The bottom transport now separates playback controls, time readout and audio/window controls
+  with stable, theme-aware dividers. The time divider follows the responsive visibility policy,
+  so narrow windows do not leave an orphaned line or shift the control row.
+- `appearance-preferences` passed with the new dark/light style contracts. Code-size, Clang
+  formatting and `git diff --check` passed. No playback commands, layout geometry of the video
+  surface, decoder settings or GPU rendering path changed.
+
+Thumbnail decoder foundation stage (2026-10-23):
+
+- Added an isolated FFmpeg thumbnail decoder for local media. It owns one format/codec/scaler
+  context per request, supports cancellation through FFmpeg's interrupt callback, and returns
+  GUI-safe `QImage` data without touching libmpv, OpenGL, Wayland surfaces, HDR presentation or
+  the primary hardware-decoding path.
+- The focused `thumbnail-decoder` CTest passed; the generated 320x180 fixture verifies bounded
+  output dimensions and invalid/cancelled request handling. Clang formatting, `git diff --check`
+  and the 500/800-line code-size check passed. Network thumbnail access remains intentionally
+  deferred until a request policy can preserve mpv authentication and avoid blocking previews.
+
+Playlist narrow text stage (2026-10-23):
+
+- Playlist rows now use middle elision so long entries retain both the meaningful filename prefix
+  and the extension at the 240 px pane minimum. The model's full normalized path remains available
+  through `Qt::ToolTipRole`; queue order, drag/drop and playback behavior are unchanged.
+- The new narrow-pane regression failed against Qt's default `ElideRight` and passes with the
+  explicit policy. `ui-surface` and the full non-window Debug selection (`ctest --test-dir
+  build/debug -E 'window|startup'`) passed **46/46** in **54.66 seconds**; code-size, formatting
+  and `git diff --check` passed. Native Wayland text rasterization remains desktop verification.
+
+Runtime language refresh stage (2026-10-23):
+
+- Settings now retranslate as one subtree when the language changes at runtime: theme menu items,
+  playback settings, subtitle display settings, and About keep their existing actions, shortcuts,
+  enabled state and theme check state. Subtitle display menu actions now expose a dedicated
+  `retranslate()` path and include English catalog entries.
+- Preferences categories now show Qt standard playback, audio and subtitle icons for faster visual
+  scanning without changing the three-page data flow.
+- The new window regression passes English -> Chinese round-tripping and preserves the playback
+  settings shortcut and selected theme. `preferences-dialog` and `window` passed **2/2** in the
+  focused run; the full non-window Debug selection (`ctest --test-dir build/debug -E 'window|startup'`)
+  passed **46/46** in **58.81 seconds**. Code-size, Clang formatting and `git diff --check` passed.
+- No playback commands, decoder settings, GPU render path, CPU frame copies or HDR handling changed.
+  The window test was run under the native Wayland session; broader window-suite failures recorded
+  in the previous stages remain outside the non-window regression scope.
+
+Transport hierarchy stage (2026-10-23):
+
+- The transport bar now has a restrained top separator in both themes, a distinct monospace time
+  readout, and an independently styled volume slider. Timeline sizing, direct seek behavior,
+  keyboard shortcuts and shared QAction wiring are unchanged.
+- The appearance regression now asserts the transport, time and volume style contracts. The full
+  non-window Debug selection (`ctest --test-dir build/debug -E 'window|startup'`) passed **46/46**
+  in **55.29 seconds**; code-size, Clang formatting and `git diff --check` passed.
+- No libmpv commands, decoder settings, GPU render path, CPU frame copies, HDR handling or
+  playback polling changed. Native Wayland pixels and pointer hover rendering remain unverified.
+
+Welcome panel hierarchy stage (2026-10-23):
+
+- The empty-state surface now has a small NekoPlayer brand mark, more deliberate vertical rhythm,
+  a slightly lighter container radius, and taller recent-history rows. The brand mark is hidden only
+  for extremely short surfaces, preserving the primary open actions before supporting copy.
+- `ui-surface` and `appearance-preferences` passed **2/2** in the focused Debug run. The full
+  non-window Debug selection (`ctest --test-dir build/debug -E 'window|startup'`) passed **46/46**
+  in **54.98 seconds**; code-size, formatting and `git diff --check` passed. No libmpv commands,
+  decoder settings, GPU render path, CPU frame copies, HDR handling or playback polling changed.
+- A full unfiltered Debug CTest run was also attempted under the native Wayland session. Four
+  pre-existing window targets failed (fullscreen feedback, media-information teardown, file-drop,
+  and playlist-window); these are outside the standing non-window verification scope and are not
+  attributed to this welcome-panel-only change. Native Wayland visual spacing remains unverified.
+
+Mini-player session geometry follow-up (2026-10-23):
+
+- Closing the app while mini mode was active previously persisted the temporary compact geometry as the normal window size. Mini mode now captures the pre-entry Qt geometry blob and session saving persists that value, while the existing `QRect` still restores the visible window when leaving mini mode.
+- The new test failed before the fix by comparing the stored session geometry with the normal geometry captured before mini mode; both the persistence regression and mini-mode toggle test pass after the fix. Full Debug build, code-size, formatting and `git diff --check` passed.
+- Tests ran offscreen and report unsupported QOpenGLWidget/raise operations; they validate saved Qt state, not actual Wayland placement or video rendering.
+- After the follow-up, the full non-window Debug CTest selection (`-E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'`) passed **45/45** in **53.33 seconds**. Window behavior tests remain outside this suite per the standing preference.
+
+Mini-player window mode stage (2026-10-23):
+
+- Added a shared `Ctrl+Shift+M` action in View and the video context menu. It reuses the existing main window, libmpv instance and GPU-rendered video widget; mini mode hides menus/status/playlist, uses a 480×320 tool window with a stay-on-top hint, and restores the saved normal geometry, maximized state and playlist visibility on exit.
+- Entering from fullscreen exits fullscreen first. The action remains checkable, changes to “Exit Mini Player” while active, and is translated at runtime. No extra decoder, frame copy, or polling path is introduced.
+- The new Qt window-state regression passed under the offscreen plugin, including action state, hidden chrome, flags and size restoration. This environment reports that `QOpenGLWidget` and native raise are unsupported, so it does not verify video pixels, actual stacking, or compositor policy. Wayland may ignore or constrain always-on-top requests; that remains native desktop verification.
+- Full Debug build, focused `ui-surface`, `appearance-preferences`, `code-size`, formatting and `git diff --check` passed. No native Wayland window test was run.
+
+Welcome panel icon and interaction stage (2026-10-23):
+
+- Recent local and network entries now use distinct Qt standard icons, a consistent 16 px icon size, a pointing-hand cursor, and keyboard-friendly focus behavior without changing the existing click signal.
+- Accessible names identify the media type and retain the sanitized location; runtime language changes update these names along with the visible heading. Tooltips remain free of network credentials, queries and fragments.
+- The red/green UI regression covers icon presence, size, sanitized network metadata and English runtime retranslation. `ui-surface_test` passed **8/8** in Debug; formatting and `git diff --check` passed. Window behavior tests were not run, so native Wayland icon rasterization and pointer/focus visuals remain desktop verification work.
+- No libmpv commands, decoder settings, GPU render path, CPU frame copies, HDR handling or playback polling changed in this stage.
+
+Welcome panel recent-history stage (2026-10-23):
+
+- The welcome surface now shows up to three recent local or network sources, keeps network credentials, query strings and fragments out of labels/tooltips, and emits the original source when a history action is selected.
+- Recent history updates live from `RecentMediaHistory`, and the empty state remains clear when no entries exist. Runtime language changes translate the recent-history heading and fallback label.
+- The card now yields recent entries and supporting copy at short heights while preserving both primary playback actions; wide cards keep the compact two-column action layout and narrow cards stack actions vertically.
+- `ui-surface_test` passed **8/8** in Debug and ASan/UBSan with offscreen Qt (`ASAN_OPTIONS=detect_leaks=0`). The short-height regression covers the 360×190 surface and the existing narrow-width regression covers the stacked actions. `appearance-preferences`, `code-size`, formatting and `git diff --check` also passed. Window behavior tests were not run; native Wayland visual spacing and history-click behavior remain desktop verification work.
+- No libmpv commands, decoder settings, GPU render path, CPU frame copies, HDR handling or playback polling changed in this stage.
+
+Welcome panel narrow-layout stage (2026-10-23):
+
+- The welcome card now switches its primary actions from a row to a column when the translated button labels no longer fit side-by-side. Its minimum width was reduced so the stacked layout fits the supported narrow video surface with the playlist open.
+- `ui-surface` passed in Debug and ASan/UBSan (`ASAN_OPTIONS=detect_leaks=0`); the new offscreen regression checks the 280 px card width where the network action previously had only 118 px for a 168 px size hint. `code-size`, `appearance-preferences`, and `preferences-dialog` passed **4/4**; the full Debug build, formatting and `git diff --check` passed. Window behavior tests were compiled but not run; native Wayland layout remains desktop verification work.
+- Running the sanitizer test with default LeakSanitizer reported process-exit allocations rooted in system fontconfig/GTK libraries. The same ASan/UBSan test passed with leak detection disabled; this is consistent with other Qt UI sanitizer runs recorded above.
+
+Control-state styling stage (2026-10-22):
+
+- Dark and light themes now give disabled slider handles an explicit muted track color and border, so an unavailable seek control is visibly distinct from a focused/hovered one while retaining the existing opacity treatment.
+- `code-size`, `appearance-preferences`, and `preferences-dialog` passed **3/3**. The updated appearance suite passed **9/9** under ASan/UBSan with leak detection disabled. Window behavior tests were not run; native Wayland focus-ring contrast remains desktop verification work.
+- Formatting and `git diff --check` passed. No playback, decoding, or GPU rendering code changed.
+
 Responsive transport stage (2026-10-22):
 
 - TransportBar now selects compact metrics from its live width. At 560 px it keeps time and volume controls with smaller footprints; below 480 px it hides the optional time label and shrinks volume; below 360 px it hides volume as a final narrow-surface fallback. Button sizing, timeline interaction, and shared QAction wiring are unchanged.

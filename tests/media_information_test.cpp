@@ -57,6 +57,7 @@ class MediaInformationTest final : public QObject {
 
     void identifiesHdrTransferAndPrimaries() {
         MpvController player(true, true);
+        player.setHardwareDecodingEnabled(false);
         player.openFile(QString::fromUtf8(TEST_HDR_MEDIA_PATH));
         QTRY_COMPARE(player.mediaInformation().videoWidth, 64);
         QTRY_COMPARE(player.mediaInformation().videoPrimaries, QStringLiteral("bt.2020"));

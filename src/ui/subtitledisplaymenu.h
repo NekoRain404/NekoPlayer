@@ -13,6 +13,7 @@ class SubtitleDisplayMenu final : public QObject {
     explicit SubtitleDisplayMenu(MpvController &controller, QWidget *window);
     [[nodiscard]] QMenu *menu() const;
     [[nodiscard]] QAction *settingsAction() const;
+    void retranslate();
 
   signals:
     void feedback(const QString &message);

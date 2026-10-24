@@ -2,6 +2,7 @@
 #include "mainwindow.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
+#include "welcomepanel.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -27,6 +28,13 @@ void MainWindow::restoreSession(const QString &path) {
         statusBar()->showMessage(tr("无法恢复会话：%1").arg(loaded.error));
         return;
     }
+    folderMenu_->setMediaLibraryPreferences(loaded.state.mediaLibrary);
+    updateSeekActionLabels(loaded.state.seekStepSeconds);
+    connect(session_.get(), &SessionManager::playbackHistoryChanged, this, [this] {
+        if (welcomePanel_)
+            welcomePanel_->setResumeEntries(session_->playbackHistory());
+    });
+    welcomePanel_->setResumeEntries(session_->playbackHistory());
     if (!loaded.state.window.geometry.isEmpty()) {
         restoreGeometry(loaded.state.window.geometry);
         // Fullscreen is a transient mode; only the normal/maximized window is durable.
@@ -44,7 +52,9 @@ QString MainWindow::saveSession() {
     if (!session_)
         return recentError;
     WindowPreferences window;
-    window.geometry = isFullScreen() ? normalGeometry_ : saveGeometry();
+    window.geometry = miniPlayerActive_ ? miniPlayerSavedGeometry_
+                      : isFullScreen()  ? normalGeometry_
+                                        : saveGeometry();
     window.playlistVisible = showPlaylistAction_->isChecked();
     const auto sessionError = session_->save(std::move(window), pendingPaths_);
     if (recentError.isEmpty())

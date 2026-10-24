@@ -74,9 +74,12 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
                 historyEntries_.remove(normalized);
                 resumePositions_.remove(normalized);
                 savePlaybackHistory();
+                emit playbackHistoryChanged();
             });
     playlist_.setResumePositionResolver([this](const QString &path) {
-        return resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0);
+        return resumePlaybackPositionEnabled_
+                   ? resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0)
+                   : 0.0;
     });
 }
 
@@ -101,9 +104,13 @@ SessionLoadResult SessionManager::restore() {
         historyEntries_.insert(normalized, entry);
         resumePositions_.insert(normalized, entry.position);
     }
+    emit playbackHistoryChanged();
     mediaDirectory_ = loaded.state.window.mediaDirectory;
+    mediaLibraryPreferences_ = loaded.state.mediaLibrary;
+    resumePlaybackPositionEnabled_ = loaded.state.resumePlaybackPosition;
+    seekStepSeconds_ = loaded.state.seekStepSeconds;
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
-                           loaded.state.resumePosition);
+                           resumePlaybackPositionEnabled_ ? loaded.state.resumePosition : 0);
     player_.setVolume(audio_.volume);
     player_.setMuted(audio_.muted);
     player_.setHardwareDecodingEnabled(loaded.state.hardwareDecodingEnabled);
@@ -126,7 +133,9 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
         rememberPlaybackPosition(state.path, position, state.duration);
     }
     window.mediaDirectory = mediaDirectory_;
-    const auto position = player_.state().path == playlist_.model()->currentPath()
+    const auto position = !resumePlaybackPositionEnabled_
+                              ? 0.0
+                          : player_.state().path == playlist_.model()->currentPath()
                               ? player_.resumePosition()
                               : playlist_.pendingResumePosition();
     SessionState saved;
@@ -139,6 +148,9 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.resumePosition = position;
     saved.tuning = tuning_;
     saved.videoColor = player_.videoColorAdjustment();
+    saved.mediaLibrary = mediaLibraryPreferences_;
+    saved.resumePlaybackPosition = resumePlaybackPositionEnabled_;
+    saved.seekStepSeconds = seekStepSeconds_;
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     if (!sessionError.isEmpty())
@@ -173,6 +185,7 @@ void SessionManager::rememberPlaybackPosition(const QString &path, double positi
         }
     }
     savePlaybackHistory();
+    emit playbackHistoryChanged();
 }
 
 QString SessionManager::savePlaybackHistory() const {
@@ -325,6 +338,40 @@ QString SessionManager::saveTrackPreferences() {
 }
 
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }
+
+bool SessionManager::resumePlaybackPositionEnabled() const {
+    return resumePlaybackPositionEnabled_;
+}
+
+int SessionManager::seekStepSeconds() const { return seekStepSeconds_; }
+
+void SessionManager::setSeekStepSeconds(int seconds) {
+    if (seconds == 5 || seconds == 10 || seconds == 30)
+        seekStepSeconds_ = seconds;
+}
+
+void SessionManager::setResumePlaybackPositionEnabled(bool enabled) {
+    resumePlaybackPositionEnabled_ = enabled;
+}
+
+MediaLibraryPreferences SessionManager::mediaLibraryPreferences() const {
+    return mediaLibraryPreferences_;
+}
+
+void SessionManager::setMediaLibraryPreferences(MediaLibraryPreferences preferences) {
+    mediaLibraryPreferences_ = preferences;
+}
+
+QList<PlaybackHistoryEntry> SessionManager::playbackHistory() const {
+    QList<PlaybackHistoryEntry> entries;
+    entries.reserve(historyEntries_.size());
+    for (const auto &entry : historyEntries_)
+        entries.append(entry);
+    std::sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+        return left.lastPlayedUtcMs > right.lastPlayedUtcMs;
+    });
+    return entries;
+}
 void SessionManager::rememberMedia(const QString &path) {
     const auto source = MediaSource::normalize(path);
     if (!source.isEmpty() && !MediaSource::isNetwork(source))

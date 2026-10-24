@@ -57,12 +57,15 @@ SessionState normalized(SessionState state) {
     state.subtitles = state.subtitles.normalized();
     state.tuning = state.tuning.normalized();
     state.videoColor = state.videoColor.normalized();
+    if (state.seekStepSeconds != 5 && state.seekStepSeconds != 10 &&
+        state.seekStepSeconds != 30)
+        state.seekStepSeconds = 5;
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
     if (state.audio.outputDevice.isEmpty() || state.audio.outputDevice.contains(QChar::Null))
         state.audio.outputDevice = QStringLiteral("auto");
     QStringList paths;
-    int current = -1;
+    qsizetype current = -1;
     for (qsizetype row = 0; row < state.paths.size(); ++row) {
         const auto &path = state.paths.at(row);
         // Persisted local paths must remain independent of the working directory.
@@ -79,7 +82,8 @@ SessionState normalized(SessionState state) {
     if (current < 0 || !std::isfinite(state.resumePosition) || state.resumePosition < 0 ||
         MediaSource::isNetwork(state.paths.at(current)))
         state.resumePosition = 0;
-    state.currentIndex = current >= 0 ? current : (state.paths.isEmpty() ? -1 : 0);
+    state.currentIndex =
+        current >= 0 ? static_cast<int>(current) : (state.paths.isEmpty() ? -1 : 0);
     const QFileInfo directory(state.window.mediaDirectory);
     if (!directory.isAbsolute() || !directory.isDir())
         state.window.mediaDirectory.clear();
@@ -113,6 +117,16 @@ SessionLoadResult SessionStore::load() const {
         settings.value(QStringLiteral("audio/outputDevice"), QStringLiteral("auto")).toString();
     state.hardwareDecodingEnabled =
         readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
+    state.resumePlaybackPosition =
+        readBool(settings, QStringLiteral("playback/resumePosition"), true);
+    const auto seekStep = settings.value(QStringLiteral("playback/seekStepSeconds"), 5).toInt(&valid);
+    state.seekStepSeconds = valid && (seekStep == 5 || seekStep == 10 || seekStep == 30)
+                                ? seekStep
+                                : 5;
+    state.mediaLibrary.scanningEnabled =
+        readBool(settings, QStringLiteral("library/scanningEnabled"), true);
+    state.mediaLibrary.recursiveByDefault =
+        readBool(settings, QStringLiteral("library/recursiveByDefault"));
     state.subtitles.visible = readBool(settings, QStringLiteral("subtitles/visible"), true);
     const auto scale = settings.value(QStringLiteral("subtitles/scale"), 1).toDouble(&valid);
     state.subtitles.scale = valid ? scale : 1;
@@ -169,6 +183,12 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("audio/muted"), saved.audio.muted);
     settings.setValue(QStringLiteral("audio/outputDevice"), saved.audio.outputDevice);
     settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
+    settings.setValue(QStringLiteral("playback/resumePosition"), saved.resumePlaybackPosition);
+    settings.setValue(QStringLiteral("playback/seekStepSeconds"), saved.seekStepSeconds);
+    settings.setValue(QStringLiteral("library/scanningEnabled"),
+                      saved.mediaLibrary.scanningEnabled);
+    settings.setValue(QStringLiteral("library/recursiveByDefault"),
+                      saved.mediaLibrary.recursiveByDefault);
     settings.setValue(QStringLiteral("subtitles/visible"), saved.subtitles.visible);
     settings.setValue(QStringLiteral("subtitles/scale"), saved.subtitles.scale);
     settings.setValue(QStringLiteral("subtitles/position"), saved.subtitles.position);

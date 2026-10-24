@@ -1,9 +1,11 @@
 #include "mainwindow.h"
 #include "actionfeedbackoverlay.h"
 #include "actionfeedbacktext.h"
+#include "appearanceicons.h"
 #include "foldermenu.h"
 #include "fullscreencontrols.h"
 #include "input/localfiledrop.h"
+#include "input/mediafiletypes.h"
 #include "networkopendialog.h"
 #include "playback/mediasource.h"
 #include "playback/mpvcontroller.h"
@@ -13,25 +15,32 @@
 #include "playbackoverlay.h"
 #include "playlist/m3u8store.h"
 #include "playlistpane.h"
+#include "preview/thumbnailservice.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
+#include "thumbnailpreview.h"
+#include "thumbnailpreviewpolicy.h"
 #include "transportbar.h"
+#include "welcomepanel.h"
 
 #include <QAction>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListView>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMimeData>
+#include <QScreen>
 #include <QStatusBar>
 #include <QStyle>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <algorithm>
 #include <utility>
 
 namespace {
@@ -60,6 +69,12 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(fileDrop_, &LocalFileDrop::mediaFilesDropped, this, &MainWindow::appendFiles);
     connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
     createActions();
+    connect(folderMenu_, &FolderMenu::mediaLibraryPreferencesChanged, this,
+            [this](bool scanningEnabled, bool recursiveByDefault) {
+                if (session_)
+                    session_->setMediaLibraryPreferences(
+                        {scanningEnabled, recursiveByDefault});
+            });
     connect(fileDrop_, &LocalFileDrop::foldersDropped, this, [this](const QStringList &paths) {
         folderMenu_->start(paths, true, folderMenu_->recursiveEnabled());
     });
@@ -73,13 +88,18 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     feedbackOverlay_->setGeometry(video_->rect());
     playbackOverlay_ = new PlaybackOverlay(*controller_, video_);
     playbackOverlay_->setGeometry(video_->rect());
-    emptyHint_ =
-        new QLabel(tr("NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件\nCtrl+U 打开网络地址"), video_);
-    emptyHint_->setAlignment(Qt::AlignCenter);
-    emptyHint_->setAttribute(Qt::WA_TransparentForMouseEvents);
-    emptyHint_->setStyleSheet(QStringLiteral("font-size: 18px; background: transparent;"));
+    welcomePanel_ = new WelcomePanel(openAction_, openNetworkAction_, video_);
+    connect(welcomePanel_, &WelcomePanel::recentSourceRequested, this, &MainWindow::openFile);
+    connect(welcomePanel_, &WelcomePanel::resumeSourceRequested, this, &MainWindow::openFile);
+    connect(recentMedia_.get(), &RecentMediaHistory::changed, this,
+            [this] { welcomePanel_->setRecentSources(recentMedia_->entries()); });
+    welcomePanel_->setRecentSources(recentMedia_->entries());
     auto *videoLayout = new QVBoxLayout(video_);
-    videoLayout->addWidget(emptyHint_);
+    videoLayout->setContentsMargins(24, 24, 24, 24);
+    videoLayout->setSpacing(0);
+    videoLayout->addStretch(1);
+    videoLayout->addWidget(welcomePanel_, 0, Qt::AlignHCenter);
+    videoLayout->addStretch(1);
     playlistPane_ = new PlaylistPane(*playlist_, appendAction_, previousAction_, nextAction_,
                                      clearPlaylistAction_, content);
     playlistMenu_->addSeparator();
@@ -93,6 +113,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     bodyLayout->addWidget(playlistPane_);
     transport_ = new TransportBar(openAction_, previousAction_, pauseAction_, nextAction_,
                                   stopAction_, muteAction_, fullscreenAction_, content);
+    thumbnailService_ = new ThumbnailService(this);
+    thumbnailPreview_ = new ThumbnailPreview(this);
     fullscreenControls_ = new FullscreenControls(*transport_, *video_, *centralLayout_, this);
     layout->addWidget(body, 1);
     layout->addWidget(transport_);
@@ -101,6 +123,14 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     statusBar()->showMessage(tr("就绪 · Qt 6 + libmpv"));
     connect(controller_.get(), &MpvController::stateChanged, this, &MainWindow::updateState);
     connect(controller_.get(), &MpvController::errorOccurred, this, &MainWindow::showError);
+    connect(controller_.get(), &MpvController::fileOpenRequested, this,
+            &MainWindow::hideThumbnailPreview);
+    connect(controller_.get(), &MpvController::stopRequested, this,
+            &MainWindow::hideThumbnailPreview);
+    connect(controller_.get(), &MpvController::mediaLoadFailed, this,
+            &MainWindow::hideThumbnailPreview);
+    connect(controller_.get(), &MpvController::playbackFinished, this,
+            &MainWindow::hideThumbnailPreview);
     connect(controller_.get(), &MpvController::fileLoaded, this, [this] {
         recentMedia_->remember(controller_->state().path);
         statusBar()->showMessage(
@@ -152,6 +182,10 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
     });
+    connect(transport_, &TransportBar::timelineHovered, this, &MainWindow::requestThumbnailPreview);
+    connect(transport_, &TransportBar::timelineHoverEnded, this, &MainWindow::hideThumbnailPreview);
+    connect(thumbnailService_, &ThumbnailService::thumbnailReady, this,
+            &MainWindow::showThumbnailPreview);
     controlsTimer_.setSingleShot(true);
     controlsTimer_.setInterval(2200);
     connect(&controlsTimer_, &QTimer::timeout, this, [this] {
@@ -284,10 +318,9 @@ void MainWindow::savePlaylist(const QString &path) {
 
 void MainWindow::chooseFile() {
     folderMenu_->cancel();
-    const auto path =
-        QFileDialog::getOpenFileName(this, tr("打开媒体文件"), mediaDirectory(),
-                                     tr("媒体文件 (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.ts *.mp3 "
-                                        "*.flac *.wav);;所有文件 (*)"));
+    const auto path = QFileDialog::getOpenFileName(
+        this, tr("打开媒体文件"), mediaDirectory(),
+        tr("媒体文件 (%1);;所有文件 (*)").arg(mediaFileNameFilterPatterns()));
     if (!path.isEmpty())
         openFile(path);
 }
@@ -301,10 +334,9 @@ void MainWindow::chooseNetworkUrl() {
 
 void MainWindow::chooseFilesToAppend() {
     folderMenu_->cancel();
-    const auto paths =
-        QFileDialog::getOpenFileNames(this, tr("添加媒体文件"), mediaDirectory(),
-                                      tr("媒体文件 (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.ts "
-                                         "*.mp3 *.flac *.wav);;所有文件 (*)"));
+    const auto paths = QFileDialog::getOpenFileNames(
+        this, tr("添加媒体文件"), mediaDirectory(),
+        tr("媒体文件 (%1);;所有文件 (*)").arg(mediaFileNameFilterPatterns()));
     appendFiles(paths);
 }
 
@@ -325,17 +357,17 @@ void MainWindow::updateState() {
     pauseAction_->setText(canPlay ? tr("播放") : tr("暂停"));
     pauseAction_->setToolTip(pauseAction_->text());
     pauseAction_->setStatusTip(pauseAction_->text());
-    pauseAction_->setIcon(
-        style()->standardIcon(canPlay ? QStyle::SP_MediaPlay : QStyle::SP_MediaPause));
+    setAppearanceIcon(pauseAction_,
+                      canPlay ? AppearanceIcons::Symbol::Play : AppearanceIcons::Symbol::Pause);
     muteAction_->setChecked(state.muted);
-    muteAction_->setIcon(
-        style()->standardIcon(state.muted ? QStyle::SP_MediaVolumeMuted : QStyle::SP_MediaVolume));
+    setAppearanceIcon(muteAction_, state.muted ? AppearanceIcons::Symbol::Mute
+                                               : AppearanceIcons::Symbol::Volume);
     previousAction_->setEnabled(video_->isReady() && playlist_->hasPrevious());
     nextAction_->setEnabled(video_->isReady() && playlist_->hasNext());
     clearPlaylistAction_->setEnabled(playlist_->model()->rowCount() > 0 ||
                                      !pendingPaths_.isEmpty());
     transport_->present(state);
-    emptyHint_->setVisible(!state.active);
+    welcomePanel_->setVisible(!state.active);
     setWindowTitle(state.path.isEmpty()
                        ? QStringLiteral("NekoPlayer")
                        : MediaSource::displayName(state.path) + QStringLiteral(" — NekoPlayer"));
@@ -365,6 +397,56 @@ void MainWindow::showSeekFeedback(const QString &message) {
         showActionFeedback(message);
 }
 
+void MainWindow::requestThumbnailPreview(double seconds, QPoint globalPosition) {
+    const auto &state = controller_->state();
+    if (!canRequestThumbnailPreview(state, controller_->canStepFrameForward())) {
+        hideThumbnailPreview();
+        return;
+    }
+    thumbnailAnchor_ = globalPosition;
+    thumbnailPreview_->hide();
+    const auto requestId = thumbnailService_->request(
+        state.path, std::clamp(seconds, 0.0, state.duration), QSize(232, 130));
+    Q_UNUSED(requestId)
+}
+
+void MainWindow::hideThumbnailPreview() {
+    if (thumbnailService_)
+        thumbnailService_->cancel();
+    if (thumbnailPreview_)
+        thumbnailPreview_->clear();
+}
+
+void MainWindow::showThumbnailPreview(quint64 requestId, const QString &source,
+                                      double requestedSeconds, ThumbnailResult result) {
+    Q_UNUSED(requestId)
+    const auto &state = controller_->state();
+    if (!state.active) {
+        hideThumbnailPreview();
+        return;
+    }
+    if (!result.succeeded() || source != state.path)
+        return;
+    thumbnailPreview_->present(result.image, requestedSeconds);
+    const auto timeline = transport_->timelineGlobalGeometry();
+    const auto size = thumbnailPreview_->sizeHint();
+    const auto *screen = QGuiApplication::screenAt(timeline.center());
+    if (!screen)
+        screen = QGuiApplication::primaryScreen();
+    if (!screen)
+        return;
+    const auto available = screen->availableGeometry();
+    const auto anchor = thumbnailAnchor_.isNull() ? timeline.center() : thumbnailAnchor_;
+    const auto x = std::clamp(anchor.x() - size.width() / 2, available.left(),
+                              available.right() - size.width() + 1);
+    auto y = timeline.top() - size.height() - 10;
+    if (y < available.top())
+        y = timeline.bottom() + 10;
+    thumbnailPreview_->move(x, y);
+    thumbnailPreview_->show();
+    thumbnailPreview_->raise();
+}
+
 void MainWindow::dragEnterEvent(QDragEnterEvent *event) {
     if (event->mimeData()->hasUrls())
         event->acceptProposedAction();
@@ -378,38 +460,112 @@ void MainWindow::dropEvent(QDropEvent *event) {
 }
 
 void MainWindow::setFullscreen(bool enabled) {
-    if (enabled == isFullScreen())
+    if (syncingWindowState_)
         return;
+    if (enabled == fullscreenPresentationActive_ && enabled == isFullScreen())
+        return;
+
+    if (enabled && miniPlayerActive_)
+        setMiniPlayer(false);
+    hideThumbnailPreview();
+
+    syncingWindowState_ = true;
     if (enabled) {
-        normalGeometry_ = saveGeometry();
-        normalMaximized_ = isMaximized();
-        menuBar()->hide();
-        statusBar()->hide();
-        fullscreenControls_->enter();
-        playlistPane_->hide();
-        showPlaylistAction_->setEnabled(false);
-        showFullScreen();
+        if (!fullscreenPresentationActive_) {
+            const auto priorGeometry = normalGeometry();
+            if (priorGeometry.isValid())
+                normalGeometry_ = saveGeometry();
+            normalMaximized_ = isMaximized();
+            menuBar()->hide();
+            statusBar()->hide();
+            fullscreenControls_->enter();
+            playlistPane_->hide();
+            showPlaylistAction_->setEnabled(false);
+            fullscreenPresentationActive_ = true;
+        }
+        if (!isFullScreen())
+            showFullScreen();
         video_->setCursor(Qt::BlankCursor);
         revealControls();
     } else {
         controlsTimer_.stop();
-        fullscreenControls_->leave();
+        if (fullscreenPresentationActive_)
+            fullscreenControls_->leave();
+        fullscreenPresentationActive_ = false;
         video_->unsetCursor();
-        showNormal();
-        restoreGeometry(normalGeometry_);
-        if (normalMaximized_)
-            showMaximized();
-        menuBar()->show();
-        statusBar()->show();
-        showPlaylistAction_->setEnabled(true);
-        playlistPane_->setVisible(showPlaylistAction_->isChecked());
+        if (isFullScreen()) {
+            showNormal();
+            if (!normalGeometry_.isEmpty())
+                restoreGeometry(normalGeometry_);
+            if (normalMaximized_)
+                showMaximized();
+        }
+        if (miniPlayerActive_) {
+            menuBar()->hide();
+            statusBar()->hide();
+            showPlaylistAction_->setEnabled(false);
+            playlistPane_->hide();
+        } else {
+            menuBar()->show();
+            statusBar()->show();
+            showPlaylistAction_->setEnabled(true);
+            playlistPane_->setVisible(showPlaylistAction_->isChecked());
+        }
     }
     fullscreenAction_->setChecked(enabled);
     fullscreenAction_->setText(enabled ? tr("退出全屏") : tr("全屏"));
     fullscreenAction_->setToolTip(fullscreenAction_->text());
     fullscreenAction_->setStatusTip(fullscreenAction_->text());
-    fullscreenAction_->setIcon(style()->standardIcon(enabled ? QStyle::SP_TitleBarNormalButton
-                                                             : QStyle::SP_TitleBarMaxButton));
+    setAppearanceIcon(fullscreenAction_, enabled ? AppearanceIcons::Symbol::Restore
+                                                 : AppearanceIcons::Symbol::Fullscreen);
+    syncingWindowState_ = false;
+}
+
+void MainWindow::setMiniPlayer(bool enabled) {
+    auto *action = findChild<QAction *>(QStringLiteral("miniPlayerAction"));
+    if (enabled == miniPlayerActive_)
+        return;
+    hideThumbnailPreview();
+    if (enabled) {
+        if (isFullScreen())
+            setFullscreen(false);
+        miniPlayerActive_ = true;
+        miniPlayerSavedGeometry_ = saveGeometry();
+        miniPlayerGeometry_ = isMaximized() ? normalGeometry() : geometry();
+        miniPlayerMaximized_ = isMaximized();
+        showPlaylistAction_->setEnabled(false);
+        playlistPane_->hide();
+        menuBar()->hide();
+        statusBar()->hide();
+        setWindowFlag(Qt::Tool, true);
+        setWindowFlag(Qt::WindowStaysOnTopHint, true);
+        setWindowState(windowState() & ~Qt::WindowMaximized);
+        resize(480, 320);
+        show();
+    } else {
+        if (isFullScreen())
+            setFullscreen(false);
+        miniPlayerActive_ = false;
+        menuBar()->show();
+        statusBar()->show();
+        showPlaylistAction_->setEnabled(true);
+        setWindowFlag(Qt::Tool, false);
+        setWindowFlag(Qt::WindowStaysOnTopHint, false);
+        show();
+        if (miniPlayerGeometry_.isValid())
+            setGeometry(miniPlayerGeometry_);
+        if (miniPlayerMaximized_)
+            showMaximized();
+        playlistPane_->setVisible(showPlaylistAction_->isChecked());
+    }
+    if (action) {
+        action->setChecked(enabled);
+        action->setText(enabled ? tr("退出小窗") : tr("小窗播放"));
+        action->setToolTip(action->text());
+        action->setStatusTip(action->text());
+        setAppearanceIcon(action, enabled ? AppearanceIcons::Symbol::Remove
+                                          : AppearanceIcons::Symbol::Restore);
+    }
 }
 
 void MainWindow::revealControls() {

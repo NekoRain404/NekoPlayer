@@ -2,6 +2,34 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>PreferencesDialog</name>
+    <message><source>外观</source><translation>Appearance</translation></message>
+    <message><source>基础主题</source><translation>Base theme</translation></message>
+    <message><source>强调色</source><translation>Accent</translation></message>
+    <message><source>启用玻璃质感</source><translation>Enable glass treatment</translation></message>
+    <message><source>基础主题：</source><translation>Base theme:</translation></message>
+    <message><source>强调色：</source><translation>Accent:</translation></message>
+    <message><source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不支持背景模糊时使用半透明样式。</source><translation>Changes are previewed immediately and saved when applied. Glass treatment affects interface panels only and does not blur video; translucent styling is used when background blur is unavailable.</translation></message>
+    <message><source>偏好设置</source><translation>Preferences</translation></message>
+    <message><source>恢复上次播放位置</source><translation>Resume from the last playback position</translation></message>
+    <message><source>左右键跳转时长</source><translation>Left/right seek interval</translation></message>
+    <message><source>左右键跳转时长：</source><translation>Left/right seek interval:</translation></message>
+    <message><source>%1 秒</source><translation>%1 seconds</translation></message>
+    <message><source>媒体库</source><translation>Media Library</translation></message>
+    <message><source>允许扫描文件夹中的媒体文件</source><translation>Allow scanning folders for media files</translation></message>
+    <message><source>默认包含子文件夹</source><translation>Include subfolders by default</translation></message>
+    <message><source>扫描仅在你打开、添加或拖入文件夹时进行，不会在启动时自动遍历目录。关闭后，文件夹扫描入口将停用；直接打开媒体文件仍可使用。</source><translation>Scanning runs only when you open, add, or drop a folder; directories are not scanned automatically at startup. When disabled, folder scanning is unavailable, while opening media files directly remains available.</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>外观设置…</source><translation>Appearance Settings…</translation></message>
+    <message><source>媒体库设置…</source><translation>Media Library Settings…</translation></message>
+</context>
+<context>
+    <name>FolderMenu</name>
+    <message><source>媒体文件夹扫描已关闭；可在偏好设置的媒体库中重新开启。</source><translation>Media folder scanning is disabled. Re-enable it under Preferences → Media Library.</translation></message>
+</context>
+<context>
     <name>AbLoopMenu</name>
     <message><source>将当前位置设为起点 A</source><translation>Set Current Position as A</translation></message>
     <message><source>将当前位置设为终点 B</source><translation>Set Current Position as B</translation></message>
@@ -78,6 +106,23 @@
     <message><source>从列表移除</source><translation>Remove from Playlist</translation></message>
     <message><source>上移所选项</source><translation>Move Selected Up</translation></message>
     <message><source>下移所选项</source><translation>Move Selected Down</translation></message>
+    <message><source>播放列表</source><translation>Playlist</translation></message>
+    <message><source>%1 项</source><translation>%1 items</translation></message>
+</context>
+<context>
+    <name>WelcomePanel</name>
+    <message><source>开始播放</source><translation>Start Playing</translation></message>
+    <message><source>打开本地媒体或连接网络地址，享受流畅播放体验</source><translation>Open local media or connect to a network address for smooth playback</translation></message>
+    <message><source>也可以将视频拖到这里 · Ctrl+O 打开文件 · Ctrl+U 打开网络地址</source><translation>You can also drop a video here · Ctrl+O to open a file · Ctrl+U to open a network URL</translation></message>
+    <message><source>最近播放</source><translation>Recently Played</translation></message>
+    <message><source>继续观看</source><translation>Continue Watching</translation></message>
+    <message><source>%1 / %2</source><translation>%1 / %2</translation></message>
+    <message><source>继续观看：%1，%2 / %3</source><translation>Continue watching: %1, %2 / %3</translation></message>
+    <message><source>未命名媒体</source><translation>Untitled Media</translation></message>
+    <message><source>网络媒体：%1</source><translation>Network media: %1</translation></message>
+    <message><source>本地媒体：%1</source><translation>Local media: %1</translation></message>
+    <message><source>小窗播放</source><translation>Mini Player</translation></message>
+    <message><source>退出小窗</source><translation>Exit Mini Player</translation></message>
 </context>
 <context>
     <name>MediaInformationDialog</name>
@@ -175,6 +220,11 @@ Ctrl+U to open a network URL</translation></message>
 </context>
 <context>
     <name>QObject</name>
+    <message><source>Ocean</source><translation>Ocean</translation></message>
+    <message><source>Emerald</source><translation>Emerald</translation></message>
+    <message><source>Violet</source><translation>Violet</translation></message>
+    <message><source>Rose</source><translation>Rose</translation></message>
+    <message><source>Amber</source><translation>Amber</translation></message>
     <message><source>深色</source><translation>Dark</translation></message>
     <message><source>浅色</source><translation>Light</translation></message>
     <message><source>跟随系统</source><translation>Follow System</translation></message>
@@ -243,6 +293,16 @@ libmpv client API: %2.%3</translation></message>
     <message><source>开启</source><translation>On</translation></message>
     <message><source>视频(&amp;I) · %1 · %2°</source><translation>&amp;Video · %1 · %2°</translation></message>
     <message><source>画面比例：%1 · 旋转：%2°</source><translation>Aspect ratio: %1 · Rotation: %2°</translation></message>
+</context>
+<context>
+    <name>SubtitleDisplayMenu</name>
+    <message><source>字幕显示</source><translation>Subtitle Display</translation></message>
+    <message><source>显示字幕</source><translation>Show Subtitles</translation></message>
+    <message><source>放大字幕</source><translation>Increase Subtitle Size</translation></message>
+    <message><source>缩小字幕</source><translation>Decrease Subtitle Size</translation></message>
+    <message><source>上移字幕</source><translation>Move Subtitles Up</translation></message>
+    <message><source>下移字幕</source><translation>Move Subtitles Down</translation></message>
+    <message><source>字幕显示设置…</source><translation>Subtitle Display Settings…</translation></message>
 </context>
 <context>
     <name>MediaInformation</name>

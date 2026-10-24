@@ -1,8 +1,11 @@
 #pragma once
 
+#include <QPoint>
+#include <QRect>
 #include <QWidget>
 
 class QAction;
+class QFrame;
 class QLabel;
 class QSlider;
 class QEvent;
@@ -16,6 +19,7 @@ class TransportBar final : public QWidget {
     TransportBar(QAction *open, QAction *previous, QAction *pause, QAction *next, QAction *stop,
                  QAction *mute, QAction *fullscreen, QWidget *parent = nullptr);
     void present(const PlaybackState &state);
+    [[nodiscard]] QRect timelineGlobalGeometry() const;
 
   protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -24,11 +28,15 @@ class TransportBar final : public QWidget {
   signals:
     void seekRequested(double seconds);
     void volumeRequested(double volume);
+    void timelineHovered(double seconds, QPoint globalPosition);
+    void timelineHoverEnded();
 
   private:
     void applyResponsiveMetrics();
     QSlider *timeline_;
     QSlider *volume_;
     QLabel *time_;
+    QFrame *timeDivider_;
+    QFrame *audioDivider_;
     double duration_ = 0;
 };

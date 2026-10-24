@@ -83,10 +83,10 @@ PlaybackState fields: `active`, `paused`, `seekable`, `muted`, `position`, `dura
   xvfb-run -a ./build/debug/NekoPlayer --silent-audio --smoke-test
   ./build/debug/NekoPlayer '/path/电影 example.mkv'
   ```
-- [ ] Run `cmake --build --preset debug && ctest --preset debug` and `cmake --preset sanitizers && cmake --build --preset sanitizers && ctest --preset sanitizers`; investigate sanitizer failures without blanket suppression.
-- [ ] Run static analysis on project source with the compiler arguments supported by clang-tidy. Review callback ownership, path encoding, errors, volume boundaries and stale property state against the spec.
+- [x] Run full Debug and ASan/UBSan non-window regression suites; investigate sanitizer failures without blanket suppression. Window behavior tests remain skipped by user request.
+- [x] Run static analysis on project source with the compiler arguments supported by clang-tidy. Review callback ownership, path encoding, errors, volume boundaries and stale property state against the spec.
 - [x] Update README with implemented features, shortcuts, dependencies, test evidence and actual platform limitations. Record any unverified real-display/audio behavior precisely.
-- [ ] Commit only if an existing author identity is configured; otherwise leave reviewable local changes and report branch/path. Do not push or publish.
+- [x] Commit only if an existing author identity is configured; otherwise leave reviewable local changes and report branch/path. Do not push or publish.
 
 ## Execution ledger
 

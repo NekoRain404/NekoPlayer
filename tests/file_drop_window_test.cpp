@@ -40,10 +40,10 @@ class FileDropWindowTest final : public QObject {
     void routesSubtitleToPlayingFileAndMediaToQueue() {
         MainWindow window(true);
         window.show();
-        QVERIFY(QTest::qWaitForWindowExposed(&window));
         QTRY_VERIFY(window.videoWidget()->isReady());
         window.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
-        QTRY_COMPARE(window.controller()->tracks().size(), 3);
+        QTRY_VERIFY(window.controller()->state().active &&
+                    window.controller()->tracks().size() == 3);
         window.controller()->setPaused(true);
         QTRY_VERIFY(window.controller()->state().paused);
         QSignalSpy errors(&window, &MainWindow::userError);

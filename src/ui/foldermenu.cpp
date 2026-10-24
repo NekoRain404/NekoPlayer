@@ -24,10 +24,12 @@ FolderMenu::FolderMenu(QWidget *window, std::function<QString()> initialDirector
         window->addAction(action);
         menu_->addAction(action);
         connect(action, &QAction::triggered, this, [this, append] { chooseDirectory(append); });
+        return action;
     };
-    add(tr("打开文件夹…"), "openFolderAction", QKeySequence(Qt::CTRL | Qt::Key_D), false);
-    add(tr("添加文件夹…"), "appendFolderAction", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D),
-        true);
+    openAction_ = add(tr("打开文件夹…"), "openFolderAction", QKeySequence(Qt::CTRL | Qt::Key_D),
+                      false);
+    appendAction_ = add(tr("添加文件夹…"), "appendFolderAction",
+                        QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_D), true);
     menu_->addSeparator();
     recursiveAction_->setObjectName(QStringLiteral("recursiveFolderAction"));
     recursiveAction_->setCheckable(true);
@@ -43,6 +45,9 @@ FolderMenu::FolderMenu(QWidget *window, std::function<QString()> initialDirector
     progress_->hide();
     connect(progress_, &QProgressDialog::canceled, this, &FolderMenu::cancel);
     connect(cancelAction_, &QAction::triggered, this, &FolderMenu::cancel);
+    connect(recursiveAction_, &QAction::toggled, this, [this](bool recursive) {
+        emit mediaLibraryPreferencesChanged(scanningEnabled_, recursive);
+    });
     connect(job_, &FolderScanJob::scanningChanged, this, [this] {
         const bool scanning = job_->isScanning();
         cancelAction_->setEnabled(scanning);
@@ -67,11 +72,29 @@ QMenu *FolderMenu::menu() const { return menu_; }
 
 bool FolderMenu::recursiveEnabled() const { return recursiveAction_->isChecked(); }
 
+MediaLibraryPreferences FolderMenu::mediaLibraryPreferences() const {
+    return {scanningEnabled_, recursiveAction_->isChecked()};
+}
+
+void FolderMenu::setMediaLibraryPreferences(MediaLibraryPreferences preferences) {
+    scanningEnabled_ = preferences.scanningEnabled;
+    openAction_->setEnabled(scanningEnabled_);
+    appendAction_->setEnabled(scanningEnabled_);
+    recursiveAction_->setEnabled(scanningEnabled_);
+    if (!scanningEnabled_)
+        cancel();
+    recursiveAction_->setChecked(preferences.recursiveByDefault);
+}
+
 void FolderMenu::start(const QString &directory, bool append, bool recursive) {
     start(QStringList{directory}, append, recursive);
 }
 
 void FolderMenu::start(const QStringList &directories, bool append, bool recursive) {
+    if (!scanningEnabled_) {
+        emit feedback(tr("媒体文件夹扫描已关闭；可在偏好设置的媒体库中重新开启。"));
+        return;
+    }
     append_ = append;
     job_->start(directories, recursive);
 }

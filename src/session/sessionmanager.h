@@ -17,10 +17,18 @@ class SessionManager final : public QObject {
     [[nodiscard]] SessionLoadResult restore();
     [[nodiscard]] QString save(WindowPreferences window, const QStringList &pendingPaths = {});
     [[nodiscard]] QString mediaDirectory() const;
+    [[nodiscard]] MediaLibraryPreferences mediaLibraryPreferences() const;
+    void setMediaLibraryPreferences(MediaLibraryPreferences preferences);
+    [[nodiscard]] bool resumePlaybackPositionEnabled() const;
+    void setResumePlaybackPositionEnabled(bool enabled);
+    [[nodiscard]] int seekStepSeconds() const;
+    void setSeekStepSeconds(int seconds);
+    [[nodiscard]] QList<PlaybackHistoryEntry> playbackHistory() const;
     void rememberMedia(const QString &path);
 
   signals:
     void configurationErrorOccurred(const QString &message);
+    void playbackHistoryChanged();
 
   private:
     MpvController &player_;
@@ -33,6 +41,9 @@ class SessionManager final : public QObject {
     AudioPreferences audio_;
     TuningPreferences tuning_;
     QString mediaDirectory_;
+    MediaLibraryPreferences mediaLibraryPreferences_;
+    bool resumePlaybackPositionEnabled_ = true;
+    int seekStepSeconds_ = 5;
     QString loadError_;
     QString historyError_;
     bool stopRequested_ = false;

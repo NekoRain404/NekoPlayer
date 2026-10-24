@@ -23,6 +23,22 @@ class ResumeTest final : public QObject {
     }
 
   private slots:
+    void resumePreferenceCanStartRestoredQueueAtBeginning() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("settings.ini"));
+        auto saved = bookmark();
+        saved.resumePlaybackPosition = false;
+        QVERIFY(SessionStore(file).save(saved).isEmpty());
+
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, file);
+        QVERIFY(session.restore().error.isEmpty());
+        QCOMPARE(queue.pendingResumePosition(), 0.0);
+        QVERIFY(!SessionStore(file).load().state.resumePlaybackPosition);
+    }
+
     void rendererReloadBeforeFirstPositionKeepsResumeOwnership() {
         MpvController player(true, true);
         QSignalSpy loaded(&player, &MpvController::fileLoaded);

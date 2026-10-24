@@ -25,6 +25,11 @@ struct WindowPreferences {
     QString mediaDirectory;
 };
 
+struct MediaLibraryPreferences {
+    bool scanningEnabled = true;
+    bool recursiveByDefault = false;
+};
+
 struct SessionState {
     AudioPreferences audio;
     WindowPreferences window;
@@ -35,6 +40,9 @@ struct SessionState {
     double resumePosition = 0;
     TuningPreferences tuning;
     VideoColorAdjustment videoColor;
+    MediaLibraryPreferences mediaLibrary;
+    bool resumePlaybackPosition = true;
+    int seekStepSeconds = 5;
 };
 
 struct SessionLoadResult {

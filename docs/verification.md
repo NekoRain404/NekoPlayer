@@ -1,5 +1,12 @@
 # Verification Record
 
+First playable verification and static-analysis closure (2026-10-24):
+
+- Fixed a Clang-only most-vexing-parse issue in `mediafolderscan.cpp` by using brace initialization for `QCollator`; the independent Clang build of `neko_input` and that file's Clang-Tidy check passed.
+- Full Debug build and all **49/49 non-window tests** passed. Full ASan/UBSan build and the same **49/49 non-window tests** passed with `ASAN_OPTIONS=detect_leaks=0`. A run without that setting reported process-exit allocations rooted in host GTK/Pango/fontconfig platform libraries, so it was stopped and not counted as a project leak result.
+- Clang-Tidy processed all **80 production `.cpp` files** with `clang-analyzer-*` and `bugprone-narrowing-conversions`. No optional-access or unsafe-path findings were emitted. The folder-scan watcher leak warning is a Qt-parent-ownership false positive: `QFutureWatcher` is constructed with the job as QObject parent and also `deleteLater()`'d when its future finishes. Reviewed narrowing reports cover Qt model APIs whose row counts are `int`, timestamp-to-seconds and byte-size display conversions, and Qt key-sequence construction; these are bounded/interface or intentional precision conversions, not blindly rewritten. The analyzer also reports private `MpvController::Impl` padding; this per-player aggregate is dominated by Qt containers/strings and was not reordered without evidence of a meaningful performance gain.
+- `code-size`, `clang-format --dry-run --Werror` for the changed source, and `git diff --check` passed. No GUI/window tests were run, per user request.
+
 完整非窗口回归阶段（2026-10-24）：
 
 - 在容器-size 收尾提交后重新构建完整 Debug 目标；`ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` 通过 **49/49**（63.50 秒）。

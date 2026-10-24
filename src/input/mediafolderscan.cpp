@@ -91,7 +91,7 @@ MediaFolderScanResult scanMediaFolder(const QString &directory, bool recursive,
         return {{}, {}, true};
     // The C locale ignores numeric mode on some Qt backends. Pin a locale so
     // ordering is natural and deterministic across the user's locale settings.
-    QCollator collator(QLocale(QLocale::English));
+    QCollator collator{QLocale(QLocale::English)};
     collator.setNumericMode(true);
     collator.setCaseSensitivity(Qt::CaseInsensitive);
     std::sort(paths.begin(), paths.end(), [&collator](const QString &left, const QString &right) {

@@ -13,6 +13,18 @@ Thumbnail timestamp origin correction stage (2026-10-24):
 - Window behavior tests were not run, per the standing preference. The generated fixture uses
   FFmpeg and is independent of Wayland, libmpv rendering and hardware decoding.
 
+Thumbnail preview eligibility stage (2026-10-24):
+
+- Timeline hover now requests thumbnails only for active, seekable local media with a finite
+  positive duration and an available motion-video stream. Seekable audio no longer starts a
+  decoder task on every hover; network preview remains intentionally unsupported.
+- The new policy regression covers audio-only media, valid local video, network sources, and
+  inactive/non-seekable/zero-duration playback. The full Debug build and non-window suite passed
+  **50/50** in **53.23 seconds**; ASan/UBSan policy test passed **1/1**. `code-size`, Clang
+  formatting and `git diff --check` passed.
+- Window behavior tests were not run. The contract test exercises the eligibility decision only;
+  actual Wayland popup positioning and FFmpeg cancellation latency remain desktop/runtime checks.
+
 首页续看历史阶段（2026-10-24）：
 
 - 欢迎页新增“继续观看”区块，消费 `SessionManager` 已加载／更新的本地续播记录；最多展示 3 项，排除非法路径、无效时长、越界位置以及距片尾不超过 1 秒的条目。按钮沿用已有 `openFile` 和播放队列续播解析，不建立第二份存储，也不触碰网络媒体。

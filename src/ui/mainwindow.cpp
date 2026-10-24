@@ -18,6 +18,7 @@
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 #include "thumbnailpreview.h"
+#include "thumbnailpreviewpolicy.h"
 #include "transportbar.h"
 #include "welcomepanel.h"
 
@@ -393,8 +394,7 @@ void MainWindow::showSeekFeedback(const QString &message) {
 
 void MainWindow::requestThumbnailPreview(double seconds, QPoint globalPosition) {
     const auto &state = controller_->state();
-    if (!state.active || state.path.isEmpty() || !state.seekable || state.duration <= 0.0 ||
-        !ThumbnailService::isLocalSource(state.path)) {
+    if (!canRequestThumbnailPreview(state, controller_->canStepFrameForward())) {
         hideThumbnailPreview();
         return;
     }

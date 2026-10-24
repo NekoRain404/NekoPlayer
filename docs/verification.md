@@ -1,5 +1,10 @@
 # Verification Record
 
+Final post-review regression (2026-10-24, code at `987d46a`):
+
+- The final test-only fixes changed no production code. The standard non-window selection `LC_ALL=C LANG=C ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passed **54/54** in **58.50 s** on the final tree. Window-behavior tests were compiled but not executed.
+- The final review fix wave resolved the `--no-config` Left/Right seek-step fallback, the playlist single-click precise timer, the missing Interaction Settings icon, the Interaction help text and translation, and the flaky track-restart test (10/10 focused runs). Remaining limitations are recorded in the first section below.
+
 Release-readiness known limitations after final review (2026-10-24):
 
 - Narrow-width transport label: at 480–639 px the transport band caps the time label at 100 px, while the displayed text needs roughly 137–144 px. The elapsed/remaining toggle can therefore clip in its remaining-time mode at the narrowest widths. Layout metrics were intentionally not changed in the final fix wave; this remains an open visual limitation pending a layout decision.

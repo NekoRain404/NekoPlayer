@@ -34,10 +34,13 @@ class TransportBar final : public QWidget {
 
   private:
     void applyResponsiveMetrics();
+    void updateTimeLabel();
     QSlider *timeline_;
     QSlider *volume_;
     QLabel *time_;
     QFrame *timeDivider_;
     QFrame *audioDivider_;
+    double position_ = 0;
     double duration_ = 0;
+    bool timeShowsRemaining_ = false;
 };

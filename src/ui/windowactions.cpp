@@ -306,17 +306,19 @@ void MainWindow::createActions() {
     };
     auto *playbackSettings =
         make(tr("播放设置…"), "playbackSettingsAction", QKeySequence(Qt::Key_F5));
-    setAppearanceIcon(playbackSettings, AppearanceIcons::Symbol::Information);
+    setAppearanceIcon(playbackSettings, AppearanceIcons::Symbol::Settings);
     connect(playbackSettings, &QAction::triggered, this,
             [showPreferences] { showPreferences(PreferencesDialog::Category::Playback); });
     settings->addAction(playbackSettings);
     auto *mediaLibrarySettings = settings->addAction(tr("媒体库设置…"));
     mediaLibrarySettings->setObjectName(QStringLiteral("mediaLibrarySettingsAction"));
+    setAppearanceIcon(mediaLibrarySettings, AppearanceIcons::Symbol::Settings);
     connect(mediaLibrarySettings, &QAction::triggered, this,
             [showPreferences] { showPreferences(PreferencesDialog::Category::MediaLibrary); });
     settings->addAction(subtitleDisplay->settingsAction());
     auto *appearanceSettingsAction = settings->addAction(tr("外观设置…"));
     appearanceSettingsAction->setObjectName(QStringLiteral("appearanceSettingsAction"));
+    setAppearanceIcon(appearanceSettingsAction, AppearanceIcons::Symbol::Settings);
     connect(appearanceSettingsAction, &QAction::triggered, this,
             [showPreferences] { showPreferences(PreferencesDialog::Category::Appearance); });
     auto *interactionSettings = settings->addAction(tr("交互设置…"));

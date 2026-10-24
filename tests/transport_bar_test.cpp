@@ -5,6 +5,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QFrame>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMouseEvent>
 #include <QSignalSpy>
@@ -67,6 +68,91 @@ class TransportBarTest final : public QObject {
         QVERIFY(timeline);
         QCOMPARE(timeline->toolTip(), QStringLiteral("00:01:15 / 00:02:00"));
         QCOMPARE(timeline->accessibleDescription(), QStringLiteral("00:01:15 / 00:02:00"));
+    }
+
+    void timeLabelTogglesElapsedAndRemaining() {
+        QAction open(QStringLiteral("打开文件"));
+        QAction previous(QStringLiteral("上一个"));
+        QAction pause(QStringLiteral("播放"));
+        QAction next(QStringLiteral("下一个"));
+        QAction stop(QStringLiteral("停止"));
+        QAction mute(QStringLiteral("静音"));
+        QAction fullscreen(QStringLiteral("全屏"));
+        QWidget host;
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
+        auto *hostLayout = new QVBoxLayout(&host);
+        hostLayout->setContentsMargins(0, 0, 0, 0);
+        hostLayout->addWidget(&transport);
+        host.resize(560, 100);
+        host.show();
+        QCoreApplication::processEvents();
+        PlaybackState state;
+        state.active = true;
+        state.seekable = true;
+        state.position = 75;
+        state.duration = 120;
+        transport.present(state);
+
+        auto *time = transport.findChild<QLabel *>(QStringLiteral("timeLabel"));
+        QVERIFY(time);
+        QCOMPARE(time->text(), QStringLiteral("00:01:15 / 00:02:00"));
+        QVERIFY(time->toolTip().contains(time->text()));
+        QVERIFY(time->accessibleDescription().contains(time->text()));
+        QVERIFY(time->toolTip().contains(QStringLiteral("切换")));
+        QVERIFY(time->accessibleDescription().contains(QStringLiteral("切换")));
+
+        const QPoint center = time->rect().center();
+        QMouseEvent press(QEvent::MouseButtonPress, center, time->mapToGlobal(center),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, center, time->mapToGlobal(center),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &release);
+
+        QCOMPARE(time->text(), QStringLiteral("-00:00:45 / 00:02:00"));
+        QVERIFY(time->toolTip().contains(time->text()));
+        QVERIFY(time->accessibleDescription().contains(time->text()));
+        QVERIFY(time->accessibleDescription().contains(QStringLiteral("已播放")));
+
+        state.position = 90;
+        transport.present(state);
+        QCOMPARE(time->text(), QStringLiteral("-00:00:30 / 00:02:00"));
+        QVERIFY(time->toolTip().contains(time->text()));
+    }
+
+    void timeLabelSupportsKeyboardActivation() {
+        QAction open(QStringLiteral("打开文件"));
+        QAction previous(QStringLiteral("上一个"));
+        QAction pause(QStringLiteral("播放"));
+        QAction next(QStringLiteral("下一个"));
+        QAction stop(QStringLiteral("停止"));
+        QAction mute(QStringLiteral("静音"));
+        QAction fullscreen(QStringLiteral("全屏"));
+        QWidget host;
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
+        PlaybackState state;
+        state.active = true;
+        state.seekable = true;
+        state.position = 90;
+        state.duration = 120;
+        transport.present(state);
+
+        auto *time = transport.findChild<QLabel *>(QStringLiteral("timeLabel"));
+        QVERIFY(time);
+        QCOMPARE(time->accessibleName(), QStringLiteral("播放时间"));
+        QVERIFY(time->focusPolicy() != Qt::NoFocus);
+
+        QKeyEvent space(QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &space);
+        QCOMPARE(time->text(), QStringLiteral("-00:00:30 / 00:02:00"));
+
+        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &enter);
+        QCOMPARE(time->text(), QStringLiteral("00:01:30 / 00:02:00"));
+
+        QKeyEvent keypadEnter(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &keypadEnter);
+        QCOMPARE(time->text(), QStringLiteral("-00:00:30 / 00:02:00"));
     }
 
     void timelineHoverReportsPointerPosition() {

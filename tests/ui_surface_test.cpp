@@ -161,6 +161,21 @@ class UiSurfaceTest final : public QObject {
         const auto networkImage = network.pixmap(QSize(24, 24)).toImage();
         QVERIFY(networkImage.pixelColor(12, 7).alpha() == 0);
 
+        const auto settings =
+            AppearanceIcons::icon(AppearanceIcons::Symbol::Settings, palette).pixmap(24, 24);
+        QVERIFY(!settings.isNull());
+        const auto settingsImage = settings.toImage();
+        bool settingsPainted = false;
+        for (int y = 0; y < settingsImage.height() && !settingsPainted; ++y) {
+            for (int x = 0; x < settingsImage.width(); ++x) {
+                if (settingsImage.pixelColor(x, y).alpha() > 0) {
+                    settingsPainted = true;
+                    break;
+                }
+            }
+        }
+        QVERIFY(settingsPainted);
+
         const auto seekBack =
             AppearanceIcons::icon(AppearanceIcons::Symbol::SeekBackward, palette).pixmap(24, 24);
         const auto seekForward =

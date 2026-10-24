@@ -26,7 +26,8 @@ enum class Symbol {
     MoveUp,
     MoveDown,
     Information,
-    MediaFile
+    MediaFile,
+    Settings
 };
 
 QIcon icon(Symbol symbol, const QPalette &palette);

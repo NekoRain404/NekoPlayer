@@ -139,7 +139,7 @@ git commit -m "refactor(ui): define semantic appearance tokens"
 
 - [ ] **Step 1: Strengthen the existing style test around both themes and required states**
 
-Extend `exposesContentFirstInteractionStyle()` so each theme's generated sheet contains stable selectors for hover, pressed, checked, selected, focus, and disabled states on its relevant controls, and assert that no legacy per-component stylesheet remains necessary. Preserve the current behavior assertions for named selectors and timeline/volume controls.
+Extend `exposesContentFirstInteractionStyle()` so each theme's generated sheet contains stable selectors for hover, pressed, checked, selected, focus, and disabled states on its relevant controls. Preserve the current behavior assertions for named selectors and timeline/volume controls. Do not assert internal stylesheet ownership; verify user-visible generated selectors and theme behavior instead.
 
 - [ ] **Step 2: Run the focused test to capture the missing generator**
 

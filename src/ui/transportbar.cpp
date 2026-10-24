@@ -133,11 +133,15 @@ QString timeText(double seconds) {
         .arg((total / 60) % 60, 2, 10, QLatin1Char('0'))
         .arg(total % 60, 2, 10, QLatin1Char('0'));
 }
-QToolButton *button(QAction *action, QWidget *parent) {
+QToolButton *button(QAction *action, QWidget *parent, bool primary = false) {
     auto *result = new QToolButton(parent);
     result->setDefaultAction(action);
+    if (primary) {
+        result->setObjectName(QStringLiteral("transportPrimaryButton"));
+        result->setProperty("transportPrimaryAction", true);
+    }
     result->setToolButtonStyle(Qt::ToolButtonIconOnly);
-    result->setIconSize(QSize(22, 22));
+    result->setIconSize(primary ? QSize(26, 26) : QSize(22, 22));
     result->setMinimumSize(36, 32);
     result->setFocusPolicy(Qt::StrongFocus);
     const auto updateDescription = [result, action] {
@@ -185,9 +189,9 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     layout->setSpacing(4);
     layout->addWidget(timeline_);
     auto *row = new QHBoxLayout;
-    row->setSpacing(4);
+    row->setSpacing(5);
     row->addWidget(button(previous, this));
-    row->addWidget(button(pause, this));
+    row->addWidget(button(pause, this, true));
     row->addWidget(button(next, this));
     row->addWidget(button(stop, this));
     row->addWidget(button(open, this));

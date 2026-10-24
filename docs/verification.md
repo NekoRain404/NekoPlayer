@@ -1,5 +1,19 @@
 # Verification Record
 
+Transport-bar visual hierarchy stage (2026-10-24):
+
+- The play/pause control is now a distinct primary action with a larger icon and theme-aware
+  resting, hover, pressed and checked states. Secondary controls retain their compact sizing;
+  row spacing is slightly more generous without changing responsive hide/show thresholds or
+  playback wiring.
+- `cmake --build build/debug -j4` succeeded. `ctest --test-dir build/debug -R
+  '^(code-size|appearance-preferences|ui-surface|fullscreen-feedback-window)$'` passed **4/4**.
+- The primary-action contract verifies the button still invokes the pause QAction and is visually
+  distinguished by its icon size. Appearance checks exercise both dark and light primary states;
+  the fullscreen feedback test covers the existing overlay/control lifecycle.
+- Formatting, `git diff --check` and the 500/800-line checker passed. Real Wayland visual
+  inspection of color/contrast and hover/focus presentation remains outstanding.
+
 Reply-queue exhaustion test stabilization (2026-10-24):
 
 - Repeated testing exposed that a single event-pump/probe sequence did not guarantee libmpv's

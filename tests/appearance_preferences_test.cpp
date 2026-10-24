@@ -57,6 +57,8 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(style.contains(QStringLiteral("QSlider#timelineSlider")));
         QVERIFY(style.contains(QStringLiteral("QToolButton:pressed")));
         QVERIFY(style.contains(QStringLiteral("QToolButton:checked")));
+        QVERIFY(style.contains(QStringLiteral("QToolButton#transportPrimaryButton:hover")));
+        QVERIFY(style.contains(QStringLiteral("QToolButton#transportPrimaryButton:checked")));
         QVERIFY(style.contains(QStringLiteral("QListView#playlistView::item:hover")));
         QVERIFY(style.contains(QStringLiteral("QListView#playlistView::item:selected")));
         QVERIFY(style.contains(QStringLiteral("QPushButton:focus")));
@@ -70,6 +72,8 @@ class AppearancePreferencesTest final : public QObject {
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Light);
         const auto lightStyle = qApp->styleSheet();
         QVERIFY(lightStyle.contains(QStringLiteral("QToolButton:pressed")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QToolButton#transportPrimaryButton:hover")));
+        QVERIFY(lightStyle.contains(QStringLiteral("QToolButton#transportPrimaryButton:checked")));
         QVERIFY(lightStyle.contains(QStringLiteral("QListView#playlistView::item:selected")));
         QVERIFY(lightStyle.contains(QStringLiteral("QSlider#timelineSlider")));
         QVERIFY(lightStyle.contains(QStringLiteral("QWidget#welcomePanel")));
@@ -100,6 +104,12 @@ class AppearancePreferencesTest final : public QObject {
             QVERIFY(!button->accessibleName().isEmpty());
             QCOMPARE(button->toolTip(), button->accessibleName());
         }
+
+        auto *primary =
+            transport.findChild<QToolButton *>(QStringLiteral("transportPrimaryButton"));
+        QVERIFY(primary);
+        QCOMPARE(primary->defaultAction(), &pause);
+        QCOMPARE(primary->iconSize(), QSize(26, 26));
     }
 
     void timelineExposesPositionAndDuration() {

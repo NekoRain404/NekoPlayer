@@ -15,12 +15,16 @@
 #include <QTabWidget>
 #include <QVBoxLayout>
 
-PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
+PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
+                                     MediaLibraryPreferences initialMediaLibrary)
     : QDialog(parent), player_(player), tabs_(new QTabWidget(this)),
       hardwareDecoding_(new QComboBox(this)), actualDecoder_(new QLabel(this)),
       audioDevice_(new QComboBox(this)), subtitleVisible_(new QCheckBox(tr("显示字幕"), this)),
       subtitleScale_(new QDoubleSpinBox(this)), subtitlePosition_(new QDoubleSpinBox(this)),
-      subtitleFont_(new QFontComboBox(this)) {
+      subtitleFont_(new QFontComboBox(this)),
+      mediaScanningEnabled_(new QCheckBox(tr("允许扫描文件夹中的媒体文件"), this)),
+      recursiveFolderScan_(new QCheckBox(tr("默认包含子文件夹"), this)),
+      mediaLibraryPreferences_(initialMediaLibrary) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
@@ -86,6 +90,23 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
     subtitleForm->addRow(subtitleHelp);
     tabs_->addTab(subtitles, style()->standardIcon(QStyle::SP_FileDialogDetailedView), tr("字幕"));
 
+    auto *mediaLibraryPage = new QWidget(tabs_);
+    auto *mediaLibraryForm = new QFormLayout(mediaLibraryPage);
+    mediaScanningEnabled_->setObjectName(QStringLiteral("mediaScanningEnabledChoice"));
+    mediaScanningEnabled_->setAccessibleName(tr("允许扫描文件夹中的媒体文件"));
+    mediaScanningEnabled_->setChecked(initialMediaLibrary.scanningEnabled);
+    recursiveFolderScan_->setObjectName(QStringLiteral("recursiveFolderScanChoice"));
+    recursiveFolderScan_->setAccessibleName(tr("默认包含子文件夹"));
+    recursiveFolderScan_->setChecked(initialMediaLibrary.recursiveByDefault);
+    mediaLibraryForm->addRow(mediaScanningEnabled_);
+    mediaLibraryForm->addRow(recursiveFolderScan_);
+    auto *scanHelp = new QLabel(
+        tr("扫描仅在你打开、添加或拖入文件夹时进行，不会在启动时自动遍历目录。关闭后，文件夹扫描入口将停用；直接打开媒体文件仍可使用。"),
+        mediaLibraryPage);
+    scanHelp->setWordWrap(true);
+    mediaLibraryForm->addRow(scanHelp);
+    tabs_->addTab(mediaLibraryPage, style()->standardIcon(QStyle::SP_DirOpenIcon), tr("媒体库"));
+
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(tabs_);
     auto *buttons =
@@ -117,6 +138,10 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent)
     connect(subtitlePosition_, &QDoubleSpinBox::valueChanged, this,
             &PreferencesDialog::updateApplyButton);
     connect(subtitleFont_, &QFontComboBox::currentTextChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(mediaScanningEnabled_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(recursiveFolderScan_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::hardwareDecodingPreferenceChanged, this,
             &PreferencesDialog::updateApplyButton);
@@ -158,6 +183,14 @@ void PreferencesDialog::apply() {
                                     subtitlePosition_->value(), subtitleFont_->currentText()};
     if (draft.normalized() != player_.subtitlePreferences())
         player_.setSubtitlePreferences(draft);
+    const MediaLibraryPreferences mediaLibraryDraft{mediaScanningEnabled_->isChecked(),
+                                                     recursiveFolderScan_->isChecked()};
+    if (mediaLibraryDraft.scanningEnabled != mediaLibraryPreferences_.scanningEnabled ||
+        mediaLibraryDraft.recursiveByDefault != mediaLibraryPreferences_.recursiveByDefault) {
+        mediaLibraryPreferences_ = mediaLibraryDraft;
+        emit mediaLibraryPreferencesChanged(mediaLibraryDraft.scanningEnabled,
+                                            mediaLibraryDraft.recursiveByDefault);
+    }
     displaySubtitlePreferences();
     updateApplyButton();
 }
@@ -167,9 +200,12 @@ void PreferencesDialog::updateApplyButton() {
         hardwareDecoding_->currentData().toBool() != player_.hardwareDecodingEnabled();
     const SubtitlePreferences draft{subtitleVisible_->isChecked(), subtitleScale_->value(),
                                     subtitlePosition_->value(), subtitleFont_->currentText()};
-    applyButton_->setEnabled(
-        player_.isReady() &&
-        (decodingChanged || draft.normalized() != player_.subtitlePreferences()));
+    const bool mediaLibraryChanged =
+        mediaScanningEnabled_->isChecked() != mediaLibraryPreferences_.scanningEnabled ||
+        recursiveFolderScan_->isChecked() != mediaLibraryPreferences_.recursiveByDefault;
+    const bool playbackChange =
+        decodingChanged || draft.normalized() != player_.subtitlePreferences();
+    applyButton_->setEnabled(mediaLibraryChanged || (player_.isReady() && playbackChange));
 }
 
 void PreferencesDialog::updateActualDecoder() {

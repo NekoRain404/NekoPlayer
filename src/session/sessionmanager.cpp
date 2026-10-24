@@ -104,6 +104,7 @@ SessionLoadResult SessionManager::restore() {
     }
     emit playbackHistoryChanged();
     mediaDirectory_ = loaded.state.window.mediaDirectory;
+    mediaLibraryPreferences_ = loaded.state.mediaLibrary;
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
                            loaded.state.resumePosition);
     player_.setVolume(audio_.volume);
@@ -141,6 +142,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.resumePosition = position;
     saved.tuning = tuning_;
     saved.videoColor = player_.videoColorAdjustment();
+    saved.mediaLibrary = mediaLibraryPreferences_;
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     if (!sessionError.isEmpty())
@@ -328,6 +330,14 @@ QString SessionManager::saveTrackPreferences() {
 }
 
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }
+
+MediaLibraryPreferences SessionManager::mediaLibraryPreferences() const {
+    return mediaLibraryPreferences_;
+}
+
+void SessionManager::setMediaLibraryPreferences(MediaLibraryPreferences preferences) {
+    mediaLibraryPreferences_ = preferences;
+}
 
 QList<PlaybackHistoryEntry> SessionManager::playbackHistory() const {
     QList<PlaybackHistoryEntry> entries;

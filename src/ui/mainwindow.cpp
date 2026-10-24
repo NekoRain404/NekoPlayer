@@ -69,6 +69,12 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(fileDrop_, &LocalFileDrop::mediaFilesDropped, this, &MainWindow::appendFiles);
     connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
     createActions();
+    connect(folderMenu_, &FolderMenu::mediaLibraryPreferencesChanged, this,
+            [this](bool scanningEnabled, bool recursiveByDefault) {
+                if (session_)
+                    session_->setMediaLibraryPreferences(
+                        {scanningEnabled, recursiveByDefault});
+            });
     connect(fileDrop_, &LocalFileDrop::foldersDropped, this, [this](const QStringList &paths) {
         folderMenu_->start(paths, true, folderMenu_->recursiveEnabled());
     });

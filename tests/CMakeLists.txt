@@ -12,11 +12,7 @@ target_link_libraries(recent_media_history_test PRIVATE neko_session Qt6::Test)
 add_test(NAME recent-media-history COMMAND recent_media_history_test)
 set_tests_properties(recent-media-history PROPERTIES TIMEOUT 20)
 
-add_executable(folder_scan_test folder_scan_test.cpp)
-target_link_libraries(folder_scan_test PRIVATE neko_input Qt6::Test)
-add_test(NAME folder-scan COMMAND folder_scan_test)
-set_tests_properties(folder-scan PROPERTIES TIMEOUT 60)
-
+include(folder_scanning_tests.cmake)
 add_executable(media_source_test media_source_test.cpp)
 target_link_libraries(media_source_test PRIVATE neko_playback Qt6::Test)
 add_test(NAME media-source COMMAND media_source_test)

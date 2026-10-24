@@ -17,6 +17,7 @@
 #include "playlistpane.h"
 #include "preferencesdialog.h"
 #include "recentmediamenu.h"
+#include "session/sessionmanager.h"
 #include "subtitledisplaymenu.h"
 #include "trackmenus.h"
 #include "tuningmenus.h"
@@ -243,15 +244,30 @@ void MainWindow::createActions() {
             [this](bool visible) { playlistPane_->setVisible(visible); });
     view->addAction(showPlaylistAction_);
     auto *settings = menuBar()->addMenu(tr("设置(&S)"));
+    const auto showPreferences = [this](PreferencesDialog::Category category) {
+        PreferencesDialog dialog(*controller_, this, folderMenu_->mediaLibraryPreferences());
+        connect(&dialog, &PreferencesDialog::mediaLibraryPreferencesChanged, this,
+                [this](bool scanningEnabled, bool recursiveByDefault) {
+                    const MediaLibraryPreferences preferences{scanningEnabled, recursiveByDefault};
+                    folderMenu_->setMediaLibraryPreferences(preferences);
+                    if (session_)
+                        session_->setMediaLibraryPreferences(preferences);
+                });
+        dialog.selectCategory(category);
+        dialog.exec();
+    };
     auto *playbackSettings =
         make(tr("播放设置…"), "playbackSettingsAction", QKeySequence(Qt::Key_F5));
     setAppearanceIcon(playbackSettings, AppearanceIcons::Symbol::Information);
-    connect(playbackSettings, &QAction::triggered, this, [this] {
-        PreferencesDialog dialog(*controller_, this);
-        dialog.selectCategory(PreferencesDialog::Category::Playback);
-        dialog.exec();
+    connect(playbackSettings, &QAction::triggered, this, [showPreferences] {
+        showPreferences(PreferencesDialog::Category::Playback);
     });
     settings->addAction(playbackSettings);
+    auto *mediaLibrarySettings = settings->addAction(tr("媒体库设置…"));
+    mediaLibrarySettings->setObjectName(QStringLiteral("mediaLibrarySettingsAction"));
+    connect(mediaLibrarySettings, &QAction::triggered, this, [showPreferences] {
+        showPreferences(PreferencesDialog::Category::MediaLibrary);
+    });
     settings->addAction(subtitleDisplay->settingsAction());
     settings->addSeparator();
     auto *themeMenu = settings->addMenu(tr("主题"));
@@ -409,6 +425,7 @@ void MainWindow::changeEvent(QEvent *event) {
     if (auto *chinese = findChild<QAction *>(QStringLiteral("languageChineseAction")))
         chinese->setText(tr("简体中文"));
     setActionText("playbackSettingsAction", tr("播放设置…"));
+    setActionText("mediaLibrarySettingsAction", tr("媒体库设置…"));
     setActionText("aboutAction", tr("关于 NekoPlayer…"));
     setActionText("themeDarkAction",
                   AppearancePreferences::themeName(AppearancePreferences::Theme::Dark));

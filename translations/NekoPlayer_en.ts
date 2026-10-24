@@ -2,6 +2,22 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>PreferencesDialog</name>
+    <message><source>偏好设置</source><translation>Preferences</translation></message>
+    <message><source>媒体库</source><translation>Media Library</translation></message>
+    <message><source>允许扫描文件夹中的媒体文件</source><translation>Allow scanning folders for media files</translation></message>
+    <message><source>默认包含子文件夹</source><translation>Include subfolders by default</translation></message>
+    <message><source>扫描仅在你打开、添加或拖入文件夹时进行，不会在启动时自动遍历目录。关闭后，文件夹扫描入口将停用；直接打开媒体文件仍可使用。</source><translation>Scanning runs only when you open, add, or drop a folder; directories are not scanned automatically at startup. When disabled, folder scanning is unavailable, while opening media files directly remains available.</translation></message>
+</context>
+<context>
+    <name>MainWindow</name>
+    <message><source>媒体库设置…</source><translation>Media Library Settings…</translation></message>
+</context>
+<context>
+    <name>FolderMenu</name>
+    <message><source>媒体文件夹扫描已关闭；可在偏好设置的媒体库中重新开启。</source><translation>Media folder scanning is disabled. Re-enable it under Preferences → Media Library.</translation></message>
+</context>
+<context>
     <name>AbLoopMenu</name>
     <message><source>将当前位置设为起点 A</source><translation>Set Current Position as A</translation></message>
     <message><source>将当前位置设为终点 B</source><translation>Set Current Position as B</translation></message>

@@ -71,6 +71,8 @@ class SessionTest final : public QObject {
         saved.paths = {media, missing, media};
         saved.currentIndex = 2;
         saved.audio = {37.5, true};
+        saved.mediaLibrary.scanningEnabled = false;
+        saved.mediaLibrary.recursiveByDefault = true;
         saved.window = {QByteArray::fromHex("00ff0012"), true, temporary.path()};
         QVERIFY(SessionStore(file).save(saved).isEmpty());
         const auto loaded = SessionStore(file).load();
@@ -82,9 +84,24 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.window.geometry, QByteArray::fromHex("00ff0012"));
         QVERIFY(loaded.state.window.playlistVisible);
         QCOMPARE(loaded.state.window.mediaDirectory, temporary.path());
+        QVERIFY(!loaded.state.mediaLibrary.scanningEnabled);
+        QVERIFY(loaded.state.mediaLibrary.recursiveByDefault);
         QCOMPARE(loaded.state.tuning.playbackSpeed, 1.0);
         QCOMPARE(loaded.state.tuning.audioDelay, 0.0);
         QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
+    }
+
+    void legacyConfigurationDefaultsToEnabledOnDemandScanning() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("legacy.ini"));
+        QSettings settings(path, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("schemaVersion"), 1);
+        settings.sync();
+        const auto loaded = SessionStore(path).load();
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QVERIFY(loaded.state.mediaLibrary.scanningEnabled);
+        QVERIFY(!loaded.state.mediaLibrary.recursiveByDefault);
     }
 
     void schemaOneConfigurationWithoutTuningValuesUsesDefaults() {

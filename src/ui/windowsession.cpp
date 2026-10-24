@@ -28,6 +28,7 @@ void MainWindow::restoreSession(const QString &path) {
         statusBar()->showMessage(tr("无法恢复会话：%1").arg(loaded.error));
         return;
     }
+    folderMenu_->setMediaLibraryPreferences(loaded.state.mediaLibrary);
     connect(session_.get(), &SessionManager::playbackHistoryChanged, this, [this] {
         if (welcomePanel_)
             welcomePanel_->setResumeEntries(session_->playbackHistory());

@@ -114,6 +114,10 @@ SessionLoadResult SessionStore::load() const {
         settings.value(QStringLiteral("audio/outputDevice"), QStringLiteral("auto")).toString();
     state.hardwareDecodingEnabled =
         readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
+    state.mediaLibrary.scanningEnabled =
+        readBool(settings, QStringLiteral("library/scanningEnabled"), true);
+    state.mediaLibrary.recursiveByDefault =
+        readBool(settings, QStringLiteral("library/recursiveByDefault"));
     state.subtitles.visible = readBool(settings, QStringLiteral("subtitles/visible"), true);
     const auto scale = settings.value(QStringLiteral("subtitles/scale"), 1).toDouble(&valid);
     state.subtitles.scale = valid ? scale : 1;
@@ -170,6 +174,10 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("audio/muted"), saved.audio.muted);
     settings.setValue(QStringLiteral("audio/outputDevice"), saved.audio.outputDevice);
     settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
+    settings.setValue(QStringLiteral("library/scanningEnabled"),
+                      saved.mediaLibrary.scanningEnabled);
+    settings.setValue(QStringLiteral("library/recursiveByDefault"),
+                      saved.mediaLibrary.recursiveByDefault);
     settings.setValue(QStringLiteral("subtitles/visible"), saved.subtitles.visible);
     settings.setValue(QStringLiteral("subtitles/scale"), saved.subtitles.scale);
     settings.setValue(QStringLiteral("subtitles/position"), saved.subtitles.position);

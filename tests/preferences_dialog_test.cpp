@@ -3,6 +3,8 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDialogButtonBox>
+#include <QPushButton>
 #include <QDoubleSpinBox>
 #include <QFontComboBox>
 #include <QIcon>
@@ -17,16 +19,22 @@ class PreferencesDialogTest final : public QObject {
         PreferencesDialog dialog(player);
         auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
         QVERIFY(tabs);
-        QCOMPARE(tabs->count(), 3);
+        QCOMPARE(tabs->count(), 4);
         QCOMPARE(tabs->tabText(0), QStringLiteral("播放"));
         QCOMPARE(tabs->tabText(1), QStringLiteral("音频"));
         QCOMPARE(tabs->tabText(2), QStringLiteral("字幕"));
+        QCOMPARE(tabs->tabText(3), QStringLiteral("媒体库"));
         QVERIFY(!tabs->tabIcon(0).isNull());
         QVERIFY(!tabs->tabIcon(1).isNull());
         QVERIFY(!tabs->tabIcon(2).isNull());
+        QVERIFY(!tabs->tabIcon(3).isNull());
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice")));
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("audioOutputDeviceChoice")));
         QVERIFY(dialog.findChild<QComboBox *>(QStringLiteral("subtitleFontChoice")));
+        QVERIFY(dialog.findChild<QCheckBox *>(QStringLiteral("mediaScanningEnabledChoice")));
+        QVERIFY(dialog.findChild<QCheckBox *>(QStringLiteral("recursiveFolderScanChoice")));
+        QVERIFY(dialog.findChild<QCheckBox *>(QStringLiteral("mediaScanningEnabledChoice"))
+                    ->isChecked());
     }
 
     void opensRequestedCategory() {
@@ -36,6 +44,26 @@ class PreferencesDialogTest final : public QObject {
         auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
         QVERIFY(tabs);
         QCOMPARE(tabs->currentIndex(), 2);
+    }
+
+    void appliesMediaLibraryPreferencesOnlyAfterApply() {
+        MpvController player(true, true);
+        PreferencesDialog dialog(player);
+        auto *scanning = dialog.findChild<QCheckBox *>(QStringLiteral("mediaScanningEnabledChoice"));
+        auto *recursive = dialog.findChild<QCheckBox *>(QStringLiteral("recursiveFolderScanChoice"));
+        QVERIFY(scanning && recursive);
+        QSignalSpy changed(&dialog, &PreferencesDialog::mediaLibraryPreferencesChanged);
+        scanning->setChecked(false);
+        recursive->setChecked(true);
+        QVERIFY(changed.isEmpty());
+        dialog.selectCategory(PreferencesDialog::Category::MediaLibrary);
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(buttons);
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(changed.count(), 1);
+        const auto arguments = changed.takeFirst();
+        QVERIFY(!arguments.at(0).toBool());
+        QVERIFY(arguments.at(1).toBool());
     }
 
     void namesEveryPreferenceControlForAssistiveTechnology() {

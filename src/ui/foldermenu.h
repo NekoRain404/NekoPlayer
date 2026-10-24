@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include "session/sessionstate.h"
 #include <QStringList>
 #include <functional>
 
@@ -16,6 +17,8 @@ class FolderMenu final : public QObject {
     FolderMenu(QWidget *window, std::function<QString()> initialDirectory);
     [[nodiscard]] QMenu *menu() const;
     [[nodiscard]] bool recursiveEnabled() const;
+    [[nodiscard]] MediaLibraryPreferences mediaLibraryPreferences() const;
+    void setMediaLibraryPreferences(MediaLibraryPreferences preferences);
     void start(const QString &directory, bool append, bool recursive);
     void start(const QStringList &directories, bool append, bool recursive);
     void cancel();
@@ -24,6 +27,7 @@ class FolderMenu final : public QObject {
     void filesReady(const QStringList &paths, bool append);
     void feedback(const QString &message);
     void errorOccurred(const QString &message);
+    void mediaLibraryPreferencesChanged(bool scanningEnabled, bool recursiveByDefault);
 
   private:
     void chooseDirectory(bool append);
@@ -34,5 +38,8 @@ class FolderMenu final : public QObject {
     QProgressDialog *progress_;
     FolderScanJob *job_;
     std::function<QString()> initialDirectory_;
+    QAction *openAction_ = nullptr;
+    QAction *appendAction_ = nullptr;
+    bool scanningEnabled_ = true;
     bool append_ = false;
 };

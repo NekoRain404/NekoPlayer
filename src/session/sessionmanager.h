@@ -17,6 +17,8 @@ class SessionManager final : public QObject {
     [[nodiscard]] SessionLoadResult restore();
     [[nodiscard]] QString save(WindowPreferences window, const QStringList &pendingPaths = {});
     [[nodiscard]] QString mediaDirectory() const;
+    [[nodiscard]] MediaLibraryPreferences mediaLibraryPreferences() const;
+    void setMediaLibraryPreferences(MediaLibraryPreferences preferences);
     [[nodiscard]] QList<PlaybackHistoryEntry> playbackHistory() const;
     void rememberMedia(const QString &path);
 
@@ -35,6 +37,7 @@ class SessionManager final : public QObject {
     AudioPreferences audio_;
     TuningPreferences tuning_;
     QString mediaDirectory_;
+    MediaLibraryPreferences mediaLibraryPreferences_;
     QString loadError_;
     QString historyError_;
     bool stopRequested_ = false;

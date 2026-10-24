@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDialog>
+#include "session/sessionstate.h"
 
 class MpvController;
 class QComboBox;
@@ -14,10 +15,14 @@ class QTabWidget;
 class PreferencesDialog final : public QDialog {
     Q_OBJECT
   public:
-    enum class Category { Playback, Audio, Subtitles };
+    enum class Category { Playback, Audio, Subtitles, MediaLibrary };
 
-    explicit PreferencesDialog(MpvController &player, QWidget *parent = nullptr);
+    explicit PreferencesDialog(MpvController &player, QWidget *parent = nullptr,
+                               MediaLibraryPreferences mediaLibrary = {});
     void selectCategory(Category category);
+
+  signals:
+    void mediaLibraryPreferencesChanged(bool scanningEnabled, bool recursiveByDefault);
 
   private:
     void apply();
@@ -34,6 +39,9 @@ class PreferencesDialog final : public QDialog {
     QDoubleSpinBox *subtitleScale_;
     QDoubleSpinBox *subtitlePosition_;
     QFontComboBox *subtitleFont_;
+    QCheckBox *mediaScanningEnabled_;
+    QCheckBox *recursiveFolderScan_;
+    MediaLibraryPreferences mediaLibraryPreferences_;
     QPushButton *applyButton_;
     QPushButton *restoreDefaultsButton_;
     QString lastDecoder_;

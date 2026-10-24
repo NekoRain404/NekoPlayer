@@ -66,7 +66,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t) {
              QString::number(unit), QString::number(t.controlRadius), QString::number(unit / 2),
              color(t.accent), color(t.mutedText), QString::number(t.controlRadius),
              QString::number(unit * 3), color(t.hoverSurface), color(t.pressedSurface),
-             color(t.disabledText), color(t.focus), color(t.selectedText), color(t.accentHover),
+             color(t.disabledText), color(t.focus), color(t.accentText), color(t.accentHover),
              color(t.accentHover), color(t.accentPressed), QString::number(unit + 1),
              color(t.selection), QString::number(unit * 7), color(t.selectedText));
 }

@@ -14,6 +14,7 @@ struct AppearanceTokens {
     QColor mutedText;
     QColor separator;
     QColor accent;
+    QColor accentText;
     QColor accentHover;
     QColor accentPressed;
     QColor focus;

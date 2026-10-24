@@ -18,6 +18,9 @@
 #include <QVBoxLayout>
 #include <QtTest>
 
+#include <algorithm>
+#include <cmath>
+
 class AppearancePreferencesTest final : public QObject {
     Q_OBJECT
   private slots:
@@ -30,6 +33,31 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(light.accent != light.canvas);
         QCOMPARE(dark.spaceUnit, light.spaceUnit);
         QCOMPARE(dark.transportHitTarget, 32);
+    }
+
+    void primaryActionForegroundContrastsWithAccentSurface() {
+        const auto contrast = [](const QColor &first, const QColor &second) {
+            const auto luminance = [](const QColor &color) {
+                const auto linear = [](qreal channel) {
+                    return channel <= 0.04045 ? channel / 12.92
+                                              : std::pow((channel + 0.055) / 1.055, 2.4);
+                };
+                return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) +
+                       0.0722 * linear(color.blueF());
+            };
+            const auto lighter = std::max(luminance(first), luminance(second));
+            const auto darker = std::min(luminance(first), luminance(second));
+            return (lighter + 0.05) / (darker + 0.05);
+        };
+        for (const auto theme : {AppearancePreferences::Theme::Dark,
+                                 AppearancePreferences::Theme::Light}) {
+            const auto tokens = appearanceTokens(theme);
+            QVERIFY2(contrast(tokens.accentText, tokens.accent) >= 4.5,
+                     "Primary-action text must meet WCAG AA contrast");
+            const auto style = appearanceStyleSheet(tokens);
+            QVERIFY(style.contains(QStringLiteral("QToolButton#transportPrimaryButton:checked{color:%1;")
+                                       .arg(tokens.accentText.name(QColor::HexRgb))));
+        }
     }
 
     void exposesThreeThemesAndAppliesPalettes() {

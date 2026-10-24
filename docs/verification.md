@@ -1,5 +1,14 @@
 # Verification Record
 
+Reply-queue exhaustion test stabilization (2026-10-24):
+
+- Repeated testing exposed that a single event-pump/probe sequence did not guarantee libmpv's
+  bounded reply queue had room for all three retry commands. The regression test now retries each
+  identical framing request until that specific request is accepted, then verifies native values.
+- `video-framing` passed five consecutive focused runs. The full non-window Debug selection
+  (`ctest --test-dir build/debug -E 'window|startup' --output-on-failure`) passed **49/49**.
+- Formatting and `git diff --check` passed. Production behavior was unchanged.
+
 Wayland file-drop window-test readiness stage (2026-10-23):
 
 - Removed a redundant `qWaitForWindowExposed()` assertion from the desktop drag/drop integration test. Under the configured native Wayland backend it timed out even though the scenario's actual prerequisite is successful `VideoWidget` renderer initialization; the test now waits for that concrete condition before exercising file-drop routing.

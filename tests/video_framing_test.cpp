@@ -21,6 +21,7 @@ QString nativeText(MpvController &player, const char *name) {
     mpv_free(value);
     return result;
 }
+
 } // namespace
 
 class VideoFramingTest final : public QObject {
@@ -172,10 +173,21 @@ class VideoFramingTest final : public QObject {
         QCOMPARE(changed.count(), 0);
         QVERIFY(!errors.isEmpty());
 
-        QCoreApplication::processEvents();
-        player.setVideoZoom(1);
-        player.setVideoPanX(0.5);
-        player.setVideoPanY(-0.5);
+        QTRY_VERIFY_WITH_TIMEOUT(([&] {
+                                     player.setVideoZoom(1);
+                                     return player.videoFraming().zoom == 1;
+                                 })(),
+                                 2000);
+        QTRY_VERIFY_WITH_TIMEOUT(([&] {
+                                     player.setVideoPanX(0.5);
+                                     return player.videoFraming().panX == 0.5;
+                                 })(),
+                                 2000);
+        QTRY_VERIFY_WITH_TIMEOUT(([&] {
+                                     player.setVideoPanY(-0.5);
+                                     return player.videoFraming().panY == -0.5;
+                                 })(),
+                                 2000);
         QCOMPARE(player.videoFraming(), (VideoFraming{1, 0.5, -0.5}));
         QTRY_COMPARE(nativeValue(player, "video-zoom"), 1.0);
         QTRY_COMPARE(nativeValue(player, "video-pan-x"), 0.5);

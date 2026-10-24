@@ -77,20 +77,22 @@
 **Interfaces:**
 - New value type:
   ```cpp
+  enum class MiddleClickAction { None, PlayPause, Mute, Fullscreen };
   struct InteractionPreferences {
       bool singleClickPlayPause = true;
       bool doubleClickFullscreen = true;
-      bool middleClickFullscreen = false;
+      MiddleClickAction middleClick = MiddleClickAction::None;
       bool wheelAdjustsVolume = true;
       int wheelVolumeStep = 5; // 1..20
       bool wheelSeeksTimeline = true;
+      bool playlistSingleClick = false;
   };
   ```
 - `SessionState` gains `InteractionPreferences interaction;`.
-- `SessionStore` reads/writes optional `interaction/*` keys; missing or invalid values fall back independently; `wheelVolumeStep` is clamped to 1..20.
+- `SessionStore` reads/writes optional `interaction/*` keys; missing or invalid values fall back independently; `wheelVolumeStep` is clamped to 1..20; `middleClick` accepts `none`, `playPause`, `mute`, `fullscreen` and falls back to `none`.
 - `SessionManager` exposes `interactionPreferences()` and `setInteractionPreferences()`.
 - `PreferencesDialog` gains `Category::Interaction` as a new final category, a constructor argument `InteractionPreferences interaction = {}`, and `interactionPreferencesChanged(InteractionPreferences)`.
-- The Interaction page has named, accessible controls: `interactionSingleClickChoice`, `interactionDoubleClickChoice`, `interactionMiddleClickChoice`, `interactionWheelVolumeChoice`, `interactionWheelStepChoice`, `interactionWheelSeekChoice`. Apply emits once when changed; Restore Defaults on this page resets the defaults.
+- The Interaction page has named, accessible controls: `interactionSingleClickChoice`, `interactionDoubleClickChoice`, `interactionMiddleClickChoice`, `interactionWheelVolumeChoice`, `interactionWheelStepChoice`, `interactionWheelSeekChoice`, `interactionPlaylistClickChoice`. Apply emits once when changed; Restore Defaults on this page resets the defaults.
 - `PreferencesCoordinator::Handlers` gains the interaction getter/setter.
 
 **Steps:**
@@ -130,7 +132,7 @@
 - `MainWindow` stores the active `InteractionPreferences`, applies it on restore and on settings changes, and:
   - toggles playback on single click when enabled;
   - toggles fullscreen on double click when enabled;
-  - toggles fullscreen on middle click when enabled;
+  - performs the configured middle-click action (`None`, `PlayPause`, `Mute`, `Fullscreen`);
   - adjusts volume by `wheelVolumeStep` per notch when enabled;
   - seeks by the configured seek step on timeline wheel when enabled.
 - Feedback continues to use the existing `ActionFeedbackOverlay` / seek feedback.
@@ -167,7 +169,70 @@
 - [ ] Run `transport-bar`, `appearance-preferences`, `ui-surface`, `code-size`; build all.
 - [ ] Commit as `feat(ui): polish transport time and settings icons`.
 
-## Task 5: Documentation, verification, and final review
+## Task 5: Playlist ergonomics
+
+**Why:** The playlist is a primary surface, but it currently has a fixed width, double-click-only activation, and no quick way to find an item in a long queue.
+
+**Files:**
+- Modify `src/ui/playlistpane.h`
+- Modify `src/ui/playlistpane.cpp`
+- Modify `src/ui/mainwindow.cpp`
+- Modify `src/ui/mainwindow.h` if the splitter needs a member
+- Modify `src/session/sessionstate.h`
+- Modify `src/session/sessionstore.cpp`
+- Modify `src/session/sessionmanager.h`
+- Modify `src/session/sessionmanager.cpp`
+- Modify `src/ui/preferencescoordinator.cpp` only if the coordinator must expose the new value
+- Modify `tests/session_test.cpp`
+- Modify `tests/playlist_edit_test.cpp` only if activation behavior is covered there
+- Modify `translations/NekoPlayer_en.ts`
+
+**Interfaces / behavior:**
+- `PlaylistPane::setSingleClickActivation(bool)` connects `QListView::clicked` to the same play request as `activated` when enabled; double-click and Enter keep working.
+- The video/playlist row uses a `QSplitter` with the existing playlist minimum width (240 px), `setCollapsible(1, false)`, and video stretch 1.
+- `WindowPreferences` gains `int playlistWidth = 0`; 0 means the default. Persist the width when the playlist is visible and restore it after the splitter is built. Clamp to a sensible range on load (240–1000).
+- Fullscreen/mini-player continue to hide the playlist without changing the stored width.
+- Add a header search field? Do not add a proxy model in this phase: it would complicate current-row identity, drag/drop, and failure history. Record the search field as a follow-up instead.
+
+**Steps:**
+- [ ] Add session-store tests for default/invalid/round-trip playlist width.
+- [ ] Add a focused PlaylistPane test for single-click activation if it can be done without a live renderer.
+- [ ] Replace the fixed horizontal layout with the splitter; restore and save width.
+- [ ] Wire `playlistSingleClick` from `InteractionPreferences`.
+- [ ] Run `session`, `playlist-edit`, `transport-bar`, `code-size`; build all.
+- [ ] Commit as `feat(ui): make the playlist resizable and click-configurable`.
+
+## Task 6: Performance and boundary cleanup
+
+**Why:** The audit found per-tick work on the GUI thread and a duplicated appearance apply. These are cheap to fix and directly improve responsiveness and layering.
+
+**Files:**
+- Modify `src/ui/windowactions.cpp`
+- Modify `src/ui/mainwindow.cpp`
+- Modify `src/ui/mainwindow.h`
+- Modify `src/ui/preferencesdialog.cpp`
+- Modify `src/ui/foldermenu.cpp`
+- Modify `src/ui/appearancepreferences.cpp`
+- Modify `src/ui/backenddiagnostic.h` / `.cpp` or `src/playback/backenddiagnostic.cpp`
+- Modify `tests/window_test.cpp` only if a compile-only assertion is needed
+- Modify `tests/preferences_dialog_test.cpp` / `tests/ui_surface_test.cpp` for focused coverage.
+
+**Interfaces / behavior:**
+- `MainWindow::updateState()` must not allocate a new icon on every `time-pos` tick. `setAppearanceIcon` caches the symbol and palette; skip `AppearanceIcons::icon` when unchanged. Cache the window title by path instead of rebuilding `MediaSource::displayName` on every state tick.
+- `PreferencesDialog` must not recompute every draft on each playback tick. Gate `updateApplyButton()`/`updateActualDecoder()` on a cached `(active, hardwareDecoder)` and on dedicated preference signals; playback position changes alone must not drive dialog work.
+- Appearance Apply must apply once: the preview already applies the draft. `PreferencesDialog::apply()` updates its rollback snapshots and emits; `AppearanceMenu::setSettings()` remains the single apply/persist owner. Add a focused test that the final settings and persistence are correct.
+- `FolderMenu::setMediaLibraryPreferences()` must block programmatic `toggled` signals so the session is not written twice.
+- Move the libmpv client API version query out of `appearancepreferences.cpp` into `BackendDiagnostic` (or an existing playback-layer helper) so the UI layer does not include `mpv/client.h` for About text.
+- Do not change the render path, polling behavior, or playback semantics.
+
+**Steps:**
+- [ ] Add focused regressions for icon/title stability across repeated `updateState()` ticks and for preference-dialog state gating where feasible without window tests.
+- [ ] Implement the caches and single-owner appearance apply.
+- [ ] Move the client API version query behind the playback boundary.
+- [ ] Run focused `preferences-dialog`, `appearance-preferences`, `ui-surface`, `code-size`; build all.
+- [ ] Commit as `perf(ui): remove per-tick churn and duplicated applies`.
+
+## Task 7: Documentation, verification, and final review
 
 **Files:**
 - Modify `README.md`

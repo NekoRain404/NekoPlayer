@@ -17,6 +17,8 @@ This phase therefore targets four outcomes:
 - Add persisted interaction preferences: single click, double click, middle click, wheel volume, wheel volume step, and timeline wheel seek.
 - Make the video surface and timeline honor those preferences through narrow signals; keep `VideoWidget` free of mpv and preference logic.
 - Add a clickable elapsed/remaining time readout and consistent settings icons.
+- Make the playlist resizable and optionally single-click activated.
+- Remove per-tick GUI churn: no icon allocation or title rebuild on every position tick, no repeated preference recomputation while the dialog is open, and a single owner for appearance apply/persist.
 - Keep the existing 500-line target with a small automated grace window; split by responsibility, not by line count.
 - Update README, architecture, verification, and translations.
 
@@ -48,9 +50,10 @@ Defaults preserve the current experience except for the new convenience actions:
 
 - Single left click on video: play/pause (enabled by default).
 - Double left click: fullscreen toggle (enabled by default; existing behavior).
-- Middle click: fullscreen toggle (disabled by default).
+- Middle click: configurable as none, play/pause, mute, or fullscreen (default none).
 - Wheel over video: volume by the configured step (enabled by default).
 - Wheel over the timeline: seek by the configured seek step (enabled by default).
+- Playlist single-click activation: opt-in (default off; double-click/Enter remains the default).
 - Single-click detection waits for the double-click interval so a double click does not also pause.
 
 The policy helpers are pure functions and are tested without OpenGL or a desktop session.
@@ -63,9 +66,13 @@ Interaction preferences live in the existing session INI under `interaction/*`, 
 
 - Existing category indices remain stable; `Interaction` is appended.
 - Old session files load with defaults.
-- No new raw mpv calls in UI code.
+- No new raw mpv calls in UI code; the About dialog gets its client API version through the playback layer.
 - Video, HDR, decoding, and render paths are untouched.
 - New visible strings are translated; the English catalog must compile.
+
+## Performance Boundary
+
+`time-pos` is observed, so `stateChanged` fires frequently. Per-tick work must stay cheap: reuse cached action icons and window titles, keep dialog draft comparisons behind dedicated signals or cached state, and never rebuild the application palette or stylesheet more than once for one user action. These are GUI-thread optimizations only; playback commands and event handling stay asynchronous.
 
 ## Verification
 

@@ -1,6 +1,7 @@
 #include "abloopmenu.h"
 #include "actionfeedbacktext.h"
 #include "appearanceicons.h"
+#include "appearancemenu.h"
 #include "appearancepreferences.h"
 #include "audiodevicemenu.h"
 #include "currentmediamenu.h"
@@ -247,10 +248,16 @@ void MainWindow::createActions() {
             [this](bool visible) { playlistPane_->setVisible(visible); });
     view->addAction(showPlaylistAction_);
     auto *settings = menuBar()->addMenu(tr("设置(&S)"));
-    const auto showPreferences = [this](PreferencesDialog::Category category) {
+    QSettings appearanceSettings;
+    auto *appearanceMenu = new AppearanceMenu(
+        this, appearanceSettings, qApp->property("configurationEnabled").toBool());
+    const auto showPreferences = [this, appearanceMenu](PreferencesDialog::Category category) {
         PreferencesDialog dialog(*controller_, this, folderMenu_->mediaLibraryPreferences(),
                                  session_ ? session_->resumePlaybackPositionEnabled() : true,
-                                 session_ ? session_->seekStepSeconds() : 5);
+                                 session_ ? session_->seekStepSeconds() : 5,
+                                 appearanceMenu->settings());
+        connect(&dialog, &PreferencesDialog::appearancePreferencesChanged, appearanceMenu,
+                &AppearanceMenu::setSettings);
         connect(&dialog, &PreferencesDialog::mediaLibraryPreferencesChanged, this,
                 [this](bool scanningEnabled, bool recursiveByDefault) {
                     const MediaLibraryPreferences preferences{scanningEnabled, recursiveByDefault};
@@ -285,39 +292,16 @@ void MainWindow::createActions() {
         showPreferences(PreferencesDialog::Category::MediaLibrary);
     });
     settings->addAction(subtitleDisplay->settingsAction());
+    auto *appearanceSettingsAction = settings->addAction(tr("外观设置…"));
+    appearanceSettingsAction->setObjectName(QStringLiteral("appearanceSettingsAction"));
+    connect(appearanceSettingsAction, &QAction::triggered, this, [showPreferences] {
+        showPreferences(PreferencesDialog::Category::Appearance);
+    });
     settings->addSeparator();
-    auto *themeMenu = settings->addMenu(tr("主题"));
+    auto *themeMenu = appearanceMenu->menu();
+    themeMenu->setTitle(tr("主题"));
+    settings->addMenu(themeMenu);
     themeMenu->menuAction()->setObjectName(QStringLiteral("themeMenuAction"));
-    auto *themeGroup = new QActionGroup(themeMenu);
-    themeGroup->setExclusive(true);
-    QSettings appearanceSettings;
-    const auto savedAppearance = qApp->property("configurationEnabled").toBool()
-                                     ? AppearancePreferences::loadSettings(appearanceSettings)
-                                     : AppearancePreferences::Settings{};
-    for (const auto theme : AppearancePreferences::themes()) {
-        auto *action = themeMenu->addAction(AppearancePreferences::themeName(theme));
-        const auto key = theme == AppearancePreferences::Theme::Dark    ? QStringLiteral("dark")
-                         : theme == AppearancePreferences::Theme::Light ? QStringLiteral("light")
-                                                                        : QStringLiteral("system");
-        action->setObjectName(QStringLiteral("theme%1Action")
-                                  .arg(key == QLatin1String("dark")    ? QStringLiteral("Dark")
-                                       : key == QLatin1String("light") ? QStringLiteral("Light")
-                                                                       : QStringLiteral("System")));
-        action->setCheckable(true);
-        themeGroup->addAction(action);
-        action->setChecked(savedAppearance.theme == theme);
-        connect(action, &QAction::triggered, this, [theme] {
-            QSettings preferences;
-            const bool useConfig = qApp->property("configurationEnabled").toBool();
-            auto appearance = useConfig ? AppearancePreferences::loadSettings(preferences)
-                                        : AppearancePreferences::Settings{};
-            appearance.theme = theme;
-            if (auto *application = qobject_cast<QApplication *>(qApp))
-                AppearancePreferences::applySettings(*application, appearance);
-            if (useConfig)
-                AppearancePreferences::saveSettings(preferences, appearance);
-        });
-    }
     auto *languageMenu = settings->addMenu(tr("语言"));
     languageMenu->menuAction()->setObjectName(QStringLiteral("languageMenuAction"));
     auto *languageGroup = new QActionGroup(languageMenu);
@@ -456,6 +440,7 @@ void MainWindow::changeEvent(QEvent *event) {
         chinese->setText(tr("简体中文"));
     setActionText("playbackSettingsAction", tr("播放设置…"));
     setActionText("mediaLibrarySettingsAction", tr("媒体库设置…"));
+    setActionText("appearanceSettingsAction", tr("外观设置…"));
     setActionText("aboutAction", tr("关于 NekoPlayer…"));
     setActionText("themeDarkAction",
                   AppearancePreferences::themeName(AppearancePreferences::Theme::Dark));

@@ -72,7 +72,8 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/playlist/m3u8store.cpp
     src/ui/mediainformationtext.cpp src/ui/mediainformationdialog.cpp
     src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp
-    src/ui/windowactions.cpp src/ui/windowsession.cpp src/ui/transportbar.cpp src/ui/foldermenu.cpp
+    src/ui/windowactions.cpp src/ui/appearancemenu.cpp src/ui/windowsession.cpp
+    src/ui/transportbar.cpp src/ui/foldermenu.cpp
     src/ui/thumbnailpreview.cpp
     src/ui/thumbnailpreviewpolicy.cpp
     src/ui/recentmediamenu.cpp

@@ -3,6 +3,13 @@
 <TS version="2.1" language="en_US">
 <context>
     <name>PreferencesDialog</name>
+    <message><source>外观</source><translation>Appearance</translation></message>
+    <message><source>基础主题</source><translation>Base theme</translation></message>
+    <message><source>强调色</source><translation>Accent</translation></message>
+    <message><source>启用玻璃质感</source><translation>Enable glass treatment</translation></message>
+    <message><source>基础主题：</source><translation>Base theme:</translation></message>
+    <message><source>强调色：</source><translation>Accent:</translation></message>
+    <message><source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不支持背景模糊时使用半透明样式。</source><translation>Changes are previewed immediately and saved when applied. Glass treatment affects interface panels only and does not blur video; translucent styling is used when background blur is unavailable.</translation></message>
     <message><source>偏好设置</source><translation>Preferences</translation></message>
     <message><source>恢复上次播放位置</source><translation>Resume from the last playback position</translation></message>
     <message><source>左右键跳转时长</source><translation>Left/right seek interval</translation></message>
@@ -15,6 +22,7 @@
 </context>
 <context>
     <name>MainWindow</name>
+    <message><source>外观设置…</source><translation>Appearance Settings…</translation></message>
     <message><source>媒体库设置…</source><translation>Media Library Settings…</translation></message>
 </context>
 <context>
@@ -212,6 +220,11 @@ Ctrl+U to open a network URL</translation></message>
 </context>
 <context>
     <name>QObject</name>
+    <message><source>Ocean</source><translation>Ocean</translation></message>
+    <message><source>Emerald</source><translation>Emerald</translation></message>
+    <message><source>Violet</source><translation>Violet</translation></message>
+    <message><source>Rose</source><translation>Rose</translation></message>
+    <message><source>Amber</source><translation>Amber</translation></message>
     <message><source>深色</source><translation>Dark</translation></message>
     <message><source>浅色</source><translation>Light</translation></message>
     <message><source>跟随系统</source><translation>Follow System</translation></message>

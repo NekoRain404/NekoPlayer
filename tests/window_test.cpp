@@ -29,6 +29,8 @@
 #include <QtTest>
 
 namespace {
+constexpr auto appearanceIconSymbolProperty = "appearanceIconSymbol";
+constexpr auto appearanceIconPaletteCacheProperty = "appearanceIconPaletteCache";
 QString mediaPath() { return QString::fromUtf8(TEST_MEDIA_PATH); }
 bool hasColoredVideo(const QImage &image) {
     if (image.isNull())
@@ -680,8 +682,8 @@ class WindowTest final : public QObject {
         QVERIFY(pause && mute);
         const auto pauseIcon = pause->icon();
         const auto muteIcon = mute->icon();
-        const auto pauseSymbol = pause->property("appearanceIconSymbol");
-        const auto pausePaletteCache = pause->property("appearanceIconPaletteCache");
+        const auto pauseSymbol = pause->property(appearanceIconSymbolProperty);
+        const auto pausePaletteCache = pause->property(appearanceIconPaletteCacheProperty);
         const auto title = window.windowTitle();
         QVERIFY(!pauseIcon.isNull() && !muteIcon.isNull());
 
@@ -691,8 +693,8 @@ class WindowTest final : public QObject {
             window.controller()->stateChanged();
         QCOMPARE(pause->icon().cacheKey(), pauseIcon.cacheKey());
         QCOMPARE(mute->icon().cacheKey(), muteIcon.cacheKey());
-        QCOMPARE(pause->property("appearanceIconSymbol"), pauseSymbol);
-        QCOMPARE(pause->property("appearanceIconPaletteCache"), pausePaletteCache);
+        QCOMPARE(pause->property(appearanceIconSymbolProperty), pauseSymbol);
+        QCOMPARE(pause->property(appearanceIconPaletteCacheProperty), pausePaletteCache);
         QCOMPARE(window.windowTitle(), title);
     }
 

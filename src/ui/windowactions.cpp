@@ -39,6 +39,11 @@
 #include <QtGlobal>
 #include <utility>
 
+namespace {
+constexpr auto appearanceIconSymbolProperty = "appearanceIconSymbol";
+constexpr auto appearanceIconPaletteCacheProperty = "appearanceIconPaletteCache";
+} // namespace
+
 void MainWindow::createActions() {
     const auto make = [this](const QString &text, const char *name, QKeySequence shortcut) {
         auto *action = new QAction(text, this);
@@ -412,20 +417,20 @@ void MainWindow::updateSeekActionLabels(int seconds) {
 
 void MainWindow::setAppearanceIcon(QAction *action, AppearanceIcons::Symbol symbol) {
     const auto paletteCacheKey = palette().cacheKey();
-    const auto storedSymbol = action->property("appearanceIconSymbol");
-    const auto storedPaletteCache = action->property("appearanceIconPaletteCache");
+    const auto storedSymbol = action->property(appearanceIconSymbolProperty);
+    const auto storedPaletteCache = action->property(appearanceIconPaletteCacheProperty);
     if (storedSymbol.isValid() && storedPaletteCache.isValid() &&
         storedSymbol.toInt() == static_cast<int>(symbol) &&
         storedPaletteCache.toLongLong() == paletteCacheKey)
         return;
-    action->setProperty("appearanceIconSymbol", static_cast<int>(symbol));
-    action->setProperty("appearanceIconPaletteCache", paletteCacheKey);
+    action->setProperty(appearanceIconSymbolProperty, static_cast<int>(symbol));
+    action->setProperty(appearanceIconPaletteCacheProperty, paletteCacheKey);
     action->setIcon(AppearanceIcons::icon(symbol, palette()));
 }
 
 void MainWindow::refreshAppearanceIcons() {
     for (auto *action : findChildren<QAction *>()) {
-        const auto symbol = action->property("appearanceIconSymbol");
+        const auto symbol = action->property(appearanceIconSymbolProperty);
         if (symbol.isValid())
             setAppearanceIcon(action, static_cast<AppearanceIcons::Symbol>(symbol.toInt()));
     }

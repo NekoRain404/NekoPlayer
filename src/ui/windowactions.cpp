@@ -16,6 +16,7 @@
 #include "playbackoverlay.h"
 #include "playlistmodemenu.h"
 #include "playlistpane.h"
+#include "preferencescoordinator.h"
 #include "preferencesdialog.h"
 #include "recentmediamenu.h"
 #include "session/sessionmanager.h"
@@ -197,7 +198,11 @@ void MainWindow::createActions() {
     playback->addMenu(tuning->speedMenu());
     auto *audio = menuBar()->addMenu(tr("声音(&A)"));
     audio->addActions({muteAction_, louder, quieter});
-    auto *subtitleDisplay = new SubtitleDisplayMenu(*controller_, this);
+    auto *subtitleDisplay =
+        new SubtitleDisplayMenu(*controller_, this, [this](PreferencesDialog::Category category) {
+            if (preferencesCoordinator_)
+                preferencesCoordinator_->show(this, category);
+        });
     connect(subtitleDisplay, &SubtitleDisplayMenu::feedback, this,
             [this](const QString &message) { showActionFeedback(message, 2500); });
     trackMenus_ =
@@ -251,46 +256,54 @@ void MainWindow::createActions() {
     QSettings appearanceSettings;
     auto *appearanceMenu = new AppearanceMenu(this, appearanceSettings,
                                               qApp->property("configurationEnabled").toBool());
-    const auto showPreferences = [this, appearanceMenu](PreferencesDialog::Category category) {
-        PreferencesDialog dialog(*controller_, this, folderMenu_->mediaLibraryPreferences(),
-                                 session_ ? session_->resumePlaybackPositionEnabled() : true,
-                                 session_ ? session_->seekStepSeconds() : 5,
-                                 appearanceMenu->settings());
-        connect(&dialog, &PreferencesDialog::appearancePreferencesChanged, appearanceMenu,
-                &AppearanceMenu::setSettings);
-        connect(&dialog, &PreferencesDialog::mediaLibraryPreferencesChanged, this,
-                [this](bool scanningEnabled, bool recursiveByDefault) {
-                    const MediaLibraryPreferences preferences{scanningEnabled, recursiveByDefault};
-                    folderMenu_->setMediaLibraryPreferences(preferences);
-                    if (session_)
-                        session_->setMediaLibraryPreferences(preferences);
-                });
-        connect(&dialog, &PreferencesDialog::resumePlaybackPositionChanged, this,
-                [this](bool enabled) {
-                    if (session_)
-                        session_->setResumePlaybackPositionEnabled(enabled);
-                });
-        connect(&dialog, &PreferencesDialog::seekStepSecondsChanged, this,
-                [this](int seconds) {
-                    if (session_)
-                        session_->setSeekStepSeconds(seconds);
-                    updateSeekActionLabels(seconds);
-                });
-        dialog.selectCategory(category);
-        dialog.exec();
+    preferencesCoordinator_ = new PreferencesCoordinator(
+        *controller_,
+        {.appearance = [appearanceMenu] { return appearanceMenu->settings(); },
+         .setAppearance =
+             [appearanceMenu](AppearancePreferences::Settings appearance) {
+                 appearanceMenu->setSettings(appearance);
+             },
+         .mediaLibrary = [this] { return folderMenu_->mediaLibraryPreferences(); },
+         .setMediaLibrary =
+             [this](MediaLibraryPreferences preferences) {
+                 folderMenu_->setMediaLibraryPreferences(preferences);
+                 if (session_)
+                     session_->setMediaLibraryPreferences(preferences);
+             },
+         .resumePlaybackPosition =
+             [this] {
+                 return session_ ? session_->resumePlaybackPositionEnabled()
+                                 : resumePlaybackPositionDefault_;
+             },
+         .setResumePlaybackPosition =
+             [this](bool enabled) {
+                 resumePlaybackPositionDefault_ = enabled;
+                 if (session_)
+                     session_->setResumePlaybackPositionEnabled(enabled);
+             },
+         .seekStepSeconds =
+             [this] { return session_ ? session_->seekStepSeconds() : seekStepSecondsDefault_; },
+         .setSeekStepSeconds =
+             [this](int seconds) {
+                 seekStepSecondsDefault_ = seconds;
+                 if (session_)
+                     session_->setSeekStepSeconds(seconds);
+                 updateSeekActionLabels(seconds);
+             }},
+        this);
+    const auto showPreferences = [this](PreferencesDialog::Category category) {
+        preferencesCoordinator_->show(this, category);
     };
     auto *playbackSettings =
         make(tr("播放设置…"), "playbackSettingsAction", QKeySequence(Qt::Key_F5));
     setAppearanceIcon(playbackSettings, AppearanceIcons::Symbol::Information);
-    connect(playbackSettings, &QAction::triggered, this, [showPreferences] {
-        showPreferences(PreferencesDialog::Category::Playback);
-    });
+    connect(playbackSettings, &QAction::triggered, this,
+            [showPreferences] { showPreferences(PreferencesDialog::Category::Playback); });
     settings->addAction(playbackSettings);
     auto *mediaLibrarySettings = settings->addAction(tr("媒体库设置…"));
     mediaLibrarySettings->setObjectName(QStringLiteral("mediaLibrarySettingsAction"));
-    connect(mediaLibrarySettings, &QAction::triggered, this, [showPreferences] {
-        showPreferences(PreferencesDialog::Category::MediaLibrary);
-    });
+    connect(mediaLibrarySettings, &QAction::triggered, this,
+            [showPreferences] { showPreferences(PreferencesDialog::Category::MediaLibrary); });
     settings->addAction(subtitleDisplay->settingsAction());
     auto *appearanceSettingsAction = settings->addAction(tr("外观设置…"));
     appearanceSettingsAction->setObjectName(QStringLiteral("appearanceSettingsAction"));
@@ -369,8 +382,8 @@ void MainWindow::updateSeekActionLabels(int seconds) {
     for (const auto &[name, direction] :
          {std::pair{"seekBackAction", -1}, std::pair{"seekForwardAction", 1}}) {
         if (auto *action = findChild<QAction *>(QString::fromLatin1(name))) {
-            const auto label = direction < 0 ? tr("后退 %1 秒").arg(seconds)
-                                             : tr("前进 %1 秒").arg(seconds);
+            const auto label =
+                direction < 0 ? tr("后退 %1 秒").arg(seconds) : tr("前进 %1 秒").arg(seconds);
             action->setText(label);
             action->setToolTip(label);
             action->setStatusTip(label);

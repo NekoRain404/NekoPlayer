@@ -1,6 +1,8 @@
 #pragma once
 
+#include "preferencesdialog.h"
 #include <QObject>
+#include <functional>
 
 class MpvController;
 class QAction;
@@ -10,7 +12,9 @@ class QWidget;
 class SubtitleDisplayMenu final : public QObject {
     Q_OBJECT
   public:
-    explicit SubtitleDisplayMenu(MpvController &controller, QWidget *window);
+    explicit SubtitleDisplayMenu(
+        MpvController &controller, QWidget *window,
+        std::function<void(PreferencesDialog::Category)> showPreferences = {});
     [[nodiscard]] QMenu *menu() const;
     [[nodiscard]] QAction *settingsAction() const;
     void retranslate();
@@ -24,4 +28,5 @@ class SubtitleDisplayMenu final : public QObject {
     QMenu *menu_;
     QAction *visible_;
     QAction *settings_;
+    std::function<void(PreferencesDialog::Category)> showPreferences_;
 };

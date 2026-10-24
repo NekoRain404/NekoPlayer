@@ -23,6 +23,7 @@ class PlaybackOverlay;
 class FolderMenu;
 class RecentMediaHistory;
 class FullscreenControls;
+class PreferencesCoordinator;
 class QVBoxLayout;
 class ThumbnailPreview;
 class ThumbnailService;
@@ -85,6 +86,7 @@ class MainWindow final : public QMainWindow {
     std::unique_ptr<PlaylistController> playlist_;
     std::unique_ptr<SessionManager> session_;
     std::unique_ptr<RecentMediaHistory> recentMedia_;
+    PreferencesCoordinator *preferencesCoordinator_ = nullptr;
     VideoWidget *video_ = nullptr;
     TransportBar *transport_ = nullptr;
     FullscreenControls *fullscreenControls_ = nullptr;
@@ -126,4 +128,7 @@ class MainWindow final : public QMainWindow {
     bool miniPlayerMaximized_ = false;
     bool miniPlayerActive_ = false;
     bool sessionSaveAttempted_ = false;
+    // Session-only fallbacks used when --no-config leaves session_ null.
+    bool resumePlaybackPositionDefault_ = true;
+    int seekStepSecondsDefault_ = 5;
 };

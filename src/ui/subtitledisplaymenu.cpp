@@ -1,13 +1,16 @@
 #include "subtitledisplaymenu.h"
 #include "playback/mpvcontroller.h"
-#include "preferencesdialog.h"
 
 #include <QAction>
 #include <QMenu>
 #include <QWidget>
+#include <utility>
 
-SubtitleDisplayMenu::SubtitleDisplayMenu(MpvController &controller, QWidget *window)
-    : QObject(window), controller_(controller), menu_(new QMenu(tr("字幕显示"), window)) {
+SubtitleDisplayMenu::SubtitleDisplayMenu(
+    MpvController &controller, QWidget *window,
+    std::function<void(PreferencesDialog::Category)> showPreferences)
+    : QObject(window), controller_(controller), menu_(new QMenu(tr("字幕显示"), window)),
+      showPreferences_(std::move(showPreferences)) {
     menu_->setObjectName(QStringLiteral("subtitleDisplayMenu"));
     const auto make = [this, window](const QString &text, const char *name, QKeySequence shortcut) {
         auto *action = new QAction(text, this);
@@ -34,10 +37,9 @@ SubtitleDisplayMenu::SubtitleDisplayMenu(MpvController &controller, QWidget *win
     connect(down, &QAction::triggered, this, [this] { controller_.adjustSubtitlePosition(2); });
     menu_->addSeparator();
     settings_ = make(tr("字幕显示设置…"), "subtitleSettingsAction", QKeySequence(Qt::Key_F6));
-    connect(settings_, &QAction::triggered, this, [this, window] {
-        PreferencesDialog dialog(controller_, window);
-        dialog.selectCategory(PreferencesDialog::Category::Subtitles);
-        dialog.exec();
+    connect(settings_, &QAction::triggered, this, [this] {
+        if (showPreferences_)
+            showPreferences_(PreferencesDialog::Category::Subtitles);
     });
     connect(&controller_, &MpvController::subtitlePreferencesChanged, this, [this] {
         update();

@@ -33,6 +33,12 @@ target_link_libraries(preferences_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME preferences-dialog COMMAND preferences_dialog_test)
 set_tests_properties(preferences-dialog PROPERTIES TIMEOUT 20)
 
+add_executable(preferences_coordinator_test preferences_coordinator_test.cpp)
+target_link_libraries(preferences_coordinator_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME preferences-coordinator COMMAND preferences_coordinator_test)
+set_tests_properties(preferences-coordinator PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(appearance_preferences_test appearance_preferences_test.cpp)
 target_link_libraries(appearance_preferences_test PRIVATE neko_ui Qt6::Test)
 qt_add_translations(appearance_preferences_test TS_FILES ../translations/NekoPlayer_en.ts

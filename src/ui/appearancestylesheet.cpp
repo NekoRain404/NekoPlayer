@@ -15,8 +15,10 @@ QString panelFill(const QColor &value, bool glassEnabled) {
     if (!glassEnabled) {
         return color(value);
     }
-    return QStringLiteral("qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 %1,stop:1 %2)")
-        .arg(translucent(value.lighter(108), 238), translucent(value, 218));
+    // A shaded lower rim supplies inexpensive depth without an offscreen graphics effect.
+    return QStringLiteral("qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 %1,stop:0.96 %2,stop:1 %3)")
+        .arg(translucent(value.lighter(108), 238), translucent(value, 218),
+             translucent(value.darker(108), 238));
 }
 } // namespace
 
@@ -27,7 +29,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled) {
                "QWidget#transportBar{background:%27;color:%2;border-top:1px solid %3;}"
                "QFrame#transportDivider{background:%3;color:%3;}"
                "QWidget#playlistPane{background:%28;border-left:1px solid %3;}"
-               "QWidget#playlistHeader{border-bottom:1px solid %3;}"
+               "QWidget#playlistHeader{background:%29;border-bottom:1px solid %3;}"
                "QWidget#welcomePanel{background:%29;border:1px solid %3;border-radius:%6px;}"
                "QLabel{color:%7;} "
                "QLabel#timeLabel{color:%7;font-family:monospace;font-size:12px;padding:0 %8px;}"
@@ -53,16 +55,18 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled) {
                "QPushButton#welcomeOpenButton:hover{background:%21;} "
                "QPushButton#welcomeOpenButton:pressed{background:%22;}"
                "QPushButton#welcomeNetworkButton{background:%5;}"
-               "QPushButton[welcomeRecentAction]{text-align:left;background:%5;border:1px solid "
+               "QPushButton[welcomeRecentAction]{text-align:left;background:%29;border:1px solid "
                "%3;border-radius:%6px;}"
                "QPushButton[welcomeRecentAction]:hover{background:%15;} "
                "QPushButton[welcomeRecentAction]:pressed{background:%16;}"
                "QPushButton[welcomeRecentAction]:focus{border:1px solid %18;}"
-               "QPushButton[welcomeContinueAction]{text-align:left;background:%5;border:1px solid "
+               "QPushButton[welcomeContinueAction]{text-align:left;background:%29;border:1px solid "
                "%3;border-radius:%6px;}"
                "QPushButton[welcomeContinueAction]:hover{background:%15;} "
                "QPushButton[welcomeContinueAction]:pressed{background:%16;}"
-               "QMenuBar,QMenu,QStatusBar{background:%4;color:%2;} QMenu{border:1px solid %3;}"
+               "QMenuBar,QStatusBar{background:%4;color:%2;}"
+               "QMenu{background:%28;color:%2;border:1px solid %3;border-radius:%13px;}"
+               "QDialog{background:%28;color:%2;}"
                "QMenuBar::item{padding:%8px %23px;border-radius:%13px;}"
                "QMenuBar::item:selected,QMenu::item:selected{background:%24;}"
                "QMenu::item{padding:%23px %25px %23px %14px;border-radius:%13px;}"

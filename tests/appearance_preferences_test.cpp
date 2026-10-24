@@ -193,7 +193,11 @@ class AppearancePreferencesTest final : public QObject {
             const auto opaque = appearanceStyleSheet(tokens, false);
             for (const auto &selector :
                  {QStringLiteral("QWidget#playlistPane"), QStringLiteral("QWidget#transportBar"),
-                  QStringLiteral("QWidget#welcomePanel")}) {
+                  QStringLiteral("QWidget#welcomePanel"), QStringLiteral("QWidget#playlistHeader"),
+                  QStringLiteral("QPushButton[welcomeRecentAction]"),
+                  QStringLiteral("QPushButton[welcomeContinueAction]"), QStringLiteral("QMenu{"),
+                  QStringLiteral("QDialog{")}) {
+                QVERIFY2(glass.contains(selector), qPrintable(selector));
                 const auto rule = glass.mid(glass.indexOf(selector)).section('}', 0, 0);
                 const QRegularExpression rgba(QStringLiteral("rgba\\(\\d+,\\d+,\\d+,(\\d+)\\)"));
                 const auto match = rgba.match(rule);
@@ -208,6 +212,7 @@ class AppearancePreferencesTest final : public QObject {
                 QVERIFY(!style.contains(QStringLiteral("VideoWidget")));
                 QVERIFY(!style.contains(QStringLiteral("QOpenGLWidget")));
                 QVERIFY(!style.contains(QStringLiteral("PlaybackOverlay")));
+                QVERIFY(!style.contains(QStringLiteral("ActionFeedbackOverlay")));
                 QVERIFY(!style.contains(QStringLiteral("QWidget{")));
             }
         }

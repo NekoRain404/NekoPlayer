@@ -1,19 +1,28 @@
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
+#include "playback/videowidget.h"
 #include "session/playbackhistorystore.h"
+#include "ui/actionfeedbackoverlay.h"
 #include "ui/appearanceicons.h"
 #include "ui/appearancepreferences.h"
+#include "ui/fullscreencontrols.h"
+#include "ui/playbackoverlay.h"
 #include "ui/playlistpane.h"
+#include "ui/transportbar.h"
 #include "ui/welcomepanel.h"
 
 #include <QAction>
 #include <QBoxLayout>
+#include <QDialog>
+#include <QGraphicsOpacityEffect>
 #include <QImage>
 #include <QLabel>
 #include <QListView>
+#include <QMenu>
 #include <QPainter>
 #include <QProgressBar>
+#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTranslator>
@@ -22,6 +31,114 @@
 class UiSurfaceTest final : public QObject {
     Q_OBJECT
   private slots:
+    void glassChangesTransportMenuAndDialogMaterial() {
+        QAction action;
+        TransportBar transport(&action, &action, &action, &action, &action, &action, &action);
+        QMenu menu;
+        QDialog dialog;
+        QList<QColor> opaqueColors;
+        for (const bool glass : {false, true}) {
+            AppearancePreferences::applySettings(
+                *qApp,
+                {AppearancePreferences::Theme::Dark, AppearancePreferences::Accent::Ocean, glass});
+            int index = 0;
+            for (auto *surface : {static_cast<QWidget *>(&transport), static_cast<QWidget *>(&menu),
+                                  static_cast<QWidget *>(&dialog)}) {
+                surface->resize(400, 120);
+                surface->ensurePolished();
+                QImage image(surface->size(), QImage::Format_ARGB32_Premultiplied);
+                image.fill(Qt::transparent);
+                QPainter painter(&image);
+                surface->render(&painter, {}, {}, QWidget::DrawWindowBackground);
+                painter.end();
+                const auto fill = image.pixelColor(5, 5);
+                if (!glass)
+                    opaqueColors.append(fill);
+                else
+                    QVERIFY(fill != opaqueColors.at(index));
+                ++index;
+                QVERIFY(!surface->testAttribute(Qt::WA_TranslucentBackground));
+                QVERIFY(!surface->graphicsEffect());
+            }
+        }
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+    }
+
+    void appearanceLeavesVideoAndPlaybackOverlaysUnmodified() {
+        MpvController player(true, true);
+        VideoWidget video(player);
+        PlaybackOverlay playback(player, &video);
+        ActionFeedbackOverlay feedback(&video);
+        const auto playbackStyle = playback.styleSheet();
+        const auto feedbackStyle = feedback.styleSheet();
+        const auto playbackTranslucent = playback.testAttribute(Qt::WA_TranslucentBackground);
+        const auto feedbackTranslucent = feedback.testAttribute(Qt::WA_TranslucentBackground);
+        for (const auto theme : AppearancePreferences::themes()) {
+            for (const bool glass : {false, true}) {
+                AppearancePreferences::applySettings(
+                    *qApp, {theme, AppearancePreferences::Accent::Amber, glass});
+                video.ensurePolished();
+                playback.ensurePolished();
+                feedback.ensurePolished();
+                for (auto *surface :
+                     {static_cast<QWidget *>(&video), static_cast<QWidget *>(&playback),
+                      static_cast<QWidget *>(&feedback)}) {
+                    QVERIFY(!surface->graphicsEffect());
+                }
+                QVERIFY(!video.testAttribute(Qt::WA_TranslucentBackground));
+                QCOMPARE(playback.testAttribute(Qt::WA_TranslucentBackground), playbackTranslucent);
+                QCOMPARE(feedback.testAttribute(Qt::WA_TranslucentBackground), feedbackTranslucent);
+                QVERIFY(video.styleSheet().isEmpty());
+                QCOMPARE(playback.styleSheet(), playbackStyle);
+                QCOMPARE(feedback.styleSheet(), feedbackStyle);
+            }
+        }
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+    }
+
+    void glassPreferenceKeepsFullscreenTransportFadeIndependent() {
+        QWidget host;
+        QVBoxLayout layout(&host);
+        QWidget video(&host);
+        QAction action;
+        TransportBar transport(&action, &action, &action, &action, &action, &action, &action,
+                               &host);
+        layout.addWidget(&video);
+        layout.addWidget(&transport);
+        FullscreenControls controls(transport, video, layout);
+        auto *opacity = qobject_cast<QGraphicsOpacityEffect *>(transport.graphicsEffect());
+        auto *animation = controls.findChild<QPropertyAnimation *>();
+        QVERIFY(opacity && animation);
+        host.show();
+        for (const bool glass : {false, true}) {
+            AppearancePreferences::applySettings(
+                *qApp,
+                {AppearancePreferences::Theme::Dark, AppearancePreferences::Accent::Ocean, glass});
+            controls.enter();
+            QCOMPARE(opacity->opacity(), 0.0);
+            QVERIFY(opacity->isEnabled());
+            controls.reveal();
+            QCOMPARE(animation->endValue().toReal(), 1.0);
+            animation->setCurrentTime(animation->duration());
+            QCOMPARE(opacity->opacity(), 1.0);
+            AppearancePreferences::applySettings(
+                *qApp,
+                {AppearancePreferences::Theme::Light, AppearancePreferences::Accent::Rose, !glass});
+            QCOMPARE(transport.graphicsEffect(), opacity);
+            QCOMPARE(opacity->opacity(), 1.0);
+            controls.fadeOut();
+            QCOMPARE(animation->endValue().toReal(), 0.0);
+            animation->setCurrentTime(animation->duration());
+            QVERIFY(transport.isHidden());
+            QVERIFY(transport.testAttribute(Qt::WA_TransparentForMouseEvents));
+            controls.leave();
+            QVERIFY(!opacity->isEnabled());
+            QCOMPARE(opacity->opacity(), 1.0);
+            QCOMPARE(transport.parentWidget(), &host);
+        }
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+    }
+
     void sharedIconsRenderAtDevicePixelRatio() {
         QPalette palette;
         palette.setColor(QPalette::ButtonText, QColor(QStringLiteral("#70a0ff")));

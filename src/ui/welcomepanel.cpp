@@ -2,6 +2,7 @@
 #include "appearanceicons.h"
 
 #include "playback/mediasource.h"
+#include "playback/playbacktime.h"
 
 #include <QAction>
 #include <QBoxLayout>
@@ -13,12 +14,14 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSizePolicy>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <cmath>
 
 namespace {
 QString safeLocation(const QString &source, bool networkSource) {
@@ -91,6 +94,17 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     buttonsLayout_->addWidget(openButton);
     buttonsLayout_->addWidget(networkButton);
     layout->addLayout(buttonsLayout_);
+
+    auto *continueHeading = new QLabel(this);
+    continueHeading->setObjectName(QStringLiteral("welcomeContinueHeading"));
+    continueHeading->setVisible(false);
+    continueHeading->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    continueHeading->setAttribute(Qt::WA_TransparentForMouseEvents);
+    layout->addWidget(continueHeading);
+    continueLayout_ = new QVBoxLayout;
+    continueLayout_->setContentsMargins(0, 0, 0, 0);
+    continueLayout_->setSpacing(6);
+    layout->addLayout(continueLayout_);
 
     auto *recentHeading = new QLabel(this);
     recentHeading->setObjectName(QStringLiteral("welcomeRecentHeading"));
@@ -237,6 +251,62 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
     updateVerticalDensity();
 }
 
+void WelcomePanel::setResumeEntries(const QList<PlaybackHistoryEntry> &entries) {
+    resumeEntries_.clear();
+    for (const auto &entry : entries) {
+        if (PlaybackHistoryStore::normalizedPath(entry.path).isEmpty() ||
+            !std::isfinite(entry.position) || !std::isfinite(entry.duration) ||
+            entry.position <= 0 || entry.duration <= 0 || entry.position >= entry.duration ||
+            entry.duration - entry.position <= 1.0)
+            continue;
+        resumeEntries_.append(entry);
+        if (resumeEntries_.size() == 3)
+            break;
+    }
+    while (auto *item = continueLayout_->takeAt(0)) {
+        if (item->widget())
+            delete item->widget();
+        delete item;
+    }
+    auto *heading = findChild<QLabel *>(QStringLiteral("welcomeContinueHeading"));
+    heading->setVisible(!resumeEntries_.isEmpty());
+    for (qsizetype index = 0; index < resumeEntries_.size(); ++index) {
+        const auto entry = resumeEntries_.at(index);
+        auto *button = new QPushButton(this);
+        button->setObjectName(QStringLiteral("welcomeContinueAction%1").arg(index + 1));
+        button->setProperty("welcomeContinueAction", true);
+        button->setMinimumHeight(48);
+        button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        auto *row = new QVBoxLayout(button);
+        row->setContentsMargins(12, 6, 12, 6);
+        row->setSpacing(3);
+        auto *title = new QLabel(MediaSource::displayName(entry.path), button);
+        title->setObjectName(QStringLiteral("welcomeContinueTitle%1").arg(index + 1));
+        title->setAttribute(Qt::WA_TransparentForMouseEvents);
+        row->addWidget(title);
+        auto *progress = new QProgressBar(button);
+        progress->setObjectName(QStringLiteral("welcomeContinueProgress%1").arg(index + 1));
+        progress->setRange(0, 1000);
+        const auto fraction = std::clamp(entry.position / entry.duration, 0.0, 1.0);
+        progress->setValue(qRound(fraction * 1000.0));
+        progress->setTextVisible(true);
+        progress->setFormat(tr("%1 / %2").arg(formatPlaybackTime(entry.position),
+                                              formatPlaybackTime(entry.duration)));
+        progress->setFixedHeight(16);
+        row->addWidget(progress);
+        button->setCursor(Qt::PointingHandCursor);
+        button->setFocusPolicy(Qt::StrongFocus);
+        button->setAccessibleName(tr("继续观看：%1，%2 / %3")
+                                      .arg(MediaSource::displayName(entry.path),
+                                           formatPlaybackTime(entry.position),
+                                           formatPlaybackTime(entry.duration)));
+        connect(button, &QPushButton::clicked, this,
+                [this, path = entry.path] { emit resumeSourceRequested(path); });
+        continueLayout_->addWidget(button);
+    }
+    updateVerticalDensity();
+}
+
 void WelcomePanel::updateRecentButtonLabels() {
     const auto availableWidth = std::max(0, width() - 156);
     const QFontMetrics metrics(font());
@@ -265,10 +335,18 @@ void WelcomePanel::updateVerticalDensity() {
     const bool showRecent = height() >= 260;
     const bool showSupportingText = height() >= 215;
     const bool showBrand = height() >= 165;
+    const bool showContinue = height() >= 360;
     if (auto *brand = findChild<QLabel *>(QStringLiteral("welcomeBrand")))
         brand->setVisible(showBrand);
     if (auto *heading = findChild<QLabel *>(QStringLiteral("welcomeRecentHeading")))
         heading->setVisible(showRecent && !recentSources_.isEmpty());
+    if (auto *heading = findChild<QLabel *>(QStringLiteral("welcomeContinueHeading")))
+        heading->setVisible(showContinue && !resumeEntries_.isEmpty());
+    for (qsizetype index = 0; index < resumeEntries_.size(); ++index) {
+        if (auto *button =
+                findChild<QPushButton *>(QStringLiteral("welcomeContinueAction%1").arg(index + 1)))
+            button->setVisible(showContinue);
+    }
     for (qsizetype index = 0; index < recentSources_.size(); ++index) {
         if (auto *button =
                 findChild<QPushButton *>(QStringLiteral("welcomeRecentAction%1").arg(index + 1)))
@@ -293,5 +371,7 @@ void WelcomePanel::retranslateUi() {
         heading->setText(tr("最近播放"));
         updateVerticalDensity();
     }
+    if (auto *heading = findChild<QLabel *>(QStringLiteral("welcomeContinueHeading")))
+        heading->setText(tr("继续观看"));
     updateRecentButtonLabels();
 }

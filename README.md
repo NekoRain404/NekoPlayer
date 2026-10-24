@@ -8,6 +8,8 @@
 
 “文件 → 当前媒体”和右键菜单支持复制完整路径／网络地址（Ctrl+Alt+C）、复制带毫秒的播放时间（Ctrl+Shift+C），以及打开本地媒体所在文件夹。复制网络地址会保留原始查询参数，便于重新播放；文件夹入口交给桌面默认文件管理器，网络来源禁用此项。
 
+空闲首页会根据独立播放历史显示“继续观看”，最多列出 3 条仍有有效续播位置的本地媒体及其进度；点击后沿用正常打开流程并从保存位置继续。未知时长、无效位置、已接近片尾以及网络媒体不进入此区块；现有“最近播放”来源列表保持独立。
+
 ## 构建与检查
 
 需要 CMake 3.25+、Ninja、支持 C++20 的编译器、Qt 6.5+ Core/Concurrent/Widgets/OpenGLWidgets、libmpv 开发库和 pkg-config。构建测试还需要 Qt Test、Qt Network 和 FFmpeg，Qt Network 仅用于本地 HTTP 测试服务。原生 Wayland 测试另需 Qt Wayland 平台插件及可用的 Wayland 桌面会话。Xvfb、xvfb-run 和 Openbox 仅用于显式的 X11 CI 回归。仅构建播放器可传入 `-DBUILD_TESTING=OFF`。当前使用 Linux/pkg-config；Windows SDK 查找与打包尚未配置。

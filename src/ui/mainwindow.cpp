@@ -82,6 +82,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     playbackOverlay_->setGeometry(video_->rect());
     welcomePanel_ = new WelcomePanel(openAction_, openNetworkAction_, video_);
     connect(welcomePanel_, &WelcomePanel::recentSourceRequested, this, &MainWindow::openFile);
+    connect(welcomePanel_, &WelcomePanel::resumeSourceRequested, this, &MainWindow::openFile);
     connect(recentMedia_.get(), &RecentMediaHistory::changed, this,
             [this] { welcomePanel_->setRecentSources(recentMedia_->entries()); });
     welcomePanel_->setRecentSources(recentMedia_->entries());

@@ -2,6 +2,7 @@
 #include "mainwindow.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
+#include "welcomepanel.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -27,6 +28,11 @@ void MainWindow::restoreSession(const QString &path) {
         statusBar()->showMessage(tr("无法恢复会话：%1").arg(loaded.error));
         return;
     }
+    connect(session_.get(), &SessionManager::playbackHistoryChanged, this, [this] {
+        if (welcomePanel_)
+            welcomePanel_->setResumeEntries(session_->playbackHistory());
+    });
+    welcomePanel_->setResumeEntries(session_->playbackHistory());
     if (!loaded.state.window.geometry.isEmpty()) {
         restoreGeometry(loaded.state.window.geometry);
         // Fullscreen is a transient mode; only the normal/maximized window is durable.

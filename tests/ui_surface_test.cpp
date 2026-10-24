@@ -1,6 +1,7 @@
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
+#include "session/playbackhistorystore.h"
 #include "ui/appearanceicons.h"
 #include "ui/appearancepreferences.h"
 #include "ui/playlistpane.h"
@@ -8,10 +9,11 @@
 
 #include <QAction>
 #include <QBoxLayout>
-#include <QLabel>
 #include <QImage>
+#include <QLabel>
 #include <QListView>
 #include <QPainter>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTranslator>
@@ -71,8 +73,7 @@ class UiSurfaceTest final : public QObject {
         panel.render(&painter, {}, {}, QWidget::DrawWindowBackground);
         painter.end();
 
-        QCOMPARE(image.pixelColor(10, panel.height() / 2),
-                 panel.palette().color(QPalette::Window));
+        QCOMPARE(image.pixelColor(10, panel.height() / 2), panel.palette().color(QPalette::Window));
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
     }
 
@@ -156,6 +157,38 @@ class UiSurfaceTest final : public QObject {
         QCOMPARE(location->text(), QStringLiteral("https://example.test/video/Episode.mkv"));
         QVERIFY(!location->text().contains(QStringLiteral("secret")));
         QVERIFY(!location->text().contains(QStringLiteral("token")));
+    }
+
+    void welcomePanelShowsResumablePlaybackHistory() {
+        QAction open(QStringLiteral("打开文件…"));
+        QAction network(QStringLiteral("打开网络地址…"));
+        WelcomePanel panel(&open, &network);
+        QSignalSpy resumeSpy(&panel, &WelcomePanel::resumeSourceRequested);
+        const QString path = QStringLiteral("/media/Film One.mkv");
+        panel.setResumeEntries({{path, 45.0, 120.0, 100},
+                                {QStringLiteral("/media/At End.mkv"), 119.5, 120.0, 99},
+                                {QStringLiteral("/media/Unknown Duration.mkv"), 12.0, 0.0, 98},
+                                {QStringLiteral("/media/Invalid Position.mkv"), 130.0, 120.0, 97},
+                                {QStringLiteral("/media/Second.mkv"), 20.0, 80.0, 96},
+                                {QStringLiteral("/media/Third.mkv"), 30.0, 90.0, 95},
+                                {QStringLiteral("/media/Fourth.mkv"), 40.0, 100.0, 94}});
+
+        auto *heading = panel.findChild<QLabel *>(QStringLiteral("welcomeContinueHeading"));
+        auto *item = panel.findChild<QPushButton *>(QStringLiteral("welcomeContinueAction1"));
+        auto *progress =
+            panel.findChild<QProgressBar *>(QStringLiteral("welcomeContinueProgress1"));
+        QVERIFY(heading && item && progress);
+        QVERIFY(!heading->isHidden());
+        QCOMPARE(panel.findChild<QLabel *>(QStringLiteral("welcomeContinueTitle1"))->text(),
+                 QStringLiteral("Film One.mkv"));
+        QCOMPARE(progress->value(), 375);
+        QVERIFY(panel.findChild<QPushButton *>(QStringLiteral("welcomeContinueAction2")));
+        QVERIFY(panel.findChild<QPushButton *>(QStringLiteral("welcomeContinueAction3")));
+        QVERIFY(!panel.findChild<QPushButton *>(QStringLiteral("welcomeContinueAction4")));
+
+        item->click();
+        QCOMPARE(resumeSpy.size(), 1);
+        QCOMPARE(resumeSpy.takeFirst().at(0).toString(), path);
     }
 
     void welcomePanelPrioritizesPlaybackActionsWhenShort() {
@@ -253,6 +286,7 @@ class UiSurfaceTest final : public QObject {
         QAction network(QStringLiteral("打开网络地址…"));
         WelcomePanel panel(&open, &network);
         panel.setRecentSources({QStringLiteral("/media/Film One.mkv")});
+        panel.setResumeEntries({{QStringLiteral("/media/Film One.mkv"), 45.0, 120.0, 100}});
         QTranslator translator;
         QVERIFY(translator.load(QStringLiteral(":/i18n/NekoPlayer_en.qm")));
         qApp->installTranslator(&translator);
@@ -262,6 +296,8 @@ class UiSurfaceTest final : public QObject {
                  QStringLiteral("Start Playing"));
         QCOMPARE(panel.findChild<QLabel *>(QStringLiteral("welcomeRecentHeading"))->text(),
                  QStringLiteral("Recently Played"));
+        QCOMPARE(panel.findChild<QLabel *>(QStringLiteral("welcomeContinueHeading"))->text(),
+                 QStringLiteral("Continue Watching"));
         QVERIFY(panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1"))
                     ->accessibleName()
                     .startsWith(QStringLiteral("Local media:")));

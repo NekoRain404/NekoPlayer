@@ -74,6 +74,7 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
                 historyEntries_.remove(normalized);
                 resumePositions_.remove(normalized);
                 savePlaybackHistory();
+                emit playbackHistoryChanged();
             });
     playlist_.setResumePositionResolver([this](const QString &path) {
         return resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0);
@@ -101,6 +102,7 @@ SessionLoadResult SessionManager::restore() {
         historyEntries_.insert(normalized, entry);
         resumePositions_.insert(normalized, entry.position);
     }
+    emit playbackHistoryChanged();
     mediaDirectory_ = loaded.state.window.mediaDirectory;
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
                            loaded.state.resumePosition);
@@ -173,6 +175,7 @@ void SessionManager::rememberPlaybackPosition(const QString &path, double positi
         }
     }
     savePlaybackHistory();
+    emit playbackHistoryChanged();
 }
 
 QString SessionManager::savePlaybackHistory() const {
@@ -325,6 +328,17 @@ QString SessionManager::saveTrackPreferences() {
 }
 
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }
+
+QList<PlaybackHistoryEntry> SessionManager::playbackHistory() const {
+    QList<PlaybackHistoryEntry> entries;
+    entries.reserve(historyEntries_.size());
+    for (const auto &entry : historyEntries_)
+        entries.append(entry);
+    std::sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+        return left.lastPlayedUtcMs > right.lastPlayedUtcMs;
+    });
+    return entries;
+}
 void SessionManager::rememberMedia(const QString &path) {
     const auto source = MediaSource::normalize(path);
     if (!source.isEmpty() && !MediaSource::isNetwork(source))

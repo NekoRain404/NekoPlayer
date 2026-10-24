@@ -17,10 +17,12 @@ class SessionManager final : public QObject {
     [[nodiscard]] SessionLoadResult restore();
     [[nodiscard]] QString save(WindowPreferences window, const QStringList &pendingPaths = {});
     [[nodiscard]] QString mediaDirectory() const;
+    [[nodiscard]] QList<PlaybackHistoryEntry> playbackHistory() const;
     void rememberMedia(const QString &path);
 
   signals:
     void configurationErrorOccurred(const QString &message);
+    void playbackHistoryChanged();
 
   private:
     MpvController &player_;

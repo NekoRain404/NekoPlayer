@@ -1,5 +1,11 @@
 # Verification Record
 
+首页续看历史阶段（2026-10-24）：
+
+- 欢迎页新增“继续观看”区块，消费 `SessionManager` 已加载／更新的本地续播记录；最多展示 3 项，排除非法路径、无效时长、越界位置以及距片尾不超过 1 秒的条目。按钮沿用已有 `openFile` 和播放队列续播解析，不建立第二份存储，也不触碰网络媒体。
+- 完整 Debug 构建通过；`ui-surface`、`appearance-preferences`、`playback-history-store`、`playback-history-session`、`session`、`code-size` 共 **6/6** 通过。修改文件的 clang-format 与 `git diff --check` 通过，普通代码文件均低于 500 行。
+- 未运行窗口行为测试；首页在真实 Wayland 下的布局/视觉及跨会话桌面验收仍未覆盖。本阶段不改变 mpv 命令、解码器、HDR 或视频渲染路径。
+
 Media-first UI visual foundation stage (2026-10-24):
 
 - Added semantic Dark/Light tokens, token-generated main-window styling, WCAG AA primary-action and muted-text contrast, and shared DPR-aware vector icons. The icon review regression verifies outline interiors remain transparent and seek directions differ. Dark/Light primary-action contrast is 6.84:1 / 5.04:1; Light muted text is 4.64:1 on the canvas and 5.02:1 on the surface.

@@ -87,6 +87,9 @@
     <message><source>打开本地媒体或连接网络地址，享受流畅播放体验</source><translation>Open local media or connect to a network address for smooth playback</translation></message>
     <message><source>也可以将视频拖到这里 · Ctrl+O 打开文件 · Ctrl+U 打开网络地址</source><translation>You can also drop a video here · Ctrl+O to open a file · Ctrl+U to open a network URL</translation></message>
     <message><source>最近播放</source><translation>Recently Played</translation></message>
+    <message><source>继续观看</source><translation>Continue Watching</translation></message>
+    <message><source>%1 / %2</source><translation>%1 / %2</translation></message>
+    <message><source>继续观看：%1，%2 / %3</source><translation>Continue watching: %1, %2 / %3</translation></message>
     <message><source>未命名媒体</source><translation>Untitled Media</translation></message>
     <message><source>网络媒体：%1</source><translation>Network media: %1</translation></message>
     <message><source>本地媒体：%1</source><translation>Local media: %1</translation></message>

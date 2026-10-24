@@ -1,5 +1,6 @@
 #pragma once
 
+#include "session/playbackhistorystore.h"
 #include <QStringList>
 #include <QWidget>
 
@@ -15,9 +16,11 @@ class WelcomePanel final : public QWidget {
   public:
     WelcomePanel(QAction *open, QAction *network, QWidget *parent = nullptr);
     void setRecentSources(const QStringList &sources);
+    void setResumeEntries(const QList<PlaybackHistoryEntry> &entries);
 
   signals:
     void recentSourceRequested(const QString &source);
+    void resumeSourceRequested(const QString &source);
 
   protected:
     void changeEvent(QEvent *event) override;
@@ -32,5 +35,7 @@ class WelcomePanel final : public QWidget {
 
     QBoxLayout *buttonsLayout_ = nullptr;
     QVBoxLayout *recentLayout_ = nullptr;
+    QVBoxLayout *continueLayout_ = nullptr;
     QStringList recentSources_;
+    QList<PlaybackHistoryEntry> resumeEntries_;
 };

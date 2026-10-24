@@ -116,6 +116,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     buttons->addWidget(actionButton(clear, this));
     layout->addLayout(buttons);
     singleClickTimer_->setSingleShot(true);
+    singleClickTimer_->setTimerType(Qt::PreciseTimer);
     connect(singleClickTimer_, &QTimer::timeout, this, [this] {
         const auto pending = pendingClickIndex_;
         pendingClickIndex_ = QPersistentModelIndex{};

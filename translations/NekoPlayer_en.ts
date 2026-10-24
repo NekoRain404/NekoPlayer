@@ -34,7 +34,7 @@
     <message><source>中键单击：</source><translation>Middle click:</translation></message>
     <message><source>每次调节：</source><translation>Step per notch:</translation></message>
     <message><source>%1%</source><translation>%1%</translation></message>
-    <message><source>单击会等待双击间隔，避免双击时也触发播放/暂停；关闭对应选项后，该操作保持默认。</source><translation>Single clicks wait for the double-click interval so a double click does not also play or pause. Disabled actions keep their default behavior.</translation></message>
+    <message><source>单击会等待双击间隔，避免双击时也触发播放/暂停；关闭后该操作不执行。</source><translation>Single clicks wait for the double-click interval so a double click does not also play or pause. When disabled, the action does nothing.</translation></message>
 </context>
 <context>
     <name>MainWindow</name>

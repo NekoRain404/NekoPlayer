@@ -426,9 +426,8 @@ void PreferencesDialog::createInteractionPage(InteractionPreferences interaction
     form->addRow(tr("每次调节："), interactionWheelStep_);
     form->addRow(interactionWheelSeek_);
     form->addRow(interactionPlaylistClick_);
-    auto *help = new QLabel(tr("单击会等待双击间隔，避免双击时也触发播放/暂停；关闭对应选项后，"
-                               "该操作保持默认。"),
-                            page);
+    auto *help =
+        new QLabel(tr("单击会等待双击间隔，避免双击时也触发播放/暂停；关闭后该操作不执行。"), page);
     help->setWordWrap(true);
     form->addRow(help);
     tabs_->addTab(page, style()->standardIcon(QStyle::SP_FileDialogListView), tr("交互"));

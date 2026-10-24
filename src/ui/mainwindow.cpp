@@ -220,7 +220,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(transport_, &TransportBar::wheelSeekRequested, this, [this](int direction) {
         if (!interactionPreferences_.wheelSeeksTimeline)
             return;
-        const auto seconds = session_ ? session_->seekStepSeconds() : seekStepSecondsDefault_;
+        const auto seconds = seekStepSeconds();
         controller_->seekRelative(direction * seconds);
         showSeekFeedback(ActionFeedbackText::seek(direction * seconds));
     });

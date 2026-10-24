@@ -75,6 +75,10 @@ QString MainWindow::mediaDirectory() const {
     return QStandardPaths::writableLocation(QStandardPaths::MoviesLocation);
 }
 
+int MainWindow::seekStepSeconds() const {
+    return session_ ? session_->seekStepSeconds() : seekStepSecondsDefault_;
+}
+
 void MainWindow::closeEvent(QCloseEvent *event) {
     folderMenu_->cancel();
     const auto error = saveSession();

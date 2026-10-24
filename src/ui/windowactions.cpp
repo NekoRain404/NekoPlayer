@@ -110,12 +110,12 @@ void MainWindow::createActions() {
     setAppearanceIcon(back, AppearanceIcons::Symbol::SeekBackward);
     setAppearanceIcon(forward, AppearanceIcons::Symbol::SeekForward);
     connect(back, &QAction::triggered, this, [this] {
-        const auto seconds = session_ ? session_->seekStepSeconds() : 5;
+        const auto seconds = seekStepSeconds();
         controller_->seekRelative(-seconds);
         showSeekFeedback(ActionFeedbackText::seek(-seconds));
     });
     connect(forward, &QAction::triggered, this, [this] {
-        const auto seconds = session_ ? session_->seekStepSeconds() : 5;
+        const auto seconds = seekStepSeconds();
         controller_->seekRelative(seconds);
         showSeekFeedback(ActionFeedbackText::seek(seconds));
     });
@@ -289,8 +289,7 @@ void MainWindow::createActions() {
                  if (session_)
                      session_->setResumePlaybackPositionEnabled(enabled);
              },
-         .seekStepSeconds =
-             [this] { return session_ ? session_->seekStepSeconds() : seekStepSecondsDefault_; },
+         .seekStepSeconds = [this] { return seekStepSeconds(); },
          .setSeekStepSeconds =
              [this](int seconds) {
                  seekStepSecondsDefault_ = seconds;
@@ -332,6 +331,7 @@ void MainWindow::createActions() {
             [showPreferences] { showPreferences(PreferencesDialog::Category::Appearance); });
     auto *interactionSettings = settings->addAction(tr("交互设置…"));
     interactionSettings->setObjectName(QStringLiteral("interactionSettingsAction"));
+    setAppearanceIcon(interactionSettings, AppearanceIcons::Symbol::Settings);
     connect(interactionSettings, &QAction::triggered, this,
             [showPreferences] { showPreferences(PreferencesDialog::Category::Interaction); });
     settings->addSeparator();

@@ -87,6 +87,7 @@ class MainWindow final : public QMainWindow {
     void showThumbnailPreview(quint64 requestId, const QString &source, double requestedSeconds,
                               ThumbnailResult result);
     [[nodiscard]] QString mediaDirectory() const;
+    [[nodiscard]] int seekStepSeconds() const;
     std::unique_ptr<MpvController> controller_;
     std::unique_ptr<PlaylistController> playlist_;
     std::unique_ptr<SessionManager> session_;

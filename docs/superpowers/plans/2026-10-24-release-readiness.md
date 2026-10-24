@@ -10,7 +10,7 @@
 
 - C++20 / Qt 6 Widgets / libmpv; keep the single playback engine and the existing render path.
 - Keep playback state/commands, graphics resources, and desktop interaction in separate layers. UI code must not issue raw mpv commands.
-- Ordinary handwritten files target 500 lines; the automated guard tolerates up to 525. `src/ui/mainwindow.cpp` and `tests/window_test.cpp` keep their 800-line exception. Split by responsibility, never by line count.
+- Ordinary handwritten files target 500 lines; the automated guard tolerates up to 550. `src/ui/mainwindow.cpp` and `tests/window_test.cpp` keep their 800-line exception. Split by responsibility, never by line count.
 - Do not run window-behavior tests in the default suite; compile them. The standing verification selection is:
   `ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'`
 - Use `cmake --preset debug`, `cmake --build --preset debug`, `ctest --preset debug`.

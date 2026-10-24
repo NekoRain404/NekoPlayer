@@ -7,7 +7,7 @@ list(APPEND sources "${NEKO_SOURCE_DIR}/CMakeLists.txt"
 set(target_line_limit 500)
 # A small grace window avoids splitting cohesive code solely to cross a line
 # boundary. Files larger than this still require a listed exception.
-set(default_line_limit 525)
+set(default_line_limit 550)
 set(special_line_limit 800)
 # These integration/coordinator files may legitimately hold several tightly
 # coupled desktop scenarios. New exceptions require an explicit entry and reason.

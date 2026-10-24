@@ -232,7 +232,40 @@
 - [ ] Run focused `preferences-dialog`, `appearance-preferences`, `ui-surface`, `code-size`; build all.
 - [ ] Commit as `perf(ui): remove per-tick churn and duplicated applies`.
 
-## Task 7: Documentation, verification, and final review
+## Task 7: Interaction polish from review findings
+
+**Why:** The task reviews found a set of small, verified edge cases in the new interaction code. Fix them together so the final verification is not chasing individual nits.
+
+**Files:**
+- Modify `src/playback/videowidget.cpp`
+- Modify `src/ui/mainwindow.cpp`
+- Modify `src/ui/windowactions.cpp`
+- Modify `src/session/sessionstate.h`
+- Modify `src/session/sessionstore.cpp`
+- Modify `src/session/sessionmanager.cpp`
+- Modify `src/ui/preferencesdialog.cpp`
+- Modify `src/ui/transportbar.cpp`
+- Modify `tests/preferences_dialog_test.cpp`
+- Modify `tests/transport_bar_test.cpp`
+- Modify `tests/ui_surface_test.cpp`
+
+**Interfaces / behavior:**
+- Start the `VideoWidget` single-click timer on release, not press, and use `Qt::PreciseTimer`.
+- Ignore `wheelScrolled` when `deltaY == 0`; skip volume feedback and commands when playback is not active/ready.
+- Make the coordinator interaction getter return normalized values (clamp `wheelVolumeStep`) so the dialog and runtime agree after a hand-edited session.
+- Add `InteractionPreferences::normalized()` and `operator==`; use them in `SessionStore`, `SessionManager`, and `PreferencesDialog` instead of duplicated clamps and seven-field comparisons. Use C++20 designated initializers for the draft.
+- Use `findData(InteractionPreferences{}.wheelVolumeStep)` instead of the magic fallback index.
+- Give the clickable time label a visible focus cue (paint a focus frame or use `QStyle::PE_FrameFocusRect`) and an actionable accessible role/description. Include the remaining time in the tooltip/description in both modes.
+- Make the Settings icon test distinguish the glyph from another symbol (a characteristic pixel or comparison), not merely “some pixel painted.”
+- Extend the accessibility-name test to all seven Interaction controls.
+
+**Steps:**
+- [ ] Add or extend focused tests for the normalized preferences, the time-label focus/description, and the icon distinction.
+- [ ] Implement the polish items; keep behavior changes narrow.
+- [ ] Run `preferences-dialog`, `preferences-coordinator`, `transport-bar`, `ui-surface`, `interaction-policy`, `session`, `code-size`; build all.
+- [ ] Commit as `polish(ui): harden interaction details from review`.
+
+## Task 8: Documentation, verification, and final review
 
 **Files:**
 - Modify `README.md`

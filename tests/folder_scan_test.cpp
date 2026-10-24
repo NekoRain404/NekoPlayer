@@ -1,4 +1,5 @@
 #include "input/folderscanjob.h"
+#include "input/mediafiletypes.h"
 #include "input/mediafolderscan.h"
 
 #include <QDir>
@@ -68,6 +69,25 @@ class PoolBlocker final {
 class FolderScanTest final : public QObject {
     Q_OBJECT
   private slots:
+    void dialogPatternsCoverEveryScannedMediaType() {
+        const QStringList expected{
+            QStringLiteral("mkv"),  QStringLiteral("mp4"),  QStringLiteral("avi"),
+            QStringLiteral("mov"),  QStringLiteral("webm"), QStringLiteral("m4v"),
+            QStringLiteral("ts"),   QStringLiteral("m2ts"), QStringLiteral("mts"),
+            QStringLiteral("mpg"),  QStringLiteral("mpeg"), QStringLiteral("wmv"),
+            QStringLiteral("flv"),  QStringLiteral("ogv"),  QStringLiteral("3gp"),
+            QStringLiteral("vob"),  QStringLiteral("mp3"),  QStringLiteral("flac"),
+            QStringLiteral("wav"),  QStringLiteral("m4a"),  QStringLiteral("aac"),
+            QStringLiteral("ogg"),  QStringLiteral("opus"), QStringLiteral("wma"),
+            QStringLiteral("aiff"), QStringLiteral("aif"),  QStringLiteral("mka"),
+            QStringLiteral("ac3"),  QStringLiteral("dts"),  QStringLiteral("ape")};
+        QCOMPARE(supportedMediaExtensions(), expected);
+
+        const auto patterns = mediaFileNameFilterPatterns().split(QLatin1Char(' '));
+        for (const auto &extension : expected)
+            QVERIFY2(patterns.contains(QStringLiteral("*.") + extension), qPrintable(extension));
+    }
+
     void filtersAndNaturallySortsDirectChildren() {
         QTemporaryDir directory;
         QVERIFY(directory.isValid());

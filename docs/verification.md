@@ -1,5 +1,11 @@
 # Verification Record
 
+媒体文件筛选器一致性阶段（2026-10-24）：
+
+- 将视频与音频支持扩展名集中到 `mediafiletypes.cpp`；目录扫描以及打开/添加文件对话框复用同一集合，防止可扫描文件被选择器过滤掉。回归测试逐项核对 30 种扩展名及对话框通配符。
+- Debug 全量构建通过；`ctest --test-dir build/debug -E 'window|startup' --output-on-failure` 通过 **50/50**。`code-size` 在该测试集中通过；`clang-format --dry-run --Werror` 与 `git diff --check` 通过。
+- 按用户要求未运行窗口行为测试。验证覆盖过滤器和目录扫描契约，不代表真实 Wayland 文件选择器视觉验收；播放队列语义及 libmpv/GPU 路径未改变。
+
 Thumbnail timestamp origin correction stage (2026-10-24):
 
 - FFmpeg thumbnail seek targets and returned timestamps now use media-relative time even when a

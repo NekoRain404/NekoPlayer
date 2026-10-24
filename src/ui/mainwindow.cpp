@@ -5,6 +5,7 @@
 #include "foldermenu.h"
 #include "fullscreencontrols.h"
 #include "input/localfiledrop.h"
+#include "input/mediafiletypes.h"
 #include "networkopendialog.h"
 #include "playback/mediasource.h"
 #include "playback/mpvcontroller.h"
@@ -311,10 +312,9 @@ void MainWindow::savePlaylist(const QString &path) {
 
 void MainWindow::chooseFile() {
     folderMenu_->cancel();
-    const auto path =
-        QFileDialog::getOpenFileName(this, tr("打开媒体文件"), mediaDirectory(),
-                                     tr("媒体文件 (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.ts *.mp3 "
-                                        "*.flac *.wav);;所有文件 (*)"));
+    const auto path = QFileDialog::getOpenFileName(
+        this, tr("打开媒体文件"), mediaDirectory(),
+        tr("媒体文件 (%1);;所有文件 (*)").arg(mediaFileNameFilterPatterns()));
     if (!path.isEmpty())
         openFile(path);
 }
@@ -328,10 +328,9 @@ void MainWindow::chooseNetworkUrl() {
 
 void MainWindow::chooseFilesToAppend() {
     folderMenu_->cancel();
-    const auto paths =
-        QFileDialog::getOpenFileNames(this, tr("添加媒体文件"), mediaDirectory(),
-                                      tr("媒体文件 (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.ts "
-                                         "*.mp3 *.flac *.wav);;所有文件 (*)"));
+    const auto paths = QFileDialog::getOpenFileNames(
+        this, tr("添加媒体文件"), mediaDirectory(),
+        tr("媒体文件 (%1);;所有文件 (*)").arg(mediaFileNameFilterPatterns()));
     appendFiles(paths);
 }
 

@@ -57,7 +57,7 @@ add_library(neko_session src/session/sessionstore.cpp src/session/sessionmanager
 target_link_libraries(neko_session PUBLIC neko_playback)
 
 add_library(neko_input src/input/localfiledrop.cpp src/input/mediafolderscan.cpp
-    src/input/folderscanjob.cpp)
+    src/input/folderscanjob.cpp src/input/mediafiletypes.cpp)
 target_link_libraries(neko_input PUBLIC neko_playback Qt6::Concurrent)
 
 add_library(neko_preview src/preview/ffmpegthumbnaildecoder.cpp src/preview/thumbnailservice.cpp)

@@ -13,6 +13,7 @@
 | `MediaChapter` / `mpvchapters.cpp` | 章节原始编号、标题及起始秒数；复制借用的 node 为独立快照 | 领域类型不依赖 mpv，解析器不依赖 UI |
 | `playbacktime.cpp` | 时间字符串解析与格式化，校验格式、有限值及转换范围 | Qt Core，无播放或窗口状态 |
 | `MediaSource` | 本地路径、file URL 与受支持网络地址的校验、规范化和显示名称 | Qt Core，无 I/O、播放或窗口状态；保留签名 URL 的路径与查询转义 |
+| `mediafiletypes.cpp` | 统一支持的媒体扩展名与 Qt 文件选择器过滤模式 | Qt Core 值数据；目录扫描与打开/添加对话框共享，不依赖播放状态 |
 | `NetworkOpenDialog` | 网络地址输入与播放按钮可用性 | Qt Widgets / MediaSource；确认后由 MainWindow 交给队列业务 API |
 | `PlaylistModel` | 本地／网络媒体队列、当前项与原生单项移动；提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器 |
 | `M3u8Store` | UTF-8 播放列表导入、整批来源校验、当前行注释与原子保存 | Qt Core / MediaSource，不操作队列或播放器，不联网探测 |

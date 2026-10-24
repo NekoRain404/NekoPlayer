@@ -3,17 +3,17 @@
 更新时间：2026-10-24
 仓库：`/home/nekorain/Development/NekoPlayer`
 分支：`feat/first-playable`
-本阶段代码 HEAD：`6aa897e`（`feat: polish glass surfaces without affecting video`）
+外观实现提交：`6aa897e`。交接文档提交：`a41468d`。当前工作区另有一项未提交的 System palette 修正及其回归测试；全量验证被用户要求停止，不能视为最终完成。
 
 ## 1. 交接结论
 
-外观偏好阶段已实现并提交。用户可选择 Dark、Light、System 三种基础主题，Ocean、Emerald、Violet、Rose、Amber 五种强调色，以及 UI 玻璃式半透明样式开关。偏好页支持即时预览、Apply 持久化和 Cancel 回滚；Settings 菜单中的旧主题菜单继续可用，并与新偏好页共用状态。
+外观偏好阶段已实现并提交。用户可选择 Dark、Light、System 三种基础主题，Ocean、Emerald、Violet、Rose、Amber 五种强调色，以及 UI 玻璃式半透明样式开关。偏好页支持即时预览、Apply 持久化和 Cancel 回滚；Settings 菜单中的旧主题菜单继续可用，并与新偏好页共用状态。整体审查发现 System 主题原先没有把强调色写进原生 palette role；当前工作区已有一版修正，但尚未完成全量验证，也尚未提交。
 
 “玻璃”在本实现里指 UI 控件的半透明渐变、边缘明暗和主题色表面，不是真正的背景模糊。视频帧、libmpv 渲染、硬件解码和 HDR 路径没有为了外观效果而改动。Debug 构建通过，标准非窗口 CTest 集合通过 50/50；窗口行为测试按用户要求没有运行。
 
 ## 2. 已交付内容与提交
 
-本阶段代码范围从 `1a645de`（计划提交）到 `6aa897e`：
+本阶段代码范围从 `1a645de`（计划提交）起；外观实现至 `6aa897e`，交接说明提交为 `a41468d`。当前未提交修正不计入这些提交：
 
 | 提交 | 内容 |
 | --- | --- |
@@ -21,6 +21,7 @@
 | `e091006` | 外观配置读写、启动应用和主题菜单状态 |
 | `2d46cd9` | 偏好设置外观页、即时预览、Apply/Cancel、英文翻译 |
 | `6aa897e` | UI 表面覆盖和视频/全屏反馈隔离回归测试 |
+| 工作区未提交 | System 保留平台标准调色板，同时应用强调色选择/链接 role；补充回归测试（定向测试通过，全量回归被停止） |
 
 主要实现位置：
 
@@ -68,11 +69,14 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 | --- | --- |
 | `cmake --preset debug` | 成功 |
 | `cmake --build --preset debug -j4` | 成功；Ninja 显示 `no work to do`，所有目标已是最新 |
-| `ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` | **50/50 通过，54.37 秒** |
+| `ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` | 基础实现阶段 **50/50 通过，54.37 秒**。本次 System palette 修正后重跑到 45/50 时按用户要求中断；前 45 项通过，剩余 5 项未完成，因此不能声称修正后的全量套件通过 |
+| System palette 修正的 `appearance-preferences` 定向测试 | **1/1 通过**；修正前新增断言按预期失败 |
 | `ctest --test-dir build/debug -R '^code-size$' --output-on-failure` | **1/1 通过**（也包含在上述 50 项中） |
 | `git diff --check 1a645de..6aa897e` | 通过 |
 | Appearance 相关源文件及测试 `clang-format --dry-run --Werror` | 通过；`windowactions.cpp` 全文件另有基线遗留格式告警，详见下文 |
 | Task 4 独立只读审查 | 无 Critical、Important、Minor 发现；判定 Ready |
+
+整分支审查补充发现 System palette 未采用 accent 的 Highlight/HighlightedText/Link role（P2）。当前工作区已有测试优先的修正版：保留 standard palette 的其余 role，并覆盖上述三项 accent role；定向测试已通过，但完整非窗口 CTest 在 45/50 处被用户要求中止，修正仍未提交。下一位开发者应先审查当前 diff，再决定继续全量验证/提交或调整方案。审查还指出设计规格提到 soft shadows，但当前 QSS 没有真实投影。Qt Widgets QSS 无可移植 `box-shadow`；当前只有渐变下缘的轻量明暗模拟，因此此项作为明确的设计限制记录，不额外添加逐控件 graphics effect 或第二条绘制路径。
 
 非窗口测试集合明确排除了含 `window` 的目标，以及 `file-startup`、`preferences-dialog`、`video-color-dialog`。这是按项目既有验证记录使用的选择；本次完整结果不能替代偏好对话框交互或原生桌面行为验收。Task 3 之前对偏好页定向测试曾通过 5/5，但那不是本次全量回归结果。
 

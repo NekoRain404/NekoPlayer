@@ -1,6 +1,6 @@
 #include "playlistpane.h"
-#include "playlistitemdelegate.h"
 #include "appearanceicons.h"
+#include "playlistitemdelegate.h"
 
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"

@@ -122,9 +122,9 @@ void WelcomePanel::changeEvent(QEvent *event) {
             if (!label->property("welcomeMediaIcon").toBool())
                 continue;
             const auto network = label->parentWidget()->property("welcomeRecentNetwork").toBool();
-            const auto icon = AppearanceIcons::icon(
-                network ? AppearanceIcons::Symbol::Network : AppearanceIcons::Symbol::MediaFile,
-                palette());
+            const auto icon = AppearanceIcons::icon(network ? AppearanceIcons::Symbol::Network
+                                                            : AppearanceIcons::Symbol::MediaFile,
+                                                    palette());
             label->setPixmap(icon.pixmap(18, 18));
         }
     }

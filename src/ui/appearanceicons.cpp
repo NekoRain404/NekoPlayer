@@ -16,7 +16,10 @@ void paintSymbol(QPainter &painter, Symbol symbol) {
         QPolygonF shape;
         for (const auto &point : points)
             shape << point;
+        painter.save();
+        painter.setBrush(painter.pen().color());
         painter.drawPolygon(shape);
+        painter.restore();
     };
     switch (symbol) {
     case Symbol::Play:
@@ -38,9 +41,15 @@ void paintSymbol(QPainter &painter, Symbol symbol) {
         polygon({{6, 5}, {15, 12}, {6, 19}});
         break;
     case Symbol::Seek:
+    case Symbol::SeekForward:
         line(5, 5, 5, 19);
         polygon({{10, 5}, {18, 12}, {10, 19}});
         line(19, 5, 19, 19);
+        break;
+    case Symbol::SeekBackward:
+        line(19, 5, 19, 19);
+        polygon({{14, 5}, {6, 12}, {14, 19}});
+        line(5, 5, 5, 19);
         break;
     case Symbol::Open:
     case Symbol::MediaFile:
@@ -138,7 +147,7 @@ class AppearanceIconEngine final : public QIconEngine {
         painter->translate(rect.topLeft());
         painter->scale(rect.width() / 24.0, rect.height() / 24.0);
         painter->setPen(QPen(color, 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-        painter->setBrush(color);
+        painter->setBrush(Qt::NoBrush);
         paintSymbol(*painter, symbol_);
         painter->restore();
     }

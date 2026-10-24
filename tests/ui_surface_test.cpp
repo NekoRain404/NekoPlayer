@@ -1,8 +1,8 @@
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
-#include "ui/appearancepreferences.h"
 #include "ui/appearanceicons.h"
+#include "ui/appearancepreferences.h"
 #include "ui/playlistpane.h"
 #include "ui/welcomepanel.h"
 
@@ -34,7 +34,19 @@ class UiSurfaceTest final : public QObject {
         QCOMPARE(highDpi.devicePixelRatio(), 2.0);
 
         const auto media = AppearanceIcons::icon(AppearanceIcons::Symbol::MediaFile, palette);
-        QVERIFY(!media.pixmap(QSize(24, 24), 2.0).isNull());
+        const auto mediaImage = media.pixmap(QSize(24, 24)).toImage();
+        QVERIFY(!mediaImage.isNull());
+        QVERIFY(mediaImage.pixelColor(10, 6).alpha() == 0);
+
+        const auto network = AppearanceIcons::icon(AppearanceIcons::Symbol::Network, palette);
+        const auto networkImage = network.pixmap(QSize(24, 24)).toImage();
+        QVERIFY(networkImage.pixelColor(12, 7).alpha() == 0);
+
+        const auto seekBack =
+            AppearanceIcons::icon(AppearanceIcons::Symbol::SeekBackward, palette).pixmap(24, 24);
+        const auto seekForward =
+            AppearanceIcons::icon(AppearanceIcons::Symbol::SeekForward, palette).pixmap(24, 24);
+        QVERIFY(seekBack.toImage() != seekForward.toImage());
 
         const auto disabled = play.pixmap(QSize(24, 24), QIcon::Disabled, QIcon::Off);
         QVERIFY(!disabled.isNull());

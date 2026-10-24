@@ -18,6 +18,8 @@ enum class Symbol {
     Fullscreen,
     Restore,
     Seek,
+    SeekBackward,
+    SeekForward,
     Volume,
     Mute,
     Remove,

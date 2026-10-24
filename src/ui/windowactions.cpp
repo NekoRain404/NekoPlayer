@@ -1,7 +1,7 @@
 #include "abloopmenu.h"
 #include "actionfeedbacktext.h"
-#include "appearancepreferences.h"
 #include "appearanceicons.h"
+#include "appearancepreferences.h"
 #include "audiodevicemenu.h"
 #include "currentmediamenu.h"
 #include "foldermenu.h"
@@ -98,8 +98,8 @@ void MainWindow::createActions() {
     connect(escape, &QAction::triggered, this, [this] { setFullscreen(false); });
     auto *back = make(tr("后退 5 秒"), "seekBackAction", QKeySequence(Qt::Key_Left));
     auto *forward = make(tr("前进 5 秒"), "seekForwardAction", QKeySequence(Qt::Key_Right));
-    setAppearanceIcon(back, AppearanceIcons::Symbol::Previous);
-    setAppearanceIcon(forward, AppearanceIcons::Symbol::Next);
+    setAppearanceIcon(back, AppearanceIcons::Symbol::SeekBackward);
+    setAppearanceIcon(forward, AppearanceIcons::Symbol::SeekForward);
     connect(back, &QAction::triggered, this, [this] {
         controller_->seekRelative(-5);
         showSeekFeedback(ActionFeedbackText::seek(-5));

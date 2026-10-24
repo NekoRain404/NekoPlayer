@@ -1,7 +1,7 @@
 #include "mainwindow.h"
-#include "appearanceicons.h"
 #include "actionfeedbackoverlay.h"
 #include "actionfeedbacktext.h"
+#include "appearanceicons.h"
 #include "foldermenu.h"
 #include "fullscreencontrols.h"
 #include "input/localfiledrop.h"
@@ -350,8 +350,8 @@ void MainWindow::updateState() {
     pauseAction_->setText(canPlay ? tr("播放") : tr("暂停"));
     pauseAction_->setToolTip(pauseAction_->text());
     pauseAction_->setStatusTip(pauseAction_->text());
-    setAppearanceIcon(pauseAction_, canPlay ? AppearanceIcons::Symbol::Play
-                                            : AppearanceIcons::Symbol::Pause);
+    setAppearanceIcon(pauseAction_,
+                      canPlay ? AppearanceIcons::Symbol::Play : AppearanceIcons::Symbol::Pause);
     muteAction_->setChecked(state.muted);
     setAppearanceIcon(muteAction_, state.muted ? AppearanceIcons::Symbol::Mute
                                                : AppearanceIcons::Symbol::Volume);

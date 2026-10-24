@@ -25,6 +25,7 @@ class PlaylistPane final : public QWidget {
     void playRequested(int row);
 
   private:
+    void refreshIcons();
     void synchronizeCurrent();
     void updateItemCount();
     void updateEditingActions();

@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "appearanceicons.h"
 #include "actionfeedbackoverlay.h"
 #include "actionfeedbacktext.h"
 #include "foldermenu.h"
@@ -349,11 +350,11 @@ void MainWindow::updateState() {
     pauseAction_->setText(canPlay ? tr("播放") : tr("暂停"));
     pauseAction_->setToolTip(pauseAction_->text());
     pauseAction_->setStatusTip(pauseAction_->text());
-    pauseAction_->setIcon(
-        style()->standardIcon(canPlay ? QStyle::SP_MediaPlay : QStyle::SP_MediaPause));
+    setAppearanceIcon(pauseAction_, canPlay ? AppearanceIcons::Symbol::Play
+                                            : AppearanceIcons::Symbol::Pause);
     muteAction_->setChecked(state.muted);
-    muteAction_->setIcon(
-        style()->standardIcon(state.muted ? QStyle::SP_MediaVolumeMuted : QStyle::SP_MediaVolume));
+    setAppearanceIcon(muteAction_, state.muted ? AppearanceIcons::Symbol::Mute
+                                               : AppearanceIcons::Symbol::Volume);
     previousAction_->setEnabled(video_->isReady() && playlist_->hasPrevious());
     nextAction_->setEnabled(video_->isReady() && playlist_->hasNext());
     clearPlaylistAction_->setEnabled(playlist_->model()->rowCount() > 0 ||
@@ -509,8 +510,8 @@ void MainWindow::setFullscreen(bool enabled) {
     fullscreenAction_->setText(enabled ? tr("退出全屏") : tr("全屏"));
     fullscreenAction_->setToolTip(fullscreenAction_->text());
     fullscreenAction_->setStatusTip(fullscreenAction_->text());
-    fullscreenAction_->setIcon(style()->standardIcon(enabled ? QStyle::SP_TitleBarNormalButton
-                                                             : QStyle::SP_TitleBarMaxButton));
+    setAppearanceIcon(fullscreenAction_, enabled ? AppearanceIcons::Symbol::Restore
+                                                 : AppearanceIcons::Symbol::Fullscreen);
     syncingWindowState_ = false;
 }
 
@@ -556,8 +557,8 @@ void MainWindow::setMiniPlayer(bool enabled) {
         action->setText(enabled ? tr("退出小窗") : tr("小窗播放"));
         action->setToolTip(action->text());
         action->setStatusTip(action->text());
-        action->setIcon(style()->standardIcon(enabled ? QStyle::SP_TitleBarCloseButton
-                                                      : QStyle::SP_TitleBarNormalButton));
+        setAppearanceIcon(action, enabled ? AppearanceIcons::Symbol::Remove
+                                          : AppearanceIcons::Symbol::Restore);
     }
 }
 

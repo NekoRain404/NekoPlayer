@@ -2,6 +2,7 @@
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 #include "ui/appearancepreferences.h"
+#include "ui/appearanceicons.h"
 #include "ui/playlistpane.h"
 #include "ui/welcomepanel.h"
 
@@ -19,6 +20,27 @@
 class UiSurfaceTest final : public QObject {
     Q_OBJECT
   private slots:
+    void sharedIconsRenderAtDevicePixelRatio() {
+        QPalette palette;
+        palette.setColor(QPalette::ButtonText, QColor(QStringLiteral("#70a0ff")));
+        const auto play = AppearanceIcons::icon(AppearanceIcons::Symbol::Play, palette);
+        QVERIFY(!play.isNull());
+        const auto native = play.pixmap(QSize(24, 24));
+        QVERIFY(!native.isNull());
+        QCOMPARE(native.size(), QSize(24, 24));
+        const auto highDpi = play.pixmap(QSize(24, 24), 2.0);
+        QVERIFY(!highDpi.isNull());
+        QCOMPARE(highDpi.size(), QSize(48, 48));
+        QCOMPARE(highDpi.devicePixelRatio(), 2.0);
+
+        const auto media = AppearanceIcons::icon(AppearanceIcons::Symbol::MediaFile, palette);
+        QVERIFY(!media.pixmap(QSize(24, 24), 2.0).isNull());
+
+        const auto disabled = play.pixmap(QSize(24, 24), QIcon::Disabled, QIcon::Off);
+        QVERIFY(!disabled.isNull());
+        QCOMPARE(disabled.size(), QSize(24, 24));
+    }
+
     void welcomePanelPaintsItsThemeSurface() {
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);
         QAction open(QStringLiteral("打开文件…"));

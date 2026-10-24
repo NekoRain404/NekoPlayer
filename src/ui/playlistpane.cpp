@@ -1,5 +1,6 @@
 #include "playlistpane.h"
 #include "playlistitemdelegate.h"
+#include "appearanceicons.h"
 
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
@@ -9,7 +10,6 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListView>
-#include <QStyle>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -54,9 +54,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     remove_->setShortcut(QKeySequence(Qt::Key_Delete));
     moveUp_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Up));
     moveDown_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Down));
-    remove_->setIcon(style()->standardIcon(QStyle::SP_DialogDiscardButton));
-    moveUp_->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
-    moveDown_->setIcon(style()->standardIcon(QStyle::SP_ArrowDown));
+    refreshIcons();
     view_->setAccessibleName(tr("播放列表"));
     view_->setToolTip(tr("双击播放；可拖动排序"));
     for (auto *action : editingActions()) {
@@ -128,6 +126,8 @@ QList<QAction *> PlaylistPane::editingActions() const { return {remove_, moveUp_
 
 void PlaylistPane::changeEvent(QEvent *event) {
     QWidget::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange)
+        refreshIcons();
     if (event->type() != QEvent::LanguageChange)
         return;
     remove_->setText(tr("从列表移除"));
@@ -138,6 +138,12 @@ void PlaylistPane::changeEvent(QEvent *event) {
     view_->setAccessibleName(tr("播放列表"));
     view_->setToolTip(tr("双击播放；可拖动排序"));
     updateItemCount();
+}
+
+void PlaylistPane::refreshIcons() {
+    remove_->setIcon(AppearanceIcons::icon(AppearanceIcons::Symbol::Remove, palette()));
+    moveUp_->setIcon(AppearanceIcons::icon(AppearanceIcons::Symbol::MoveUp, palette()));
+    moveDown_->setIcon(AppearanceIcons::icon(AppearanceIcons::Symbol::MoveDown, palette()));
 }
 
 void PlaylistPane::updateItemCount() {

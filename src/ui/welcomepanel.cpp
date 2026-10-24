@@ -1,4 +1,5 @@
 #include "welcomepanel.h"
+#include "appearanceicons.h"
 
 #include "playback/mediasource.h"
 
@@ -15,7 +16,6 @@
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSizePolicy>
-#include <QStyle>
 #include <QUrl>
 #include <QVBoxLayout>
 #include <algorithm>
@@ -117,6 +117,17 @@ void WelcomePanel::changeEvent(QEvent *event) {
     QWidget::changeEvent(event);
     if (event->type() == QEvent::LanguageChange)
         retranslateUi();
+    if (event->type() == QEvent::PaletteChange) {
+        for (auto *label : findChildren<QLabel *>()) {
+            if (!label->property("welcomeMediaIcon").toBool())
+                continue;
+            const auto network = label->parentWidget()->property("welcomeRecentNetwork").toBool();
+            const auto icon = AppearanceIcons::icon(
+                network ? AppearanceIcons::Symbol::Network : AppearanceIcons::Symbol::MediaFile,
+                palette());
+            label->setPixmap(icon.pixmap(18, 18));
+        }
+    }
 }
 
 void WelcomePanel::paintEvent(QPaintEvent *event) {
@@ -183,8 +194,9 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
         icon->setAttribute(Qt::WA_TransparentForMouseEvents);
         icon->setAlignment(Qt::AlignCenter);
         icon->setFixedSize(30, 30);
-        const auto mediaIcon =
-            style()->standardIcon(networkSource ? QStyle::SP_DriveNetIcon : QStyle::SP_FileIcon);
+        const auto mediaIcon = AppearanceIcons::icon(
+            networkSource ? AppearanceIcons::Symbol::Network : AppearanceIcons::Symbol::MediaFile,
+            button->palette());
         icon->setPixmap(mediaIcon.pixmap(18, 18));
         rowLayout->addWidget(icon, 0, Qt::AlignVCenter);
 

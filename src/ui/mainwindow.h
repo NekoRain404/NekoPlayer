@@ -27,6 +27,9 @@ class QVBoxLayout;
 class ThumbnailPreview;
 class ThumbnailService;
 struct ThumbnailResult;
+namespace AppearanceIcons {
+enum class Symbol;
+}
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -53,6 +56,8 @@ class MainWindow final : public QMainWindow {
 
   private:
     void createActions();
+    void setAppearanceIcon(QAction *action, AppearanceIcons::Symbol symbol);
+    void refreshAppearanceIcons();
     void chooseFile();
     void chooseNetworkUrl();
     void chooseFilesToAppend();

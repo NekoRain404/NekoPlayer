@@ -34,9 +34,19 @@ void AppearancePreferences::saveSettings(QSettings &settings, const Settings &ap
 
 void AppearancePreferences::applySettings(QApplication &application, const Settings &appearance) {
     const auto tokens = appearanceTokens(appearance.theme, appearance.accent);
-    application.setPalette(appearance.theme == Theme::System
-                               ? application.style()->standardPalette()
-                               : paletteForTokens(tokens));
+    if (appearance.theme == Theme::System) {
+        auto palette = application.style()->standardPalette();
+        // Keep the platform's disabled selection/link roles intact; only the
+        // enabled groups should express the user's accent.
+        for (const auto group : {QPalette::Active, QPalette::Inactive}) {
+            palette.setColor(group, QPalette::Highlight, tokens.selection);
+            palette.setColor(group, QPalette::HighlightedText, tokens.selectedText);
+            palette.setColor(group, QPalette::Link, tokens.accent);
+        }
+        application.setPalette(palette);
+    } else {
+        application.setPalette(paletteForTokens(tokens));
+    }
     application.setStyleSheet(appearanceStyleSheet(tokens, appearance.glassEnabled));
 }
 

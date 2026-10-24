@@ -1,6 +1,6 @@
 #include "appearancepreferences.h"
-#include "appearancetokens.h"
 #include "appearancestylesheet.h"
+#include "appearancetokens.h"
 
 #include <QApplication>
 #include <QMessageBox>

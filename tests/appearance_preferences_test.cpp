@@ -1,7 +1,7 @@
 #include "playback/mpvcontroller.h"
-#include "ui/appearancetokens.h"
-#include "ui/appearancestylesheet.h"
 #include "ui/appearancepreferences.h"
+#include "ui/appearancestylesheet.h"
+#include "ui/appearancetokens.h"
 #include "ui/transportbar.h"
 #include "ui/transportbarmetrics.h"
 
@@ -49,14 +49,15 @@ class AppearancePreferencesTest final : public QObject {
             const auto darker = std::min(luminance(first), luminance(second));
             return (lighter + 0.05) / (darker + 0.05);
         };
-        for (const auto theme : {AppearancePreferences::Theme::Dark,
-                                 AppearancePreferences::Theme::Light}) {
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light}) {
             const auto tokens = appearanceTokens(theme);
             QVERIFY2(contrast(tokens.accentText, tokens.accent) >= 4.5,
                      "Primary-action text must meet WCAG AA contrast");
             const auto style = appearanceStyleSheet(tokens);
-            QVERIFY(style.contains(QStringLiteral("QToolButton#transportPrimaryButton:checked{color:%1;")
-                                       .arg(tokens.accentText.name(QColor::HexRgb))));
+            QVERIFY(style.contains(
+                QStringLiteral("QToolButton#transportPrimaryButton:checked{color:%1;")
+                    .arg(tokens.accentText.name(QColor::HexRgb))));
         }
     }
 

@@ -709,6 +709,9 @@ class WindowTest final : public QObject {
         QVERIFY(firstChoice);
         QCOMPARE(firstChoice->currentData().toInt(), 5);
         firstChoice->setCurrentIndex(firstChoice->findData(10));
+        auto *buttons = first->findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(buttons);
+        buttons->button(QDialogButtonBox::Apply)->click();
         auto *back = action(window, "seekBackAction");
         auto *forward = action(window, "seekForwardAction");
         QVERIFY(back && forward);

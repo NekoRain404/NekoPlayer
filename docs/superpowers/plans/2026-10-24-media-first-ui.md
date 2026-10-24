@@ -50,7 +50,7 @@
 - Produces `[[nodiscard]] QPalette paletteForTokens(const AppearanceTokens &tokens);` for the `AppearancePreferences` coordinator.
 - `AppearancePreferences::applyTheme(QApplication &, Theme)` remains the public entry point and retains existing `Theme::System` behavior.
 
-- [ ] **Step 1: Add failing token contract tests**
+- [x] **Step 1: Add failing token contract tests**
 
 Include `ui/appearancetokens.h` in `tests/appearance_preferences_test.cpp`, then add this test:
 
@@ -69,13 +69,13 @@ void darkAndLightTokensKeepSemanticContrastAndSharedMetrics() {
 }
 ```
 
-- [ ] **Step 2: Run the focused test and confirm the missing API fails to compile**
+- [x] **Step 2: Run the focused test and confirm the missing API fails to compile**
 
 Run: `cmake --build --preset debug --target appearance_preferences_test -j4`
 
 Expected: compilation fails because `AppearanceTokens` and `appearanceTokens` have not been introduced.
 
-- [ ] **Step 3: Implement the token value type and two semantic palettes**
+- [x] **Step 3: Implement the token value type and two semantic palettes**
 
 Define the exact fields above in `appearancetokens.h`; initialize one complete value per custom theme in `appearancetokens.cpp`. Keep shared geometric values equal between themes (`spaceUnit = 4`, `transportHitTarget = 32`) and use distinct 8 px main spacing and restrained radius values. Keep every authored file under 500 lines.
 
@@ -106,17 +106,17 @@ struct AppearanceTokens {
 };
 ```
 
-- [ ] **Step 4: Make the existing theme entry point consume token-derived palettes**
+- [x] **Step 4: Make the existing theme entry point consume token-derived palettes**
 
 Move palette role assignment out of `appearancepreferences.cpp` into `QPalette paletteForTokens(const AppearanceTokens &tokens)` declared by `appearancetokens.h`. `applyTheme` uses it for Dark/Light; System calls `application.setStyleSheet({})` and restores the platform style's standard palette behavior as it does today.
 
-- [ ] **Step 5: Build and run the focused contract test**
+- [x] **Step 5: Build and run the focused contract test**
 
 Run: `cmake --build --preset debug --target appearance_preferences_test -j4 && ctest --test-dir build/debug -R '^appearance-preferences$' --output-on-failure`
 
 Expected: target builds and `appearance-preferences` passes for all three theme modes.
 
-- [ ] **Step 6: Commit the token boundary**
+- [x] **Step 6: Commit the token boundary**
 
 ```bash
 git add CMakeLists.txt src/ui/appearancetokens.h src/ui/appearancetokens.cpp src/ui/appearancepreferences.cpp tests/appearance_preferences_test.cpp
@@ -137,17 +137,17 @@ git commit -m "refactor(ui): define semantic appearance tokens"
 - Styles only stable existing selectors: `QMainWindow`, `QMenuBar`, `QMenu`, `QStatusBar`, `QWidget#transportBar`, `QWidget#playlistPane`, `QWidget#playlistHeader`, `QWidget#welcomePanel`, existing named labels/buttons/sliders, `QListView#playlistView`, and keyboard focus/state pseudo-selectors.
 - Does not add selectors that depend on text, translated labels, widget ancestry traversal, or playback properties.
 
-- [ ] **Step 1: Strengthen the existing style test around both themes and required states**
+- [x] **Step 1: Strengthen the existing style test around both themes and required states**
 
 Extend `exposesContentFirstInteractionStyle()` so each theme's generated sheet contains stable selectors for hover, pressed, checked, selected, focus, and disabled states on its relevant controls. Preserve the current behavior assertions for named selectors and timeline/volume controls. Do not assert internal stylesheet ownership; verify user-visible generated selectors and theme behavior instead.
 
-- [ ] **Step 2: Run the focused test to capture the missing generator**
+- [x] **Step 2: Run the focused test to capture the missing generator**
 
 Run: `cmake --build --preset debug --target appearance_preferences_test -j4`
 
 Expected: compilation fails because `appearanceStyleSheet` is not declared yet.
 
-- [ ] **Step 3: Extract the stylesheet and interpolate semantic values**
+- [x] **Step 3: Extract the stylesheet and interpolate semantic values**
 
 Implement `appearanceStyleSheet` in a dedicated file. Encode every color using `QColor::name(QColor::HexRgb)` from the token roles; encode spacing and radii from the token metrics. Remove duplicate hard-coded theme sheets from `appearancepreferences.cpp` and keep that coordinator below 500 lines. Preserve all existing object selectors relied upon by `transportbar.cpp`, `playlistpane.cpp`, `welcomepanel.cpp`, and tests.
 
@@ -160,17 +160,17 @@ return QStringLiteral("QWidget#transportBar { background: %1; color: %2; "
          tokens.separator.name(QColor::HexRgb));
 ```
 
-- [ ] **Step 4: Apply measured, restrained styling without layout or action rewiring**
+- [x] **Step 4: Apply measured, restrained styling without layout or action rewiring**
 
 Use one spacing rhythm (4 px base / 8 px primary rhythm), quiet separators, smaller consistent surface radii, readable primary/secondary text, a restrained accent for primary/selected/focus states, and visible disabled/hover/pressed/checked states. Keep `System` free of the app stylesheet. Do not change widget layout, shortcut, enablement, media queue, or signal wiring in this task.
 
-- [ ] **Step 5: Verify selectors and theme switching**
+- [x] **Step 5: Verify selectors and theme switching**
 
 Run: `cmake --build --preset debug --target appearance_preferences_test ui_surface_test -j4 && ctest --test-dir build/debug -R '^(appearance-preferences|ui-surface)$' --output-on-failure`
 
 Expected: both tests pass; applying System after Dark or Light leaves `qApp->styleSheet()` empty, and Dark/Light styles include the shared surface and interaction selectors.
 
-- [ ] **Step 6: Commit the stylesheet extraction**
+- [x] **Step 6: Commit the stylesheet extraction**
 
 ```bash
 git add CMakeLists.txt src/ui/appearancestylesheet.h src/ui/appearancestylesheet.cpp src/ui/appearancepreferences.cpp tests/appearance_preferences_test.cpp
@@ -196,7 +196,7 @@ git commit -m "feat(ui): apply semantic media-first theme styling"
 - Icon drawing uses logical coordinates and `QPainter` paths with `QIconEngine` pixmap generation at the requested device-pixel ratio; colors come from `QPalette::ButtonText` or `QPalette::WindowText`, with disabled state generated from `QPalette::Disabled` roles.
 - Widgets continue to bind the same `QAction` instances. Icon replacement must not change shortcuts, labels, accessibility names, signal paths, or enabled/checked state.
 
-- [ ] **Step 1: Add icon-contract checks to `ui_surface_test`**
+- [x] **Step 1: Add icon-contract checks to `ui_surface_test`**
 
 Include `ui/appearanceicons.h` and add the following kind of assertions using `QIcon::pixmap(QSize(24, 24), 2.0)`:
 
@@ -218,13 +218,13 @@ void sharedIconsRenderAtDevicePixelRatio() {
 
 Repeat for a media-file and one disabled-mode icon. Existing transport button count, minimum size, accessible names, default actions, playlist editing, and welcome action tests remain intact.
 
-- [ ] **Step 2: Run `ui-surface` and confirm the icon factory contract is absent**
+- [x] **Step 2: Run `ui-surface` and confirm the icon factory contract is absent**
 
 Run: `cmake --build --preset debug --target ui_surface_test -j4`
 
 Expected: compilation fails on the new `AppearanceIcons` interface.
 
-- [ ] **Step 3: Implement the small vector icon engine**
+- [x] **Step 3: Implement the small vector icon engine**
 
 Implement only the enumerated symbols, grouped into reusable path primitives for play/transport, file/media, and common actions. Paint with antialiasing in a normalized 24 × 24 logical canvas; apply transforms rather than raster scaling. Keep the header and source each below 500 lines, and avoid emoji, external runtime assets, SVG plugin requirements, and platform-specific window glyphs.
 
@@ -255,19 +255,19 @@ paintSymbol(*painter, symbol_);
 painter->restore();
 ```
 
-- [ ] **Step 4: Route covered widgets through the shared icons**
+- [x] **Step 4: Route covered widgets through the shared icons**
 
 Replace direct `QStyle::standardIcon` selection in the covered construction/update sites with `AppearanceIcons::icon`. For the dynamic play/pause, mute, and fullscreen/restore actions, preserve the existing state decision and only change the icon provider. `WelcomePanel` continues copying the action icon, and all buttons continue using `setDefaultAction`/existing QAction binding. Palette icon refresh belongs in the existing `MainWindow::changeEvent` implementation in `src/ui/windowactions.cpp`; update only the icon on `QEvent::PaletteChange`, while leaving its `LanguageChange` branch unchanged.
 
 Refresh palette-colored action icons from `MainWindow::changeEvent` on `QEvent::PaletteChange` as well as at action creation/state changes, so switching Dark/Light/System updates already-visible menu, toolbar, playlist, and welcome icons without restarting. Do not add a timer or playback-property observer for this refresh.
 
-- [ ] **Step 5: Run visual-surface and regression tests**
+- [x] **Step 5: Run visual-surface and regression tests**
 
 Run: `cmake --build --preset debug --target appearance_preferences_test ui_surface_test -j4 && ctest --test-dir build/debug -R '^(appearance-preferences|ui-surface)$' --output-on-failure`
 
 Expected: both tests pass; icon tests pass under offscreen rendering; action and accessibility regression tests remain unchanged and pass.
 
-- [ ] **Step 6: Commit the shared icon/component contract**
+- [x] **Step 6: Commit the shared icon/component contract**
 
 ```bash
 git add CMakeLists.txt src/ui/appearanceicons.h src/ui/appearanceicons.cpp src/ui/windowactions.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp src/ui/welcomepanel.cpp src/ui/transportbar.cpp tests/ui_surface_test.cpp tests/appearance_preferences_test.cpp
@@ -280,13 +280,13 @@ git commit -m "feat(ui): unify main window iconography"
 - Modify: `docs/verification.md` with dated, factual commands and results after they are run.
 - Review: all files from Tasks 1–3 and the design spec.
 
-- [ ] **Step 1: Format and check whitespace**
+- [x] **Step 1: Format and check whitespace**
 
 Run: `clang-format -i` on only the changed `.cpp`/`.h` files, then `git diff --check`.
 
 Expected: no whitespace errors; formatting does not alter behavior.
 
-- [ ] **Step 2: Run all focused visual/theme and code-size checks**
+- [x] **Step 2: Run all focused visual/theme and code-size checks**
 
 Run: `cmake --build --preset debug -j4 && ctest --test-dir build/debug -R '^(code-size|appearance-preferences|ui-surface)$' --output-on-failure`
 
@@ -296,7 +296,7 @@ Expected: complete Debug build succeeds and all three tests pass. Do not run win
 
 Launch `./build/debug/NekoPlayer --no-config` from the native Wayland session. Inspect Dark and Light welcome surfaces and a playing window at 16:9, a narrow window, and 1.75× display scaling. Confirm text is not clipped, actions retain their hit targets, focused/disabled/selected states remain distinct, the video position/layout has not changed, and there is no visible icon raster blur. If only Xvfb/offscreen is available, record that as layout-only evidence and mark native Wayland visual acceptance as not performed rather than claiming it passed.
 
-- [ ] **Step 4: Recheck all code-size limits and commit the completed phase**
+- [x] **Step 4: Recheck all code-size limits and commit the completed phase**
 
 Run: `ctest --test-dir build/debug -R '^code-size$' --output-on-failure && git diff --check && git status --short`
 

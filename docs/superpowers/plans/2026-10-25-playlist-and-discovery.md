@@ -31,11 +31,13 @@
 - Modify `translations/NekoPlayer_en.ts`
 
 **Interfaces / behavior:**
-- Add a `QLineEdit` named `playlistSearchEdit` under the playlist header, with clear button, placeholder `搜索播放列表`, accessible name, and a `QShortcut` for Escape to clear.
+- Add a `QLineEdit` named `playlistSearchEdit` under the playlist header, with clear button, placeholder `搜索播放列表`, and accessible name.
+- Add pane-owned search actions with `Qt::WidgetWithChildrenShortcut`: `搜索播放列表` (`QKeySequence::Find`, object name `focusPlaylistSearchAction`) focuses and selects the search field, and `清除播放列表搜索` (Escape, object name `clearPlaylistSearchAction`) clears it. Expose both through `shortcutActions()` for the shortcut reference.
 - Add a `QSortFilterProxyModel` as a member, source = `PlaylistModel`, case-insensitive, filter column 0, dynamic.
 - While the trimmed search text is non-empty, set the view model to the proxy; disable InternalMove drag/drop and the remove/up/down editing actions. While empty, set the view back to the source model and restore drag/drop.
 - Add helpers mapping a view index to the source row; use them for `activated`, single-click pending indices, and editing actions.
 - `synchronizeCurrent()` maps the source current row into the proxy when filtering; if it is hidden, clear the view selection. Clearing the filter selects the source current row.
+- Clear the search on a source-model reset so a replacement queue is not hidden by a stale filter.
 - The item count shows `"%1 / %2 项"` while filtering and `"%1 项"` otherwise.
 - Do not modify the queue, current row, playback, or drag/drop semantics when the filter is empty.
 
@@ -59,13 +61,16 @@
 
 **Interfaces / behavior:**
 - `ShortcutsDialog` is a `QDialog` with a read-only `QTreeWidget` (`shortcutsTree`) and columns `操作`, `快捷键`, `范围`.
-- Construction takes a `QMenuBar *`; it recursively walks menus, deduplicates shared `QAction`s, and includes only actions with non-empty shortcuts. Scope is `列表聚焦` for `Qt::WidgetShortcut`, otherwise `全局`. Menu titles are top-level items.
+- Construction takes a `QMenuBar *` plus an optional list of extra pane-owned `QAction`s; it recursively walks menus, deduplicates shared `QAction`s, and includes only actions with non-empty shortcuts. Extra actions that are not already menu actions appear under the top-level `面板快捷键` item, pruned when empty.
+- Scope is `列表聚焦` for `Qt::WidgetShortcut`, `当前面板` for `Qt::WidgetWithChildrenShortcut`, otherwise `全局`. Menu titles are top-level items.
+- `MainWindow` passes `PlaylistPane::shortcutActions()` so the search shortcuts appear in the reference.
 - Add a checkable-free `shortcutsAction` (`快捷键…`, F1, object name `shortcutsAction`) and a `帮助(&H)` menu after Settings containing the shortcut action and the existing About action.
 - Update the `LanguageChange` menu-title array and action text path for the Help menu/action.
 - The dialog is modal and built fresh on each open so it reflects the current language/shortcuts.
 
 **Tests:**
 - Add a `shortcuts-dialog` test target. Build a QMenuBar with a global action, a widget-scoped action, a no-shortcut action, and a submenu; assert the tree includes only the shortcut actions, correct scope labels, native shortcut text, and no duplicate shared action.
+- Assert extra actions appear under `面板快捷键` with `当前面板`, duplicates are not repeated, and an empty extra list prunes the section.
 - Compile-only window assertion for the F1 action/menu if a non-window test cannot reach it.
 
 **Commit:** `feat(ui): add a live keyboard shortcut reference`.
@@ -75,8 +80,7 @@
 **Files:**
 - Modify `src/playback/playlistcontroller.h/.cpp`
 - Modify `src/ui/playlistmodemenu.h/.cpp`
-- Modify `tests/playlist_modes_test.cpp`
-- Modify `tests/playlist_modes_test.cpp` only; no session schema changes.
+- Modify `tests/playlist_modes_test.cpp`; no session schema changes.
 
 **Interfaces / behavior:**
 - Add `bool stopAfterCurrent() const`, `void setStopAfterCurrent(bool)`, and `stopAfterCurrentChanged(bool)`.

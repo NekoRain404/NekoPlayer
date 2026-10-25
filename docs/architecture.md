@@ -124,9 +124,9 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 
 列表编辑沿用 Qt 的 `beginMoveRows`／`endMoveRows` 与 QListView InternalMove，不重载媒体。内部 MIME 对象持有 `QPersistentModelIndex`，跨移动和删除跟踪真实条目，区分重复路径并拒绝外部或已失效数据。当前行和失败行集合随结构变更映射；删除当前项先停止并取消自动续播，再选择邻项，迟到 EOF／加载错误不能自行启动它。面板通过持久索引区分编辑选择与播放项，仅播放项身份改变才同步选择；代理用 CurrentRole 加粗，不让 model 依赖字体。编辑 QAction 由面板提供给列表、按钮和主菜单，快捷键仅在列表聚焦时生效；不订阅播放进度，不新增帧处理或配置写盘。
 
-播放列表搜索由 `PlaylistPane` 持有临时 `QSortFilterProxyModel`，仅在裁剪后的搜索文本非空时安装到视图，并按显示名第 0 列做不区分大小写的包含过滤。过滤期间禁用 InternalMove 与移除／上移／下移动作，激活、单击和编辑动作通过 `mapToSource` 映射回源行；清空后恢复源模型、源当前行与拖动。搜索、计数和待定单击不修改队列、播放状态或会话文件。Ctrl+F 使用 `WidgetWithChildrenShortcut`，只在面板及其子控件聚焦时聚焦并全选搜索框；Esc 为搜索框的 `WidgetShortcut` 清空入口。
+播放列表搜索由 `PlaylistPane` 持有临时 `QSortFilterProxyModel`，仅在裁剪后的搜索文本非空时安装到视图，并按显示名第 0 列做不区分大小写的包含过滤。过滤期间禁用 InternalMove 与移除／上移／下移动作，激活、单击和编辑动作通过 `mapToSource` 映射回源行；清空后恢复源模型、源当前行与拖动。搜索、计数和待定单击不修改队列、播放状态或会话文件。Ctrl+F（`focusPlaylistSearchAction`）与 Esc（`clearPlaylistSearchAction`）是面板自有的 `WidgetWithChildrenShortcut` 动作，只在面板及其子控件聚焦时生效，分别聚焦并全选搜索框、清空搜索；源模型重置时自动清空搜索，避免旧过滤隐藏新队列。
 
-`ShortcutsDialog` 每次打开时递归遍历实时 `QMenuBar`，去重共享 `QAction`，只列出至少有一个快捷键的动作，并用 `QKeySequence::NativeText` 显示快捷键；范围列区分全局、列表聚焦（`WidgetShortcut`）和当前面板（`WidgetWithChildrenShortcut`，例如 Ctrl+F）。帮助菜单同时承载该动作（F1）和原有关于对话框，不手工维护快捷键表。
+`ShortcutsDialog` 每次打开时递归遍历实时 `QMenuBar`，去重共享 `QAction`，只列出至少有一个快捷键的动作，并用 `QKeySequence::NativeText` 显示快捷键；主窗口另外传入面板自有的快捷键动作，未出现在菜单中的项归入顶层“面板快捷键”，同样去重。范围列区分全局、列表聚焦（`WidgetShortcut`）和当前面板（`WidgetWithChildrenShortcut`，例如 Ctrl+F／Esc）。帮助菜单同时承载该动作（F1）和原有关于对话框，不手工维护快捷键表。
 
 `PlaylistController::stopAfterCurrent` 是会话内布尔意图，不写入 schema；开启时 `updateFileLoop()` 禁用原生 `loop-file` 使 EOF 可观察。自然 EOF 先取消该模式并结束队列，不推进到下一项；显式停止和 `clear()` 同样取消，手动上一项／下一项与循环／随机导航保持可用。
 

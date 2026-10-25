@@ -131,8 +131,8 @@
 
 ## Verification Checklist
 
-- [ ] Full Debug build succeeds; window tests compile only.
-- [ ] Non-window Debug suite passes.
-- [ ] Focused sanitizer tests pass with the documented leak-detection caveat.
-- [ ] `code-size`, changed-file formatting, and `git diff --check` pass.
-- [ ] No raw mpv commands in UI code; no polling or frame copies.
+- [x] Full Debug build succeeds; window tests compile only.
+- [x] Non-window Debug suite passes.
+- [x] Focused sanitizer tests pass with the documented leak-detection caveat.
+- [x] `code-size`, changed-file formatting, and `git diff --check` pass.
+- [x] No raw mpv commands in UI code; no polling or frame copies.

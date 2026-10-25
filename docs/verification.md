@@ -1,5 +1,19 @@
 # Verification Record
 
+Playlist and discovery verification (2026-10-25, code at `3a5ab8c`):
+
+- Scope: playlist search/filter, the live F1 shortcut reference and Help menu, stop-after-current, and the runtime application icon. No production code changed in this documentation round.
+- `cmake --preset debug` succeeded. `cmake --build --preset debug -j4` succeeded and relinked all 23 build targets, including the player and every test executable; the window-behavior suites were compiled and linked but not executed.
+- Standard suite `LC_ALL=C LANG=C ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passed **57/57** in **66.37 s**. The selection excluded 14 window/desktop tests out of 71 registered tests. The three new targets are `playlist-pane`, `shortcuts-dialog`, and `app-icon`; stop-after-current cases live in `playlist-modes`. `LC_ALL=C` remains required because the host's non-C locale makes mpv reject playback.
+- Focused selection `LC_ALL=C LANG=C ctest --test-dir build/debug -R '^(code-size|playlist|playlist-edit|playlist-modes|playlist-pane|shortcuts-dialog|app-icon|preferences-dialog)$' --output-on-failure` passed **8/8** in **11.44 s**.
+- `cmake --preset sanitizers` succeeded. `cmake --build --preset sanitizers --target playlist_test playlist_edit_test playlist_modes_test playlist_pane_test shortcuts_dialog_test app_icon_test -j4` succeeded. `LC_ALL=C LANG=C ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/sanitizers -R '^(playlist|playlist-edit|playlist-modes|playlist-pane|shortcuts-dialog|app-icon)$' --output-on-failure` passed **6/6** in **11.73 s** with no ASan/UBSan reports. Leak detection was disabled only to exclude documented platform-library exit allocations (Qt Wayland client, GTK/Pango/fontconfig); this result does not claim leak-free execution.
+- `rm -rf /tmp/neko-install && cmake --install build/debug --prefix /tmp/neko-install` installed exactly three files: `/tmp/neko-install/bin/NekoPlayer`, `/tmp/neko-install/share/applications/nekoplayer.desktop`, and `/tmp/neko-install/share/icons/hicolor/scalable/apps/nekoplayer.svg`.
+- `ctest --test-dir build/debug -R '^code-size$' --output-on-failure` passed **1/1** (0.40 s). The guard enforces a 500-line target, a 550-line ordinary hard limit, and 800 lines for the listed `mainwindow.cpp` / `window_test.cpp` exceptions.
+- `clang-format --dry-run --Werror` (clang-format 23.1.3) passed for the **18** changed C++ source/header files that still exist across `7e098ad..3a5ab8c`. `git diff --check -- . ':(exclude)docs/skills.md'` passed for both the working tree and the `7e098ad..3a5ab8c` range.
+- `cmake --build --preset debug --target release_translations -j4` succeeded with Ninja reporting `no work to do`; `lrelease6 translations/NekoPlayer_en.ts` reported **291 finished, 0 unfinished** translations.
+- Boundary checks: no `mpv_` / `MPV_` / `mpv/client.h` usage in `src/ui/`; UI timers remain single-shot hide/feedback or click-disambiguation timers rather than playback polling; no CPU frame copies or render-path changes.
+- Not verified by this round: native Wayland visual/keyboard/pointer behavior, HDR output and tone mapping on an HDR display, GPU hardware decoding, physical audio devices, multi-monitor mixed scaling, Windows, and distro packaging. Window-behavior tests compiled only. Real-display acceptance remains open.
+
 Final post-review hardening regression (2026-10-25, code at `6232353`):
 
 - The final fix wave scoped PreferencesDialog Restore Defaults by category (Subtitles no longer resets the hidden Playback seek draft), added a load-bearing regression for that path, asserted playlist display-name cache alignment, normalized the programmatic seek setter, and added a custom-seek save/load assertion.

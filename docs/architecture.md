@@ -17,7 +17,7 @@
 | `NetworkOpenDialog` | 网络地址输入与播放按钮可用性 | Qt Widgets / MediaSource；确认后由 MainWindow 交给队列业务 API |
 | `PlaylistModel` | 本地／网络媒体队列、当前项与原生单项移动；维护与队列同步的显示名缓存，提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器 |
 | `M3u8Store` | UTF-8 播放列表导入、整批来源校验、当前行注释与原子保存 | Qt Core / MediaSource，不操作队列或播放器，不联网探测 |
-| `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环／随机策略与有界失败恢复 | 依赖播放业务 API、队列模型和 `ShuffleOrder`，不依赖 UI |
+| `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环／随机策略、播放完当前停止标志与有界失败恢复 | 依赖播放业务 API、队列模型和 `ShuffleOrder`，不依赖 UI |
 | `ShuffleOrder` | 随机候选池、实际访问历史与前后导航 | Qt Core 持久模型索引，不控制播放器，不改变显示顺序 |
 | `VideoWidget` | GL 上下文、物理像素 FBO、帧更新、隐藏时跳帧、资源释放 | 只处理渲染，不提交播放命令 |
 | `TransportBar` | 展示时间/进度/音量，拖动与时间条滚轮定位意图，时间显示切换；`TransportBarMetrics::forWidth` 计算窄宽布局 | 状态快照和 QAction，不操作 mpv；滚轮档位由纯 `interactionpolicy` 提供 |
@@ -25,12 +25,14 @@
 | `ThumbnailPreviewPolicy` | 校验本地动态视频预览条件，避免对音频、网络或不可定位媒体启动解码 | 只读取播放状态与动态视频可用性，不访问帧或播放器句柄 |
 | `ThumbnailService` / `ffmpegthumbnaildecoder` / `ThumbnailPreview` | 有界后台缩略图解码、缓存、取消与时间条悬停预览 | 独立 FFmpeg 解码实例，不触碰主 libmpv client 或视频帧；预览控件只显示 QImage |
 | `PlaybackOverlay` / `playbackoverlaytext.cpp` | Tab 常驻播放信息与独立、自动隐藏的定位进度 | 只读取控制器快照；纯文本格式化与 Qt Widgets 分离，不调用 mpv |
-| `PlaylistPane` | 队列视图、独立编辑选择、当前项标识、编辑动作入口及可选单击激活 | 通过队列业务 API 和共享 QAction 操作，不接触 mpv；分隔条宽度由 MainWindow 持有 |
+| `PlaylistPane` | 队列视图、按显示名过滤的搜索框、临时 `QSortFilterProxyModel`、独立编辑选择、当前项标识、编辑动作入口及可选单击激活 | 过滤期间禁用拖动／编辑并把代理行映射回源行；通过队列业务 API 和共享 QAction 操作，不接触 mpv；分隔条宽度由 MainWindow 持有 |
+| `ShortcutsDialog` | 从实时 `QMenuBar` 生成只读快捷键树，去重共享动作并标注全局／列表聚焦／当前面板范围 | 只读取菜单与 `QAction`，不调用 mpv、不持有播放或偏好状态 |
+| `AppIcon` / `appicon.cpp` | 运行时按 16–256 px 绘制多尺寸窗口图标，几何与安装 SVG 一致 | Qt Gui 绘制，无 Qt SVG 插件或外部资源；不触碰播放或渲染 |
 | `TrackMenus` | 音轨、字幕菜单和外挂音轨／字幕文件入口；文件选择期间检查媒体代次 | 依赖控制器快照与业务接口，不接触 mpv handle |
 | `mpvcontroller_externaltracks.cpp` | 类型化外挂加载与渲染恢复队列，按规范化文件路径去重、按类型恢复流序号 | 同一 client 的异步命令，不依赖 UI 或增加解码器 |
 | `AudioDeviceMenu` | 当前输出设备选择；菜单栏与右键菜单复用同一菜单 | 只读取拥有数据的设备快照并调用控制器业务 API |
 | `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
-| `PlaylistModeMenu` | 互斥循环模式、独立随机开关、R／Shift+R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
+| `PlaylistModeMenu` | 互斥循环模式、独立随机开关、播放完当前停止、R／Shift+R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
 | `NavigationMenu` / `TimeSeekDialog` | 章节、逐帧、多档跳转、回到开头及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键；定位反馈复用全屏进度 |
 | `AbLoop` / `mpvcontroller_loop.cpp` | 当前媒体的 A–B 区间意图、端点校验和原生异步设置 | Qt Core 值类型与同一 mpv client，不依赖 UI |
 | `AbLoopMenu` | 共享区间菜单、当前时间端点动作和快捷键 | 只使用控制器业务 API，端点变化时刷新标题 |
@@ -55,7 +57,7 @@
 | `FolderMenu` | 共享文件夹入口、递归选项与可取消进度窗口 | 只向 MainWindow 发布完整结果，再复用原有打开／追加队列入口 |
 | `windowactions.cpp` | 同一 MainWindow 类的动作与菜单装配 | 菜单、按钮、快捷键共用 QAction |
 | `windowsession.cpp` | 同一 MainWindow 类的会话装配、窗口 geometry 与关闭保存 | SessionManager、Qt Widgets，不介入帧渲染 |
-| `main.cpp` | 参数解析、启动和 smoke 退出条件 | 后端诊断实现单独保留 |
+| `main.cpp` | 参数解析、启动、应用／窗口图标设置和 smoke 退出条件 | 后端诊断实现单独保留 |
 
 业务路径：用户文件／网络入口 → `MediaSource` 校验与规范化 → `PlaylistController` 选择媒体项 → 控制器异步命令 → mpv 事件 → Qt 接收者队列 → 状态信号 → 展示更新。替换队列前验证整批输入，无效输入不修改队列；网络 I/O 由 mpv 负责，Qt Network 仅用于测试。EOF 自动选择下一项；加载失败沿当前导航方向跳过失败项，不将一般 mpv 错误误认为队列切换。渲染路径独立：mpv 更新回调 → Qt 队列 → GL current → render API → Qt 合成。
 
@@ -121,6 +123,14 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 字幕显示实现集中在 `mpvcontroller_subtitles.cpp`，复用同一 client 的异步 `set` 命令；只有变更的字段才提交，UTF-8 字体作为独立参数传递。`SubtitlePreferences` 表示最新成功入队的用户意图，快速步进和关闭保存直接读取它，不等待属性观察；异步执行错误仍由现有错误信号报告，不宣称后端已执行成功。显示开关使用 `sub-visibility`，不改 `sid`；缩放为 0.25–4，位置为 0–100，拒绝非有限步进；字体去除首尾空白，空值、控制字符或超长名称回退 `sans-serif`。不设置 ASS 强制覆盖，不新增帧复制、轮询或媒体重载。schema 1 的可选 `subtitles/*` 字段缺失或损坏时分别回退默认值；停止、换片和渲染重建不清除偏好。字幕菜单仍按媒体状态启用，空闲设置入口由全局设置菜单和共享 F6 动作提供。对话框只在打开时枚举字体，保留泛型及当前未安装的字体名称；偏好变化通知驱动动作刷新，无逐帧处理。
 
 列表编辑沿用 Qt 的 `beginMoveRows`／`endMoveRows` 与 QListView InternalMove，不重载媒体。内部 MIME 对象持有 `QPersistentModelIndex`，跨移动和删除跟踪真实条目，区分重复路径并拒绝外部或已失效数据。当前行和失败行集合随结构变更映射；删除当前项先停止并取消自动续播，再选择邻项，迟到 EOF／加载错误不能自行启动它。面板通过持久索引区分编辑选择与播放项，仅播放项身份改变才同步选择；代理用 CurrentRole 加粗，不让 model 依赖字体。编辑 QAction 由面板提供给列表、按钮和主菜单，快捷键仅在列表聚焦时生效；不订阅播放进度，不新增帧处理或配置写盘。
+
+播放列表搜索由 `PlaylistPane` 持有临时 `QSortFilterProxyModel`，仅在裁剪后的搜索文本非空时安装到视图，并按显示名第 0 列做不区分大小写的包含过滤。过滤期间禁用 InternalMove 与移除／上移／下移动作，激活、单击和编辑动作通过 `mapToSource` 映射回源行；清空后恢复源模型、源当前行与拖动。搜索、计数和待定单击不修改队列、播放状态或会话文件。Ctrl+F 使用 `WidgetWithChildrenShortcut`，只在面板及其子控件聚焦时聚焦并全选搜索框；Esc 为搜索框的 `WidgetShortcut` 清空入口。
+
+`ShortcutsDialog` 每次打开时递归遍历实时 `QMenuBar`，去重共享 `QAction`，只列出至少有一个快捷键的动作，并用 `QKeySequence::NativeText` 显示快捷键；范围列区分全局、列表聚焦（`WidgetShortcut`）和当前面板（`WidgetWithChildrenShortcut`，例如 Ctrl+F）。帮助菜单同时承载该动作（F1）和原有关于对话框，不手工维护快捷键表。
+
+`PlaylistController::stopAfterCurrent` 是会话内布尔意图，不写入 schema；开启时 `updateFileLoop()` 禁用原生 `loop-file` 使 EOF 可观察。自然 EOF 先取消该模式并结束队列，不推进到下一项；显式停止和 `clear()` 同样取消，手动上一项／下一项与循环／随机导航保持可用。
+
+`AppIcon::windowIcon()` 在运行时以抗锯齿绘制 16、24、32、48、64、128、256 px 的多尺寸 `QIcon`，透明背景，几何与 `data/nekoplayer.svg` 一致；`main.cpp` 在 GUI 分支创建窗口前调用 `QApplication::setWindowIcon()`。该路径不依赖 Qt SVG 插件或外部资源，也不改变播放、渲染或安装的桌面条目图标。
 
 缺失文件的同步错误回调也允许修改队列：顺序扫描在首次报错前才为剩余候选建立持久索引快照，按原遍历顺序最多尝试每个仍存在的候选一次，回调中新追加的项留给下一次导航。随机扫描沿持久候选池继续，可在固定扫描预算内访问回调新加入的项。正常有效文件入口不构建整表快照。新扫描、清空或移除当前项会使旧扫描修订号失效；取消与耗尽是不同结果，取消不能发出 queueFinished 或覆盖重入的新播放请求。
 

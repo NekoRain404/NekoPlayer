@@ -11,6 +11,7 @@ class QFontComboBox;
 class QCheckBox;
 class QLabel;
 class QPushButton;
+class QSpinBox;
 class QTabWidget;
 
 class PreferencesDialog final : public QDialog {
@@ -64,7 +65,7 @@ class PreferencesDialog final : public QDialog {
     QCheckBox *mediaScanningEnabled_;
     QCheckBox *recursiveFolderScan_;
     QCheckBox *resumePlaybackPosition_;
-    QComboBox *seekStepSeconds_;
+    QSpinBox *seekStepSeconds_;
     MediaLibraryPreferences mediaLibraryPreferences_;
     bool resumePlaybackPositionDefault_ = true;
     int seekStepSecondsDefault_ = 5;

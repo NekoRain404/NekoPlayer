@@ -10,6 +10,7 @@
 #include <QDialogButtonBox>
 #include <QPushButton>
 #include <QSettings>
+#include <QSpinBox>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QWidget>
@@ -78,7 +79,7 @@ class PreferencesCoordinatorTest final : public QObject {
             dialog->findChild<QCheckBox *>(QStringLiteral("recursiveFolderScanChoice"));
         auto *resume =
             dialog->findChild<QCheckBox *>(QStringLiteral("resumePlaybackPositionChoice"));
-        auto *seek = dialog->findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+        auto *seek = dialog->findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
         auto *single =
             dialog->findChild<QCheckBox *>(QStringLiteral("interactionSingleClickChoice"));
         auto *middle =
@@ -97,7 +98,7 @@ class PreferencesCoordinatorTest final : public QObject {
         QVERIFY(!scanning->isChecked());
         QVERIFY(recursive->isChecked());
         QVERIFY(!resume->isChecked());
-        QCOMPARE(seek->currentData().toInt(), 10);
+        QCOMPARE(seek->value(), 10);
         QVERIFY(!single->isChecked());
         QCOMPARE(middle->currentData().toInt(), static_cast<int>(MiddleClickAction::Fullscreen));
         QCOMPARE(wheelStep->currentData().toInt(), 8);
@@ -125,7 +126,7 @@ class PreferencesCoordinatorTest final : public QObject {
                 dialog->findChild<QCheckBox *>(QStringLiteral("recursiveFolderScanChoice"));
             auto *resume =
                 dialog->findChild<QCheckBox *>(QStringLiteral("resumePlaybackPositionChoice"));
-            auto *seek = dialog->findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+            auto *seek = dialog->findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
             auto *single =
                 dialog->findChild<QCheckBox *>(QStringLiteral("interactionSingleClickChoice"));
             auto *middle =
@@ -149,7 +150,7 @@ class PreferencesCoordinatorTest final : public QObject {
             scanning->setChecked(false);
             recursive->setChecked(true);
             resume->setChecked(false);
-            seek->setCurrentIndex(seek->findData(10));
+            seek->setValue(10);
             single->setChecked(false);
             middle->setCurrentIndex(middle->findData(static_cast<int>(MiddleClickAction::Mute)));
             wheelVolume->setChecked(false);

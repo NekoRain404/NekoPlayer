@@ -15,6 +15,7 @@
     <message><source>左右键跳转时长</source><translation>Left/right seek interval</translation></message>
     <message><source>左右键跳转时长：</source><translation>Left/right seek interval:</translation></message>
     <message><source>%1 秒</source><translation>%1 seconds</translation></message>
+    <message><source> 秒</source><translation> s</translation></message>
     <message><source>媒体库</source><translation>Media Library</translation></message>
     <message><source>允许扫描文件夹中的媒体文件</source><translation>Allow scanning folders for media files</translation></message>
     <message><source>默认包含子文件夹</source><translation>Include subfolders by default</translation></message>

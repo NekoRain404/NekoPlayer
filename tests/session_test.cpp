@@ -506,7 +506,8 @@ class SessionTest final : public QObject {
             settings.setValue(QStringLiteral("playback/speed"), 99.0);
             settings.setValue(QStringLiteral("playback/audioDelay"), -99.0);
             settings.setValue(QStringLiteral("playback/subtitleDelay"), QStringLiteral("nan"));
-            settings.setValue(QStringLiteral("playback/seekStepSeconds"), 15);
+            settings.setValue(QStringLiteral("playback/seekStepSeconds"),
+                              QStringLiteral("garbage"));
             settings.sync();
         }
         const auto loaded = SessionStore(file).load();
@@ -520,6 +521,12 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.tuning.audioDelay, -10.0);
         QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
         QCOMPARE(loaded.state.seekStepSeconds, 5);
+        const QList<QPair<int, int>> seekCases{{0, 5}, {121, 5}, {1, 1}, {7, 7}, {120, 120}};
+        for (const auto &[stored, expected] : seekCases) {
+            QSettings(file, QSettings::IniFormat)
+                .setValue(QStringLiteral("playback/seekStepSeconds"), stored);
+            QCOMPARE(SessionStore(file).load().state.seekStepSeconds, expected);
+        }
     }
 
     void inaccessibleDestinationReportsFailure() {

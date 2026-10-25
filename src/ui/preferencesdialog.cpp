@@ -12,6 +12,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QSpinBox>
 #include <QStyle>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -30,7 +31,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       mediaScanningEnabled_(new QCheckBox(tr("允许扫描文件夹中的媒体文件"), this)),
       recursiveFolderScan_(new QCheckBox(tr("默认包含子文件夹"), this)),
       resumePlaybackPosition_(new QCheckBox(tr("恢复上次播放位置"), this)),
-      seekStepSeconds_(new QComboBox(this)), mediaLibraryPreferences_(initialMediaLibrary),
+      seekStepSeconds_(new QSpinBox(this)), mediaLibraryPreferences_(initialMediaLibrary),
       resumePlaybackPositionDefault_(resumePlaybackPosition),
       seekStepSecondsDefault_(seekStepSeconds), lastApplyActive_(player.state().active) {
     setObjectName(QStringLiteral("preferencesDialog"));
@@ -50,10 +51,9 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     playbackForm->addRow(resumePlaybackPosition_);
     seekStepSeconds_->setObjectName(QStringLiteral("seekStepChoice"));
     seekStepSeconds_->setAccessibleName(tr("左右键跳转时长"));
-    for (const int seconds : {5, 10, 30})
-        seekStepSeconds_->addItem(tr("%1 秒").arg(seconds), seconds);
-    const auto seekIndex = seekStepSeconds_->findData(seekStepSeconds);
-    seekStepSeconds_->setCurrentIndex(seekIndex >= 0 ? seekIndex : 0);
+    seekStepSeconds_->setRange(1, 120);
+    seekStepSeconds_->setSuffix(tr(" 秒"));
+    seekStepSeconds_->setValue(seekStepSeconds);
     playbackForm->addRow(tr("左右键跳转时长："), seekStepSeconds_);
     actualDecoder_->setObjectName(QStringLiteral("actualDecoder"));
     actualDecoder_->setTextFormat(Qt::PlainText);
@@ -157,8 +157,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             &PreferencesDialog::updateApplyButton);
     connect(resumePlaybackPosition_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
-    connect(seekStepSeconds_, &QComboBox::currentIndexChanged, this,
-            &PreferencesDialog::updateApplyButton);
+    connect(seekStepSeconds_, &QSpinBox::valueChanged, this, &PreferencesDialog::updateApplyButton);
     connect(subtitleVisible_, &QCheckBox::toggled, this, &PreferencesDialog::updateApplyButton);
     connect(subtitleScale_, &QDoubleSpinBox::valueChanged, this,
             &PreferencesDialog::updateApplyButton);
@@ -222,7 +221,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
         subtitleScale_->setValue(1.0);
         subtitlePosition_->setValue(100.0);
         subtitleFont_->setEditText(SubtitlePreferences{}.font);
-        seekStepSeconds_->setCurrentIndex(seekStepSeconds_->findData(5));
+        seekStepSeconds_->setValue(5);
     });
     updateApplyButton();
     updateActualDecoder();
@@ -251,7 +250,7 @@ void PreferencesDialog::apply() {
         resumePlaybackPositionDefault_ = resumePlaybackPosition_->isChecked();
         emit resumePlaybackPositionChanged(resumePlaybackPositionDefault_);
     }
-    const auto seekStep = seekStepSeconds_->currentData().toInt();
+    const auto seekStep = seekStepSeconds_->value();
     if (seekStep != seekStepSecondsDefault_) {
         seekStepSecondsDefault_ = seekStep;
         emit seekStepSecondsChanged(seekStep);
@@ -289,7 +288,7 @@ void PreferencesDialog::updateApplyButton() {
     const bool playbackChange =
         decodingChanged || draft.normalized() != player_.subtitlePreferences() ||
         resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_ ||
-        seekStepSeconds_->currentData().toInt() != seekStepSecondsDefault_;
+        seekStepSeconds_->value() != seekStepSecondsDefault_;
     applyButton_->setEnabled(appearanceChanged() || mediaLibraryChanged || interactionChanged() ||
                              (player_.isReady() && playbackChange));
 }

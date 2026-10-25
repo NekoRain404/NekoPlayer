@@ -23,6 +23,7 @@
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QSlider>
+#include <QSpinBox>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTemporaryDir>
@@ -707,10 +708,10 @@ class WindowTest final : public QObject {
         auto *coordinator = window.findChild<PreferencesCoordinator *>();
         QVERIFY(coordinator);
         auto first = coordinator->createDialog(&window, PreferencesDialog::Category::Playback);
-        auto *firstChoice = first->findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+        auto *firstChoice = first->findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
         QVERIFY(firstChoice);
-        QCOMPARE(firstChoice->currentData().toInt(), 5);
-        firstChoice->setCurrentIndex(firstChoice->findData(10));
+        QCOMPARE(firstChoice->value(), 5);
+        firstChoice->setValue(10);
         auto *buttons = first->findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
         QVERIFY(buttons);
         buttons->button(QDialogButtonBox::Apply)->click();
@@ -720,9 +721,9 @@ class WindowTest final : public QObject {
         QCOMPARE(back->text(), QStringLiteral("后退 10 秒"));
         QCOMPARE(forward->text(), QStringLiteral("前进 10 秒"));
         auto second = coordinator->createDialog(&window, PreferencesDialog::Category::Playback);
-        auto *secondChoice = second->findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+        auto *secondChoice = second->findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
         QVERIFY(secondChoice);
-        QCOMPARE(secondChoice->currentData().toInt(), 10);
+        QCOMPARE(secondChoice->value(), 10);
     }
 
     void reportsMissingGraphicsContext() {

@@ -13,6 +13,7 @@
 #include <QMenu>
 #include <QPushButton>
 #include <QSettings>
+#include <QSpinBox>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -149,9 +150,9 @@ class PreferencesDialogTest final : public QObject {
                     ->isChecked());
         QVERIFY(dialog.findChild<QCheckBox *>(QStringLiteral("resumePlaybackPositionChoice"))
                     ->isChecked());
-        auto *seekStep = dialog.findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+        auto *seekStep = dialog.findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
         QVERIFY(seekStep);
-        QCOMPARE(seekStep->currentData().toInt(), 5);
+        QCOMPARE(seekStep->value(), 5);
     }
 
     void opensRequestedCategory() {
@@ -204,19 +205,18 @@ class PreferencesDialogTest final : public QObject {
     void appliesSeekStepPreference() {
         MpvController player(true, true);
         PreferencesDialog dialog(player);
-        auto *seekStep = dialog.findChild<QComboBox *>(QStringLiteral("seekStepChoice"));
+        auto *seekStep = dialog.findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
         QVERIFY(seekStep);
-        QCOMPARE(seekStep->count(), 3);
-        QCOMPARE(seekStep->itemData(0).toInt(), 5);
-        QCOMPARE(seekStep->itemData(1).toInt(), 10);
-        QCOMPARE(seekStep->itemData(2).toInt(), 30);
+        QCOMPARE(seekStep->minimum(), 1);
+        QCOMPARE(seekStep->maximum(), 120);
+        QCOMPARE(seekStep->value(), 5);
         QSignalSpy changed(&dialog, &PreferencesDialog::seekStepSecondsChanged);
-        seekStep->setCurrentIndex(1);
+        seekStep->setValue(7);
         auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
         QVERIFY(buttons);
         buttons->button(QDialogButtonBox::Apply)->click();
         QCOMPARE(changed.count(), 1);
-        QCOMPARE(changed.constFirst().constFirst().toInt(), 10);
+        QCOMPARE(changed.constFirst().constFirst().toInt(), 7);
     }
 
     void interactionCategoryExposesCurrentValues() {

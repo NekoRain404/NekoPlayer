@@ -107,12 +107,14 @@ appropriate.
 
 ## Verification Checklist
 
-- [ ] Full Debug build succeeds; window tests compile only.
-- [ ] Non-window Debug suite passes under `LC_ALL=C LANG=C`.
-- [ ] Focused sanitizer targets pass with the documented leak-detection caveat.
-- [ ] `code-size`, changed-file formatting, and `git diff --check` pass.
-- [ ] No raw mpv commands in UI code; no new polling or frame copies.
+- [x] Full Debug build succeeds; window tests compile only.
+- [x] Non-window Debug suite passes under `LC_ALL=C LANG=C`.
+- [x] Focused sanitizer targets pass with the documented leak-detection caveat.
+- [x] `code-size`, changed-file formatting, and `git diff --check` pass.
+- [x] No raw mpv commands in UI code; no new polling or frame copies.
 - [ ] README/architecture/verification/plan updated; whole-branch review clean.
+      Documentation is updated; the whole-branch review findings are fixed at
+      `832fbe0`, with the scoped re-review still pending.
 
 ## Status (2026-10-25)
 
@@ -123,4 +125,5 @@ Code at `acc623e`; commits `35961c2`, `cce15f8`, `8cf71e3`, `acc623e`.
 - [x] Task 3: pane `ExtendedSelection`, modifier-safe click-to-play, empty-state hint.
 - [x] Task 4: playlist sort submenu and count-confirmed missing-file cleanup.
 - [x] Task 5: Debug build; non-window suite 62/62 in 60.44 s; focused selection 5/5 in 7.27 s; focused sanitizer 4/4 in 7.70 s with leak detection disabled for documented platform-library exit allocations; `code-size` 1/1 with advisories for `windowactions.cpp` (537) and `ui_surface_test.cpp` (550); 19 changed C++ files formatting-clean; `git diff --check` clean excluding `docs/skills.md`; 309/309 translations finished; three-file install layout; no raw mpv use in `src/ui/`; all commits authored by NekoRain with no co-author trailers.
+- [x] Final review fix wave at `832fbe0`: revalidated missing-file cleanup after confirmation with the actual count; sort cancels a pending folder import; press-time modifier cancellation and modifier clearing; empty-queue hint precedence; failure history cleared only after a real sort; wait cursors for sort/scan/removal; three new `playlist-pane` tests. Re-verified: non-window **62/62** in **61.13 s**; focused **6/6** in **7.93 s**; focused sanitizers **3/3** in **6.97 s** with leak detection disabled for the documented platform-library caveat; `code-size` 1/1 with advisories for `windowactions.cpp` (539), `playlist_pane_test.cpp` (502) and `ui_surface_test.cpp` (550); 5 changed C++ files formatting-clean; `git diff --check` clean excluding `docs/skills.md`; 309/309 translations finished; three-file install layout.
 - [ ] Native Wayland visual/keyboard/pointer acceptance was not performed; window tests remain compile-only.

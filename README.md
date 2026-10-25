@@ -64,7 +64,14 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 cmake --install build/debug --prefix ~/.local
 ```
 
-安装后写入 `bin/NekoPlayer`、`share/applications/nekoplayer.desktop` 和 `share/icons/hicolor/scalable/apps/nekoplayer.svg`。桌面条目通过 `Exec=NekoPlayer %F` 启动，因此 `~/.local/bin` 需要位于 `PATH` 中；图标和菜单条目可能需要重新登录或刷新桌面缓存后才会出现。可用 `cmake --install build/debug --prefix /tmp/neko-install` 检查安装布局。
+安装后写入 `bin/NekoPlayer`、`share/applications/nekoplayer.desktop` 和 `share/icons/hicolor/scalable/apps/nekoplayer.svg`。桌面条目通过 `Exec=NekoPlayer %F` 启动，因此 `~/.local/bin` 需要位于 `PATH` 中。若菜单中仍未出现条目或图标，可刷新用户级桌面数据库和图标缓存：
+
+```bash
+update-desktop-database ~/.local/share/applications
+gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
+```
+
+可用 `cmake --install build/debug --prefix /tmp/neko-install` 检查安装布局。
 
 ## 常用操作
 

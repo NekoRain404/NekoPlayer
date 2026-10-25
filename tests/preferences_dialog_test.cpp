@@ -261,6 +261,7 @@ class PreferencesDialogTest final : public QObject {
         interaction.wheelVolumeStep = 12;
         interaction.wheelSeeksTimeline = false;
         interaction.playlistSingleClick = true;
+        interaction.showRemainingTime = true;
         PreferencesDialog dialog(player, nullptr, {}, true, 5, {}, interaction);
         auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
         auto *single =
@@ -277,8 +278,10 @@ class PreferencesDialogTest final : public QObject {
             dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelSeekChoice"));
         auto *playlist =
             dialog.findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
+        auto *remaining =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionRemainingTimeChoice"));
         QVERIFY(tabs && single && doubleClick && middle && wheelVolume && wheelStep && wheelSeek &&
-                playlist);
+                playlist && remaining);
         QCOMPARE(tabs->count(), 6);
         QCOMPARE(tabs->tabText(5), QStringLiteral("交互"));
         QVERIFY(!single->isChecked());
@@ -289,9 +292,11 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(wheelStep->currentData().toInt(), 12);
         QVERIFY(!wheelSeek->isChecked());
         QVERIFY(playlist->isChecked());
+        QVERIFY(remaining->isChecked());
         QCOMPARE(single->accessibleName(), QStringLiteral("单击视频时播放或暂停"));
         QCOMPARE(middle->accessibleName(), QStringLiteral("中键单击操作"));
-        QCOMPARE(wheelStep->accessibleName(), QStringLiteral("滚轮音量步长"));
+        QCOMPARE(wheelStep->accessibleName(), QStringLiteral("音量步进"));
+        QCOMPARE(remaining->accessibleName(), QStringLiteral("显示剩余时间"));
     }
 
     void appliesInteractionPreferencesOnceWhenChanged() {
@@ -311,9 +316,11 @@ class PreferencesDialogTest final : public QObject {
             dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelSeekChoice"));
         auto *playlist =
             dialog.findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
+        auto *remaining =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionRemainingTimeChoice"));
         auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
         QVERIFY(single && doubleClick && middle && wheelVolume && wheelStep && wheelSeek &&
-                playlist && buttons);
+                playlist && remaining && buttons);
         std::optional<InteractionPreferences> applied;
         int emissions = 0;
         connect(&dialog, &PreferencesDialog::interactionPreferencesChanged, &dialog,
@@ -329,6 +336,7 @@ class PreferencesDialogTest final : public QObject {
         wheelStep->setCurrentIndex(wheelStep->findData(9));
         wheelSeek->setChecked(false);
         playlist->setChecked(true);
+        remaining->setChecked(true);
         QCOMPARE(emissions, 0);
         buttons->button(QDialogButtonBox::Apply)->click();
         QCOMPARE(emissions, 1);
@@ -340,6 +348,7 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(applied->wheelVolumeStep, 9);
         QVERIFY(!applied->wheelSeeksTimeline);
         QVERIFY(applied->playlistSingleClick);
+        QVERIFY(applied->showRemainingTime);
 
         buttons->button(QDialogButtonBox::Apply)->click();
         QCOMPARE(emissions, 1);
@@ -355,6 +364,7 @@ class PreferencesDialogTest final : public QObject {
         interaction.wheelVolumeStep = 17;
         interaction.wheelSeeksTimeline = false;
         interaction.playlistSingleClick = true;
+        interaction.showRemainingTime = true;
         PreferencesDialog dialog(player, nullptr, {}, true, 5, {}, interaction);
         auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
         auto *single =
@@ -371,9 +381,11 @@ class PreferencesDialogTest final : public QObject {
             dialog.findChild<QCheckBox *>(QStringLiteral("interactionWheelSeekChoice"));
         auto *playlist =
             dialog.findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
+        auto *remaining =
+            dialog.findChild<QCheckBox *>(QStringLiteral("interactionRemainingTimeChoice"));
         auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
         QVERIFY(tabs && single && doubleClick && middle && wheelVolume && wheelStep && wheelSeek &&
-                playlist && buttons);
+                playlist && remaining && buttons);
         dialog.selectCategory(PreferencesDialog::Category::Interaction);
         QCOMPARE(tabs->currentIndex(), 5);
         auto *restore = buttons->button(QDialogButtonBox::RestoreDefaults);
@@ -386,6 +398,7 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(wheelStep->currentData().toInt(), 5);
         QVERIFY(wheelSeek->isChecked());
         QVERIFY(!playlist->isChecked());
+        QVERIFY(!remaining->isChecked());
 
         std::optional<InteractionPreferences> applied;
         connect(&dialog, &PreferencesDialog::interactionPreferencesChanged, &dialog,
@@ -399,6 +412,7 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(applied->wheelVolumeStep, 5);
         QVERIFY(applied->wheelSeeksTimeline);
         QVERIFY(!applied->playlistSingleClick);
+        QVERIFY(!applied->showRemainingTime);
     }
 
     void namesEveryPreferenceControlForAssistiveTechnology() {
@@ -425,9 +439,10 @@ class PreferencesDialogTest final : public QObject {
             {QStringLiteral("interactionDoubleClickChoice"), QStringLiteral("双击视频时切换全屏")},
             {QStringLiteral("interactionMiddleClickChoice"), QStringLiteral("中键单击操作")},
             {QStringLiteral("interactionWheelVolumeChoice"), QStringLiteral("滚轮调节音量")},
-            {QStringLiteral("interactionWheelStepChoice"), QStringLiteral("滚轮音量步长")},
+            {QStringLiteral("interactionWheelStepChoice"), QStringLiteral("音量步进")},
             {QStringLiteral("interactionWheelSeekChoice"), QStringLiteral("时间轴滚轮跳转")},
             {QStringLiteral("interactionPlaylistClickChoice"), QStringLiteral("播放列表单击播放")},
+            {QStringLiteral("interactionRemainingTimeChoice"), QStringLiteral("显示剩余时间")},
         };
         for (const auto &[objectName, name] : interactionNames) {
             auto *control = dialog.findChild<QWidget *>(objectName);

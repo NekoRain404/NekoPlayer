@@ -129,6 +129,59 @@ class TransportBarTest final : public QObject {
         QVERIFY(time->toolTip().contains(time->text()));
     }
 
+    void timeShowsRemainingCanBeConfiguredAndClickStaysTransient() {
+        QAction open(QStringLiteral("打开文件"));
+        QAction previous(QStringLiteral("上一个"));
+        QAction pause(QStringLiteral("播放"));
+        QAction next(QStringLiteral("下一个"));
+        QAction stop(QStringLiteral("停止"));
+        QAction mute(QStringLiteral("静音"));
+        QAction fullscreen(QStringLiteral("全屏"));
+        QWidget host;
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen, &host);
+        auto *hostLayout = new QVBoxLayout(&host);
+        hostLayout->setContentsMargins(0, 0, 0, 0);
+        hostLayout->addWidget(&transport);
+        host.resize(560, 100);
+        host.show();
+        QCoreApplication::processEvents();
+        PlaybackState state;
+        state.active = true;
+        state.seekable = true;
+        state.position = 75;
+        state.duration = 120;
+        transport.present(state);
+
+        auto *time = transport.findChild<QLabel *>(QStringLiteral("timeLabel"));
+        QVERIFY(time);
+        QVERIFY(!transport.timeShowsRemaining());
+        QCOMPARE(time->text(), QStringLiteral("00:01:15 / 00:02:00"));
+        const int labelWidth = time->width();
+
+        transport.setTimeShowsRemaining(true);
+        QVERIFY(transport.timeShowsRemaining());
+        QCOMPARE(time->text(), QStringLiteral("-00:00:45 / 00:02:00"));
+        QCOMPARE(time->width(), labelWidth);
+        transport.setTimeShowsRemaining(true);
+        QVERIFY(transport.timeShowsRemaining());
+        QCOMPARE(time->text(), QStringLiteral("-00:00:45 / 00:02:00"));
+
+        // A label click overrides the configured default only for this session.
+        const QPoint center = time->rect().center();
+        QMouseEvent press(QEvent::MouseButtonPress, center, time->mapToGlobal(center),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, center, time->mapToGlobal(center),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &release);
+        QVERIFY(!transport.timeShowsRemaining());
+        QCOMPARE(time->text(), QStringLiteral("00:01:15 / 00:02:00"));
+
+        transport.setTimeShowsRemaining(false);
+        QVERIFY(!transport.timeShowsRemaining());
+        QCOMPARE(time->text(), QStringLiteral("00:01:15 / 00:02:00"));
+    }
+
     void timeLabelSupportsKeyboardActivation() {
         QAction open(QStringLiteral("打开文件"));
         QAction previous(QStringLiteral("上一个"));

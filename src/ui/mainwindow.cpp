@@ -647,6 +647,8 @@ void MainWindow::applyInteractionPreferences(const InteractionPreferences &prefe
     interactionPreferences_ = preferences.normalized();
     if (playlistPane_)
         playlistPane_->setSingleClickActivation(interactionPreferences_.playlistSingleClick);
+    if (transport_)
+        transport_->setTimeShowsRemaining(interactionPreferences_.showRemainingTime);
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {

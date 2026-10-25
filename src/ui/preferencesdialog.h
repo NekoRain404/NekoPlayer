@@ -77,6 +77,7 @@ class PreferencesDialog final : public QDialog {
     QComboBox *interactionWheelStep_ = nullptr;
     QCheckBox *interactionWheelSeek_ = nullptr;
     QCheckBox *interactionPlaylistClick_ = nullptr;
+    QCheckBox *interactionRemainingTime_ = nullptr;
     QPushButton *applyButton_;
     QPushButton *restoreDefaultsButton_;
     QString lastDecoder_;

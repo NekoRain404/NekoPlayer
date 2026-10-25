@@ -351,6 +351,11 @@ add_dependencies(session_test test_media)
 add_test(NAME session COMMAND session_test)
 set_tests_properties(session PROPERTIES TIMEOUT 60)
 
+add_executable(interaction_preferences_test interaction_preferences_test.cpp)
+target_link_libraries(interaction_preferences_test PRIVATE neko_session Qt6::Test)
+add_test(NAME interaction-preferences COMMAND interaction_preferences_test)
+set_tests_properties(interaction-preferences PROPERTIES TIMEOUT 20)
+
 add_custom_command(OUTPUT "${TEST_TRACK_MEDIA}"
     COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
         -i "${TEST_MEDIA}" -f lavfi -i sine=frequency=880:sample_rate=48000

@@ -169,6 +169,8 @@ SessionLoadResult SessionStore::load() const {
         readBool(settings, QStringLiteral("interaction/wheelSeeksTimeline"), true);
     state.interaction.playlistSingleClick =
         readBool(settings, QStringLiteral("interaction/playlistSingleClick"));
+    state.interaction.showRemainingTime =
+        readBool(settings, QStringLiteral("interaction/showRemainingTime"));
     state.mediaLibrary.scanningEnabled =
         readBool(settings, QStringLiteral("library/scanningEnabled"), true);
     state.mediaLibrary.recursiveByDefault =
@@ -248,6 +250,8 @@ QString SessionStore::save(const SessionState &state) const {
                       saved.interaction.wheelSeeksTimeline);
     settings.setValue(QStringLiteral("interaction/playlistSingleClick"),
                       saved.interaction.playlistSingleClick);
+    settings.setValue(QStringLiteral("interaction/showRemainingTime"),
+                      saved.interaction.showRemainingTime);
     settings.setValue(QStringLiteral("library/scanningEnabled"),
                       saved.mediaLibrary.scanningEnabled);
     settings.setValue(QStringLiteral("library/recursiveByDefault"),

@@ -329,6 +329,15 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     applyResponsiveMetrics();
 }
 
+void TransportBar::setTimeShowsRemaining(bool remaining) {
+    if (timeShowsRemaining_ == remaining)
+        return;
+    timeShowsRemaining_ = remaining;
+    updateTimeLabel();
+}
+
+bool TransportBar::timeShowsRemaining() const { return timeShowsRemaining_; }
+
 QRect TransportBar::timelineGlobalGeometry() const {
     return QRect(timeline_->mapToGlobal(QPoint()), timeline_->size());
 }

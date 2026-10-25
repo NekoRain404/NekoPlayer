@@ -19,6 +19,8 @@ class TransportBar final : public QWidget {
     TransportBar(QAction *open, QAction *previous, QAction *pause, QAction *next, QAction *stop,
                  QAction *mute, QAction *fullscreen, QWidget *parent = nullptr);
     void present(const PlaybackState &state);
+    void setTimeShowsRemaining(bool remaining);
+    [[nodiscard]] bool timeShowsRemaining() const;
     [[nodiscard]] QRect timelineGlobalGeometry() const;
 
   protected:

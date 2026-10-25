@@ -29,11 +29,12 @@
     <message><source>静音</source><translation>Mute</translation></message>
     <message><source>全屏</source><translation>Fullscreen</translation></message>
     <message><source>滚轮调节音量</source><translation>Adjust volume with the wheel</translation></message>
-    <message><source>滚轮音量步长</source><translation>Wheel volume step</translation></message>
+    <message><source>音量步进</source><translation>Volume step</translation></message>
     <message><source>时间轴滚轮跳转</source><translation>Seek with the timeline wheel</translation></message>
     <message><source>播放列表单击播放</source><translation>Play playlist item on single click</translation></message>
+    <message><source>显示剩余时间</source><translation>Show remaining time</translation></message>
     <message><source>中键单击：</source><translation>Middle click:</translation></message>
-    <message><source>每次调节：</source><translation>Step per notch:</translation></message>
+    <message><source>音量步进：</source><translation>Volume step:</translation></message>
     <message><source>%1%</source><translation>%1%</translation></message>
     <message><source>单击会等待双击间隔，避免双击时也触发播放/暂停；关闭后该操作不执行。</source><translation>Single clicks wait for the double-click interval so a double click does not also play or pause. When disabled, the action does nothing.</translation></message>
 </context>

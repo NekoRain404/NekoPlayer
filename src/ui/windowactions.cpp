@@ -130,12 +130,14 @@ void MainWindow::createActions() {
     setAppearanceIcon(louder, AppearanceIcons::Symbol::Add);
     setAppearanceIcon(quieter, AppearanceIcons::Symbol::Remove);
     connect(louder, &QAction::triggered, this, [this] {
-        const auto volume = qBound(0.0, controller_->state().volume + 5.0, 100.0);
+        const auto step = static_cast<double>(interactionPreferences_.wheelVolumeStep);
+        const auto volume = qBound(0.0, controller_->state().volume + step, 100.0);
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
     });
     connect(quieter, &QAction::triggered, this, [this] {
-        const auto volume = qBound(0.0, controller_->state().volume - 5.0, 100.0);
+        const auto step = static_cast<double>(interactionPreferences_.wheelVolumeStep);
+        const auto volume = qBound(0.0, controller_->state().volume - step, 100.0);
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
     });

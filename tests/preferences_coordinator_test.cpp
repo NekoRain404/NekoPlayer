@@ -66,6 +66,7 @@ class PreferencesCoordinatorTest final : public QObject {
         state.interaction.middleClick = MiddleClickAction::Fullscreen;
         state.interaction.wheelVolumeStep = 8;
         state.interaction.playlistSingleClick = true;
+        state.interaction.showRemainingTime = true;
         auto coordinator = coordinatorFor(player, state);
         auto dialog = coordinator->createDialog(nullptr, PreferencesDialog::Category::MediaLibrary);
         QVERIFY(dialog);
@@ -88,9 +89,11 @@ class PreferencesCoordinatorTest final : public QObject {
             dialog->findChild<QComboBox *>(QStringLiteral("interactionWheelStepChoice"));
         auto *playlist =
             dialog->findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
+        auto *remaining =
+            dialog->findChild<QCheckBox *>(QStringLiteral("interactionRemainingTimeChoice"));
         auto *tabs = dialog->findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
         QVERIFY(theme && accent && glass && scanning && recursive && resume && seek && single &&
-                middle && wheelStep && playlist && tabs);
+                middle && wheelStep && playlist && remaining && tabs);
 
         QCOMPARE(theme->currentData().toInt(), static_cast<int>(Appearance::Theme::Light));
         QCOMPARE(accent->currentData().toInt(), static_cast<int>(Appearance::Accent::Amber));
@@ -103,6 +106,7 @@ class PreferencesCoordinatorTest final : public QObject {
         QCOMPARE(middle->currentData().toInt(), static_cast<int>(MiddleClickAction::Fullscreen));
         QCOMPARE(wheelStep->currentData().toInt(), 8);
         QVERIFY(playlist->isChecked());
+        QVERIFY(remaining->isChecked());
         QCOMPARE(tabs->currentIndex(), static_cast<int>(PreferencesDialog::Category::MediaLibrary));
     }
 
@@ -139,10 +143,13 @@ class PreferencesCoordinatorTest final : public QObject {
                 dialog->findChild<QCheckBox *>(QStringLiteral("interactionWheelSeekChoice"));
             auto *playlist =
                 dialog->findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
+            auto *remaining =
+                dialog->findChild<QCheckBox *>(QStringLiteral("interactionRemainingTimeChoice"));
             auto *buttons =
                 dialog->findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             QVERIFY(theme && accent && glass && scanning && recursive && resume && seek && single &&
-                    middle && wheelVolume && wheelStep && wheelSeek && playlist && buttons);
+                    middle && wheelVolume && wheelStep && wheelSeek && playlist && remaining &&
+                    buttons);
 
             theme->setCurrentIndex(theme->findData(static_cast<int>(Appearance::Theme::Light)));
             accent->setCurrentIndex(accent->findData(static_cast<int>(Appearance::Accent::Amber)));
@@ -157,6 +164,7 @@ class PreferencesCoordinatorTest final : public QObject {
             wheelStep->setCurrentIndex(wheelStep->findData(13));
             wheelSeek->setChecked(false);
             playlist->setChecked(true);
+            remaining->setChecked(true);
             buttons->button(QDialogButtonBox::Apply)->click();
 
             QCOMPARE(state.appearance.theme, Appearance::Theme::Light);
@@ -172,6 +180,7 @@ class PreferencesCoordinatorTest final : public QObject {
             QCOMPARE(state.interaction.wheelVolumeStep, 13);
             QVERIFY(!state.interaction.wheelSeeksTimeline);
             QVERIFY(state.interaction.playlistSingleClick);
+            QVERIFY(state.interaction.showRemainingTime);
         }
         qApp->setPalette(originalPalette);
         qApp->setStyleSheet(originalStyle);

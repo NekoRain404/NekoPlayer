@@ -183,6 +183,8 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             &PreferencesDialog::updateApplyButton);
     connect(interactionPlaylistClick_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
+    connect(interactionRemainingTime_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::hardwareDecodingPreferenceChanged, this,
             &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::subtitlePreferencesChanged, this,
@@ -416,7 +418,7 @@ void PreferencesDialog::createInteractionPage(InteractionPreferences interaction
     interactionWheelVolume_->setAccessibleName(tr("滚轮调节音量"));
     interactionWheelStep_ = new QComboBox(page);
     interactionWheelStep_->setObjectName(QStringLiteral("interactionWheelStepChoice"));
-    interactionWheelStep_->setAccessibleName(tr("滚轮音量步长"));
+    interactionWheelStep_->setAccessibleName(tr("音量步进"));
     for (int step = 1; step <= 20; ++step)
         interactionWheelStep_->addItem(tr("%1%").arg(step), step);
     interactionWheelSeek_ = new QCheckBox(tr("时间轴滚轮跳转"), page);
@@ -425,13 +427,17 @@ void PreferencesDialog::createInteractionPage(InteractionPreferences interaction
     interactionPlaylistClick_ = new QCheckBox(tr("播放列表单击播放"), page);
     interactionPlaylistClick_->setObjectName(QStringLiteral("interactionPlaylistClickChoice"));
     interactionPlaylistClick_->setAccessibleName(tr("播放列表单击播放"));
+    interactionRemainingTime_ = new QCheckBox(tr("显示剩余时间"), page);
+    interactionRemainingTime_->setObjectName(QStringLiteral("interactionRemainingTimeChoice"));
+    interactionRemainingTime_->setAccessibleName(tr("显示剩余时间"));
     form->addRow(interactionSingleClick_);
     form->addRow(interactionDoubleClick_);
     form->addRow(tr("中键单击："), interactionMiddleClick_);
     form->addRow(interactionWheelVolume_);
-    form->addRow(tr("每次调节："), interactionWheelStep_);
+    form->addRow(tr("音量步进："), interactionWheelStep_);
     form->addRow(interactionWheelSeek_);
     form->addRow(interactionPlaylistClick_);
+    form->addRow(interactionRemainingTime_);
     auto *help =
         new QLabel(tr("单击会等待双击间隔，避免双击时也触发播放/暂停；关闭后该操作不执行。"), page);
     help->setWordWrap(true);
@@ -454,6 +460,7 @@ void PreferencesDialog::displayInteractionPreferences(const InteractionPreferenc
                        : interactionWheelStep_->findData(InteractionPreferences{}.wheelVolumeStep));
     interactionWheelSeek_->setChecked(preferences.wheelSeeksTimeline);
     interactionPlaylistClick_->setChecked(preferences.playlistSingleClick);
+    interactionRemainingTime_->setChecked(preferences.showRemainingTime);
 }
 
 InteractionPreferences PreferencesDialog::interactionDraft() const {
@@ -464,7 +471,8 @@ InteractionPreferences PreferencesDialog::interactionDraft() const {
             .wheelAdjustsVolume = interactionWheelVolume_->isChecked(),
             .wheelVolumeStep = interactionWheelStep_->currentData().toInt(),
             .wheelSeeksTimeline = interactionWheelSeek_->isChecked(),
-            .playlistSingleClick = interactionPlaylistClick_->isChecked()};
+            .playlistSingleClick = interactionPlaylistClick_->isChecked(),
+            .showRemainingTime = interactionRemainingTime_->isChecked()};
 }
 
 bool PreferencesDialog::interactionChanged() const {

@@ -19,8 +19,6 @@
 #include <memory>
 
 int main(int argc, char *argv[]) {
-    // libmpv requires C numeric formatting regardless of the desktop locale.
-    std::setlocale(LC_NUMERIC, "C");
     const bool checkBackendOnly =
         CommandLineArguments::hasOptionBeforeSeparator(argc, argv, "--check-backend");
     std::unique_ptr<QCoreApplication> app;
@@ -28,6 +26,9 @@ int main(int argc, char *argv[]) {
         app = std::make_unique<QCoreApplication>(argc, argv);
     else
         app = std::make_unique<QApplication>(argc, argv);
+    // Qt may adopt the desktop locale while constructing the application;
+    // libmpv requires C numeric formatting, so pin it after Qt initialization.
+    std::setlocale(LC_NUMERIC, "C");
     QCoreApplication::setApplicationName(QStringLiteral("NekoPlayer"));
     QCoreApplication::setOrganizationName(QStringLiteral("NekoPlayer"));
     QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));

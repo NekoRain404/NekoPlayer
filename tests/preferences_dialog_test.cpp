@@ -210,6 +210,7 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(seekStep->minimum(), 1);
         QCOMPARE(seekStep->maximum(), 120);
         QCOMPARE(seekStep->value(), 5);
+        QCOMPARE(seekStep->suffix(), QStringLiteral(" 秒"));
         QSignalSpy changed(&dialog, &PreferencesDialog::seekStepSecondsChanged);
         seekStep->setValue(7);
         auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));

@@ -83,8 +83,7 @@ SessionState normalized(SessionState state) {
     state.tuning = state.tuning.normalized();
     state.videoColor = state.videoColor.normalized();
     state.interaction = state.interaction.normalized();
-    if (state.seekStepSeconds < 1 || state.seekStepSeconds > 120)
-        state.seekStepSeconds = 5;
+    state.seekStepSeconds = normalizedSeekStepSeconds(state.seekStepSeconds);
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
     if (state.audio.outputDevice.isEmpty() || state.audio.outputDevice.contains(QChar::Null))
@@ -154,7 +153,7 @@ SessionLoadResult SessionStore::load() const {
         readBool(settings, QStringLiteral("playback/resumePosition"), true);
     const auto seekStep =
         settings.value(QStringLiteral("playback/seekStepSeconds"), 5).toInt(&valid);
-    state.seekStepSeconds = valid && seekStep >= 1 && seekStep <= 120 ? seekStep : 5;
+    state.seekStepSeconds = valid ? normalizedSeekStepSeconds(seekStep) : seekStepSecondsDefault;
     state.interaction.singleClickPlayPause =
         readBool(settings, QStringLiteral("interaction/singleClickPlayPause"), true);
     state.interaction.doubleClickFullscreen =

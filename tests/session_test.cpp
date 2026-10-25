@@ -28,6 +28,8 @@ class SessionTest final : public QObject {
         SessionManager session(player, queue, file);
         QSignalSpy loaded(&player, &MpvController::fileLoaded);
         QVERIFY(session.restore().error.isEmpty());
+        session.setSeekStepSeconds(7);
+        QCOMPARE(session.seekStepSeconds(), 7);
         QCOMPARE(queue.model()->rowCount(), 3);
         QCOMPARE(queue.model()->currentIndex(), 1);
         // Saving before the first mpv observation must preserve loaded preferences.

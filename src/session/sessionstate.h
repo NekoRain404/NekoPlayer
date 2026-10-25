@@ -5,6 +5,16 @@
 #include <QByteArray>
 #include <QStringList>
 
+inline constexpr int seekStepSecondsMinimum = 1;
+inline constexpr int seekStepSecondsMaximum = 120;
+inline constexpr int seekStepSecondsDefault = 5;
+
+[[nodiscard]] constexpr int normalizedSeekStepSeconds(int seconds) {
+    return seconds >= seekStepSecondsMinimum && seconds <= seekStepSecondsMaximum
+               ? seconds
+               : seekStepSecondsDefault;
+}
+
 struct AudioPreferences {
     double volume = 100;
     bool muted = false;
@@ -58,7 +68,7 @@ struct SessionState {
     VideoColorAdjustment videoColor;
     MediaLibraryPreferences mediaLibrary;
     bool resumePlaybackPosition = true;
-    int seekStepSeconds = 5;
+    int seekStepSeconds = seekStepSecondsDefault;
     InteractionPreferences interaction;
 };
 

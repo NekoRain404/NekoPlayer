@@ -204,6 +204,8 @@
     <message><source>退出全屏</source><translation>Exit Fullscreen</translation></message>
     <message><source>后退 5 秒</source><translation>Seek Back 5 Seconds</translation></message>
     <message><source>前进 5 秒</source><translation>Seek Forward 5 Seconds</translation></message>
+    <message><source>后退 %1 秒</source><translation>Back %1 s</translation></message>
+    <message><source>前进 %1 秒</source><translation>Forward %1 s</translation></message>
     <message><source>增加音量</source><translation>Volume Up</translation></message>
     <message><source>降低音量</source><translation>Volume Down</translation></message>
     <message><source>退出</source><translation>Quit</translation></message>

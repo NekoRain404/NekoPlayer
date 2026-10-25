@@ -33,7 +33,8 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       resumePlaybackPosition_(new QCheckBox(tr("恢复上次播放位置"), this)),
       seekStepSeconds_(new QSpinBox(this)), mediaLibraryPreferences_(initialMediaLibrary),
       resumePlaybackPositionDefault_(resumePlaybackPosition),
-      seekStepSecondsDefault_(seekStepSeconds), lastApplyActive_(player.state().active) {
+      seekStepSecondsDefault_(normalizedSeekStepSeconds(seekStepSeconds)),
+      lastApplyActive_(player.state().active) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
@@ -51,9 +52,9 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     playbackForm->addRow(resumePlaybackPosition_);
     seekStepSeconds_->setObjectName(QStringLiteral("seekStepChoice"));
     seekStepSeconds_->setAccessibleName(tr("左右键跳转时长"));
-    seekStepSeconds_->setRange(1, 120);
+    seekStepSeconds_->setRange(seekStepSecondsMinimum, seekStepSecondsMaximum);
     seekStepSeconds_->setSuffix(tr(" 秒"));
-    seekStepSeconds_->setValue(seekStepSeconds);
+    seekStepSeconds_->setValue(seekStepSecondsDefault_);
     playbackForm->addRow(tr("左右键跳转时长："), seekStepSeconds_);
     actualDecoder_->setObjectName(QStringLiteral("actualDecoder"));
     actualDecoder_->setTextFormat(Qt::PlainText);
@@ -221,7 +222,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
         subtitleScale_->setValue(1.0);
         subtitlePosition_->setValue(100.0);
         subtitleFont_->setEditText(SubtitlePreferences{}.font);
-        seekStepSeconds_->setValue(5);
+        seekStepSeconds_->setValue(seekStepSecondsDefault);
     });
     updateApplyButton();
     updateActualDecoder();

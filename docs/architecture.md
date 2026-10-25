@@ -14,10 +14,11 @@
 | `playbacktime.cpp` | 时间字符串解析与格式化，校验格式、有限值及转换范围 | Qt Core，无播放或窗口状态 |
 | `MediaSource` | 本地路径、file URL 与受支持网络地址的校验、规范化和显示名称 | Qt Core，无 I/O、播放或窗口状态；保留签名 URL 的路径与查询转义 |
 | `mediafiletypes.cpp` | 统一支持的媒体扩展名与 Qt 文件选择器过滤模式 | Qt Core 值数据；目录扫描与打开/添加对话框共享，不依赖播放状态 |
+| `NaturalCompare` / `naturalcompare.cpp` | 共享的不区分大小写、识别数字的标题／路径比较，供文件夹扫描与播放列表排序复用 | Qt Core 纯函数，固定英文区域设置，不依赖环境 locale、播放或 UI |
 | `NetworkOpenDialog` | 网络地址输入与播放按钮可用性 | Qt Widgets / MediaSource；确认后由 MainWindow 交给队列业务 API |
-| `PlaylistModel` | 本地／网络媒体队列、当前项与原生单项移动；维护与队列同步的显示名缓存，提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器 |
+| `PlaylistModel` | 本地／网络媒体队列、当前项、原生单项移动与批量删除；按标题／路径的稳定自然排序（升序／降序）并重映射持久索引；维护与队列同步的显示名缓存，提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器；删除与排序保持当前条目身份，排序不重载媒体 |
 | `M3u8Store` | UTF-8 播放列表导入、整批来源校验、当前行注释与原子保存 | Qt Core / MediaSource，不操作队列或播放器，不联网探测 |
-| `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环／随机策略、播放完当前停止标志与有界失败恢复 | 依赖播放业务 API、队列模型和 `ShuffleOrder`，不依赖 UI |
+| `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环／随机策略、播放完当前停止标志与有界失败恢复；批量删除、缺失文件扫描／清理与队列排序 | 依赖播放业务 API、队列模型和 `ShuffleOrder`，不依赖 UI；UI 只通过这些业务 API 操作队列 |
 | `ShuffleOrder` | 随机候选池、实际访问历史与前后导航 | Qt Core 持久模型索引，不控制播放器，不改变显示顺序 |
 | `VideoWidget` | GL 上下文、物理像素 FBO、帧更新、隐藏时跳帧、资源释放 | 只处理渲染，不提交播放命令 |
 | `TransportBar` | 展示时间/进度/音量，拖动与时间条滚轮定位意图，时间显示切换（点击为本次运行临时覆盖，持久化的已播放/剩余默认由 MainWindow 应用）；`TransportBarMetrics::forWidth` 计算窄宽布局 | 状态快照和 QAction，不操作 mpv；滚轮档位由纯 `interactionpolicy` 提供 |
@@ -25,7 +26,7 @@
 | `ThumbnailPreviewPolicy` | 校验本地动态视频预览条件，避免对音频、网络或不可定位媒体启动解码 | 只读取播放状态与动态视频可用性，不访问帧或播放器句柄 |
 | `ThumbnailService` / `ffmpegthumbnaildecoder` / `ThumbnailPreview` | 有界后台缩略图解码、缓存、取消与时间条悬停预览 | 独立 FFmpeg 解码实例，不触碰主 libmpv client 或视频帧；预览控件只显示 QImage |
 | `PlaybackOverlay` / `playbackoverlaytext.cpp` | Tab 常驻播放信息与独立、自动隐藏的定位进度 | 只读取控制器快照；纯文本格式化与 Qt Widgets 分离，不调用 mpv |
-| `PlaylistPane` | 队列视图、按显示名过滤的搜索框、临时 `QSortFilterProxyModel`、独立编辑选择、当前项标识、编辑动作入口及可选单击激活 | 过滤期间禁用拖动／编辑并把代理行映射回源行；通过队列业务 API 和共享 QAction 操作，不接触 mpv；分隔条宽度由 MainWindow 持有 |
+| `PlaylistPane` | 队列视图、按显示名过滤的搜索框、临时 `QSortFilterProxyModel`、Ctrl／Shift 多选与批量移除、当前项标识、空列表／无匹配提示、编辑动作入口及可选单击激活 | 过滤期间禁用拖动／编辑并把代理行映射回源行；多选或带修饰键的单击只改选择、不触发单击播放；通过队列业务 API 和共享 QAction 操作，不接触 mpv；分隔条宽度由 MainWindow 持有 |
 | `ShortcutsDialog` | 从实时 `QMenuBar` 生成只读快捷键树，去重共享动作并标注全局／列表聚焦／当前面板范围 | 只读取菜单与 `QAction`，不调用 mpv、不持有播放或偏好状态 |
 | `AppIcon` / `appicon.cpp` | 运行时按 16–256 px 绘制多尺寸窗口图标，几何与安装 SVG 一致 | Qt Gui 绘制，无 Qt SVG 插件或外部资源；不触碰播放或渲染 |
 | `TrackMenus` | 音轨、字幕菜单和外挂音轨／字幕文件入口；文件选择期间检查媒体代次 | 依赖控制器快照与业务接口，不接触 mpv handle |
@@ -33,6 +34,7 @@
 | `AudioDeviceMenu` | 当前输出设备选择；菜单栏与右键菜单复用同一菜单 | 只读取拥有数据的设备快照并调用控制器业务 API |
 | `TuningMenus` | 倍速、音频／字幕延迟预设、自定义输入和快捷键 | 共用 QAction，显示控制器确认的值，不接触 mpv handle |
 | `PlaylistModeMenu` | 互斥循环模式、独立随机开关、播放完当前停止、R／Shift+R 快捷键及模式标题 | 只调用队列业务接口，菜单与右键共用 |
+| `PlaylistMaintenanceMenu` | “排序”子菜单（标题／路径，升序／降序）与“移除缺失文件…”确认入口 | 只调用 `PlaylistController` 业务 API；清理先显示条目数确认，网络条目不参与缺失判定，结果仅通过现有反馈信号报告 |
 | `NavigationMenu` / `TimeSeekDialog` | 章节、逐帧、多档跳转、回到开头及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键；定位反馈复用全屏进度 |
 | `AbLoop` / `mpvcontroller_loop.cpp` | 当前媒体的 A–B 区间意图、端点校验和原生异步设置 | Qt Core 值类型与同一 mpv client，不依赖 UI |
 | `AbLoopMenu` | 共享区间菜单、当前时间端点动作和快捷键 | 只使用控制器业务 API，端点变化时刷新标题 |
@@ -122,7 +124,7 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 
 字幕显示实现集中在 `mpvcontroller_subtitles.cpp`，复用同一 client 的异步 `set` 命令；只有变更的字段才提交，UTF-8 字体作为独立参数传递。`SubtitlePreferences` 表示最新成功入队的用户意图，快速步进和关闭保存直接读取它，不等待属性观察；异步执行错误仍由现有错误信号报告，不宣称后端已执行成功。显示开关使用 `sub-visibility`，不改 `sid`；缩放为 0.25–4，位置为 0–100，拒绝非有限步进；字体去除首尾空白，空值、控制字符或超长名称回退 `sans-serif`。不设置 ASS 强制覆盖，不新增帧复制、轮询或媒体重载。schema 1 的可选 `subtitles/*` 字段缺失或损坏时分别回退默认值；停止、换片和渲染重建不清除偏好。字幕菜单仍按媒体状态启用，空闲设置入口由全局设置菜单和共享 F6 动作提供。对话框只在打开时枚举字体，保留泛型及当前未安装的字体名称；偏好变化通知驱动动作刷新，无逐帧处理。
 
-列表编辑沿用 Qt 的 `beginMoveRows`／`endMoveRows` 与 QListView InternalMove，不重载媒体。内部 MIME 对象持有 `QPersistentModelIndex`，跨移动和删除跟踪真实条目，区分重复路径并拒绝外部或已失效数据。当前行和失败行集合随结构变更映射；删除当前项先停止并取消自动续播，再选择邻项，迟到 EOF／加载错误不能自行启动它。面板通过持久索引区分编辑选择与播放项，仅播放项身份改变才同步选择；代理用 CurrentRole 加粗，不让 model 依赖字体。编辑 QAction 由面板提供给列表、按钮和主菜单，快捷键仅在列表聚焦时生效；不订阅播放进度，不新增帧处理或配置写盘。
+列表编辑沿用 Qt 的 `beginMoveRows`／`endMoveRows` 与 QListView InternalMove，不重载媒体。内部 MIME 对象持有 `QPersistentModelIndex`，跨移动和删除跟踪真实条目，区分重复路径并拒绝外部或已失效数据。当前行和失败行集合随结构变更映射；删除当前项先停止并取消自动续播，再选择邻项，迟到 EOF／加载错误不能自行启动它。面板通过持久索引区分编辑选择与播放项，仅播放项身份改变才同步选择；代理用 CurrentRole 加粗，不让 model 依赖字体。编辑 QAction 由面板提供给列表、按钮和主菜单，快捷键仅在列表聚焦时生效；不订阅播放进度，不新增帧处理或配置写盘。排序、缺失文件清理与多选移除由面板或 `PlaylistMaintenanceMenu` 转交 `PlaylistController`，UI 不自行重排或删除模型行。
 
 播放列表搜索由 `PlaylistPane` 持有临时 `QSortFilterProxyModel`，仅在裁剪后的搜索文本非空时安装到视图，并按显示名第 0 列做不区分大小写的包含过滤。过滤期间禁用 InternalMove 与移除／上移／下移动作，激活、单击和编辑动作通过 `mapToSource` 映射回源行；清空后恢复源模型、源当前行与拖动。搜索、计数和待定单击不修改队列、播放状态或会话文件。Ctrl+F（`focusPlaylistSearchAction`）与 Esc（`clearPlaylistSearchAction`）是面板自有的 `WidgetWithChildrenShortcut` 动作，只在面板及其子控件聚焦时生效，分别聚焦并全选搜索框、清空搜索；源模型重置时自动清空搜索，避免旧过滤隐藏新队列。
 

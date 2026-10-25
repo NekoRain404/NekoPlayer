@@ -113,3 +113,14 @@ appropriate.
 - [ ] `code-size`, changed-file formatting, and `git diff --check` pass.
 - [ ] No raw mpv commands in UI code; no new polling or frame copies.
 - [ ] README/architecture/verification/plan updated; whole-branch review clean.
+
+## Status (2026-10-25)
+
+Code at `acc623e`; commits `35961c2`, `cce15f8`, `8cf71e3`, `acc623e`.
+
+- [x] Task 1: model batch removal, stable natural title/path sorting, shared collation.
+- [x] Task 2: controller bulk removal, missing-file scan/removal, sort.
+- [x] Task 3: pane `ExtendedSelection`, modifier-safe click-to-play, empty-state hint.
+- [x] Task 4: playlist sort submenu and count-confirmed missing-file cleanup.
+- [x] Task 5: Debug build; non-window suite 62/62 in 60.44 s; focused selection 5/5 in 7.27 s; focused sanitizer 4/4 in 7.70 s with leak detection disabled for documented platform-library exit allocations; `code-size` 1/1 with advisories for `windowactions.cpp` (537) and `ui_surface_test.cpp` (550); 19 changed C++ files formatting-clean; `git diff --check` clean excluding `docs/skills.md`; 309/309 translations finished; three-file install layout; no raw mpv use in `src/ui/`; all commits authored by NekoRain with no co-author trailers.
+- [ ] Native Wayland visual/keyboard/pointer acceptance was not performed; window tests remain compile-only.

@@ -138,6 +138,15 @@ class WindowTest final : public QObject {
         auto *about = action(window, "aboutAction");
         QVERIFY(themeMenuAction && themeMenuAction->menu() && playbackSettings &&
                 subtitleSettings && about);
+        auto *shortcuts = action(window, "shortcutsAction");
+        QVERIFY(shortcuts);
+        QCOMPARE(shortcuts->shortcut(), QKeySequence(Qt::Key_F1));
+        const auto menus = window.menuBar()->actions();
+        QVERIFY(!menus.isEmpty() && menus.constLast()->menu());
+        auto *helpMenu = menus.constLast()->menu();
+        QCOMPARE(menus.constLast()->text(), QStringLiteral("帮助(&H)"));
+        QVERIFY(helpMenu->actions().contains(shortcuts));
+        QVERIFY(helpMenu->actions().contains(about));
         const auto shortcut = playbackSettings->shortcut();
         const auto checkedTheme = themeMenuAction->menu()->actions().at(0)->isChecked();
         QCOMPARE(themeMenuAction->menu()->actions().size(), 3);
@@ -150,6 +159,8 @@ class WindowTest final : public QObject {
         QCOMPARE(themeMenuAction->menu()->actions().at(2)->text(), QStringLiteral("Follow System"));
         QCOMPARE(playbackSettings->text(), QStringLiteral("Playback Settings…"));
         QCOMPARE(about->text(), QStringLiteral("About NekoPlayer…"));
+        QCOMPARE(shortcuts->text(), QStringLiteral("Keyboard Shortcuts…"));
+        QCOMPARE(menus.constLast()->text(), QStringLiteral("&Help"));
         QCOMPARE(playbackSettings->shortcut(), shortcut);
         QCOMPARE(themeMenuAction->menu()->actions().at(0)->isChecked(), checkedTheme);
 
@@ -158,6 +169,8 @@ class WindowTest final : public QObject {
         QCOMPARE(themeMenuAction->text(), QStringLiteral("主题"));
         QCOMPARE(playbackSettings->text(), QStringLiteral("播放设置…"));
         QCOMPARE(about->text(), QStringLiteral("关于 NekoPlayer…"));
+        QCOMPARE(shortcuts->text(), QStringLiteral("快捷键…"));
+        QCOMPARE(menus.constLast()->text(), QStringLiteral("帮助(&H)"));
         qApp->setProperty("languageManager", previousLanguageManager);
         qApp->setProperty("configurationEnabled", previousConfiguration);
     }

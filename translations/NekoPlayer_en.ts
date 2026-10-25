@@ -220,6 +220,8 @@
     <message><source>显示当前播放信息</source><translation>Show Playback Information</translation></message>
     <message><source>显示播放列表</source><translation>Show Playlist</translation></message>
     <message><source>设置(&amp;S)</source><translation>&amp;Settings</translation></message>
+    <message><source>帮助(&amp;H)</source><translation>&amp;Help</translation></message>
+    <message><source>快捷键…</source><translation>Keyboard Shortcuts…</translation></message>
     <message><source>播放设置…</source><translation>Playback Settings…</translation></message>
     <message><source>无法恢复会话：%1</source><translation>Could not restore session: %1</translation></message>
     <message><source>已恢复播放列表 · 按空格从上次位置继续播放</source><translation>Playlist restored · Press Space to resume from the previous position</translation></message>
@@ -354,5 +356,14 @@ libmpv client API: %2</translation></message>
     <message><source>采样率</source><translation>Sample rate</translation></message>
     <message><source>声道</source><translation>Channels</translation></message>
     <message><source>采样格式</source><translation>Sample format</translation></message>
+</context>
+<context>
+    <name>ShortcutsDialog</name>
+    <message><source>快捷键</source><translation>Shortcuts</translation></message>
+    <message><source>操作</source><translation>Action</translation></message>
+    <message><source>范围</source><translation>Scope</translation></message>
+    <message><source>列表聚焦</source><translation>Playlist Focus</translation></message>
+    <message><source>当前面板</source><translation>Current Panel</translation></message>
+    <message><source>全局</source><translation>Global</translation></message>
 </context>
 </TS>

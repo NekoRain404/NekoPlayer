@@ -20,6 +20,7 @@
 #include "preferencesdialog.h"
 #include "recentmediamenu.h"
 #include "session/sessionmanager.h"
+#include "shortcutsdialog.h"
 #include "subtitledisplaymenu.h"
 #include "trackmenus.h"
 #include "tuningmenus.h"
@@ -369,6 +370,11 @@ void MainWindow::createActions() {
             }
         });
     }
+    auto *shortcutsAction = make(tr("快捷键…"), "shortcutsAction", QKeySequence(Qt::Key_F1));
+    connect(shortcutsAction, &QAction::triggered, this, [this] {
+        ShortcutsDialog dialog(menuBar(), this);
+        dialog.exec();
+    });
     auto *about = settings->addAction(tr("关于 NekoPlayer…"));
     about->setObjectName(QStringLiteral("aboutAction"));
     setAppearanceIcon(about, AppearanceIcons::Symbol::Information);
@@ -376,6 +382,10 @@ void MainWindow::createActions() {
     about->setStatusTip(about->text());
     connect(about, &QAction::triggered, this,
             [this] { AppearancePreferences::showAboutDialog(this); });
+    auto *help = menuBar()->addMenu(tr("帮助(&H)"));
+    help->addAction(shortcutsAction);
+    help->addSeparator();
+    help->addAction(about);
     contextMenu_ = new QMenu(this);
     contextMenu_->addActions(
         {openAction_, openNetworkAction_, appendAction_, pauseAction_, stopAction_});
@@ -470,8 +480,9 @@ void MainWindow::changeEvent(QEvent *event) {
     setActionText("fullscreenAction", isFullScreen() ? tr("退出全屏") : tr("全屏"));
     setActionText("miniPlayerAction", miniPlayerActive_ ? tr("退出小窗") : tr("小窗播放"));
     const auto menus = menuBar()->actions();
-    const QStringList titles{tr("文件(&F)"), tr("播放(&P)"),     tr("声音(&A)"), tr("字幕(&U)"),
-                             tr("视频(&I)"), tr("播放列表(&L)"), tr("视图(&V)"), tr("设置(&S)")};
+    const QStringList titles{tr("文件(&F)"), tr("播放(&P)"), tr("声音(&A)"),
+                             tr("字幕(&U)"), tr("视频(&I)"), tr("播放列表(&L)"),
+                             tr("视图(&V)"), tr("设置(&S)"), tr("帮助(&H)")};
     for (int index = 0; index < qMin(menus.size(), titles.size()); ++index)
         menus.at(index)->setText(titles.at(index));
     if (auto *theme = findChild<QAction *>(QStringLiteral("themeMenuAction")))
@@ -487,6 +498,7 @@ void MainWindow::changeEvent(QEvent *event) {
     setActionText("appearanceSettingsAction", tr("外观设置…"));
     setActionText("interactionSettingsAction", tr("交互设置…"));
     setActionText("aboutAction", tr("关于 NekoPlayer…"));
+    setActionText("shortcutsAction", tr("快捷键…"));
     setActionText("themeDarkAction",
                   AppearancePreferences::themeName(AppearancePreferences::Theme::Dark));
     setActionText("themeLightAction",

@@ -4,6 +4,8 @@ project(NekoPlayer VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include(GNUInstallDirs)
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
@@ -97,6 +99,12 @@ add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)
 qt_add_translations(NekoPlayer TS_FILES translations/NekoPlayer_en.ts
     RESOURCE_PREFIX "/i18n")
+
+install(TARGETS NekoPlayer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES data/nekoplayer.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+install(FILES data/nekoplayer.svg
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 
 include(CTest)
 if(BUILD_TESTING)

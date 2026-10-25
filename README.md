@@ -56,6 +56,16 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 
 测试使用 generic 主题和 compose 输入上下文隔离宿主 GTK/Fcitx 插件，音频使用 null 输出。正常启动仍使用桌面配置和真实音频输出；ASan/UBSan 与泄漏检查保持开启。`--smoke-test` 检查初始化和可选文件加载后自动退出。
 
+## 安装
+
+当前只提供基于 GNUInstallDirs 的安装规则，不包含 CPack、Flatpak 或发行版打包；许可证尚未选定。
+
+```bash
+cmake --install build/debug --prefix ~/.local
+```
+
+安装后写入 `bin/NekoPlayer`、`share/applications/nekoplayer.desktop` 和 `share/icons/hicolor/scalable/apps/nekoplayer.svg`。桌面条目通过 `Exec=NekoPlayer %F` 启动，因此 `~/.local/bin` 需要位于 `PATH` 中；图标和菜单条目可能需要重新登录或刷新桌面缓存后才会出现。可用 `cmake --install build/debug --prefix /tmp/neko-install` 检查安装布局。
+
 ## 常用操作
 
 “声音 → 音轨 → 加载外挂音轨”可为当前媒体附加本地音频，加载后自动选择；无内嵌音轨的视频也可使用。一个文件的多条音轨分别列出，可切换或关闭。外挂音轨路径和所选流随本地媒体的轨道记忆保存，渲染恢复后重新加载并恢复选择；网络媒体仅在当前运行中保留。文件选择期间若停止或换片，则取消本次加载。

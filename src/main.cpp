@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
     app->setProperty("languageManager",
                      QVariant::fromValue(static_cast<QObject *>(&languageManager)));
     if (auto *gui = qobject_cast<QApplication *>(app.get())) {
+        QGuiApplication::setDesktopFileName(QStringLiteral("nekoplayer"));
         const auto appearance = useConfig ? AppearancePreferences::loadSettings(settings)
                                           : AppearancePreferences::Settings{};
         AppearancePreferences::applySettings(*gui, appearance);

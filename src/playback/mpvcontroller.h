@@ -15,6 +15,7 @@
 #include <QList>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <memory>
 #include <mpv/client.h>
 
@@ -61,6 +62,9 @@ class MpvController final : public QObject {
     [[nodiscard]] bool hardwareDecodingEnabled() const;
     [[nodiscard]] const SubtitlePreferences &subtitlePreferences() const;
     void setSubtitlePreferences(const SubtitlePreferences &preferences);
+    // Normalized (trimmed, non-empty, capped) mpv alang/slang priorities.
+    void setLanguagePreferences(const QStringList &audio, const QStringList &subtitle);
+    void setAutoLoadExternalSubtitles(bool enabled);
     void restoreTrackPreference(const TrackSelectionPreference &preference);
     [[nodiscard]] bool trackRestorationPending() const;
     void applyAudioDevicePreference(const QString &name);

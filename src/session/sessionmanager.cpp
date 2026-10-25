@@ -111,6 +111,9 @@ SessionLoadResult SessionManager::restore() {
     seekStepSeconds_ = loaded.state.seekStepSeconds;
     interaction_ = loaded.state.interaction.normalized();
     languages_ = loaded.state.languages.normalized();
+    // Apply language defaults before restoring media: mpv autoselects during load,
+    // while per-media track memory is applied after fileLoaded and wins explicitly.
+    applyLanguagePreferences();
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
                            resumePlaybackPositionEnabled_ ? loaded.state.resumePosition : 0);
     player_.setVolume(audio_.volume);
@@ -370,6 +373,12 @@ LanguagePreferences SessionManager::languagePreferences() const { return languag
 
 void SessionManager::setLanguagePreferences(const LanguagePreferences &preferences) {
     languages_ = preferences.normalized();
+    applyLanguagePreferences();
+}
+
+void SessionManager::applyLanguagePreferences() {
+    player_.setLanguagePreferences(languages_.audioLanguages, languages_.subtitleLanguages);
+    player_.setAutoLoadExternalSubtitles(languages_.autoLoadExternalSubtitles);
 }
 
 void SessionManager::setMediaLibraryPreferences(MediaLibraryPreferences preferences) {

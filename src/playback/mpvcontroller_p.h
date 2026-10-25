@@ -125,6 +125,9 @@ struct MpvController::Impl {
     bool ready = false;
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
+    QStringList preferredAudioLanguages;
+    QStringList preferredSubtitleLanguages;
+    bool autoLoadExternalSubtitles = false;
     VideoPresentation presentation;
     VideoFraming framing;
     VideoColorAdjustment videoColor;

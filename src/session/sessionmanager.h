@@ -61,6 +61,7 @@ class SessionManager final : public QObject {
     std::optional<qint64> requestedAudioTrackId_;
     std::optional<qint64> requestedSubtitleTrackId_;
     void rememberPlaybackPosition(const QString &path, double position, double duration);
+    void applyLanguagePreferences();
     QString savePlaybackHistory() const;
     void restoreTrackPreference();
     void observeTrackPreference();

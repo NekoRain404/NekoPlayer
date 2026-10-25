@@ -82,3 +82,20 @@ add_custom_command(OUTPUT "${TEST_MULTI_SUBTITLE}"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt"
         "${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt" test_track_media VERBATIM)
 add_custom_target(test_multi_subtitle DEPENDS "${TEST_MULTI_SUBTITLE}")
+
+set(TEST_LANGUAGE_MEDIA "${CMAKE_CURRENT_BINARY_DIR}/media/track-languages.mkv")
+add_custom_command(OUTPUT "${TEST_LANGUAGE_MEDIA}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/media"
+    COMMAND ${FFMPEG_EXECUTABLE} -hide_banner -loglevel error -y
+        -i "${TEST_MEDIA}" -f lavfi -i sine=frequency=880:sample_rate=48000
+        -i "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt"
+        -i "${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt"
+        -map 0:v -map 0:a -map 1:a -map 2:s -map 3:s -t 4
+        -c:v copy -c:a pcm_s16le -c:s srt
+        -metadata:s:a:0 language=jpn -metadata:s:a:1 language=eng
+        -metadata:s:s:0 language=zho -metadata:s:s:1 language=eng
+        -disposition:s:0 default
+        "${TEST_LANGUAGE_MEDIA}"
+    DEPENDS "${TEST_MEDIA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/embedded.srt"
+        "${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt" VERBATIM)
+add_custom_target(test_language_media DEPENDS "${TEST_LANGUAGE_MEDIA}")

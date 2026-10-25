@@ -410,7 +410,8 @@ void MpvController::resumeAfterRendererReset() {
     };
     // Releasing an mpv renderer disables video. Reload at the saved position,
     // including video-only files whose core may have reached END_FILE.
-    // Restore the saved external set explicitly to avoid auto-loading duplicates.
+    // Recovery overrides the session's sub-auto setting with an explicit no: the
+    // saved external set is restored below, so auto-loading would add duplicates.
     const auto loopPoint = [](const std::optional<double> &value) {
         return value ? QByteArray::number(*value, 'g', 17) : QByteArray("no");
     };

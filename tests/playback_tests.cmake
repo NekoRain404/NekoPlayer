@@ -177,3 +177,11 @@ target_compile_definitions(video_framing_test PRIVATE TEST_TRACK_MEDIA_PATH="${T
 add_dependencies(video_framing_test test_track_media)
 add_test(NAME video-framing COMMAND video_framing_test)
 set_tests_properties(video-framing PROPERTIES TIMEOUT 60)
+
+add_executable(track_language_test track_language_test.cpp)
+target_link_libraries(track_language_test PRIVATE neko_session Qt6::Test)
+target_compile_definitions(track_language_test PRIVATE
+    TEST_LANGUAGE_MEDIA_PATH="${TEST_LANGUAGE_MEDIA}")
+add_dependencies(track_language_test test_language_media)
+add_test(NAME track-language COMMAND track_language_test)
+set_tests_properties(track-language PROPERTIES TIMEOUT 60)

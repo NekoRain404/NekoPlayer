@@ -160,6 +160,57 @@ class SessionTest final : public QObject {
         QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 1000);
     }
 
+    void windowAlwaysOnTopDefaultsToFalse() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("schemaVersion"), 1);
+            settings.sync();
+        }
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QVERIFY(!loaded.state.window.alwaysOnTop);
+
+        QSettings settings(path, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("window/alwaysOnTop"), QStringLiteral("garbage"));
+        settings.sync();
+        QVERIFY(!SessionStore(path).load().state.window.alwaysOnTop);
+    }
+
+    void windowAlwaysOnTopRoundTrips() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionState saved;
+        saved.window.alwaysOnTop = true;
+        QVERIFY(SessionStore(path).save(saved).isEmpty());
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QVERIFY(loaded.state.window.alwaysOnTop);
+        QSettings persisted(path, QSettings::IniFormat);
+        QCOMPARE(persisted.value(QStringLiteral("window/alwaysOnTop")).toBool(), true);
+
+        saved.window.alwaysOnTop = false;
+        QVERIFY(SessionStore(path).save(saved).isEmpty());
+        QVERIFY(!SessionStore(path).load().state.window.alwaysOnTop);
+    }
+
+    void sessionManagerPersistsAlwaysOnTop() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, path);
+        QVERIFY(session.restore().error.isEmpty());
+        WindowPreferences window;
+        window.alwaysOnTop = true;
+        QVERIFY(session.save(window).isEmpty());
+        QVERIFY(SessionStore(path).load().state.window.alwaysOnTop);
+    }
+
     void legacyConfigurationDefaultsToEnabledOnDemandScanning() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

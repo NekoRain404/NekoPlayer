@@ -34,6 +34,7 @@ struct WindowPreferences {
     bool playlistVisible = false;
     QString mediaDirectory;
     int playlistWidth = 0; // 0 = default width.
+    bool alwaysOnTop = false;
 };
 
 struct MediaLibraryPreferences {

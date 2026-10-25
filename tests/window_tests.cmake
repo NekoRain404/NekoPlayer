@@ -92,3 +92,7 @@ add_test(NAME file-startup COMMAND ${WINDOW_TEST_RUNNER} $<TARGET_FILE:NekoPlaye
     --silent-audio --smoke-test "${TEST_MEDIA}")
 set_tests_properties(window-startup file-startup PROPERTIES TIMEOUT 20 ENVIRONMENT
     "${WINDOW_TEST_ENVIRONMENT}")
+
+# Compile-only coverage for the persisted always-on-top window state.
+add_executable(always_on_top_window_test always_on_top_window_test.cpp)
+target_link_libraries(always_on_top_window_test PRIVATE neko_ui Qt6::Test)

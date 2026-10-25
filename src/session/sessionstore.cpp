@@ -197,6 +197,7 @@ SessionLoadResult SessionStore::load() const {
     const auto playlistWidth =
         settings.value(QStringLiteral("window/playlistWidth"), 0).toInt(&valid);
     state.window.playlistWidth = valid ? playlistWidth : 0;
+    state.window.alwaysOnTop = readBool(settings, QStringLiteral("window/alwaysOnTop"));
     const auto speed = settings.value(QStringLiteral("playback/speed"), 1).toDouble(&valid);
     state.tuning.playbackSpeed = valid ? speed : 1;
     const auto audioDelay =
@@ -267,6 +268,7 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("window/playlistVisible"), saved.window.playlistVisible);
     settings.setValue(QStringLiteral("window/mediaDirectory"), saved.window.mediaDirectory);
     settings.setValue(QStringLiteral("window/playlistWidth"), saved.window.playlistWidth);
+    settings.setValue(QStringLiteral("window/alwaysOnTop"), saved.window.alwaysOnTop);
     settings.setValue(QStringLiteral("playback/speed"), saved.tuning.playbackSpeed);
     settings.setValue(QStringLiteral("playback/audioDelay"), saved.tuning.audioDelay);
     settings.setValue(QStringLiteral("playback/subtitleDelay"), saved.tuning.subtitleDelay);

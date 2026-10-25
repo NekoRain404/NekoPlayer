@@ -43,6 +43,7 @@
     <message><source>外观设置…</source><translation>Appearance Settings…</translation></message>
     <message><source>媒体库设置…</source><translation>Media Library Settings…</translation></message>
     <message><source>交互设置…</source><translation>Interaction Settings…</translation></message>
+    <message><source>窗口置顶</source><translation>Always on Top</translation></message>
 </context>
 <context>
     <name>FolderMenu</name>

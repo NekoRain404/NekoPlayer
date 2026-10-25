@@ -37,6 +37,7 @@
 #include <QMenuBar>
 #include <QMimeData>
 #include <QScreen>
+#include <QSignalBlocker>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QStyle>
@@ -557,6 +558,13 @@ void MainWindow::setFullscreen(bool enabled) {
             applyPlaylistWidth();
         }
     }
+    if (!enabled && !miniPlayerActive_ &&
+        windowFlags().testFlag(Qt::WindowStaysOnTopHint) != alwaysOnTop_) {
+        const bool wasVisible = isVisible();
+        setWindowFlag(Qt::WindowStaysOnTopHint, alwaysOnTop_);
+        if (wasVisible)
+            show();
+    }
     fullscreenAction_->setChecked(enabled);
     fullscreenAction_->setText(enabled ? tr("退出全屏") : tr("全屏"));
     fullscreenAction_->setToolTip(fullscreenAction_->text());
@@ -595,7 +603,7 @@ void MainWindow::setMiniPlayer(bool enabled) {
         statusBar()->show();
         showPlaylistAction_->setEnabled(true);
         setWindowFlag(Qt::Tool, false);
-        setWindowFlag(Qt::WindowStaysOnTopHint, false);
+        setWindowFlag(Qt::WindowStaysOnTopHint, alwaysOnTop_);
         show();
         if (miniPlayerGeometry_.isValid())
             setGeometry(miniPlayerGeometry_);
@@ -612,6 +620,28 @@ void MainWindow::setMiniPlayer(bool enabled) {
         setAppearanceIcon(action, enabled ? AppearanceIcons::Symbol::Remove
                                           : AppearanceIcons::Symbol::Restore);
     }
+}
+
+void MainWindow::setAlwaysOnTop(bool enabled) {
+    if (enabled == alwaysOnTop_)
+        return;
+    alwaysOnTop_ = enabled;
+    if (alwaysOnTopAction_) {
+        const QSignalBlocker blocker(alwaysOnTopAction_);
+        alwaysOnTopAction_->setChecked(enabled);
+        const auto label = tr("窗口置顶");
+        alwaysOnTopAction_->setText(label);
+        alwaysOnTopAction_->setToolTip(label);
+        alwaysOnTopAction_->setStatusTip(label);
+    }
+    // Fullscreen and mini-player own the top flag while active; apply the
+    // user's choice when they exit without disturbing the current mode.
+    if (isFullScreen() || miniPlayerActive_)
+        return;
+    const bool wasVisible = isVisible();
+    setWindowFlag(Qt::WindowStaysOnTopHint, enabled);
+    if (wasVisible)
+        show();
 }
 
 void MainWindow::applyPlaylistWidth() {
@@ -642,6 +672,8 @@ void MainWindow::revealControls() {
     video_->unsetCursor();
     controlsTimer_.start();
 }
+
+int MainWindow::interactionVolumeStep() const { return interactionPreferences_.wheelVolumeStep; }
 
 void MainWindow::applyInteractionPreferences(const InteractionPreferences &preferences) {
     interactionPreferences_ = preferences.normalized();

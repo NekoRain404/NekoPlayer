@@ -76,6 +76,7 @@ class MainWindow final : public QMainWindow {
     void showSeekFeedback(const QString &message);
     void setFullscreen(bool enabled);
     void setMiniPlayer(bool enabled);
+    void setAlwaysOnTop(bool enabled);
     void applyPlaylistWidth();
     void rememberPlaylistWidth();
     void revealControls();
@@ -88,6 +89,7 @@ class MainWindow final : public QMainWindow {
                               ThumbnailResult result);
     [[nodiscard]] QString mediaDirectory() const;
     [[nodiscard]] int seekStepSeconds() const;
+    [[nodiscard]] int interactionVolumeStep() const;
     std::unique_ptr<MpvController> controller_;
     std::unique_ptr<PlaylistController> playlist_;
     std::unique_ptr<SessionManager> session_;
@@ -123,6 +125,7 @@ class MainWindow final : public QMainWindow {
     QAction *nextAction_ = nullptr;
     QAction *clearPlaylistAction_ = nullptr;
     QAction *showPlaylistAction_ = nullptr;
+    QAction *alwaysOnTopAction_ = nullptr;
     QMenu *contextMenu_ = nullptr;
     QMenu *playlistMenu_ = nullptr;
     QTimer controlsTimer_;
@@ -137,6 +140,7 @@ class MainWindow final : public QMainWindow {
     QRect miniPlayerGeometry_;
     bool miniPlayerMaximized_ = false;
     bool miniPlayerActive_ = false;
+    bool alwaysOnTop_ = false;
     bool sessionSaveAttempted_ = false;
     // Session-only fallbacks used when --no-config leaves session_ null.
     bool resumePlaybackPositionDefault_ = true;

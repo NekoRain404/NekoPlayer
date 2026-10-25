@@ -45,6 +45,7 @@ void MainWindow::restoreSession(const QString &path) {
     showPlaylistAction_->setChecked(loaded.state.window.playlistVisible);
     playlistWidth_ = loaded.state.window.playlistWidth;
     applyPlaylistWidth();
+    setAlwaysOnTop(loaded.state.window.alwaysOnTop);
     if (!loaded.state.paths.isEmpty())
         statusBar()->showMessage(loaded.state.resumePosition > 0
                                      ? tr("已恢复播放列表 · 按空格从上次位置继续播放")
@@ -63,6 +64,7 @@ QString MainWindow::saveSession() {
     if (playlistPane_->isVisible())
         rememberPlaylistWidth();
     window.playlistWidth = playlistWidth_;
+    window.alwaysOnTop = alwaysOnTop_;
     const auto sessionError = session_->save(std::move(window), pendingPaths_);
     if (recentError.isEmpty())
         return sessionError;

@@ -130,13 +130,13 @@ void MainWindow::createActions() {
     setAppearanceIcon(louder, AppearanceIcons::Symbol::Add);
     setAppearanceIcon(quieter, AppearanceIcons::Symbol::Remove);
     connect(louder, &QAction::triggered, this, [this] {
-        const auto step = static_cast<double>(interactionPreferences_.wheelVolumeStep);
+        const auto step = static_cast<double>(interactionVolumeStep());
         const auto volume = qBound(0.0, controller_->state().volume + step, 100.0);
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
     });
     connect(quieter, &QAction::triggered, this, [this] {
-        const auto step = static_cast<double>(interactionPreferences_.wheelVolumeStep);
+        const auto step = static_cast<double>(interactionVolumeStep());
         const auto volume = qBound(0.0, controller_->state().volume - step, 100.0);
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
@@ -248,6 +248,10 @@ void MainWindow::createActions() {
     setAppearanceIcon(miniPlayer, AppearanceIcons::Symbol::Restore);
     connect(miniPlayer, &QAction::toggled, this, &MainWindow::setMiniPlayer);
     view->addAction(miniPlayer);
+    alwaysOnTopAction_ = make(tr("窗口置顶"), "alwaysOnTopAction", {});
+    alwaysOnTopAction_->setCheckable(true);
+    connect(alwaysOnTopAction_, &QAction::toggled, this, &MainWindow::setAlwaysOnTop);
+    view->addAction(alwaysOnTopAction_);
     auto *playbackInformation =
         make(tr("显示当前播放信息"), "playbackInformationAction", QKeySequence(Qt::Key_Tab));
     setAppearanceIcon(playbackInformation, AppearanceIcons::Symbol::Information);
@@ -488,6 +492,7 @@ void MainWindow::changeEvent(QEvent *event) {
     setActionText("muteAction", tr("静音"));
     setActionText("fullscreenAction", isFullScreen() ? tr("退出全屏") : tr("全屏"));
     setActionText("miniPlayerAction", miniPlayerActive_ ? tr("退出小窗") : tr("小窗播放"));
+    setActionText("alwaysOnTopAction", tr("窗口置顶"));
     const auto menus = menuBar()->actions();
     const QStringList titles{tr("文件(&F)"), tr("播放(&P)"), tr("声音(&A)"),
                              tr("字幕(&U)"), tr("视频(&I)"), tr("播放列表(&L)"),

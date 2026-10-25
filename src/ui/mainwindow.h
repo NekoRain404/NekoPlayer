@@ -46,6 +46,7 @@ class MainWindow final : public QMainWindow {
     void openFiles(const QStringList &paths);
     void appendFiles(const QStringList &paths);
     void openFolder(const QString &directory, bool append = false, bool recursive = false);
+    void setStartPaused(bool paused);
 
   signals:
     void userError(const QString &message);
@@ -141,6 +142,7 @@ class MainWindow final : public QMainWindow {
     bool miniPlayerMaximized_ = false;
     bool miniPlayerActive_ = false;
     bool alwaysOnTop_ = false;
+    bool startPaused_ = false;
     bool sessionSaveAttempted_ = false;
     // Session-only fallbacks used when --no-config leaves session_ null.
     bool resumePlaybackPositionDefault_ = true;

@@ -141,6 +141,17 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         statusBar()->showMessage(
             tr("正在播放 · %1").arg(MediaSource::displayName(controller_->state().path)));
     });
+    // --start-paused pauses once on the first successful load. Failed loads and
+    // explicit stops consume the pending request so it cannot affect a later
+    // user-initiated load.
+    connect(controller_.get(), &MpvController::fileLoaded, this, [this] {
+        if (std::exchange(startPaused_, false))
+            controller_->setPaused(true);
+    });
+    connect(controller_.get(), &MpvController::mediaLoadFailed, this,
+            [this] { startPaused_ = false; });
+    connect(controller_.get(), &MpvController::stopRequested, this,
+            [this] { startPaused_ = false; });
     connect(playlist_.get(), &PlaylistController::queueFinished, this,
             [this] { statusBar()->showMessage(tr("播放列表已结束")); });
     connect(playlist_.get(), &PlaylistController::queueError, this, &MainWindow::showError);
@@ -193,8 +204,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         if (deltaY == 0 || !interactionPreferences_.wheelAdjustsVolume || !controller_->isReady() ||
             !controller_->state().active)
             return;
-        const auto volume = volumeAfterWheel(controller_->state().volume, deltaY,
-                                             interactionPreferences_.wheelVolumeStep);
+        const auto volume =
+            volumeAfterWheel(controller_->state().volume, deltaY, interactionVolumeStep());
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
     });
@@ -266,6 +277,8 @@ MainWindow::~MainWindow() {
 MpvController *MainWindow::controller() const { return controller_.get(); }
 VideoWidget *MainWindow::videoWidget() const { return video_; }
 PlaylistController *MainWindow::playlist() const { return playlist_.get(); }
+
+void MainWindow::setStartPaused(bool paused) { startPaused_ = paused; }
 
 void MainWindow::openFile(const QString &path) { openFiles({path}); }
 

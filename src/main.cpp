@@ -41,6 +41,8 @@ int main(int argc, char *argv[]) {
         {QStringLiteral("silent-audio"), QStringLiteral("使用空音频输出，供自动化检查使用")});
     parser.addOption(
         {QStringLiteral("no-config"), QStringLiteral("不读取或保存播放列表和偏好设置")});
+    parser.addOption({QStringLiteral("fullscreen"), QStringLiteral("启动后进入全屏")});
+    parser.addOption({QStringLiteral("start-paused"), QStringLiteral("启动后暂停在第一帧")});
     parser.addPositionalArgument(QStringLiteral("files"),
                                  QStringLiteral("一个或多个媒体文件或网络地址"),
                                  QStringLiteral("[files...]"));
@@ -74,9 +76,14 @@ int main(int argc, char *argv[]) {
                         .filePath(QStringLiteral("session.ini"))
                   : QString{};
     MainWindow window(parser.isSet(QStringLiteral("silent-audio")), sessionPath);
-    if (!paths.isEmpty())
+    if (!paths.isEmpty()) {
+        if (parser.isSet(QStringLiteral("start-paused")))
+            window.setStartPaused(true);
         window.openFiles(paths);
+    }
     window.show();
+    if (parser.isSet(QStringLiteral("fullscreen")))
+        window.showFullScreen();
     if (parser.isSet(QStringLiteral("smoke-test"))) {
         QObject::connect(&window, &MainWindow::userError, app.get(), [](const QString &message) {
             std::cerr << message.toStdString() << '\n';

@@ -24,7 +24,11 @@ ctest --preset debug
 ./build/debug/NekoPlayer 'https://example.org/video.mkv?token=example'
 ./build/debug/NekoPlayer --check-backend
 ./build/debug/NekoPlayer --no-config
+./build/debug/NekoPlayer --fullscreen '/path/电影 example.mkv'
+./build/debug/NekoPlayer --start-paused first.mkv second.mkv
 ```
+
+`--fullscreen` 在窗口显示后进入全屏，并复用现有窗口状态同步来更新菜单、播放列表与全屏控制区；`--start-paused` 仅在提供命令行媒体时生效，在首个文件成功加载后暂停一次，加载失败或显式停止会取消该次暂停请求。两个选项都不会持久化全屏或暂停状态。
 
 仅运行无需桌面会话的后端检查（当前按用户要求跳过 GUI 测试）：
 

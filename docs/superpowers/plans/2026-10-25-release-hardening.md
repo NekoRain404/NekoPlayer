@@ -60,8 +60,8 @@
 - Modify `tests/transport_bar_test.cpp`
 
 **Behavior:**
-- `forWidth(width)`: `width < 560` hides the time label; `560 <= width < 640` sets `buttonExtent = 32`, `volumeWidth = 76`, `timeWidth = 150`; `>= 640` keeps the existing defaults.
-- At 560 the row is 7*32 + 48 + 18 + 24 + 150 + 76 = 540 px, so it fits.
+- `forWidth(width)`: `width < 560` hides the time label; `560 <= width < 640` sets `buttonExtent = 32`, `volumeWidth = 76`, `timeWidth = 155`; `>= 640` keeps the existing defaults.
+- At 560 the row is 7*32 + 48 + 18 + 24 + 155 + 76 = 545 px, so it fits.
 - `minimumRowWidth` must remain <= width in the 560–639 band.
 - Add tests at 480, 559, 560, 639, and 640, plus a widget test that the time label is hidden at 480 and visible at 560.
 

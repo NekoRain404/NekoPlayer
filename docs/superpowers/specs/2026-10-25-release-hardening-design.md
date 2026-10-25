@@ -29,7 +29,7 @@ Options: keep and mark legacy, or delete and migrate tests. Keeping them preserv
 
 ### Narrow transport time
 
-Options: shrink the font, hide the label, or allocate the measured width. Shrinking harms legibility; hiding at the minimum window width loses useful information. The row fits with a 150 px label at 560 px (314 px controls + 76 px volume + 150 px time = 540). **Chosen:** below 560 px hide the time label; 560–639 px use 150 px; ≥640 px keep 155 px. The tests assert the metrics and the actual widget visibility at 560/639/640.
+Options: shrink the font, hide the label, or allocate the measured width. Shrinking harms legibility; hiding at the minimum window width loses useful information. The row fits with a 155 px label at 560 px (314 px controls + 76 px volume + 155 px time = 545). **Chosen:** below 560 px hide the time label; 560–639 px use 155 px; ≥640 px keep 155 px. The tests assert the metrics and the actual widget visibility at 560/639/640.
 
 ### Playlist display-name cache
 

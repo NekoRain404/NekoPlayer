@@ -28,7 +28,7 @@
 
 ## Task 2: Controller application
 
-**Files:** `src/playback/mpvcontroller*.{h,cpp}` (new small `mpvcontroller_languages.cpp`), `src/session/sessionmanager.cpp` (apply loaded/set preferences to the controller), `CMakeLists.txt`, new `tests/track_language_test.cpp` (`track-language` target) in `tests/playback_tests.cmake`, using the existing multi-track fixture.
+**Files:** `src/playback/mpvcontroller*.{h,cpp}` (new small `mpvcontroller_languages.cpp`), `src/session/sessionmanager.cpp` (apply loaded/set preferences to the controller), `CMakeLists.txt`, a new `tests/test_media_fixtures.cmake` fixture `test_language_media` (video + jpn/eng audio + zho/eng subtitles with language metadata), and `tests/track_language_test.cpp` (`track-language` target) in `tests/playback_tests.cmake`.
 
 **Behavior:**
 - `MpvController::setLanguagePreferences(const QStringList &audio, const QStringList &subtitle)` stores normalized lists and sets mpv `alang`/`slang` through the existing async command helper. The client is created synchronously in the controller constructor, so no readiness queue is needed; apply on every preference change.
@@ -38,7 +38,7 @@
 - Explicit per-media track memory is applied after `fileLoaded` as today and wins over language defaults.
 - No polling; no frame copies.
 
-**Tests:** real libmpv with the multi-track fixture: `alang=eng` selects English audio when no per-media memory; explicit aid still wins; `slang=zho` selects the Chinese subtitle; sibling `.srt` auto-load on/off in a temporary directory; recovery keeps explicit external restoration without duplicates. Keep timeouts/waits consistent with `tracks_test` and use `LC_ALL=C`.
+**Tests:** real libmpv with the new language fixture: `alang=eng` selects English audio when no per-media memory; explicit aid still wins; `slang=eng` selects the English subtitle over the container-preferred Chinese one; sibling `.srt` auto-load on/off in a temporary directory; recovery keeps explicit external restoration without duplicates. Keep timeouts/waits consistent with `tracks_test` and use `LC_ALL=C`.
 
 ## Task 3: Preferences UI and translations
 

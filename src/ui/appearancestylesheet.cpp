@@ -91,7 +91,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QDialog{background:%28;color:%2;}"
                "QMenuBar{padding:2px 6px;} QMenuBar::item{padding:6px 10px;border-radius:%13px;}"
                "QMenuBar::item:selected,QMenu::item:selected{background:%24;}"
-               "QMenu::item{padding:7px 12px;margin:1px 4px;border-radius:%13px;}"
+               "QMenu::item{padding:7px %25px 7px 12px;margin:1px 4px;border-radius:%13px;}"
                "QMenu::item:disabled{color:%17;}"
                "QToolButton{color:%2;background:transparent;border:1px solid "
                "transparent;border-radius:%13px;padding:%8px;}"

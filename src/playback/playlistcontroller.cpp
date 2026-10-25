@@ -241,6 +241,8 @@ void PlaylistController::removeAt(int row) {
         return;
     const bool removingCurrent = row == model_->currentIndex();
     if (removingCurrent) {
+        // Removing the playing row is an explicit stop, so stopRequested
+        // disarms stop-after-current just like player.stop() or clear().
         playbackQueued_ = false;
         ++playbackRevision_;
         exhausted_ = false;
@@ -265,6 +267,9 @@ void PlaylistController::playFinished() {
     emit mediaPlaybackFinished(model_->currentPath());
     failedRows_.clear();
     if (stopAfterCurrent_) {
+        // Disarming may re-enable native loop-file for repeat modes, but libmpv
+        // already committed this EOF before delivering END_FILE, so the queue
+        // finishes without reopening the file.
         setStopAfterCurrent(false);
         finishQueue();
         return;

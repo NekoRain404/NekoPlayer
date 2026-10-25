@@ -149,12 +149,14 @@ class PlaylistModesTest final : public QObject {
         queue.setStopAfterCurrent(true);
         QVERIFY(queue.stopAfterCurrent());
         QCOMPARE(armed.count(), 1);
+        QCOMPARE(armed.at(0).at(0).toBool(), true);
         player.seekAbsolute(3.8);
         QTRY_VERIFY(player.state().position > 3.0);
         QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 3000);
         QCOMPARE(queue.model()->currentIndex(), 0);
         QVERIFY(!queue.stopAfterCurrent());
         QCOMPARE(armed.count(), 2);
+        QCOMPARE(armed.at(1).at(0).toBool(), false);
         QCOMPARE(loaded.count(), 1);
         QVERIFY(!player.state().active);
     }
@@ -188,6 +190,25 @@ class PlaylistModesTest final : public QObject {
         QCOMPARE(finished.count(), 1);
     }
 
+    void stopAfterCurrentOverridesRepeatAllSingleItemLoop() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy finished(&queue, &PlaylistController::queueFinished);
+        queue.setRepeatMode(PlaylistController::RepeatMode::All);
+        queue.addFiles({QString::fromUtf8(TEST_MEDIA_PATH)});
+        QTRY_COMPARE(loaded.count(), 1);
+        QTRY_VERIFY(player.state().active && player.state().seekable);
+        queue.setStopAfterCurrent(true);
+        player.seekAbsolute(3.8);
+        QTRY_VERIFY(player.state().position > 3.0);
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 3000);
+        QCOMPARE(loaded.count(), 1);
+        QCOMPARE(queue.model()->currentIndex(), 0);
+        QVERIFY(!queue.stopAfterCurrent());
+        QVERIFY(!player.state().active);
+    }
+
     void explicitStopAndClearDisarmStopAfterCurrent() {
         MpvController player(true, true);
         PlaylistController queue(player);
@@ -201,6 +222,8 @@ class PlaylistModesTest final : public QObject {
         player.stop();
         QTRY_VERIFY(!queue.stopAfterCurrent());
         QCOMPARE(armed.count(), 2);
+        QCOMPARE(armed.at(0).at(0).toBool(), true);
+        QCOMPARE(armed.at(1).at(0).toBool(), false);
         QTRY_VERIFY(!player.state().active);
 
         queue.setStopAfterCurrent(true);
@@ -208,6 +231,8 @@ class PlaylistModesTest final : public QObject {
         queue.clear();
         QTRY_VERIFY(!queue.stopAfterCurrent());
         QCOMPARE(armed.count(), 4);
+        QCOMPARE(armed.at(2).at(0).toBool(), true);
+        QCOMPARE(armed.at(3).at(0).toBool(), false);
         QCOMPARE(queue.model()->rowCount(), 0);
     }
 

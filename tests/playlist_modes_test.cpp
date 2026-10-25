@@ -236,6 +236,54 @@ class PlaylistModesTest final : public QObject {
         QCOMPARE(queue.model()->rowCount(), 0);
     }
 
+    void failureExhaustionDisarmsStopAfterCurrent() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy errors(&queue, &PlaylistController::queueError);
+        QSignalSpy finished(&queue, &PlaylistController::queueFinished);
+        QSignalSpy armed(&queue, &PlaylistController::stopAfterCurrentChanged);
+        queue.setStopAfterCurrent(true);
+        QVERIFY(queue.stopAfterCurrent());
+        queue.addFiles(
+            {QStringLiteral("/missing/neko-one.mkv"), QStringLiteral("/missing/neko-two.mkv")});
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 3000);
+        QCOMPARE(errors.count(), 2);
+        QVERIFY(!queue.stopAfterCurrent());
+        QCOMPARE(armed.count(), 2);
+        QCOMPARE(armed.at(0).at(0).toBool(), true);
+        QCOMPARE(armed.at(1).at(0).toBool(), false);
+    }
+
+    void removingCurrentRowDisarmsStopAfterCurrent() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        queue.addFiles({media, media});
+        QTRY_COMPARE(loaded.count(), 1);
+        QTRY_VERIFY(player.state().active);
+        queue.setStopAfterCurrent(true);
+        QVERIFY(queue.stopAfterCurrent());
+        queue.removeAt(0);
+        QVERIFY(!queue.stopAfterCurrent());
+        QCOMPARE(queue.model()->rowCount(), 1);
+        QTRY_VERIFY(!player.state().active);
+    }
+
+    void removingCurrentRowWhileIdleDisarmsStopAfterCurrent() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        queue.model()->addFiles(
+            {QStringLiteral("/queue/one.mkv"), QStringLiteral("/queue/two.mkv")});
+        queue.model()->setCurrentIndex(0);
+        queue.setStopAfterCurrent(true);
+        QVERIFY(queue.stopAfterCurrent());
+        queue.removeAt(0);
+        QVERIFY(!queue.stopAfterCurrent());
+        QCOMPARE(queue.model()->rowCount(), 1);
+        QCOMPARE(queue.model()->currentIndex(), 0);
+    }
+
     void manualNextAdvancesWhileArmedThenEofStops() {
         MpvController player(true, true);
         PlaylistController queue(player);

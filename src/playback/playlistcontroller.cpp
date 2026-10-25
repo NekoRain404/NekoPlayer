@@ -307,6 +307,7 @@ void PlaylistController::mediaLoadFailed(const QString &message) {
 }
 
 void PlaylistController::finishQueue() {
+    setStopAfterCurrent(false);
     playbackQueued_ = false;
     exhausted_ = true;
     emit navigationChanged();

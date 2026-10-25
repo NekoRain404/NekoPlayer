@@ -25,8 +25,6 @@ QByteArray mpvLanguageList(const QStringList &languages) {
 void MpvController::setLanguagePreferences(const QStringList &audio, const QStringList &subtitle) {
     const auto audioLanguages = normalizedLanguages(audio);
     const auto subtitleLanguages = normalizedLanguages(subtitle);
-    impl_->preferredAudioLanguages = audioLanguages;
-    impl_->preferredSubtitleLanguages = subtitleLanguages;
     // Commands run asynchronously in submission order, so applying these before a
     // load lets mpv autoselect while explicit aid/sid selections still win later.
     impl_->command({"set", "alang", mpvLanguageList(audioLanguages)});
@@ -34,7 +32,6 @@ void MpvController::setLanguagePreferences(const QStringList &audio, const QStri
 }
 
 void MpvController::setAutoLoadExternalSubtitles(bool enabled) {
-    impl_->autoLoadExternalSubtitles = enabled;
     // Exact matches only: movie.mkv pairs with movie.srt, not unrelated siblings.
     impl_->command({"set", "sub-auto", enabled ? "exact" : "no"});
 }

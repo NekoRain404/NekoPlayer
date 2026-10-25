@@ -67,6 +67,9 @@ class MpvController final : public QObject {
     void setAutoLoadExternalSubtitles(bool enabled);
     void restoreTrackPreference(const TrackSelectionPreference &preference);
     [[nodiscard]] bool trackRestorationPending() const;
+    // True when this external path was explicitly added or selected by the user
+    // for the current media, not merely auto-discovered by mpv.
+    [[nodiscard]] bool isExplicitExternalPath(const QString &path) const;
     void applyAudioDevicePreference(const QString &name);
     // Session-only accepted intent; asynchronous errors are reported separately.
     [[nodiscard]] const VideoPresentation &videoPresentation() const;

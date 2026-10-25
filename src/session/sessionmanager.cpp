@@ -273,6 +273,13 @@ void SessionManager::rememberTrackPreference() {
         for (const auto &track : tracks) {
             if (track.type != type || !track.external || track.externalPath.isEmpty())
                 continue;
+            if (!player_.isExplicitExternalPath(track.externalPath)) {
+                // Auto-discovered siblings are recreated by mpv's sub-auto rules,
+                // not user memory; never persist them or their automatic selection.
+                if (track.id == selectedId)
+                    internalId.reset();
+                continue;
+            }
             const auto externalPath = externalTrackPath(track);
             if (externalPath.isEmpty())
                 continue;

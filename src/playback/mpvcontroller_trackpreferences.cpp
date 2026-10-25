@@ -23,6 +23,9 @@ void MpvController::Impl::startPreferenceExternalLoad() {
            !preferenceRestore->paths.isEmpty()) {
         const auto identity = preferenceRestore->identity;
         const auto [type, path] = preferenceRestore->paths.takeFirst();
+        // These paths come only from saved explicit memory, so restoring them
+        // preserves their explicit origin for the next persistence snapshot.
+        explicitExternalPaths.insert(canonicalExternalPath(path));
         const auto [id, status] = submitCommand(
             {type == MediaTrack::Type::Audio ? "audio-add" : "sub-add", path.toUtf8(), "auto"});
         preferenceRestore->command = id;

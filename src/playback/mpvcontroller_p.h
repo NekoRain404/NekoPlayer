@@ -75,6 +75,7 @@ struct MpvController::Impl {
     struct RecoveryState {
         PlaybackState playback;
         QList<MediaTrack> tracks;
+        QSet<QString> explicitExternalPaths;
     };
     struct PendingOpen {
         uint64_t command = 0;
@@ -110,6 +111,11 @@ struct MpvController::Impl {
     bool chapterQuerySettled = false;
     bool loading = false;
     std::optional<RecoveryState> recovery;
+    // Canonical paths the user explicitly added or selected for this media.
+    QSet<QString> explicitExternalPaths;
+    // Explicit paths captured before a renderer-recovery reset; re-marked once
+    // restoreExternalTracks has reloaded them.
+    QSet<QString> explicitExternalPathsToRestore;
     QList<MediaTrack> tracksToRestore;
     QList<std::pair<MediaTrack::Type, QString>> externalPathsToRestore;
     uint64_t restoreCommand = 0;
@@ -125,9 +131,6 @@ struct MpvController::Impl {
     bool ready = false;
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
-    QStringList preferredAudioLanguages;
-    QStringList preferredSubtitleLanguages;
-    bool autoLoadExternalSubtitles = false;
     VideoPresentation presentation;
     VideoFraming framing;
     VideoColorAdjustment videoColor;
@@ -276,6 +279,7 @@ struct MpvController::Impl {
 
     void resetPlayback() {
         mediaReady = false;
+        explicitExternalPaths.clear();
         cancelInformationQueries();
         const bool informationChanged = information != MediaInformation{};
         information = {};
@@ -322,19 +326,26 @@ struct MpvController::Impl {
     void selectTrack(MediaTrack::Type type, qint64 id) {
         if (!state.active)
             return;
-        const bool valid = id == 0 || std::any_of(tracks.cbegin(), tracks.cend(),
-                                                  [type, id](const MediaTrack &track) {
-                                                      return track.type == type && track.id == id;
-                                                  });
-        if (!valid) {
+        const auto selected =
+            std::find_if(tracks.cbegin(), tracks.cend(), [type, id](const MediaTrack &track) {
+                return track.type == type && track.id == id;
+            });
+        if (id != 0 && selected == tracks.cend()) {
             error = MpvController::tr("所选轨道不存在");
             emit owner->errorOccurred(error);
             return;
         }
+        QString externalPath;
+        if (id != 0 && selected->external)
+            externalPath = selected->externalPath;
         const auto generation = openGeneration;
         cancelTrackRestore();
         if (generation != openGeneration || pendingPlayback || !state.active)
             return;
+        // Selecting an auto-loaded external track is user intent; record it
+        // before signaling so a synchronous persistence snapshot sees it.
+        if (!externalPath.isEmpty())
+            explicitExternalPaths.insert(canonicalExternalPath(externalPath));
         emit owner->trackSelectionRequested(type, id);
         if (generation != openGeneration || pendingPlayback || !state.active)
             return;
@@ -349,12 +360,14 @@ struct MpvController::Impl {
             canceledRestoreRequests.insert(restoreQuery);
         applyingRestoredSelections = false;
         tracksToRestore.clear();
+        explicitExternalPathsToRestore.clear();
         externalPathsToRestore.clear();
         ++restoreIdentity;
         restoreCommand = restoreQuery = 0;
         cancelPreferenceRestore();
     }
 
+    static QString canonicalExternalPath(const QString &path);
     void addExternalTrack(MediaTrack::Type type, const QString &path);
     void cancelPreferenceRestore();
     void startPreferenceExternalLoad();

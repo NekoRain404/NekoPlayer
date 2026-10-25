@@ -4,6 +4,7 @@
 #include "session/sessionmanager.h"
 #include "session/sessionstate.h"
 #include "session/sessionstore.h"
+#include "session/trackpreferencestore.h"
 
 #include <QDir>
 #include <QFile>
@@ -42,6 +43,14 @@ qint64 externalSubtitleId(const MpvController &player) {
             return track.id;
     }
     return 0;
+}
+
+QString externalSubtitlePath(const MpvController &player) {
+    for (const auto &track : player.tracks()) {
+        if (track.type == MediaTrack::Type::Subtitle && track.external)
+            return track.externalPath;
+    }
+    return {};
 }
 
 bool writeSiblingSubtitle(const QString &directory) {
@@ -145,6 +154,36 @@ class TrackLanguageTest final : public QObject {
         QVERIFY(errors.isEmpty());
     }
 
+    void autoLoadedSiblingIsExplicitOnlyAfterSelection() {
+        QTemporaryDir temporary;
+        QVERIFY(prepareSiblingMedia(temporary));
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        const auto sibling = temporary.filePath(QStringLiteral("movie.srt"));
+
+        MpvController player(true, true);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        player.setAutoLoadExternalSubtitles(true);
+        player.openFile(media);
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(loaded.count(), 1, 10000);
+        waitForTracks(player, 5);
+        QTRY_COMPARE(externalSubtitleCount(player), 1);
+
+        const auto id = externalSubtitleId(player);
+        QVERIFY(id > 0);
+        const auto path = externalSubtitlePath(player);
+        QVERIFY(!path.isEmpty());
+        QVERIFY(!player.isExplicitExternalPath(sibling));
+        QVERIFY(!player.isExplicitExternalPath(path));
+
+        player.selectSubtitleTrack(id);
+        QTRY_COMPARE(selectedTrack(player, MediaTrack::Type::Subtitle), id);
+        QVERIFY(player.isExplicitExternalPath(sibling));
+        QVERIFY(player.isExplicitExternalPath(path));
+        QVERIFY(errors.isEmpty());
+    }
+
     void defaultDoesNotAutoloadSiblingSubtitles() {
         QTemporaryDir temporary;
         QVERIFY(prepareSiblingMedia(temporary));
@@ -173,6 +212,25 @@ class TrackLanguageTest final : public QObject {
         QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Subtitle), QStringLiteral("eng"));
         QCOMPARE(selectedTrack(player, MediaTrack::Type::Audio), qint64(2));
         QCOMPARE(selectedTrack(player, MediaTrack::Type::Subtitle), qint64(2));
+        QVERIFY(errors.isEmpty());
+    }
+
+    void languageListCapKeepsMpvDefaultAudio() {
+        QStringList audio;
+        for (int index = 0; index < 16; ++index)
+            audio.append(QStringLiteral("junk%1").arg(index));
+        audio.append(QStringLiteral("eng"));
+
+        MpvController player(true, true);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        player.setLanguagePreferences(audio, {});
+        player.openFile(QString::fromUtf8(TEST_LANGUAGE_MEDIA_PATH));
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        waitForTracks(player, 4);
+
+        // eng is the 17th token and exceeds the cap, so mpv keeps its default.
+        QTRY_COMPARE(selectedTrack(player, MediaTrack::Type::Audio), qint64(1));
+        QCOMPARE(selectedLanguage(player, MediaTrack::Type::Audio), QStringLiteral("jpn"));
         QVERIFY(errors.isEmpty());
     }
 
@@ -254,6 +312,51 @@ class TrackLanguageTest final : public QObject {
         waitForTracks(player, 4);
         QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Audio), QStringLiteral("eng"));
         QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Subtitle), QStringLiteral("eng"));
+    }
+
+    void autoLoadedSiblingIsNotPersistedAsExplicitMemory() {
+        QTemporaryDir temporary;
+        QVERIFY(prepareSiblingMedia(temporary));
+        const auto sessionPath = temporary.filePath(QStringLiteral("settings.ini"));
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        const auto sibling = temporary.filePath(QStringLiteral("movie.srt"));
+        {
+            MpvController player(true, true);
+            PlaylistController playlist(player);
+            SessionManager session(player, playlist, sessionPath);
+            QVERIFY(session.restore().error.isEmpty());
+            LanguagePreferences preferences;
+            preferences.autoLoadExternalSubtitles = true;
+            session.setLanguagePreferences(preferences);
+            playlist.restoreFiles({media}, 0);
+            playlist.playOrPause();
+            QTRY_VERIFY_WITH_TIMEOUT(player.state().active && player.tracks().size() == 5, 10000);
+            player.setPaused(true);
+            QTRY_COMPARE_WITH_TIMEOUT(externalSubtitleCount(player), 1, 5000);
+            QVERIFY(!player.isExplicitExternalPath(sibling));
+            QVERIFY(session.save({}).isEmpty());
+        }
+
+        const TrackPreferenceStore store(sessionPath + QStringLiteral(".tracks.ini"));
+        const auto saved = store.load();
+        QVERIFY2(saved.error.isEmpty(), qPrintable(saved.error));
+        QCOMPARE(saved.entries.size(), 1);
+        QVERIFY(saved.entries.front().selection.externalSubtitlePaths.isEmpty());
+        QVERIFY(saved.entries.front().selection.selectedExternalSubtitlePath.isEmpty());
+
+        // A later session with auto-load off must not resurrect the discovered sibling.
+        MpvController player(true, true);
+        PlaylistController playlist(player);
+        SessionManager session(player, playlist, sessionPath);
+        QVERIFY(session.restore().error.isEmpty());
+        session.setLanguagePreferences({});
+        QVERIFY(!session.languagePreferences().autoLoadExternalSubtitles);
+        QSignalSpy restored(&player, &MpvController::trackPreferenceRestoreFinished);
+        playlist.playAt(0);
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(restored.count(), 1, 10000);
+        waitForTracks(player, 4);
+        QCOMPARE(externalSubtitleCount(player), 0);
     }
 
     void recoveryKeepsExplicitExternalSubtitleWithoutDuplicates() {

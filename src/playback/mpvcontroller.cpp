@@ -387,7 +387,8 @@ void MpvController::selectSubtitleTrack(qint64 id) {
 void MpvController::prepareForRendererReset() {
     if (state().active) {
         impl_->recovery = Impl::RecoveryState{
-            state(), impl_->tracksToRestore.isEmpty() ? tracks() : impl_->tracksToRestore};
+            state(), impl_->tracksToRestore.isEmpty() ? tracks() : impl_->tracksToRestore,
+            impl_->explicitExternalPaths};
         if (impl_->openingPosition)
             impl_->recovery->playback.position = *impl_->openingPosition;
         impl_->recoveringRenderer = true;
@@ -415,6 +416,8 @@ void MpvController::resumeAfterRendererReset() {
     // including video-only files whose core may have reached END_FILE.
     // Recovery overrides the session's sub-auto setting with an explicit no: the
     // saved external set is restored below, so auto-loading would add duplicates.
+    // This file-local option outlives the property, so toggling auto-load while
+    // the recovered file plays takes effect on the next normal load, not a retry.
     const auto loopPoint = [](const std::optional<double> &value) {
         return value ? QByteArray::number(*value, 'g', 17) : QByteArray("no");
     };
@@ -433,6 +436,7 @@ void MpvController::resumeAfterRendererReset() {
     impl_->openingPosition = position;
     impl_->openingEntry = -1;
     impl_->resetPlayback();
+    impl_->explicitExternalPathsToRestore = std::move(saved.explicitExternalPaths);
     emit stateChanged();
     if (generation != impl_->openGeneration || identity != impl_->restoreIdentity)
         return;

@@ -8,6 +8,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
@@ -357,6 +358,113 @@ class TrackLanguageTest final : public QObject {
         QTRY_COMPARE_WITH_TIMEOUT(restored.count(), 1, 10000);
         waitForTracks(player, 4);
         QCOMPARE(externalSubtitleCount(player), 0);
+    }
+
+    void restoringSavedPathAlreadyAutoLoadedKeepsOriginWithoutDuplicate() {
+        QTemporaryDir temporary;
+        QVERIFY(prepareSiblingMedia(temporary));
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        const auto sibling = temporary.filePath(QStringLiteral("movie.srt"));
+        const auto canonicalSibling = QFileInfo(sibling).canonicalFilePath();
+        QVERIFY(!canonicalSibling.isEmpty());
+
+        MpvController player(true, true);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        player.setAutoLoadExternalSubtitles(true);
+        player.openFile(media);
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(loaded.count(), 1, 10000);
+        waitForTracks(player, 5);
+        QTRY_COMPARE(externalSubtitleCount(player), 1);
+        const auto externalId = externalSubtitleId(player);
+        QVERIFY(externalId > 0);
+
+        TrackSelectionPreference preference;
+        preference.externalSubtitlePaths = {canonicalSibling};
+        preference.selectedExternalSubtitlePath = canonicalSibling;
+        preference.selectedExternalSubtitleStream = 0;
+        QSignalSpy restored(&player, &MpvController::trackPreferenceRestoreFinished);
+        player.restoreTrackPreference(preference);
+        QTRY_COMPARE_WITH_TIMEOUT(restored.count(), 1, 10000);
+
+        // The saved path was already auto-loaded: keep its explicit origin and
+        // dedupe the restore instead of adding a second external stream.
+        QVERIFY(player.isExplicitExternalPath(sibling));
+        QVERIFY(player.isExplicitExternalPath(canonicalSibling));
+        QCOMPARE(externalSubtitleCount(player), 1);
+        QTRY_COMPARE(selectedTrack(player, MediaTrack::Type::Subtitle), externalId);
+        QVERIFY(errors.isEmpty());
+    }
+
+    void restoredAutoLoadedSiblingKeepsExplicitOrigin() {
+        QTemporaryDir temporary;
+        QVERIFY(prepareSiblingMedia(temporary));
+        const auto sessionPath = temporary.filePath(QStringLiteral("settings.ini"));
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        const auto sibling = temporary.filePath(QStringLiteral("movie.srt"));
+        const auto canonicalSibling = QFileInfo(sibling).canonicalFilePath();
+        QVERIFY(!canonicalSibling.isEmpty());
+
+        {
+            MpvController player(true, true);
+            PlaylistController playlist(player);
+            SessionManager session(player, playlist, sessionPath);
+            QVERIFY(session.restore().error.isEmpty());
+            LanguagePreferences preferences;
+            preferences.autoLoadExternalSubtitles = true;
+            session.setLanguagePreferences(preferences);
+            playlist.restoreFiles({media}, 0);
+            playlist.playOrPause();
+            QTRY_VERIFY_WITH_TIMEOUT(player.state().active && player.tracks().size() == 5, 10000);
+            player.setPaused(true);
+            QTRY_COMPARE_WITH_TIMEOUT(externalSubtitleCount(player), 1, 5000);
+            const auto id = externalSubtitleId(player);
+            QVERIFY(id > 0);
+            player.selectSubtitleTrack(id);
+            QTRY_COMPARE(selectedTrack(player, MediaTrack::Type::Subtitle), id);
+            QVERIFY(session.save({}).isEmpty());
+        }
+
+        {
+            const auto saved =
+                TrackPreferenceStore(sessionPath + QStringLiteral(".tracks.ini")).load();
+            QVERIFY2(saved.error.isEmpty(), qPrintable(saved.error));
+            QCOMPARE(saved.entries.size(), 1);
+            QCOMPARE(saved.entries.front().selection.externalSubtitlePaths,
+                     QStringList{canonicalSibling});
+            QCOMPARE(saved.entries.front().selection.selectedExternalSubtitlePath,
+                     canonicalSibling);
+        }
+
+        {
+            MpvController player(true, true);
+            PlaylistController playlist(player);
+            SessionManager session(player, playlist, sessionPath);
+            QVERIFY(session.restore().error.isEmpty());
+            QVERIFY(session.languagePreferences().autoLoadExternalSubtitles);
+            QSignalSpy restored(&player, &MpvController::trackPreferenceRestoreFinished);
+            playlist.playAt(0);
+            QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+            player.setPaused(true);
+            QTRY_VERIFY_WITH_TIMEOUT(player.state().paused, 5000);
+            QTRY_COMPARE_WITH_TIMEOUT(restored.count(), 1, 10000);
+            QTRY_VERIFY_WITH_TIMEOUT(externalSubtitleCount(player) >= 1, 5000);
+            QVERIFY(player.isExplicitExternalPath(sibling));
+            QVERIFY(player.isExplicitExternalPath(canonicalSibling));
+            QVERIFY(session.save({}).isEmpty());
+        }
+
+        {
+            const auto saved =
+                TrackPreferenceStore(sessionPath + QStringLiteral(".tracks.ini")).load();
+            QVERIFY2(saved.error.isEmpty(), qPrintable(saved.error));
+            QCOMPARE(saved.entries.size(), 1);
+            QCOMPARE(saved.entries.front().selection.externalSubtitlePaths,
+                     QStringList{canonicalSibling});
+            QCOMPARE(saved.entries.front().selection.selectedExternalSubtitlePath,
+                     canonicalSibling);
+        }
     }
 
     void recoveryKeepsExplicitExternalSubtitleWithoutDuplicates() {

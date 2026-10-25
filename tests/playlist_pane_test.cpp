@@ -46,6 +46,12 @@ struct PaneFixture {
         const auto *count = pane.findChild<QLabel *>(literal("playlistCount"));
         return count ? count->text() : QString{};
     }
+    [[nodiscard]] QLabel *emptyHint() const {
+        return pane.findChild<QLabel *>(literal("playlistEmptyHint"));
+    }
+    [[nodiscard]] QAction *removeAction() const {
+        return pane.findChild<QAction *>(literal("removePlaylistItemAction"));
+    }
 };
 } // namespace
 
@@ -123,6 +129,193 @@ class PlaylistPaneTest final : public QObject {
         QVERIFY(actions.at(0)->isEnabled());
         QVERIFY(!actions.at(1)->isEnabled());
         QVERIFY(actions.at(2)->isEnabled());
+    }
+
+    void multiSelectionEnablesRemoveAndDisablesMoveActions() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(1);
+        auto *view = fixture.view();
+        auto *selection = view->selectionModel();
+        QVERIFY(selection);
+        QCOMPARE(selection->selectedRows().size(), 1);
+
+        const auto actions = fixture.pane.editingActions();
+        QVERIFY(actions.at(0)->isEnabled());
+        QVERIFY(actions.at(1)->isEnabled());
+        QVERIFY(actions.at(2)->isEnabled());
+
+        // Extending the selection does not move the current index, so the
+        // action state must also follow selectionChanged.
+        selection->select(view->model()->index(0, 0),
+                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        QCOMPARE(selection->selectedRows().size(), 2);
+        QCOMPARE(view->currentIndex().row(), 1);
+        QVERIFY(actions.at(0)->isEnabled());
+        QVERIFY(!actions.at(1)->isEnabled());
+        QVERIFY(!actions.at(2)->isEnabled());
+
+        selection->clearSelection();
+        selection->select(view->model()->index(2, 0),
+                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        QCOMPARE(selection->selectedRows().size(), 1);
+        QVERIFY(actions.at(0)->isEnabled());
+        QVERIFY(actions.at(1)->isEnabled());
+        QVERIFY(!actions.at(2)->isEnabled());
+    }
+
+    void bulkRemoveSelectedRowsLeavesCurrentEntry() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(1);
+        auto *view = fixture.view();
+        auto *selection = view->selectionModel();
+        selection->clearSelection();
+        selection->select(view->model()->index(0, 0),
+                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        selection->select(view->model()->index(2, 0),
+                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        QCOMPARE(selection->selectedRows().size(), 2);
+
+        auto *remove = fixture.removeAction();
+        QVERIFY(remove);
+        remove->trigger();
+
+        QCOMPARE(fixture.queue.model()->rowCount(), 1);
+        QCOMPARE(fixture.queue.model()->currentIndex(), 0);
+        QCOMPARE(fixture.queue.model()->index(0, 0).data().toString(), literal("beta.mkv"));
+        QCOMPARE(fixture.countText(), QStringLiteral("1 项"));
+    }
+
+    void removingCurrentSelectedRowEmptiesQueue() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(1);
+        auto *view = fixture.view();
+        view->selectAll();
+        QCOMPARE(view->selectionModel()->selectedRows().size(), 3);
+
+        auto *remove = fixture.removeAction();
+        QVERIFY(remove);
+        remove->trigger();
+
+        QCOMPARE(fixture.queue.model()->rowCount(), 0);
+        QCOMPARE(fixture.queue.model()->currentIndex(), -1);
+        QCOMPARE(fixture.countText(), QStringLiteral("0 项"));
+        auto *hint = fixture.emptyHint();
+        QVERIFY(hint);
+        QVERIFY(!hint->isHidden());
+        QCOMPARE(hint->text(), QStringLiteral("播放列表为空\n打开文件或文件夹，或拖入媒体"));
+    }
+
+    void filteredMultiSelectionMapsSafelyAndKeepsEditingDisabled() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(0);
+        fixture.search()->setText(literal("a"));
+        auto *view = fixture.view();
+        QVERIFY(view->model() != fixture.queue.model());
+        QCOMPARE(view->model()->rowCount(), 3);
+
+        auto *selection = view->selectionModel();
+        selection->clearSelection();
+        selection->select(view->model()->index(0, 0),
+                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        selection->select(view->model()->index(2, 0),
+                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        QCOMPARE(selection->selectedRows().size(), 2);
+        for (auto *action : fixture.pane.editingActions())
+            QVERIFY(!action->isEnabled());
+
+        fixture.search()->clear();
+        QVERIFY(view->model() == fixture.queue.model());
+        QCOMPARE(fixture.queue.model()->rowCount(), 3);
+        selection = view->selectionModel();
+        QCOMPARE(selection->selectedRows().size(), 1);
+        QCOMPARE(selection->selectedRows().first().row(), 0);
+    }
+
+    void modifiedClicksDoNotSchedulePlayback() {
+        PaneFixture fixture;
+        fixture.pane.setSingleClickActivation(true);
+        fixture.queue.model()->setCurrentIndex(0);
+        auto *view = fixture.view();
+        auto *selection = view->selectionModel();
+        const auto first = view->model()->index(0, 0);
+        const auto second = view->model()->index(1, 0);
+        const auto third = view->model()->index(2, 0);
+        const auto firstPoint = view->visualRect(first).center();
+        const auto secondPoint = view->visualRect(second).center();
+        const auto thirdPoint = view->visualRect(third).center();
+        QCOMPARE(view->indexAt(firstPoint), first);
+        QCOMPARE(view->indexAt(secondPoint), second);
+        QCOMPARE(view->indexAt(thirdPoint), third);
+
+        QSignalSpy plays(&fixture.pane, &PlaylistPane::playRequested);
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::ControlModifier, secondPoint, 10);
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::ShiftModifier, thirdPoint, 10);
+        QTest::qWait(QApplication::doubleClickInterval() + 100);
+        QCOMPARE(plays.count(), 0);
+        QCOMPARE(selection->selectedRows().size(), 3);
+
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, firstPoint, 10);
+        QTRY_COMPARE_WITH_TIMEOUT(plays.count(), 1, 2000);
+        QCOMPARE(plays.at(0).at(0).toInt(), 0);
+    }
+
+    void emptyHintTracksEmptyQueueAndFilters() {
+        PaneFixture fixture;
+        auto *hint = fixture.emptyHint();
+        QVERIFY(hint);
+        QCOMPARE(hint->objectName(), QStringLiteral("playlistEmptyHint"));
+        QVERIFY(hint->wordWrap());
+        QCOMPARE(hint->alignment(), Qt::Alignment(Qt::AlignCenter));
+        QCOMPARE(hint->focusPolicy(), Qt::NoFocus);
+        QVERIFY(!hint->accessibleName().isEmpty());
+        QVERIFY(hint->isHidden());
+
+        fixture.search()->setText(literal("zzz"));
+        QVERIFY(!hint->isHidden());
+        QCOMPARE(hint->text(), QStringLiteral("没有匹配项"));
+
+        fixture.search()->clear();
+        QVERIFY(hint->isHidden());
+
+        fixture.queue.clear();
+        QVERIFY(!hint->isHidden());
+        QCOMPARE(hint->text(), QStringLiteral("播放列表为空\n打开文件或文件夹，或拖入媒体"));
+
+        fixture.queue.model()->addFiles({literal("delta.mkv")});
+        QVERIFY(hint->isHidden());
+
+        fixture.queue.clear();
+        QVERIFY(!hint->isHidden());
+        QCOMPARE(hint->text(), QStringLiteral("播放列表为空\n打开文件或文件夹，或拖入媒体"));
+    }
+
+    void emptyHintHidesWhenFilteredRowsAppear() {
+        PaneFixture fixture;
+        auto *hint = fixture.emptyHint();
+        fixture.search()->setText(literal("zzz"));
+        QVERIFY(!hint->isHidden());
+
+        fixture.queue.model()->addFiles({literal("zzz.mkv")});
+        QVERIFY(hint->isHidden());
+        QCOMPARE(fixture.view()->model()->rowCount(), 1);
+        QCOMPARE(fixture.countText(), QStringLiteral("1 / 4 项"));
+    }
+
+    void playbackEntryChangeClearsStaleSelection() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(1);
+        auto *view = fixture.view();
+        auto *selection = view->selectionModel();
+        selection->select(view->model()->index(0, 0),
+                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        selection->select(view->model()->index(2, 0),
+                          QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        QCOMPARE(selection->selectedRows().size(), 3);
+
+        fixture.queue.model()->setCurrentIndex(2);
+        QCOMPARE(selection->selectedRows().size(), 1);
+        QVERIFY(selection->isSelected(view->model()->index(2, 0)));
+        QCOMPARE(view->currentIndex().row(), 2);
     }
 
     void clearingRestoresFullQueueDragDropAndCurrentRow() {

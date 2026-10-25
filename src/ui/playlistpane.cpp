@@ -13,6 +13,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
+#include <QMouseEvent>
 #include <QSortFilterProxyModel>
 #include <QTimer>
 #include <QToolButton>
@@ -40,8 +41,9 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
                            QAction *next, QAction *clear, QWidget *parent)
     : QWidget(parent), queue_(queue), model_(queue_.model()),
       filter_(new QSortFilterProxyModel(this)), search_(new QLineEdit(this)),
-      view_(new QListView(this)), remove_(new QAction(tr("从列表移除"), this)),
-      moveUp_(new QAction(tr("上移所选项"), this)), moveDown_(new QAction(tr("下移所选项"), this)),
+      view_(new QListView(this)), emptyHint_(new QLabel(this)),
+      remove_(new QAction(tr("从列表移除"), this)), moveUp_(new QAction(tr("上移所选项"), this)),
+      moveDown_(new QAction(tr("下移所选项"), this)),
       focusSearchAction_(new QAction(tr("搜索播放列表"), this)),
       clearSearchAction_(new QAction(tr("清除播放列表搜索"), this)),
       singleClickTimer_(new QTimer(this)) {
@@ -55,14 +57,20 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     search_->setPlaceholderText(tr("搜索播放列表"));
     search_->setAccessibleName(tr("搜索播放列表"));
     search_->setClearButtonEnabled(true);
+    emptyHint_->setObjectName(QStringLiteral("playlistEmptyHint"));
+    emptyHint_->setAlignment(Qt::AlignCenter);
+    emptyHint_->setWordWrap(true);
+    emptyHint_->setFocusPolicy(Qt::NoFocus);
+    emptyHint_->setAccessibleName(tr("播放列表提示"));
     view_->setObjectName(QStringLiteral("playlistView"));
     view_->setModel(model_);
     view_->setTextElideMode(Qt::ElideMiddle);
     view_->setItemDelegate(new PlaylistItemDelegate(view_));
-    view_->setSelectionMode(QAbstractItemView::SingleSelection);
+    view_->setSelectionMode(QAbstractItemView::ExtendedSelection);
     view_->setDragDropMode(QAbstractItemView::InternalMove);
     view_->setDefaultDropAction(Qt::MoveAction);
     view_->setDragDropOverwriteMode(false);
+    view_->viewport()->installEventFilter(this);
     view_->setDropIndicatorShown(true);
     remove_->setObjectName(QStringLiteral("removePlaylistItemAction"));
     moveUp_->setObjectName(QStringLiteral("movePlaylistItemUpAction"));
@@ -78,15 +86,25 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
         view_->addAction(action);
     }
     view_->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(remove_, &QAction::triggered, this,
-            [this] { queue_.removeAt(sourceRow(view_->currentIndex())); });
+    connect(remove_, &QAction::triggered, this, [this] {
+        auto rows = selectedSourceRows();
+        if (rows.isEmpty()) {
+            const auto row = sourceRow(view_->currentIndex());
+            if (row >= 0)
+                rows.append(row);
+        }
+        if (!rows.isEmpty())
+            queue_.removeRowsAt(rows);
+    });
     connect(moveUp_, &QAction::triggered, this, [this] {
-        const auto row = sourceRow(view_->currentIndex());
-        queue_.moveItem(row, row - 1);
+        const auto row = singleSelectedSourceRow();
+        if (row > 0)
+            queue_.moveItem(row, row - 1);
     });
     connect(moveDown_, &QAction::triggered, this, [this] {
-        const auto row = sourceRow(view_->currentIndex());
-        queue_.moveItem(row, row + 1);
+        const auto row = singleSelectedSourceRow();
+        if (row >= 0 && row + 1 < model_->rowCount())
+            queue_.moveItem(row, row + 1);
     });
     connectSelectionModel();
     connect(search_, &QLineEdit::textChanged, this, &PlaylistPane::applyFilter);
@@ -109,6 +127,9 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     connect(model_, &PlaylistModel::rowsMoved, this, &PlaylistPane::updateEditingActions);
     connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateEditingActions);
     connect(model_, &PlaylistModel::modelReset, this, [this] { search_->clear(); });
+    connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateEmptyHint);
+    connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateEmptyHint);
+    connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateEmptyHint);
     connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateItemCount);
     connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateItemCount);
     connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateItemCount);
@@ -134,6 +155,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     headerLayout->addWidget(count);
     layout->addWidget(header);
     layout->addWidget(search_);
+    layout->addWidget(emptyHint_);
     layout->addWidget(view_, 1);
     auto *buttons = new QHBoxLayout;
     buttons->setContentsMargins(0, 0, 0, 0);
@@ -153,6 +175,13 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
             emit playRequested(pending.row());
     });
     connect(view_, &QListView::clicked, this, [this](const QModelIndex &index) {
+        constexpr auto selectionModifiers =
+            Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier;
+        if (lastClickModifiers_ & selectionModifiers) {
+            singleClickTimer_->stop();
+            pendingClickIndex_ = QPersistentModelIndex{};
+            return;
+        }
         if (!singleClickActivation_)
             return;
         const auto row = sourceRow(index);
@@ -177,6 +206,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     synchronizeCurrent();
     updateItemCount();
     updateEditingActions();
+    updateEmptyHint();
 }
 
 QListView *PlaylistPane::view() const { return view_; }
@@ -214,7 +244,24 @@ void PlaylistPane::changeEvent(QEvent *event) {
     search_->setAccessibleName(tr("搜索播放列表"));
     view_->setAccessibleName(tr("播放列表"));
     view_->setToolTip(tr("双击播放；可拖动排序"));
+    emptyHint_->setAccessibleName(tr("播放列表提示"));
     updateItemCount();
+    updateEmptyHint();
+}
+
+bool PlaylistPane::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == view_->viewport()) {
+        switch (event->type()) {
+        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonRelease:
+        case QEvent::MouseButtonDblClick:
+            lastClickModifiers_ = static_cast<QMouseEvent *>(event)->modifiers();
+            break;
+        default:
+            break;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void PlaylistPane::refreshIcons() {
@@ -242,12 +289,16 @@ void PlaylistPane::applyFilter() {
     selectSourceCurrent();
     updateItemCount();
     updateEditingActions();
+    updateEmptyHint();
 }
 
 void PlaylistPane::connectSelectionModel() {
-    if (view_->selectionModel())
+    if (view_->selectionModel()) {
         connect(view_->selectionModel(), &QItemSelectionModel::currentChanged, this,
                 &PlaylistPane::updateEditingActions, Qt::UniqueConnection);
+        connect(view_->selectionModel(), &QItemSelectionModel::selectionChanged, this,
+                &PlaylistPane::updateEditingActions, Qt::UniqueConnection);
+    }
 }
 
 int PlaylistPane::sourceRow(const QModelIndex &index) const {
@@ -268,7 +319,7 @@ void PlaylistPane::selectSourceCurrent() {
     if (auto *selection = view_->selectionModel()) {
         const auto index = sourceIndexForCurrent();
         if (index.isValid()) {
-            view_->setCurrentIndex(index);
+            selection->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect);
             return;
         }
         selection->clearSelection();
@@ -297,6 +348,26 @@ void PlaylistPane::synchronizeCurrent() {
     updateEditingActions();
 }
 
+QList<int> PlaylistPane::selectedSourceRows() const {
+    QList<int> rows;
+    const auto *selection = view_->selectionModel();
+    if (!selection)
+        return rows;
+    const auto indexes = selection->selectedRows();
+    rows.reserve(indexes.size());
+    for (const auto &index : indexes) {
+        const auto row = sourceRow(index);
+        if (row >= 0)
+            rows.append(row);
+    }
+    return rows;
+}
+
+int PlaylistPane::singleSelectedSourceRow() const {
+    const auto rows = selectedSourceRows();
+    return rows.size() == 1 ? rows.first() : -1;
+}
+
 void PlaylistPane::updateEditingActions() {
     if (filtering_) {
         remove_->setEnabled(false);
@@ -304,8 +375,23 @@ void PlaylistPane::updateEditingActions() {
         moveDown_->setEnabled(false);
         return;
     }
-    const auto row = view_->currentIndex().row();
-    remove_->setEnabled(row >= 0);
-    moveUp_->setEnabled(row > 0);
-    moveDown_->setEnabled(row >= 0 && row + 1 < model_->rowCount());
+    const auto rows = selectedSourceRows();
+    remove_->setEnabled(!rows.isEmpty() || view_->currentIndex().isValid());
+    const auto single = rows.size() == 1 ? rows.first() : -1;
+    moveUp_->setEnabled(single > 0);
+    moveDown_->setEnabled(single >= 0 && single + 1 < model_->rowCount());
+}
+
+void PlaylistPane::updateEmptyHint() {
+    if (model_->rowCount() == 0 && !filtering_) {
+        emptyHint_->setText(tr("播放列表为空\n打开文件或文件夹，或拖入媒体"));
+        emptyHint_->show();
+        return;
+    }
+    if (filtering_ && filter_->rowCount() == 0) {
+        emptyHint_->setText(tr("没有匹配项"));
+        emptyHint_->show();
+        return;
+    }
+    emptyHint_->hide();
 }

@@ -26,6 +26,7 @@ class PlaylistPane final : public QWidget {
     void setSingleClickActivation(bool enabled);
 
   protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
     void changeEvent(QEvent *event) override;
 
   signals:
@@ -39,6 +40,9 @@ class PlaylistPane final : public QWidget {
     void synchronizeCurrent();
     void updateItemCount();
     void updateEditingActions();
+    void updateEmptyHint();
+    [[nodiscard]] QList<int> selectedSourceRows() const;
+    [[nodiscard]] int singleSelectedSourceRow() const;
     [[nodiscard]] int sourceRow(const QModelIndex &index) const;
     [[nodiscard]] QModelIndex sourceIndexForCurrent() const;
     PlaylistController &queue_;
@@ -46,6 +50,7 @@ class PlaylistPane final : public QWidget {
     QSortFilterProxyModel *filter_;
     QLineEdit *search_;
     QListView *view_;
+    QLabel *emptyHint_;
     QAction *remove_;
     QAction *moveUp_;
     QAction *moveDown_;
@@ -53,6 +58,7 @@ class PlaylistPane final : public QWidget {
     QAction *clearSearchAction_;
     QPersistentModelIndex playingIndex_;
     QTimer *singleClickTimer_;
+    Qt::KeyboardModifiers lastClickModifiers_ = Qt::NoModifier;
     QPersistentModelIndex pendingClickIndex_;
     bool singleClickActivation_ = false;
     bool filtering_ = false;

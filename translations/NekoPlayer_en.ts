@@ -132,6 +132,14 @@
     <message><source>清除播放列表搜索</source><translation>Clear playlist search</translation></message>
     <message><source>%1 项</source><translation>%1 items</translation></message>
     <message><source>%1 / %2 项</source><translation>%1 / %2 items</translation></message>
+    <message>
+        <source>播放列表为空
+打开文件或文件夹，或拖入媒体</source>
+        <translation>Playlist is empty
+Open a file or folder, or drop media here</translation>
+    </message>
+    <message><source>没有匹配项</source><translation>No matches</translation></message>
+    <message><source>播放列表提示</source><translation>Playlist hint</translation></message>
 </context>
 <context>
     <name>WelcomePanel</name>

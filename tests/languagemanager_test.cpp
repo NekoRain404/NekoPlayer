@@ -14,6 +14,8 @@ class LanguageManagerTest final : public QObject {
 
         QVERIFY(languages.setLanguage(QStringLiteral("zh_CN")));
         QCOMPARE(QCoreApplication::translate("QObject", "深色"), QStringLiteral("深色"));
+        QCOMPARE(QCoreApplication::translate("QPlatformTheme", "Apply"), QStringLiteral("应用"));
+        QCOMPARE(QCoreApplication::translate("QPlatformTheme", "Cancel"), QStringLiteral("取消"));
     }
 
     void translatesHighFrequencyPlaybackContexts() {

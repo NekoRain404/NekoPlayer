@@ -17,5 +17,7 @@ class LanguageManager final : public QObject {
   private:
     QCoreApplication &application_;
     std::unique_ptr<QTranslator> translator_;
+    std::unique_ptr<QTranslator> qtTranslator_;
     QString currentLanguage_ = QStringLiteral("zh_CN");
+    bool initialized_ = false;
 };

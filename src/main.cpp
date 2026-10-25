@@ -13,11 +13,14 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
+#include <clocale>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 
 int main(int argc, char *argv[]) {
+    // libmpv requires C numeric formatting regardless of the desktop locale.
+    std::setlocale(LC_NUMERIC, "C");
     const bool checkBackendOnly =
         CommandLineArguments::hasOptionBeforeSeparator(argc, argv, "--check-backend");
     std::unique_ptr<QCoreApplication> app;

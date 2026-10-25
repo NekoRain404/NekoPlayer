@@ -1,10 +1,10 @@
 # Verification Record
 
-Glass tuning and UI polish verification (2026-10-25, code at `7955934`):
+Glass tuning and UI polish verification (2026-10-25, code at `5d052a4`):
 
 - Scope: persisted glass opacity (40–100%, default 88) and glass blur amount (0–100%, default 38) under `appearance/glassOpacity` / `appearance/glassBlur`; the blur parameter softens the translucent gradient and rim contrast (Qt Widgets does not sample content behind a window, so this is explicitly not a true backdrop blur). The welcome panel now uses `WA_StyledBackground`/QSS instead of an opaque `paintEvent`, so it participates in the same glass material. Appearance controls moved to `PreferencesAppearancePage`; sliders show live values and are disabled when glass is off.
-- UI polish: graphite Apple-inspired Dark/Light token palettes, larger control/surface radii, rounded segmented preference tabs, styled menus/tooltips/scrollbars/inputs/check boxes with a resource check mark, and a more distinct transport/sidebar surface hierarchy.
-- `LC_ALL=C LANG=C ctest --preset debug -E '^(window|window-startup|file-startup|.*-window)$' --output-on-failure` passed **65/65** in **63.54 s** on the final tree.
+- UI polish: graphite Apple-inspired Dark/Light token palettes, larger control/surface radii, rounded segmented preference tabs with a visible selected state, styled menus/tooltips/scrollbars/inputs/check boxes with resource check and combo-chevron assets, and a more distinct transport/sidebar surface hierarchy.
+- `LC_ALL=C LANG=C ctest --preset debug -E '^(window|window-startup|file-startup|.*-window)$' --output-on-failure` passed **65/65** in **63.46 s** on the final tree.
 - `code-size` passed **1/1**; `preferences_dialog.cpp` 492, new `preferencesappearancepage.cpp` 83, `ui_surface_test.cpp` 528, `windowactions.cpp` 550 (at the hard guard).
 - `lrelease6 translations/NekoPlayer_en.ts` reports **320 finished, 0 unfinished**.
 - `clang-format` and `git diff --check` passed; the offscreen-rendered appearance page and main window were inspected visually (dark graphite surfaces, rounded tabs, sliders, translated buttons and check mark). This is not native Wayland visual acceptance; the window suite remains compile-only.

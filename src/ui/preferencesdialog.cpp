@@ -35,7 +35,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       seekStepSeconds_(new QSpinBox(this)), mediaLibraryPreferences_(initialMediaLibrary),
       resumePlaybackPositionDefault_(resumePlaybackPosition),
       seekStepSecondsDefault_(normalizedSeekStepSeconds(seekStepSeconds)),
-      lastApplyActive_(player.state().active), languagePreferences_(languages.normalized()) {
+      languagePreferences_(languages.normalized()), lastApplyActive_(player.state().active) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));

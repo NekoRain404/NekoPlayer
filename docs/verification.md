@@ -1,5 +1,11 @@
 # Verification Record
 
+Final post-review hardening regression (2026-10-25, code at `6232353`):
+
+- The final fix wave scoped PreferencesDialog Restore Defaults by category (Subtitles no longer resets the hidden Playback seek draft), added a load-bearing regression for that path, asserted playlist display-name cache alignment, normalized the programmatic seek setter, and added a custom-seek save/load assertion.
+- `LC_ALL=C LANG=C ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passed **54/54** in **58.91 s** on the final tree. The focused post-fix selection passed **5/5**; window tests were compiled only.
+- The whole-branch reviewer found no Critical issues, one Important (cross-page Restore Defaults) and six Minor findings; all Important and cheap Minor findings were fixed, with the remaining deferred items recorded below. A scoped re-review confirmed every fix.
+
 Release-hardening final verification (2026-10-25, code at `1d582ed`):
 
 - Scope: removal of the production-dead `PlaybackSettingsDialog` / `SubtitleSettingsDialog`, the narrow-width transport time fix, the playlist display-name cache, the custom 1–120 s seek interval, and GNUInstallDirs install/desktop/icon integration. No production code changed in this documentation round.

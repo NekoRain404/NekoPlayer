@@ -26,7 +26,7 @@
 - [x] Task 4: Custom seek interval
 - [x] Task 5: Install rules and desktop integration
 - [x] Task 6: Verification and documentation
-- [ ] Task 6: Whole-branch review (not dispatched during the documentation task)
+- [x] Task 6: Whole-branch review (2026-10-25; one fix wave, scoped re-review clean)
 - [ ] Optional: native Wayland real-display acceptance
 
 ---

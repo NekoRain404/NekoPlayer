@@ -442,6 +442,44 @@ class PlaylistPaneTest final : public QObject {
         QCOMPARE(fixture.countText(), QStringLiteral("2 项"));
     }
 
+    void modifierPressCancelsPendingSingleClick() {
+        PaneFixture fixture;
+        fixture.pane.setSingleClickActivation(true);
+        auto *view = fixture.view();
+        const auto point = view->visualRect(view->model()->index(0, 0)).center();
+        QSignalSpy plays(&fixture.pane, &PlaylistPane::playRequested);
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, point, 10);
+        QTest::mousePress(view->viewport(), Qt::LeftButton, Qt::ControlModifier, point);
+        QTest::qWait(QApplication::doubleClickInterval() + 100);
+        QCOMPARE(plays.count(), 0);
+    }
+
+    void emptyQueueHintTakesPrecedenceOverFilter() {
+        PaneFixture fixture;
+        fixture.queue.clear();
+        fixture.search()->setText(literal("zzz"));
+        QVERIFY(!fixture.emptyHint()->isHidden());
+        QCOMPARE(fixture.emptyHint()->text(),
+                 QStringLiteral("播放列表为空\n打开文件或文件夹，或拖入媒体"));
+    }
+
+    void sortingWhileFilteredKeepsProxyOrderAndCurrentEntry() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(2);
+        fixture.search()->setText(literal("a"));
+        auto *view = fixture.view();
+        QVERIFY(view->model() != fixture.queue.model());
+        fixture.queue.sortPlaylist(PlaylistModel::SortKey::Title, Qt::DescendingOrder);
+        QCOMPARE(fixture.queue.model()->currentIndex(), 0);
+        QCOMPARE(fixture.queue.model()->index(0, 0).data().toString(), literal("gamma.mkv"));
+        QCOMPARE(fixture.queue.model()->index(2, 0).data().toString(), literal("alpha.mkv"));
+        QCOMPARE(view->model()->rowCount(), 3);
+        QCOMPARE(view->model()->index(0, 0).data().toString(), literal("gamma.mkv"));
+        QCOMPARE(view->model()->index(2, 0).data().toString(), literal("alpha.mkv"));
+        QCOMPARE(view->currentIndex().data().toString(), literal("gamma.mkv"));
+        QVERIFY(view->selectionModel()->isSelected(view->currentIndex()));
+    }
+
     void playingRowStaysBoldWhenVisible() {
         PaneFixture fixture;
         fixture.queue.model()->setCurrentIndex(1);

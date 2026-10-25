@@ -176,6 +176,8 @@ void MainWindow::createActions() {
     connect(model, &PlaylistModel::rowsAboutToBeRemoved, folderMenu_, &FolderMenu::cancel);
     connect(model, &PlaylistModel::rowsAboutToBeMoved, folderMenu_, &FolderMenu::cancel);
     connect(model, &PlaylistModel::modelAboutToBeReset, folderMenu_, &FolderMenu::cancel);
+    // Sorting is a structural edit as well, even though it only changes layout.
+    connect(model, &PlaylistModel::layoutAboutToBeChanged, folderMenu_, &FolderMenu::cancel);
     auto *recent = new RecentMediaMenu(*recentMedia_, this);
     connect(recent, &RecentMediaMenu::openRequested, this, &MainWindow::openFile);
     connect(recent, &RecentMediaMenu::feedback, this,

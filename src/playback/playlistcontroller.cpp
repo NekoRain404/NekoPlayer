@@ -302,9 +302,11 @@ int PlaylistController::removeMissingFiles() {
 }
 
 void PlaylistController::sortPlaylist(PlaylistModel::SortKey key, Qt::SortOrder order) {
-    failedRows_.clear();
+    // Only a real reorder invalidates row-scoped failure history; an
+    // already-sorted call must not re-arm retries of failed rows.
     if (!model_->sortEntries(key, order))
         return;
+    failedRows_.clear();
     if (shuffleEnabled_)
         shuffle_.reset(*model_, model_->currentIndex());
     emit currentChanged(model_->currentIndex());

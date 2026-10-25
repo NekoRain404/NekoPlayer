@@ -41,8 +41,10 @@ PlaylistMaintenanceMenu::PlaylistMaintenanceMenu(PlaylistController &playlist,
         action->setObjectName(QString::fromLatin1(names[index]));
         sortActions_[index] = action;
         const auto [key, order] = sortEntries[index];
-        connect(action, &QAction::triggered, this,
-                [this, key, order] { playlist_.sortPlaylist(key, order); });
+        connect(action, &QAction::triggered, this, [this, key, order] {
+            const WaitCursorGuard waitCursor;
+            playlist_.sortPlaylist(key, order);
+        });
     }
     removeMissingAction_ = new QAction(this);
     removeMissingAction_->setObjectName(QStringLiteral("removeMissingFilesAction"));
@@ -56,7 +58,11 @@ QMenu *PlaylistMaintenanceMenu::sortMenu() const { return sortMenu_; }
 QAction *PlaylistMaintenanceMenu::removeMissingAction() const { return removeMissingAction_; }
 
 void PlaylistMaintenanceMenu::removeMissingFiles() {
-    const auto rows = playlist_.missingFileRows();
+    QList<int> rows;
+    {
+        const WaitCursorGuard waitCursor;
+        rows = playlist_.missingFileRows();
+    }
     if (rows.isEmpty()) {
         emit feedback(tr("没有缺失文件"));
         return;
@@ -67,11 +73,14 @@ void PlaylistMaintenanceMenu::removeMissingFiles() {
                               QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (answer != QMessageBox::Yes)
         return;
+    int removed = 0;
     {
         const WaitCursorGuard waitCursor;
-        playlist_.removeRowsAt(rows);
+        // The modal dialog ran a nested event loop; a folder import may have
+        // replaced the queue, so revalidate instead of reusing row numbers.
+        removed = playlist_.removeMissingFiles();
     }
-    emit feedback(tr("已移除 %1 个缺失文件").arg(rows.size()));
+    emit feedback(removed == 0 ? tr("没有缺失文件") : tr("已移除 %1 个缺失文件").arg(removed));
 }
 
 void PlaylistMaintenanceMenu::retranslate() {

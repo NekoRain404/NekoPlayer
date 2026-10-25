@@ -20,6 +20,9 @@
 #include <QVBoxLayout>
 
 namespace {
+constexpr auto selectionModifiers =
+    Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier;
+
 QToolButton *actionButton(QAction *action, QWidget *parent) {
     auto *button = new QToolButton(parent);
     button->setDefaultAction(action);
@@ -175,9 +178,11 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
             emit playRequested(pending.row());
     });
     connect(view_, &QListView::clicked, this, [this](const QModelIndex &index) {
-        constexpr auto selectionModifiers =
-            Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier;
-        if (lastClickModifiers_ & selectionModifiers) {
+        // Consume the recorded modifiers so a later synthetic click cannot be
+        // suppressed by stale state.
+        const auto modifiers = lastClickModifiers_;
+        lastClickModifiers_ = Qt::NoModifier;
+        if (modifiers & selectionModifiers) {
             singleClickTimer_->stop();
             pendingClickIndex_ = QPersistentModelIndex{};
             return;
@@ -252,7 +257,17 @@ void PlaylistPane::changeEvent(QEvent *event) {
 bool PlaylistPane::eventFilter(QObject *watched, QEvent *event) {
     if (watched == view_->viewport()) {
         switch (event->type()) {
-        case QEvent::MouseButtonPress:
+        case QEvent::MouseButtonPress: {
+            const auto modifiers = static_cast<QMouseEvent *>(event)->modifiers();
+            lastClickModifiers_ = modifiers;
+            // A selection gesture must cancel a pending click-to-play before
+            // the release, so holding a modifier down cannot start playback.
+            if ((modifiers & selectionModifiers) && singleClickTimer_->isActive()) {
+                singleClickTimer_->stop();
+                pendingClickIndex_ = QPersistentModelIndex{};
+            }
+            break;
+        }
         case QEvent::MouseButtonRelease:
         case QEvent::MouseButtonDblClick:
             lastClickModifiers_ = static_cast<QMouseEvent *>(event)->modifiers();
@@ -383,7 +398,8 @@ void PlaylistPane::updateEditingActions() {
 }
 
 void PlaylistPane::updateEmptyHint() {
-    if (model_->rowCount() == 0 && !filtering_) {
+    // An empty queue takes precedence over the filter: there is nothing to search.
+    if (model_->rowCount() == 0) {
         emptyHint_->setText(tr("播放列表为空\n打开文件或文件夹，或拖入媒体"));
         emptyHint_->show();
         return;

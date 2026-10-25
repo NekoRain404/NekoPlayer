@@ -18,7 +18,7 @@ the distributed source archive.
 
 | Kind | Arch packages |
 | --- | --- |
-| Runtime | `qt6-base`, `mpv`, `ffmpeg`, `hicolor-icon-theme` |
+| Runtime | `qt6-base`, `qt6-translations`, `mpv`, `ffmpeg`, `hicolor-icon-theme` |
 | Build | `cmake`, `ninja`, `qt6-tools` (`lrelease`), `pkgconf` |
 
 `base-devel` is assumed by `makepkg`.

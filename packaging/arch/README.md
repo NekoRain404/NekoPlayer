@@ -12,7 +12,7 @@ cd packaging/arch
 makepkg -si
 ```
 
-`makepkg -si` installs the runtime dependencies (`qt6-base`, `mpv`, `ffmpeg`,
+`makepkg -si` installs the runtime dependencies (`qt6-base`, `qt6-translations`, `mpv`, `ffmpeg`,
 `hicolor-icon-theme`) and the build tools (`cmake`, `ninja`, `qt6-tools`,
 `pkgconf`) through pacman, then builds and installs the package.
 

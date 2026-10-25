@@ -91,6 +91,19 @@
     <message><source>%1 · %2</source><translation>%1 · %2</translation></message>
 </context>
 <context>
+    <name>PlaylistMaintenanceMenu</name>
+    <message><source>排序</source><translation>Sort</translation></message>
+    <message><source>标题升序</source><translation>Title Ascending</translation></message>
+    <message><source>标题降序</source><translation>Title Descending</translation></message>
+    <message><source>路径升序</source><translation>Path Ascending</translation></message>
+    <message><source>路径降序</source><translation>Path Descending</translation></message>
+    <message><source>移除缺失文件…</source><translation>Remove Missing Files…</translation></message>
+    <message><source>移除缺失文件</source><translation>Remove Missing Files</translation></message>
+    <message><source>没有缺失文件</source><translation>No missing files</translation></message>
+    <message><source>找到 %1 个缺失文件。要从播放列表中移除吗？</source><translation>Found %1 missing files. Remove them from the playlist?</translation></message>
+    <message><source>已移除 %1 个缺失文件</source><translation>Removed %1 missing files</translation></message>
+</context>
+<context>
     <name>TuningMenus</name>
     <message><source>%1 倍</source><translation>%1×</translation></message>
     <message><source>减慢 0.1 倍</source><translation>Decrease Speed by 0.1×</translation></message>

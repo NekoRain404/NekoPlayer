@@ -14,6 +14,7 @@
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 #include "playbackoverlay.h"
+#include "playlistmaintenancemenu.h"
 #include "playlistmodemenu.h"
 #include "playlistpane.h"
 #include "preferencescoordinator.h"
@@ -489,6 +490,8 @@ void MainWindow::changeEvent(QEvent *event) {
     setActionText("previousAction", tr("上一个"));
     setActionText("nextAction", tr("下一个"));
     setActionText("clearPlaylistAction", tr("清空播放列表"));
+    if (playlistMaintenance_)
+        playlistMaintenance_->retranslate();
     setActionText("muteAction", tr("静音"));
     setActionText("fullscreenAction", isFullScreen() ? tr("退出全屏") : tr("全屏"));
     setActionText("miniPlayerAction", miniPlayerActive_ ? tr("退出小窗") : tr("小窗播放"));

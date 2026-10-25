@@ -14,6 +14,7 @@ class TrackMenus;
 class SessionManager;
 class PlaylistController;
 class PlaylistPane;
+class PlaylistMaintenanceMenu;
 class QAction;
 class QMenu;
 class QLabel;
@@ -130,6 +131,7 @@ class MainWindow final : public QMainWindow {
     QAction *alwaysOnTopAction_ = nullptr;
     QMenu *contextMenu_ = nullptr;
     QMenu *playlistMenu_ = nullptr;
+    PlaylistMaintenanceMenu *playlistMaintenance_ = nullptr;
     QTimer controlsTimer_;
     QString lastTitlePath_;
     QStringList pendingPaths_;

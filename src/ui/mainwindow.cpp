@@ -15,6 +15,7 @@
 #include "playback/videowidget.h"
 #include "playbackoverlay.h"
 #include "playlist/m3u8store.h"
+#include "playlistmaintenancemenu.h"
 #include "playlistpane.h"
 #include "preview/thumbnailservice.h"
 #include "session/recentmediahistory.h"
@@ -106,6 +107,12 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
                                      clearPlaylistAction_, content);
     playlistMenu_->addSeparator();
     playlistMenu_->addActions(playlistPane_->editingActions());
+    playlistMaintenance_ = new PlaylistMaintenanceMenu(*playlist_, this, this);
+    connect(playlistMaintenance_, &PlaylistMaintenanceMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message, 2500); });
+    playlistMenu_->addSeparator();
+    playlistMenu_->addMenu(playlistMaintenance_->sortMenu());
+    playlistMenu_->addAction(playlistMaintenance_->removeMissingAction());
     playlistPane_->hide();
     splitter_ = new QSplitter(Qt::Horizontal, content);
     splitter_->setObjectName(QStringLiteral("bodySplitter"));

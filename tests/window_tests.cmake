@@ -100,3 +100,7 @@ target_link_libraries(always_on_top_window_test PRIVATE neko_ui Qt6::Test)
 # Compile-only coverage for the --fullscreen / --start-paused startup paths.
 add_executable(startup_options_window_test startup_options_window_test.cpp)
 target_link_libraries(startup_options_window_test PRIVATE neko_ui Qt6::Test)
+
+# Compile-only coverage for the playlist sort submenu and cleanup action wiring.
+add_executable(playlist_maintenance_window_test playlist_maintenance_window_test.cpp)
+target_link_libraries(playlist_maintenance_window_test PRIVATE neko_ui Qt6::Test)

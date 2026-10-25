@@ -87,7 +87,8 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/languagemanager.cpp
     src/ui/videoframingmenu.cpp
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
-    src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
+    src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/playlistmaintenancemenu.cpp
+    src/ui/navigationmenu.cpp src/ui/videomenu.cpp
     src/ui/timeseekdialog.cpp src/ui/networkopendialog.cpp
     src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp src/ui/screenshotmenu.cpp
     src/ui/subtitledisplaymenu.cpp

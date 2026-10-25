@@ -118,3 +118,9 @@ add_executable(video_color_dialog_test video_color_dialog_test.cpp)
 target_link_libraries(video_color_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME video-color-dialog COMMAND video_color_dialog_test)
 set_tests_properties(video-color-dialog PROPERTIES TIMEOUT 30)
+
+add_executable(playlist_maintenance_menu_test playlist_maintenance_menu_test.cpp)
+target_link_libraries(playlist_maintenance_menu_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME playlist-maintenance-menu COMMAND playlist_maintenance_menu_test)
+set_tests_properties(playlist-maintenance-menu PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

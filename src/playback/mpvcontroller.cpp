@@ -251,14 +251,20 @@ void MpvController::setHardwareDecodingEnabled(bool enabled) {
 
 void MpvController::openFile(const QString &path) { openFileAtPosition(path, 0); }
 
+void MpvController::setSuppressAutoLoadForNextOpen(bool suppress) {
+    impl_->suppressAutoLoadForNextOpen = suppress;
+}
+
 void MpvController::openFileAtPosition(const QString &path, double seconds) {
+    const bool suppressAutoLoad = std::exchange(impl_->suppressAutoLoadForNextOpen, false);
     if (!isReady() || path.isEmpty() || !std::isfinite(seconds) || seconds < 0)
         return;
     const auto generation = ++impl_->openGeneration;
     impl_->openingPosition = seconds;
     impl_->openingEntry = -1;
-    const auto options =
-        QByteArray("aid=auto,sid=auto,start=") + QByteArray::number(seconds, 'f', 3);
+    auto options = QByteArray("aid=auto,sid=auto,start=") + QByteArray::number(seconds, 'f', 3);
+    if (suppressAutoLoad)
+        options += ",sub-auto=no";
     const auto [id, status] =
         impl_->submitCommand({"loadfile", path.toUtf8(), "replace", "-1", options});
     impl_->openingCommand = id;

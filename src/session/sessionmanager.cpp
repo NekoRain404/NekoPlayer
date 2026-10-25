@@ -76,11 +76,8 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
                 savePlaybackHistory();
                 emit playbackHistoryChanged();
             });
-    playlist_.setResumePositionResolver([this](const QString &path) {
-        return resumePlaybackPositionEnabled_
-                   ? resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0)
-                   : 0.0;
-    });
+    playlist_.setResumePositionResolver(
+        [this](const QString &path) { return resumePositionFor(path); });
 }
 
 SessionLoadResult SessionManager::restore() {
@@ -192,6 +189,23 @@ void SessionManager::rememberPlaybackPosition(const QString &path, double positi
     }
     savePlaybackHistory();
     emit playbackHistoryChanged();
+}
+
+double SessionManager::resumePositionFor(const QString &path) {
+    const auto mediaPath = TrackPreferenceStore::normalizedPath(path);
+    const auto saved = std::find_if(
+        trackPreferences_.cbegin(), trackPreferences_.cend(), [&mediaPath](const auto &entry) {
+            return entry.mediaPath == mediaPath && TrackPreferenceStore::matchesFingerprint(entry);
+        });
+    // Explicit external subtitle memory restores its own set; suppressing
+    // auto-discovery for this load avoids adding a duplicate stream.
+    const bool explicitSubtitleMemory = saved != trackPreferences_.cend() &&
+                                        (!saved->selection.externalSubtitlePaths.isEmpty() ||
+                                         !saved->selection.selectedExternalSubtitlePath.isEmpty());
+    player_.setSuppressAutoLoadForNextOpen(explicitSubtitleMemory);
+    return resumePlaybackPositionEnabled_
+               ? resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0)
+               : 0.0;
 }
 
 QString SessionManager::savePlaybackHistory() const {

@@ -65,6 +65,9 @@ class MpvController final : public QObject {
     // Normalized (trimmed, non-empty, capped) mpv alang/slang priorities.
     void setLanguagePreferences(const QStringList &audio, const QStringList &subtitle);
     void setAutoLoadExternalSubtitles(bool enabled);
+    // Consume on the next openFile/openFileAtPosition: that load only uses a
+    // file-local sub-auto=no, leaving the persisted preference untouched.
+    void setSuppressAutoLoadForNextOpen(bool suppress);
     void restoreTrackPreference(const TrackSelectionPreference &preference);
     [[nodiscard]] bool trackRestorationPending() const;
     // True when this external path was explicitly added or selected by the user

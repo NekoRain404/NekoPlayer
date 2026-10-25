@@ -417,10 +417,12 @@ PlaylistController::ScanResult PlaylistController::playFirstAvailable(int firstR
 
 void PlaylistController::startRow(int row, int step) {
     snapshotCurrentPlayback();
+    const auto path = model_->pathAt(row);
+    // Resolve before every open: SessionManager uses this hook to prepare
+    // one-shot load options that must exist before the command is submitted.
+    const auto resolvedPosition = resumePositionResolver_ ? resumePositionResolver_(path) : 0.0;
     const auto startPosition =
-        resumeEntry_.isValid() && resumeEntry_.row() == row
-            ? resumePosition_
-            : (resumePositionResolver_ ? resumePositionResolver_(model_->pathAt(row)) : 0);
+        resumeEntry_.isValid() && resumeEntry_.row() == row ? resumePosition_ : resolvedPosition;
     resumeEntry_ = QPersistentModelIndex{};
     exhausted_ = false;
     playbackQueued_ = true;
@@ -428,7 +430,7 @@ void PlaylistController::startRow(int row, int step) {
     if (shuffleEnabled_)
         shuffle_.select(*model_, row);
     model_->setCurrentIndex(row);
-    player_.openFileAtPosition(model_->pathAt(row), startPosition);
+    player_.openFileAtPosition(path, startPosition);
     emit currentChanged(row);
 }
 

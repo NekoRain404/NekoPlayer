@@ -131,6 +131,7 @@ struct MpvController::Impl {
     bool ready = false;
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
+    bool suppressAutoLoadForNextOpen = false;
     VideoPresentation presentation;
     VideoFraming framing;
     VideoColorAdjustment videoColor;

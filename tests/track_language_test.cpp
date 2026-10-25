@@ -449,7 +449,7 @@ class TrackLanguageTest final : public QObject {
             player.setPaused(true);
             QTRY_VERIFY_WITH_TIMEOUT(player.state().paused, 5000);
             QTRY_COMPARE_WITH_TIMEOUT(restored.count(), 1, 10000);
-            QTRY_VERIFY_WITH_TIMEOUT(externalSubtitleCount(player) >= 1, 5000);
+            QTRY_COMPARE_WITH_TIMEOUT(externalSubtitleCount(player), 1, 10000);
             QVERIFY(player.isExplicitExternalPath(sibling));
             QVERIFY(player.isExplicitExternalPath(canonicalSibling));
             QVERIFY(session.save({}).isEmpty());

@@ -98,7 +98,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
     Qt6::OpenGLWidgets)
 qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
-    FILES data/checkmark.png)
+    FILES data/checkmark.png data/chevron.png)
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)

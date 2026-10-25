@@ -4,7 +4,7 @@
 
 | 组件 | 职责 | 依赖边界 |
 | --- | --- | --- |
-| `MpvController` | client RAII、异步命令、属性观察、文件事件、播放状态和渲染恢复快照 | Qt Core / libmpv client API，不依赖窗口 |
+| `MpvController` | client RAII、异步命令、属性观察、文件事件、播放状态、`alang`/`slang`／`sub-auto` 语言偏好应用（自动加载默认关闭）和渲染恢复快照 | Qt Core / libmpv client API，不依赖窗口 |
 | `PlaybackState` | 只读播放快照；秒为时间单位，音量 0–100 | 控制器与展示层共用 |
 | `MediaInformation` / `mpvcontroller_information.cpp` | 容器及当前音视频解码参数的拥有数据快照、属性观察与异步补全 | Qt Core 值类型；实现复用同一 mpv client，不依赖 UI |
 | `MediaInformationDialog` / `mediainformationtext.cpp` | 当前媒体的非模态纯文本报告与显式复制 | 只读取控制器快照，文本格式化不依赖窗口，无原始 mpv 调用 |
@@ -40,17 +40,18 @@
 | `AbLoopMenu` | 共享区间菜单、当前时间端点动作和快捷键 | 只使用控制器业务 API，端点变化时刷新标题 |
 | `SubtitlePreferences` | 字幕可见性、缩放、位置及默认字体；统一归一化 | Qt Core 值类型，不依赖 mpv 或 UI |
 | `SubtitleDisplayMenu` | 共享字幕显示动作与快捷键 | 只使用字幕偏好与控制器业务 API，不订阅播放进度 |
-| `PreferencesCoordinator` | 按当前值装配共享 `PreferencesDialog` 并转发各页变更 | 依赖控制器公开接口与 MainWindow 提供的窄 getter/setter，不持有偏好存储或播放逻辑 |
+| `PreferencesDialog` | 六页偏好草稿；音频页首选音轨语言、字幕页首选字幕语言与自动加载同名字幕字段，Apply/OK 提交、Restore Defaults 分页重置 | Qt Widgets；只通过控制器公开接口提交，不接触 mpv handle |
+| `PreferencesCoordinator` | 按当前值装配共享 `PreferencesDialog` 并转发各页变更，包括首选音轨／字幕语言与自动加载开关的窄 getter/setter | 依赖控制器公开接口与 MainWindow 提供的窄 getter/setter，不持有偏好存储或播放逻辑 |
 | `AppearancePreferences` / `AppearanceTokens` / `AppearanceStylesheet` / `AppearanceMenu` | Dark/Light/System 语义色、强调色派生、QSS 生成、启动/预览应用与持久化 | Qt Widgets 样式与调色板；System 保留平台标准调色板并覆盖强调色相关 role；不触碰 `VideoWidget`、libmpv 或渲染路径 |
 | `VideoPresentation` / `mpvcontroller_video.cpp` | 本次运行的画面比例与四分之一圈旋转意图、校验及异步提交 | 值类型不依赖 UI；实现只使用同一 mpv client |
 | `VideoMenu` | 互斥比例动作、旋转快捷键与共享菜单 | 仅调用控制器业务 API，按专用信号刷新 |
 | `ScreenshotMenu` / `mpvcontroller_screenshot.cpp` | 含字幕／无字幕截图入口、保存位置选择与原生命令完成确认 | UI 不读取帧；控制器校验目标与视频状态，通过同一 client 异步编码保存 |
-| `SessionState` / `SessionStore` | 音频、输出设备、解码、字幕、倍速／延迟、窗口偏好（含播放列表宽度）、交互偏好、1–120 秒定位步长和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
+| `SessionState` / `SessionStore` | 音频、输出设备、解码、字幕、首选音轨／字幕语言、自动加载同名字幕、倍速／延迟、窗口偏好（含播放列表宽度）、交互偏好、1–120 秒定位步长和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
 | `PlaybackHistoryStore` | 独立版本化 INI 文件；按规范化绝对路径保存最近 100 个媒体位置 | Qt Core，不依赖队列、播放控制器或 UI |
 | `RecentMediaHistory` | 独立版本化 JSON；保留最近成功播放的 20 个来源、去重、清空与原子保存 | Qt Core / MediaSource；不查找媒体文件、不联网，与续播位置分离 |
 | `RecentMediaMenu` | 文件／右键共享最近播放菜单及重开快捷键 | 只读取历史并发出打开意图，复用 MainWindow 原有入口；菜单打开时才构建条目 |
 | `CurrentMediaMenu` | 共享当前媒体来源／时间复制与本地文件夹入口 | 只读取控制器快照；Qt 剪贴板与 QDesktopServices，不调用 mpv、不拼接 shell 命令 |
-| `SessionManager` | 恢复空闲队列、播放偏好、逐文件位置、交互偏好及媒体级轨道选择，采集会话、记住媒体目录 | 通过队列/播放业务 API，不调用 mpv |
+| `SessionManager` | 恢复空闲队列、播放偏好、语言偏好（加载前应用到控制器）、逐文件位置、交互偏好及媒体级轨道选择，采集会话、记住媒体目录 | 通过队列/播放业务 API，不直接调用 mpv |
 | `MainWindow` | 组件组装、文件入口、错误显示、拖放、全屏、窗口置顶和生命周期协调；持有 `PreferencesCoordinator`、交互/列表宽度状态、持久化的窗口置顶选择，以及 `--fullscreen` / `--start-paused` 启动请求（暂停请求仅消费一次） | 通过队列和控制器接口发出业务操作 |
 | `WelcomePanel` | 空闲首页的打开/网络入口、最近来源与“继续观看” | 只发出来源意图，动作由 MainWindow 拥有；不访问播放器或存储 |
 | `BackendInfo` / `backendinfo.cpp` | 通过播放层报告 libmpv client API 版本 | 封装 `mpv_client_api_version`，UI 不直接包含 `mpv/client.h` |
@@ -79,7 +80,7 @@ M3U8 导入先按播放列表目录解析相对路径，再复用 `MediaSource` 
 
 媒体级轨道偏好独立保存在 `<session path>.tracks.ini`，以规范化绝对路径、文件大小和 UTC 修改时间组成的指纹识别媒体。每项记录内嵌音轨／字幕 ID（包括 `0` 关闭值）、外挂字幕规范化路径及同一文件内的流序号，内存和磁盘均最多保留 100 个媒体。指纹在普通媒体加载完成时记录；播放期间文件被修改后不将旧轨道选择写入新指纹。已删除或被替换的历史条目会被淘汰，不影响其他媒体保存。
 
-普通打开先以 `aid=auto,sid=auto` 使用 mpv 默认选轨，然后按媒体偏好异步加载外挂字幕、查询轨道、依次设置选择；设置命令收到回复后再次查询拥有数据的快照，才发出恢复完成通知。缺失或损坏的外挂字幕只报告非致命错误，其余字幕和音轨继续恢复。用户选轨、加载字幕、停止或换片会取消旧恢复；事件处理在同步信号回调后重新校验媒体代次，避免回调换片后继续处理旧请求。renderer recovery 只用原有内存快照，期间不同时启动磁盘恢复或保存中间状态。配置损坏、未知版本或非法条目保留原文件，通过非致命配置信号报告，不阻断正常会话恢复和播放。该流程只订阅媒体和轨道变化，不订阅时间进度或帧回调，不增加周期轮询。
+普通打开先以 `aid=auto,sid=auto` 使用 mpv 默认选轨，然后按媒体偏好异步加载外挂字幕、查询轨道、依次设置选择；设置命令收到回复后再次查询拥有数据的快照，才发出恢复完成通知。缺失或损坏的外挂字幕只报告非致命错误，其余字幕和音轨继续恢复。用户选轨、加载字幕、停止或换片会取消旧恢复；事件处理在同步信号回调后重新校验媒体代次，避免回调换片后继续处理旧请求。renderer recovery 只用原有内存快照，期间不同时启动磁盘恢复或保存中间状态。配置损坏、未知版本或非法条目保留原文件，通过非致命配置信号报告，不阻断正常会话恢复和播放。该流程只订阅媒体和轨道变化，不订阅时间进度或帧回调，不增加周期轮询。普通媒体加载前先把持久化的首选音轨／字幕语言写入 mpv `alang`/`slang`，并按自动加载开关设置 `sub-auto`（默认 `no`，启用时为 `exact`）；媒体级显式记忆在 `fileLoaded` 后应用，因而优先于语言默认值。偏好变更只影响后续加载，不切换当前播放的轨道。
 
 轨道管理复用同一 client 的事件循环：观察 `track-list` → 在借用 node 失效前复制字符串和标志 → 快照变化时发送 `tracksChanged` → 重建共享菜单。音轨和字幕编号只在各自类型内唯一；控制器按类型校验编号，0 表示关闭，通过异步命令设置 `aid` / `sid`。外挂字幕路径作为独立 UTF-8 参数传给异步 `sub-add`，解析和文件读取交给 mpv。菜单不订阅时间进度来重建内容；播放状态更新只在 active 变化时更新可用性。停止、加载失败或开始换片会清除轨道快照，闲置状态忽略迟到的非空轨道数据。
 
@@ -111,7 +112,7 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 
 上次选中条目的续播位置是 schema 1 的可选字段，旧配置默认从零开始；非有限／负值和不属于有效选中条目的位置归零。队列用 `QPersistentModelIndex` 绑定尚未消费的续播位置，跟随移动并区分重复路径；停止、打开其他媒体或删除条目使其失效。第一次播放通过类型化 `openFileAtPosition` 提交该次 `loadfile` 的 `start` 文件选项，避免先从头播放再定位；后续普通重播从零开始，原生单曲循环仍回到影片开头。控制器保留加载中的目标位置，实际位置观察到达后使用可定位媒体的当前位置，距末尾不超过一秒则归零。会话只在正常保存时采集，不逐帧写盘；尚未播放便退出保留原续播位置。
 
-偏好设置由 `PreferencesCoordinator` 统一装配：`MainWindow` 注入外观、媒体库、续播位置、定位步长和交互偏好的窄 getter/setter，F5、F6 与“设置”菜单都走同一 `createDialog/show` 路径，打开时把当前值交给 `PreferencesDialog`。对话框包含播放、音频、字幕、媒体库、外观、交互六个页面，`Category` 顺序保持稳定；草稿页只在 Apply/OK 时提交解码、字幕显示和交互偏好，音频设备选择即时提交。这样 F6 不会再以默认值覆盖真实偏好，`--no-config` 仍使用会话内回退值。当前 HDR 阶段由 libmpv 观察 PQ/HLG 与原色属性，`VideoMenu` 通过 `tone-mapping` 提供自动、BT.2390 和剪裁三种 GPU/libplacebo 意图。项目需区分 HDR 内容识别、色彩映射和显示器 HDR 输出：不能只因输入为 HDR 就假设屏幕或合成器可呈现 HDR。原生 Wayland HDR 色彩管理仍需目标驱动、显示器和合成器专项验证；正常播放继续复用 libmpv GPU 路径，不增加 CPU 帧回拷，并对 SDR 显示器依赖色调映射回退。插件框架、多引擎和完整主题系统不属于当前单内核播放器范围。逐文件播放历史由 `PlaybackHistoryStore` 单独持久化，不依赖主会话书签。
+偏好设置由 `PreferencesCoordinator` 统一装配：`MainWindow` 注入外观、媒体库、续播位置、定位步长、交互偏好以及首选音轨／字幕语言和自动加载开关的窄 getter/setter，F5、F6 与“设置”菜单都走同一 `createDialog/show` 路径，打开时把当前值交给 `PreferencesDialog`。对话框包含播放、音频、字幕、媒体库、外观、交互六个页面，`Category` 顺序保持稳定；草稿页只在 Apply/OK 时提交解码、字幕显示和交互偏好，音频设备选择即时提交；语言草稿写入 `SessionManager` 并立即应用到控制器，但只作为后续媒体加载的默认值，不改变当前播放的显式轨道选择。这样 F6 不会再以默认值覆盖真实偏好，`--no-config` 仍使用会话内回退值。当前 HDR 阶段由 libmpv 观察 PQ/HLG 与原色属性，`VideoMenu` 通过 `tone-mapping` 提供自动、BT.2390 和剪裁三种 GPU/libplacebo 意图。项目需区分 HDR 内容识别、色彩映射和显示器 HDR 输出：不能只因输入为 HDR 就假设屏幕或合成器可呈现 HDR。原生 Wayland HDR 色彩管理仍需目标驱动、显示器和合成器专项验证；正常播放继续复用 libmpv GPU 路径，不增加 CPU 帧回拷，并对 SDR 显示器依赖色调映射回退。插件框架、多引擎和完整主题系统不属于当前单内核播放器范围。逐文件播放历史由 `PlaybackHistoryStore` 单独持久化，不依赖主会话书签。
 
 外观子系统由 `AppearancePreferences`、`AppearanceTokens`、`AppearanceStylesheet` 和 `AppearanceMenu` 组成：值类型负责读写与启动应用，tokens 生成 Dark/Light/System 语义颜色和强调色派生，stylesheet 只从 tokens 生成 Widgets QSS。System 主题保留 Qt style 的 `standardPalette()` 底色，同时覆盖 `Highlight`、`HighlightedText` 和 `Link` 等强调色 role。`AppearanceMenu::setSettings()` 是应用与持久化的唯一所有者；偏好页用草稿即时预览，Apply 只提交一次，Cancel 回滚到打开前值。所谓“玻璃”只是控件半透明渐变与明暗边缘，不是窗口内背景模糊；该路径不改变 `VideoWidget`、libmpv 渲染、硬解或 HDR。
 

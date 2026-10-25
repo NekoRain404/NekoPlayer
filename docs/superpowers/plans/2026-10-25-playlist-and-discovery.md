@@ -6,6 +6,13 @@
 
 **Baseline:** `feat/first-playable` at `7e098ad`.
 
+## Status (2026-10-25)
+
+- [x] Playlist search/filter, F1 shortcut reference and Help menu, stop-after-current, and runtime application icon implemented.
+- [x] Full non-window Debug suite **58/58**; focused **7/7**; focused ASan/UBSan **7/7** with the documented leak-detection caveat.
+- [x] Whole-branch review completed; one Important and cheap Minor findings fixed, scoped re-review clean.
+- [ ] Native Wayland visual/keyboard/pointer acceptance (requires an interactive desktop session).
+
 ## Global Constraints
 
 - C++20 / Qt 6 Widgets / libmpv; single engine; UI must not issue raw mpv commands.

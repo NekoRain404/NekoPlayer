@@ -173,6 +173,6 @@ HDR 媒体会根据 libmpv 的 PQ/HLG 传递函数识别，并在 Tab 播放信�
 
 普通手写代码文件以 **500 行**为目标，自动检查允许少量超出至 **550 行**。少数明确列入 `cmake/CheckCodeSize.cmake` 的窗口协调或桌面集成文件可不超过 **800 行**，新增例外必须附带理由；CTest 的 `code-size` 检查自动执行这些限制。播放业务、GPU 资源、窗口协调与控制条分别实现，详见 [架构说明](docs/architecture.md)。使用 `clang-format`，警告默认开启；回调寿命变更必须运行 sanitizer 预设。
 
-自动化以 Linux 原生 Wayland 为基准，并保留 Linux X11 软件 OpenGL 回归。当前实际验证为单个 1.75 缩放显示器；真实扬声器听感、音画同步、混合缩放多显示器、不同 GPU、硬解、HDR 与 Windows 尚需专项验收；不能由 null 音频或软件渲染测试推断。合成器可以使未聚焦的测试窗口 suspended，因此自动化通过共享 QAction 验证命令行为；真实 Wayland 键盘焦点/快捷键路由需要桌面手工验收。GL 上下文重建时重新打开当前媒体并恢复暂停状态，本地文件和可定位网络媒体恢复时间，不可定位流重新打开；此过程可能短暂中断播放。本阶段最终轮次在 `LC_ALL=C` 下通过非窗口 Debug 套件 **57/57**（66.37 秒；新增 `playlist-pane`、`shortcuts-dialog`、`app-icon` 三个目标），并运行 6 个聚焦 ASan/UBSan 测试（关闭泄漏检测以避开平台库退出分配）；窗口行为测试只编译不运行，详细命令与结果见 [验证记录](docs/verification.md)。
+自动化以 Linux 原生 Wayland 为基准，并保留 Linux X11 软件 OpenGL 回归。当前实际验证为单个 1.75 缩放显示器；真实扬声器听感、音画同步、混合缩放多显示器、不同 GPU、硬解、HDR 与 Windows 尚需专项验收；不能由 null 音频或软件渲染测试推断。合成器可以使未聚焦的测试窗口 suspended，因此自动化通过共享 QAction 验证命令行为；真实 Wayland 键盘焦点/快捷键路由需要桌面手工验收。GL 上下文重建时重新打开当前媒体并恢复暂停状态，本地文件和可定位网络媒体恢复时间，不可定位流重新打开；此过程可能短暂中断播放。本阶段最终轮次在 `LC_ALL=C` 下通过非窗口 Debug 套件 **58/58**（58.07 秒；新增 `playlist-pane`、`shortcuts-dialog`、`app-icon`、`playlist-mode-menu` 四个目标），并运行 7 个聚焦 ASan/UBSan 测试（关闭泄漏检测以避开平台库退出分配）；窗口行为测试只编译不运行，详细命令与结果见 [验证记录](docs/verification.md)。
 
 参考源码见 [docs/references.md](docs/references.md)，skills 见 [docs/skills.md](docs/skills.md)。`references/` 已忽略，不参与主项目构建或 Git 版本管理。项目自身许可证尚未选定。

@@ -1,5 +1,11 @@
 # Verification Record
 
+Final post-review playlist/discovery regression (2026-10-25, code at `1cf0480`):
+
+- The final review fix wave exposed the pane's Ctrl+F/Esc search actions through the F1 reference, disarmed stop-after-current when a queue finishes through failure/exhaustion, added remove-current and mode-menu regressions, cleared stale search text on queue replacement, and disabled the window-level exit-fullscreen Escape action outside fullscreen to remove shortcut ambiguity.
+- `LC_ALL=C LANG=C ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passed **58/58** in **58.07 s** on the final tree. The focused post-fix selection passed **7/7**; focused ASan/UBSan passed **7/7** with `ASAN_OPTIONS=detect_leaks=0` (documented platform-library caveat); after the final Escape fix, the affected `playlist-pane`, `shortcuts-dialog`, and `playlist-mode-menu` selection passed **3/3**. Window tests were compiled only.
+- `lrelease` reports **293** translations, 0 unfinished. Native Wayland visual/keyboard/pointer acceptance remains open; a launch-context probe showed even a minimal Qt widget from the agent shell is not mapped by the running niri session (the same binary maps under XWayland), so visual acceptance requires an interactive desktop session.
+
 Playlist and discovery verification (2026-10-25, code at `3a5ab8c`):
 
 - Scope: playlist search/filter, the live F1 shortcut reference and Help menu, stop-after-current, and the runtime application icon. No production code changed in this documentation round.

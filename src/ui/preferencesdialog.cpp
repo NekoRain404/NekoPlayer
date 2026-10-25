@@ -21,7 +21,8 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
                                      MediaLibraryPreferences initialMediaLibrary,
                                      bool resumePlaybackPosition, int seekStepSeconds,
                                      AppearancePreferences::Settings appearance,
-                                     InteractionPreferences interaction)
+                                     InteractionPreferences interaction,
+                                     LanguagePreferences languages)
     : QDialog(parent), appearanceBaseline_(appearance), appearancePalette_(qApp->palette()),
       appearanceStyleSheet_(qApp->styleSheet()), player_(player), tabs_(new QTabWidget(this)),
       hardwareDecoding_(new QComboBox(this)), actualDecoder_(new QLabel(this)),
@@ -34,7 +35,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       seekStepSeconds_(new QSpinBox(this)), mediaLibraryPreferences_(initialMediaLibrary),
       resumePlaybackPositionDefault_(resumePlaybackPosition),
       seekStepSecondsDefault_(normalizedSeekStepSeconds(seekStepSeconds)),
-      lastApplyActive_(player.state().active) {
+      lastApplyActive_(player.state().active), languagePreferences_(languages.normalized()) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
@@ -72,6 +73,13 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     audioDevice_->setObjectName(QStringLiteral("audioOutputDeviceChoice"));
     audioDevice_->setAccessibleName(tr("音频输出设备"));
     audioForm->addRow(tr("输出设备："), audioDevice_);
+    preferredAudioLanguages_ = new QLineEdit(audio);
+    preferredAudioLanguages_->setObjectName(QStringLiteral("preferredAudioLanguagesEdit"));
+    preferredAudioLanguages_->setAccessibleName(tr("首选音轨语言"));
+    preferredAudioLanguages_->setPlaceholderText(tr("例如：jpn,eng"));
+    preferredAudioLanguages_->setText(
+        languagePreferences_.audioLanguages.join(QStringLiteral(", ")));
+    audioForm->addRow(tr("首选音轨语言："), preferredAudioLanguages_);
     auto *audioHelp =
         new QLabel(tr("输出设备切换会立即生效；设备不可用时将回退到自动选择。"), audio);
     audioHelp->setWordWrap(true);
@@ -102,6 +110,17 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     subtitleForm->addRow(tr("缩放(&S)："), subtitleScale_);
     subtitleForm->addRow(tr("垂直位置(&P)："), subtitlePosition_);
     subtitleForm->addRow(tr("默认字体(&F)："), subtitleFont_);
+    preferredSubtitleLanguages_ = new QLineEdit(subtitles);
+    preferredSubtitleLanguages_->setObjectName(QStringLiteral("preferredSubtitleLanguagesEdit"));
+    preferredSubtitleLanguages_->setAccessibleName(tr("首选字幕语言"));
+    preferredSubtitleLanguages_->setText(
+        languagePreferences_.subtitleLanguages.join(QStringLiteral(", ")));
+    subtitleForm->addRow(tr("首选字幕语言："), preferredSubtitleLanguages_);
+    autoLoadExternalSubtitles_ = new QCheckBox(tr("自动加载同名字幕"), subtitles);
+    autoLoadExternalSubtitles_->setObjectName(QStringLiteral("autoLoadExternalSubtitlesCheck"));
+    autoLoadExternalSubtitles_->setAccessibleName(tr("自动加载同名字幕"));
+    autoLoadExternalSubtitles_->setChecked(languagePreferences_.autoLoadExternalSubtitles);
+    subtitleForm->addRow(autoLoadExternalSubtitles_);
     auto *subtitleHelp =
         new QLabel(tr("隐藏字幕会保留轨道选择。位置越小越靠上，100% "
                       "为原始位置。默认字体仅用于未指定字体的文本字幕；ASS 保留自带样式。"),
@@ -141,7 +160,8 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     restoreDefaultsButton_->setVisible(false);
     layout->addWidget(buttons);
     connect(tabs_, &QTabWidget::currentChanged, this, [this](int index) {
-        restoreDefaultsButton_->setVisible(index == static_cast<int>(Category::Subtitles) ||
+        restoreDefaultsButton_->setVisible(index == static_cast<int>(Category::Audio) ||
+                                           index == static_cast<int>(Category::Subtitles) ||
                                            index == static_cast<int>(Category::Appearance) ||
                                            index == static_cast<int>(Category::Interaction));
     });
@@ -165,6 +185,12 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     connect(subtitlePosition_, &QDoubleSpinBox::valueChanged, this,
             &PreferencesDialog::updateApplyButton);
     connect(subtitleFont_, &QFontComboBox::currentTextChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(preferredAudioLanguages_, &QLineEdit::textChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(preferredSubtitleLanguages_, &QLineEdit::textChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(autoLoadExternalSubtitles_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
     connect(mediaScanningEnabled_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
@@ -212,11 +238,16 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     connect(restoreDefaultsButton_, &QPushButton::clicked, this, [this] {
         // Reset only the category whose page is showing; hidden pages keep their drafts.
         switch (static_cast<Category>(tabs_->currentIndex())) {
+        case Category::Audio:
+            preferredAudioLanguages_->clear();
+            break;
         case Category::Subtitles:
             subtitleVisible_->setChecked(true);
             subtitleScale_->setValue(1.0);
             subtitlePosition_->setValue(100.0);
             subtitleFont_->setEditText(SubtitlePreferences{}.font);
+            preferredSubtitleLanguages_->clear();
+            autoLoadExternalSubtitles_->setChecked(false);
             break;
         case Category::Appearance:
             appearanceTheme_->setCurrentIndex(0);
@@ -227,7 +258,6 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             displayInteractionPreferences(InteractionPreferences{});
             break;
         case Category::Playback:
-        case Category::Audio:
         case Category::MediaLibrary:
             break;
         }
@@ -282,6 +312,13 @@ void PreferencesDialog::apply() {
         interactionPreferences_ = interactionDraft();
         emit interactionPreferencesChanged(interactionPreferences_);
     }
+    if (languageChanged()) {
+        languagePreferences_ = languageDraft();
+        player_.setLanguagePreferences(languagePreferences_.audioLanguages,
+                                       languagePreferences_.subtitleLanguages);
+        player_.setAutoLoadExternalSubtitles(languagePreferences_.autoLoadExternalSubtitles);
+        emit languagePreferencesChanged(languagePreferences_);
+    }
     displaySubtitlePreferences();
     updateApplyButton();
 }
@@ -299,7 +336,7 @@ void PreferencesDialog::updateApplyButton() {
         resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_ ||
         seekStepSeconds_->value() != seekStepSecondsDefault_;
     applyButton_->setEnabled(appearanceChanged() || mediaLibraryChanged || interactionChanged() ||
-                             (player_.isReady() && playbackChange));
+                             languageChanged() || (player_.isReady() && playbackChange));
 }
 
 void PreferencesDialog::createAppearancePage() {
@@ -478,3 +515,15 @@ InteractionPreferences PreferencesDialog::interactionDraft() const {
 bool PreferencesDialog::interactionChanged() const {
     return interactionDraft() != interactionPreferences_;
 }
+
+LanguagePreferences PreferencesDialog::languageDraft() const {
+    const auto parse = [](const QString &text) {
+        return LanguagePreferences{text.split(QLatin1Char(',')), {}, false}
+            .normalized()
+            .audioLanguages;
+    };
+    return {parse(preferredAudioLanguages_->text()), parse(preferredSubtitleLanguages_->text()),
+            autoLoadExternalSubtitles_->isChecked()};
+}
+
+bool PreferencesDialog::languageChanged() const { return languageDraft() != languagePreferences_; }

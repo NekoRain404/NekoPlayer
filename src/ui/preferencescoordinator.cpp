@@ -18,10 +18,12 @@ PreferencesCoordinator::createDialog(QWidget *parent, PreferencesDialog::Categor
         handlers_.appearance ? handlers_.appearance() : AppearancePreferences::Settings{};
     const InteractionPreferences interaction =
         handlers_.interaction ? handlers_.interaction() : InteractionPreferences{};
+    const LanguagePreferences language =
+        handlers_.language ? handlers_.language() : LanguagePreferences{};
 
     auto dialog =
         std::make_unique<PreferencesDialog>(player_, parent, mediaLibrary, resumePlaybackPosition,
-                                            seekStepSeconds, appearance, interaction);
+                                            seekStepSeconds, appearance, interaction, language);
 
     connect(dialog.get(), &PreferencesDialog::appearancePreferencesChanged, dialog.get(),
             [handler = handlers_.setAppearance](AppearancePreferences::Settings settings) {
@@ -45,6 +47,11 @@ PreferencesCoordinator::createDialog(QWidget *parent, PreferencesDialog::Categor
             });
     connect(dialog.get(), &PreferencesDialog::interactionPreferencesChanged, dialog.get(),
             [handler = handlers_.setInteraction](InteractionPreferences preferences) {
+                if (handler)
+                    handler(preferences);
+            });
+    connect(dialog.get(), &PreferencesDialog::languagePreferencesChanged, dialog.get(),
+            [handler = handlers_.setLanguage](LanguagePreferences preferences) {
                 if (handler)
                     handler(preferences);
             });

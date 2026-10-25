@@ -25,6 +25,8 @@ class PreferencesCoordinator final : public QObject {
         std::function<void(int)> setSeekStepSeconds;
         std::function<InteractionPreferences()> interaction;
         std::function<void(InteractionPreferences)> setInteraction;
+        std::function<LanguagePreferences()> language;
+        std::function<void(LanguagePreferences)> setLanguage;
     };
 
     explicit PreferencesCoordinator(MpvController &player, Handlers handlers,

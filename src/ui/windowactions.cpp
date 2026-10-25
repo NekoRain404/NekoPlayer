@@ -322,6 +322,17 @@ void MainWindow::createActions() {
                  applyInteractionPreferences(preferences);
                  if (session_)
                      session_->setInteractionPreferences(interactionPreferences_);
+             },
+         .language =
+             [this] {
+                 return session_ ? session_->languagePreferences().normalized()
+                                 : languagePreferences_;
+             },
+         .setLanguage =
+             [this](LanguagePreferences preferences) {
+                 languagePreferences_ = preferences.normalized();
+                 if (session_)
+                     session_->setLanguagePreferences(languagePreferences_);
              }},
         this);
     const auto showPreferences = [this](PreferencesDialog::Category category) {

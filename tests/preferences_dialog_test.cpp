@@ -10,6 +10,7 @@
 #include <QDoubleSpinBox>
 #include <QFontComboBox>
 #include <QIcon>
+#include <QLineEdit>
 #include <QMenu>
 #include <QPushButton>
 #include <QSettings>
@@ -18,6 +19,15 @@
 #include <QTemporaryDir>
 #include <QtTest>
 #include <optional>
+
+namespace {
+QString backendText(MpvController &player, const char *property) {
+    char *value = mpv_get_property_string(player.handle(), property);
+    const auto text = QString::fromUtf8(value);
+    mpv_free(value);
+    return text;
+}
+} // namespace
 
 class PreferencesDialogTest final : public QObject {
     Q_OBJECT
@@ -413,6 +423,83 @@ class PreferencesDialogTest final : public QObject {
         QVERIFY(applied->wheelSeeksTimeline);
         QVERIFY(!applied->playlistSingleClick);
         QVERIFY(!applied->showRemainingTime);
+    }
+
+    void languagePreferencesPopulateApplyAndReachPlayer() {
+        MpvController player(true, true);
+        LanguagePreferences languages;
+        languages.audioLanguages = {QStringLiteral("jpn"), QStringLiteral("eng")};
+        languages.subtitleLanguages = {QStringLiteral("chi")};
+        PreferencesDialog dialog(player, nullptr, {}, true, 5, {}, {}, languages);
+        auto *audio = dialog.findChild<QLineEdit *>(QStringLiteral("preferredAudioLanguagesEdit"));
+        auto *subtitle =
+            dialog.findChild<QLineEdit *>(QStringLiteral("preferredSubtitleLanguagesEdit"));
+        auto *autoLoad =
+            dialog.findChild<QCheckBox *>(QStringLiteral("autoLoadExternalSubtitlesCheck"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(audio && subtitle && autoLoad && buttons);
+        QCOMPARE(audio->text(), QStringLiteral("jpn, eng"));
+        QCOMPARE(audio->placeholderText(), QStringLiteral("例如：jpn,eng"));
+        QCOMPARE(audio->accessibleName(), QStringLiteral("首选音轨语言"));
+        QCOMPARE(subtitle->text(), QStringLiteral("chi"));
+        QCOMPARE(subtitle->accessibleName(), QStringLiteral("首选字幕语言"));
+        QCOMPARE(autoLoad->accessibleName(), QStringLiteral("自动加载同名字幕"));
+        QVERIFY(!autoLoad->isChecked());
+        QVERIFY(!buttons->button(QDialogButtonBox::Apply)->isEnabled());
+
+        QSignalSpy changed(&dialog, &PreferencesDialog::languagePreferencesChanged);
+        audio->setText(QStringLiteral(" eng , jpn, ,"));
+        subtitle->setText(QStringLiteral("chi, "));
+        autoLoad->setChecked(true);
+        QVERIFY(buttons->button(QDialogButtonBox::Apply)->isEnabled());
+        QVERIFY(changed.isEmpty());
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(changed.count(), 1);
+        const auto applied = qvariant_cast<LanguagePreferences>(changed.constFirst().constFirst());
+        QCOMPARE(applied.audioLanguages,
+                 (QStringList{QStringLiteral("eng"), QStringLiteral("jpn")}));
+        QCOMPARE(applied.subtitleLanguages, (QStringList{QStringLiteral("chi")}));
+        QVERIFY(applied.autoLoadExternalSubtitles);
+        QTRY_COMPARE(backendText(player, "alang"), QStringLiteral("eng,jpn"));
+        QTRY_COMPARE(backendText(player, "slang"), QStringLiteral("chi"));
+        QTRY_COMPARE(backendText(player, "sub-auto"), QStringLiteral("exact"));
+        QVERIFY(!buttons->button(QDialogButtonBox::Apply)->isEnabled());
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(changed.count(), 1);
+    }
+
+    void languageRestoreDefaultsResetsOnlyVisibleCategory() {
+        MpvController player(true, true);
+        LanguagePreferences languages;
+        languages.audioLanguages = {QStringLiteral("jpn")};
+        languages.subtitleLanguages = {QStringLiteral("chi")};
+        languages.autoLoadExternalSubtitles = true;
+        PreferencesDialog dialog(player, nullptr, {}, true, 5, {}, {}, languages);
+        auto *audio = dialog.findChild<QLineEdit *>(QStringLiteral("preferredAudioLanguagesEdit"));
+        auto *subtitle =
+            dialog.findChild<QLineEdit *>(QStringLiteral("preferredSubtitleLanguagesEdit"));
+        auto *autoLoad =
+            dialog.findChild<QCheckBox *>(QStringLiteral("autoLoadExternalSubtitlesCheck"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(audio && subtitle && autoLoad && buttons);
+        auto *restore = buttons->button(QDialogButtonBox::RestoreDefaults);
+        dialog.selectCategory(PreferencesDialog::Category::Audio);
+        QVERIFY(!restore->isHidden());
+        restore->click();
+        QVERIFY(audio->text().isEmpty());
+        QCOMPARE(subtitle->text(), QStringLiteral("chi"));
+        QVERIFY(autoLoad->isChecked());
+        dialog.selectCategory(PreferencesDialog::Category::Subtitles);
+        restore->click();
+        QVERIFY(subtitle->text().isEmpty());
+        QVERIFY(!autoLoad->isChecked());
+        QSignalSpy changed(&dialog, &PreferencesDialog::languagePreferencesChanged);
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(changed.count(), 1);
+        const auto applied = qvariant_cast<LanguagePreferences>(changed.constFirst().constFirst());
+        QVERIFY(applied.audioLanguages.isEmpty());
+        QVERIFY(applied.subtitleLanguages.isEmpty());
+        QVERIFY(!applied.autoLoadExternalSubtitles);
     }
 
     void namesEveryPreferenceControlForAssistiveTechnology() {

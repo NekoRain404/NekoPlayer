@@ -37,6 +37,12 @@
     <message><source>音量步进：</source><translation>Volume step:</translation></message>
     <message><source>%1%</source><translation>%1%</translation></message>
     <message><source>单击会等待双击间隔，避免双击时也触发播放/暂停；关闭后该操作不执行。</source><translation>Single clicks wait for the double-click interval so a double click does not also play or pause. When disabled, the action does nothing.</translation></message>
+    <message><source>首选音轨语言：</source><translation>Preferred audio languages:</translation></message>
+    <message><source>首选音轨语言</source><translation>Preferred audio languages</translation></message>
+    <message><source>例如：jpn,eng</source><translation>For example: jpn,eng</translation></message>
+    <message><source>首选字幕语言：</source><translation>Preferred subtitle languages:</translation></message>
+    <message><source>首选字幕语言</source><translation>Preferred subtitle languages</translation></message>
+    <message><source>自动加载同名字幕</source><translation>Automatically load matching subtitles</translation></message>
 </context>
 <context>
     <name>MainWindow</name>

@@ -10,6 +10,7 @@ class QDoubleSpinBox;
 class QFontComboBox;
 class QCheckBox;
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class QSpinBox;
 class QTabWidget;
@@ -23,7 +24,8 @@ class PreferencesDialog final : public QDialog {
                                MediaLibraryPreferences mediaLibrary = {},
                                bool resumePlaybackPosition = true, int seekStepSeconds = 5,
                                AppearancePreferences::Settings appearance = {},
-                               InteractionPreferences interaction = {});
+                               InteractionPreferences interaction = {},
+                               LanguagePreferences languages = {});
     void selectCategory(Category category);
 
   signals:
@@ -32,6 +34,7 @@ class PreferencesDialog final : public QDialog {
     void seekStepSecondsChanged(int seconds);
     void appearancePreferencesChanged(AppearancePreferences::Settings appearance);
     void interactionPreferencesChanged(InteractionPreferences preferences);
+    void languagePreferencesChanged(LanguagePreferences preferences);
 
   private:
     void apply();
@@ -44,6 +47,8 @@ class PreferencesDialog final : public QDialog {
     void displayInteractionPreferences(const InteractionPreferences &preferences);
     [[nodiscard]] InteractionPreferences interactionDraft() const;
     [[nodiscard]] bool interactionChanged() const;
+    [[nodiscard]] LanguagePreferences languageDraft() const;
+    [[nodiscard]] bool languageChanged() const;
     void previewAppearance();
     AppearancePreferences::Settings appearanceDraft() const;
     bool appearanceChanged() const;
@@ -78,6 +83,10 @@ class PreferencesDialog final : public QDialog {
     QCheckBox *interactionWheelSeek_ = nullptr;
     QCheckBox *interactionPlaylistClick_ = nullptr;
     QCheckBox *interactionRemainingTime_ = nullptr;
+    LanguagePreferences languagePreferences_;
+    QLineEdit *preferredAudioLanguages_ = nullptr;
+    QLineEdit *preferredSubtitleLanguages_ = nullptr;
+    QCheckBox *autoLoadExternalSubtitles_ = nullptr;
     QPushButton *applyButton_;
     QPushButton *restoreDefaultsButton_;
     QString lastDecoder_;

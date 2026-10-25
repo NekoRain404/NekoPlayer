@@ -151,4 +151,5 @@ class MainWindow final : public QMainWindow {
     bool resumePlaybackPositionDefault_ = true;
     int seekStepSecondsDefault_ = 5;
     InteractionPreferences interactionPreferences_;
+    LanguagePreferences languagePreferences_;
 };

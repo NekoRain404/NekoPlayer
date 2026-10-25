@@ -8,6 +8,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QSettings>
 #include <QSpinBox>
@@ -24,6 +25,7 @@ struct PreferencesState {
     bool resumePlaybackPosition = true;
     int seekStepSeconds = 5;
     InteractionPreferences interaction;
+    LanguagePreferences language;
 };
 
 std::unique_ptr<PreferencesCoordinator> coordinatorFor(MpvController &player,
@@ -46,7 +48,10 @@ std::unique_ptr<PreferencesCoordinator> coordinatorFor(MpvController &player,
             .setSeekStepSeconds = [&state](int seconds) { state.seekStepSeconds = seconds; },
             .interaction = [&state] { return state.interaction; },
             .setInteraction =
-                [&state](InteractionPreferences preferences) { state.interaction = preferences; }},
+                [&state](InteractionPreferences preferences) { state.interaction = preferences; },
+            .language = [&state] { return state.language; },
+            .setLanguage =
+                [&state](LanguagePreferences preferences) { state.language = preferences; }},
         nullptr);
 }
 } // namespace
@@ -67,6 +72,9 @@ class PreferencesCoordinatorTest final : public QObject {
         state.interaction.wheelVolumeStep = 8;
         state.interaction.playlistSingleClick = true;
         state.interaction.showRemainingTime = true;
+        state.language.audioLanguages = {QStringLiteral("jpn"), QStringLiteral("eng")};
+        state.language.subtitleLanguages = {QStringLiteral("chi")};
+        state.language.autoLoadExternalSubtitles = true;
         auto coordinator = coordinatorFor(player, state);
         auto dialog = coordinator->createDialog(nullptr, PreferencesDialog::Category::MediaLibrary);
         QVERIFY(dialog);
@@ -91,9 +99,16 @@ class PreferencesCoordinatorTest final : public QObject {
             dialog->findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
         auto *remaining =
             dialog->findChild<QCheckBox *>(QStringLiteral("interactionRemainingTimeChoice"));
+        auto *audioLanguages =
+            dialog->findChild<QLineEdit *>(QStringLiteral("preferredAudioLanguagesEdit"));
+        auto *subtitleLanguages =
+            dialog->findChild<QLineEdit *>(QStringLiteral("preferredSubtitleLanguagesEdit"));
+        auto *autoLoad =
+            dialog->findChild<QCheckBox *>(QStringLiteral("autoLoadExternalSubtitlesCheck"));
         auto *tabs = dialog->findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
         QVERIFY(theme && accent && glass && scanning && recursive && resume && seek && single &&
-                middle && wheelStep && playlist && remaining && tabs);
+                middle && wheelStep && playlist && remaining && audioLanguages &&
+                subtitleLanguages && autoLoad && tabs);
 
         QCOMPARE(theme->currentData().toInt(), static_cast<int>(Appearance::Theme::Light));
         QCOMPARE(accent->currentData().toInt(), static_cast<int>(Appearance::Accent::Amber));
@@ -107,6 +122,9 @@ class PreferencesCoordinatorTest final : public QObject {
         QCOMPARE(wheelStep->currentData().toInt(), 8);
         QVERIFY(playlist->isChecked());
         QVERIFY(remaining->isChecked());
+        QCOMPARE(audioLanguages->text(), QStringLiteral("jpn, eng"));
+        QCOMPARE(subtitleLanguages->text(), QStringLiteral("chi"));
+        QVERIFY(autoLoad->isChecked());
         QCOMPARE(tabs->currentIndex(), static_cast<int>(PreferencesDialog::Category::MediaLibrary));
     }
 
@@ -145,11 +163,17 @@ class PreferencesCoordinatorTest final : public QObject {
                 dialog->findChild<QCheckBox *>(QStringLiteral("interactionPlaylistClickChoice"));
             auto *remaining =
                 dialog->findChild<QCheckBox *>(QStringLiteral("interactionRemainingTimeChoice"));
+            auto *audioLanguages =
+                dialog->findChild<QLineEdit *>(QStringLiteral("preferredAudioLanguagesEdit"));
+            auto *subtitleLanguages =
+                dialog->findChild<QLineEdit *>(QStringLiteral("preferredSubtitleLanguagesEdit"));
+            auto *autoLoad =
+                dialog->findChild<QCheckBox *>(QStringLiteral("autoLoadExternalSubtitlesCheck"));
             auto *buttons =
                 dialog->findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             QVERIFY(theme && accent && glass && scanning && recursive && resume && seek && single &&
                     middle && wheelVolume && wheelStep && wheelSeek && playlist && remaining &&
-                    buttons);
+                    audioLanguages && subtitleLanguages && autoLoad && buttons);
 
             theme->setCurrentIndex(theme->findData(static_cast<int>(Appearance::Theme::Light)));
             accent->setCurrentIndex(accent->findData(static_cast<int>(Appearance::Accent::Amber)));
@@ -165,6 +189,9 @@ class PreferencesCoordinatorTest final : public QObject {
             wheelSeek->setChecked(false);
             playlist->setChecked(true);
             remaining->setChecked(true);
+            audioLanguages->setText(QStringLiteral("eng, jpn"));
+            subtitleLanguages->setText(QStringLiteral("chi, eng"));
+            autoLoad->setChecked(true);
             buttons->button(QDialogButtonBox::Apply)->click();
 
             QCOMPARE(state.appearance.theme, Appearance::Theme::Light);
@@ -181,6 +208,11 @@ class PreferencesCoordinatorTest final : public QObject {
             QVERIFY(!state.interaction.wheelSeeksTimeline);
             QVERIFY(state.interaction.playlistSingleClick);
             QVERIFY(state.interaction.showRemainingTime);
+            QCOMPARE(state.language.audioLanguages,
+                     (QStringList{QStringLiteral("eng"), QStringLiteral("jpn")}));
+            QCOMPARE(state.language.subtitleLanguages,
+                     (QStringList{QStringLiteral("chi"), QStringLiteral("eng")}));
+            QVERIFY(state.language.autoLoadExternalSubtitles);
         }
         qApp->setPalette(originalPalette);
         qApp->setStyleSheet(originalStyle);
@@ -210,7 +242,9 @@ class PreferencesCoordinatorTest final : public QObject {
                  .seekStepSeconds = [] { return 5; },
                  .setSeekStepSeconds = [](int) {},
                  .interaction = [] { return InteractionPreferences{}; },
-                 .setInteraction = [](InteractionPreferences) {}},
+                 .setInteraction = [](InteractionPreferences) {},
+                 .language = [] { return LanguagePreferences{}; },
+                 .setLanguage = [](LanguagePreferences) {}},
                 nullptr);
             auto dialog =
                 coordinator.createDialog(nullptr, PreferencesDialog::Category::Appearance);

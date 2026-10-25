@@ -172,6 +172,36 @@ class PlaylistPaneTest final : public QObject {
         QCOMPARE(fixture.view()->currentIndex().row(), 2);
     }
 
+    void currentRowChangeWhileFilteringSelectsMappedProxyRow() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(0);
+        fixture.search()->setText(literal("a"));
+        auto *view = fixture.view();
+        QVERIFY(view->model() != fixture.queue.model());
+        QCOMPARE(view->model()->rowCount(), 3);
+        QCOMPARE(view->currentIndex().row(), 0);
+
+        fixture.queue.model()->setCurrentIndex(2);
+        QCOMPARE(view->currentIndex().row(), 2);
+        QCOMPARE(view->currentIndex().data().toString(), literal("gamma.mkv"));
+        QCOMPARE(view->currentIndex().data(PlaylistModel::CurrentRole).toBool(), true);
+        QVERIFY(view->currentIndex().model() == view->model());
+    }
+
+    void findShortcutFocusesAndSelectsSearch() {
+        PaneFixture fixture;
+        auto *search = fixture.search();
+        auto *view = fixture.view();
+        search->setText(literal("beta"));
+        fixture.host.activateWindow();
+        view->setFocus();
+        QCoreApplication::processEvents();
+
+        QTest::keyClick(view, Qt::Key_F, Qt::ControlModifier);
+        QVERIFY(search->hasFocus());
+        QCOMPARE(search->selectedText(), literal("beta"));
+    }
+
     void playingRowStaysBoldWhenVisible() {
         PaneFixture fixture;
         fixture.queue.model()->setCurrentIndex(1);

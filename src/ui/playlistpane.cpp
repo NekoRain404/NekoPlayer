@@ -150,8 +150,11 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
         if (!singleClickActivation_)
             return;
         const auto row = sourceRow(index);
-        if (row >= 0)
-            pendingClickIndex_ = model_->index(row);
+        if (row < 0) {
+            pendingClickIndex_ = QPersistentModelIndex{};
+            return;
+        }
+        pendingClickIndex_ = model_->index(row);
         singleClickTimer_->start(QApplication::doubleClickInterval());
     });
     connect(view_, &QListView::doubleClicked, this, [this] {

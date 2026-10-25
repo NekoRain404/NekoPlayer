@@ -31,7 +31,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled) {
                "QWidget#playlistPane{background:%28;border-left:1px solid %3;}"
                "QWidget#playlistHeader{background:%29;border-bottom:1px solid %3;}"
                "QLineEdit#playlistSearchEdit{color:%2;background:%4;border:1px solid "
-               "%3;border-radius:%6px;padding:%8px %14px;}"
+               "%3;border-radius:%13px;padding:%8px %14px;}"
                "QLineEdit#playlistSearchEdit:focus{border:1px solid %18;}"
                "QWidget#welcomePanel{background:%29;border:1px solid %3;border-radius:%6px;}"
                "QLabel{color:%7;} "

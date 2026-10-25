@@ -32,6 +32,7 @@
 #include <QEvent>
 #include <QKeySequence>
 #include <QLabel>
+#include <QList>
 #include <QMenu>
 #include <QMenuBar>
 #include <QSettings>
@@ -372,7 +373,9 @@ void MainWindow::createActions() {
     }
     auto *shortcutsAction = make(tr("快捷键…"), "shortcutsAction", QKeySequence(Qt::Key_F1));
     connect(shortcutsAction, &QAction::triggered, this, [this] {
-        ShortcutsDialog dialog(menuBar(), this);
+        const auto extraActions =
+            playlistPane_ ? playlistPane_->shortcutActions() : QList<QAction *>{};
+        ShortcutsDialog dialog(menuBar(), extraActions, this);
         dialog.exec();
     });
     auto *about = settings->addAction(tr("关于 NekoPlayer…"));

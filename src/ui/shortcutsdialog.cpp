@@ -29,7 +29,8 @@ QString withoutMnemonics(QString text) {
 }
 } // namespace
 
-ShortcutsDialog::ShortcutsDialog(QMenuBar *menuBar, QWidget *parent)
+ShortcutsDialog::ShortcutsDialog(QMenuBar *menuBar, const QList<QAction *> &extraActions,
+                                 QWidget *parent)
     : QDialog(parent), tree_(new QTreeWidget(this)) {
     setObjectName(QStringLiteral("shortcutsDialog"));
     setWindowTitle(tr("快捷键"));
@@ -103,6 +104,12 @@ ShortcutsDialog::ShortcutsDialog(QMenuBar *menuBar, QWidget *parent)
             appendAction(nullptr, action);
         }
     }
+    auto *panelItem = new QTreeWidgetItem(tree_);
+    panelItem->setText(0, tr("面板快捷键"));
+    for (auto *action : extraActions)
+        appendAction(panelItem, action);
+    if (panelItem->childCount() == 0)
+        delete panelItem;
     tree_->expandAll();
 
     auto *layout = new QVBoxLayout(this);

@@ -127,6 +127,7 @@
     <message><source>下移所选项</source><translation>Move Selected Down</translation></message>
     <message><source>播放列表</source><translation>Playlist</translation></message>
     <message><source>搜索播放列表</source><translation>Search playlist</translation></message>
+    <message><source>清除播放列表搜索</source><translation>Clear playlist search</translation></message>
     <message><source>%1 项</source><translation>%1 items</translation></message>
     <message><source>%1 / %2 项</source><translation>%1 / %2 items</translation></message>
 </context>
@@ -365,6 +366,7 @@ libmpv client API: %2</translation></message>
     <message><source>范围</source><translation>Scope</translation></message>
     <message><source>列表聚焦</source><translation>Playlist Focus</translation></message>
     <message><source>当前面板</source><translation>Current Panel</translation></message>
+    <message><source>面板快捷键</source><translation>Panel Shortcuts</translation></message>
     <message><source>全局</source><translation>Global</translation></message>
 </context>
 </TS>

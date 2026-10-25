@@ -22,6 +22,7 @@ class PlaylistPane final : public QWidget {
 
     [[nodiscard]] QListView *view() const;
     [[nodiscard]] QList<QAction *> editingActions() const;
+    [[nodiscard]] QList<QAction *> shortcutActions() const;
     void setSingleClickActivation(bool enabled);
 
   protected:
@@ -48,6 +49,8 @@ class PlaylistPane final : public QWidget {
     QAction *remove_;
     QAction *moveUp_;
     QAction *moveDown_;
+    QAction *focusSearchAction_;
+    QAction *clearSearchAction_;
     QPersistentModelIndex playingIndex_;
     QTimer *singleClickTimer_;
     QPersistentModelIndex pendingClickIndex_;

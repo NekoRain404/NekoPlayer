@@ -6,6 +6,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
@@ -200,6 +201,52 @@ class PlaylistPaneTest final : public QObject {
         QTest::keyClick(view, Qt::Key_F, Qt::ControlModifier);
         QVERIFY(search->hasFocus());
         QCOMPARE(search->selectedText(), literal("beta"));
+    }
+
+    void shortcutActionsFocusAndClearSearch() {
+        PaneFixture fixture;
+        auto *search = fixture.search();
+        const auto actions = fixture.pane.shortcutActions();
+        QCOMPARE(actions.size(), 2);
+
+        auto *focusAction = fixture.pane.findChild<QAction *>(literal("focusPlaylistSearchAction"));
+        auto *clearAction = fixture.pane.findChild<QAction *>(literal("clearPlaylistSearchAction"));
+        QVERIFY(focusAction);
+        QVERIFY(clearAction);
+        QCOMPARE(focusAction->text(), QStringLiteral("搜索播放列表"));
+        QCOMPARE(focusAction->shortcut(), QKeySequence(QKeySequence::Find));
+        QCOMPARE(focusAction->shortcutContext(), Qt::WidgetWithChildrenShortcut);
+        QCOMPARE(clearAction->text(), QStringLiteral("清除播放列表搜索"));
+        QCOMPARE(clearAction->shortcut(), QKeySequence(Qt::Key_Escape));
+        QCOMPARE(clearAction->shortcutContext(), Qt::WidgetWithChildrenShortcut);
+        QVERIFY(fixture.pane.actions().contains(focusAction));
+        QVERIFY(fixture.pane.actions().contains(clearAction));
+
+        search->setText(literal("beta"));
+        fixture.host.activateWindow();
+        fixture.view()->setFocus();
+        QCoreApplication::processEvents();
+        focusAction->trigger();
+        QVERIFY(search->hasFocus());
+        QCOMPARE(search->selectedText(), literal("beta"));
+
+        clearAction->trigger();
+        QVERIFY(search->text().isEmpty());
+        QVERIFY(fixture.view()->model() == fixture.queue.model());
+        QCOMPARE(fixture.view()->model()->rowCount(), 3);
+    }
+
+    void modelResetClearsSearchAndShowsReplacementQueue() {
+        PaneFixture fixture;
+        fixture.search()->setText(literal("beta"));
+        QCOMPARE(fixture.view()->model()->rowCount(), 1);
+
+        fixture.queue.restoreFiles({literal("delta.mkv"), literal("epsilon.mkv")}, 0, 0);
+
+        QVERIFY(fixture.search()->text().isEmpty());
+        QVERIFY(fixture.view()->model() == fixture.queue.model());
+        QCOMPARE(fixture.view()->model()->rowCount(), 2);
+        QCOMPARE(fixture.countText(), QStringLiteral("2 项"));
     }
 
     void playingRowStaysBoldWhenVisible() {

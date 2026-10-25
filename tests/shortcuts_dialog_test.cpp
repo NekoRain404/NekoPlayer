@@ -142,6 +142,52 @@ class ShortcutsDialogTest final : public QObject {
         QCOMPARE(treeOf(after)->topLevelItemCount(), 1);
         QCOMPARE(rowsWithText(treeOf(after), QStringLiteral("Late")).size(), 1);
     }
+
+    void extraActionsAppearUnderPanelSectionWithoutDuplicates() {
+        QMenuBar menuBar;
+        auto *playlist = menuBar.addMenu(literal("Playlist"));
+        QAction menuAction(literal("Menu Search"));
+        menuAction.setShortcut(QKeySequence::Find);
+        playlist->addAction(&menuAction);
+
+        QAction focusAction(QStringLiteral("搜索播放列表"));
+        focusAction.setShortcut(QKeySequence::Find);
+        focusAction.setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        QAction clearAction(QStringLiteral("清除播放列表搜索"));
+        clearAction.setShortcut(QKeySequence(Qt::Key_Escape));
+        clearAction.setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        QAction noShortcut(literal("No Shortcut"));
+
+        ShortcutsDialog dialog(&menuBar, {&menuAction, &focusAction, &clearAction, &noShortcut});
+        auto *tree = treeOf(dialog);
+        QCOMPARE(tree->topLevelItemCount(), 2);
+        QCOMPARE(tree->topLevelItem(0)->text(0), QStringLiteral("Playlist"));
+        QCOMPARE(tree->topLevelItem(0)->childCount(), 1);
+
+        auto *panel = tree->topLevelItem(1);
+        QCOMPARE(panel->text(0), QStringLiteral("面板快捷键"));
+        QCOMPARE(panel->childCount(), 2);
+        QCOMPARE(panel->child(0)->text(0), QStringLiteral("搜索播放列表"));
+        QCOMPARE(panel->child(0)->text(2), QStringLiteral("当前面板"));
+        QCOMPARE(panel->child(1)->text(0), QStringLiteral("清除播放列表搜索"));
+        QCOMPARE(panel->child(1)->text(1), native(QKeySequence(Qt::Key_Escape)));
+        QCOMPARE(panel->child(1)->text(2), QStringLiteral("当前面板"));
+        QCOMPARE(rowsWithText(tree, QStringLiteral("Menu Search")).size(), 1);
+        QVERIFY(rowsWithText(tree, QStringLiteral("No Shortcut")).isEmpty());
+    }
+
+    void emptyExtraActionsPrunePanelSection() {
+        QMenuBar menuBar;
+        auto *file = menuBar.addMenu(literal("File"));
+        auto *open = file->addAction(literal("Open"));
+        open->setShortcut(QKeySequence::Open);
+
+        ShortcutsDialog dialog(&menuBar, {});
+        auto *tree = treeOf(dialog);
+        QCOMPARE(tree->topLevelItemCount(), 1);
+        QCOMPARE(tree->topLevelItem(0)->text(0), QStringLiteral("File"));
+        QVERIFY(rowsWithText(tree, QStringLiteral("面板快捷键")).isEmpty());
+    }
 };
 
 QTEST_MAIN(ShortcutsDialogTest)

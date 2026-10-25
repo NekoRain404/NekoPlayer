@@ -13,7 +13,6 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
-#include <QShortcut>
 #include <QSortFilterProxyModel>
 #include <QTimer>
 #include <QToolButton>
@@ -43,6 +42,8 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
       filter_(new QSortFilterProxyModel(this)), search_(new QLineEdit(this)),
       view_(new QListView(this)), remove_(new QAction(tr("从列表移除"), this)),
       moveUp_(new QAction(tr("上移所选项"), this)), moveDown_(new QAction(tr("下移所选项"), this)),
+      focusSearchAction_(new QAction(tr("搜索播放列表"), this)),
+      clearSearchAction_(new QAction(tr("清除播放列表搜索"), this)),
       singleClickTimer_(new QTimer(this)) {
     setObjectName(QStringLiteral("playlistPane"));
     setMinimumWidth(240);
@@ -89,20 +90,25 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     });
     connectSelectionModel();
     connect(search_, &QLineEdit::textChanged, this, &PlaylistPane::applyFilter);
-    auto *clearSearchShortcut = new QShortcut(QKeySequence(Qt::Key_Escape), search_);
-    clearSearchShortcut->setContext(Qt::WidgetShortcut);
-    connect(clearSearchShortcut, &QShortcut::activated, search_, &QLineEdit::clear);
-    auto *focusSearchShortcut = new QShortcut(QKeySequence::Find, this);
-    focusSearchShortcut->setContext(Qt::WidgetWithChildrenShortcut);
-    connect(focusSearchShortcut, &QShortcut::activated, this, [this] {
+    focusSearchAction_->setObjectName(QStringLiteral("focusPlaylistSearchAction"));
+    focusSearchAction_->setShortcut(QKeySequence::Find);
+    focusSearchAction_->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    clearSearchAction_->setObjectName(QStringLiteral("clearPlaylistSearchAction"));
+    clearSearchAction_->setShortcut(QKeySequence(Qt::Key_Escape));
+    clearSearchAction_->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    addAction(focusSearchAction_);
+    addAction(clearSearchAction_);
+    connect(focusSearchAction_, &QAction::triggered, this, [this] {
         search_->setFocus(Qt::ShortcutFocusReason);
         search_->selectAll();
     });
+    connect(clearSearchAction_, &QAction::triggered, search_, &QLineEdit::clear);
     connect(model_, &PlaylistModel::currentIndexChanged, this, &PlaylistPane::synchronizeCurrent);
     connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateEditingActions);
     connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateEditingActions);
     connect(model_, &PlaylistModel::rowsMoved, this, &PlaylistPane::updateEditingActions);
     connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateEditingActions);
+    connect(model_, &PlaylistModel::modelReset, this, [this] { search_->clear(); });
     connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateItemCount);
     connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateItemCount);
     connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateItemCount);
@@ -177,6 +183,10 @@ QListView *PlaylistPane::view() const { return view_; }
 
 QList<QAction *> PlaylistPane::editingActions() const { return {remove_, moveUp_, moveDown_}; }
 
+QList<QAction *> PlaylistPane::shortcutActions() const {
+    return {focusSearchAction_, clearSearchAction_};
+}
+
 void PlaylistPane::setSingleClickActivation(bool enabled) {
     if (singleClickActivation_ == enabled)
         return;
@@ -196,6 +206,8 @@ void PlaylistPane::changeEvent(QEvent *event) {
     remove_->setText(tr("从列表移除"));
     moveUp_->setText(tr("上移所选项"));
     moveDown_->setText(tr("下移所选项"));
+    focusSearchAction_->setText(tr("搜索播放列表"));
+    clearSearchAction_->setText(tr("清除播放列表搜索"));
     if (auto *title = findChild<QLabel *>(QStringLiteral("playlistTitle")))
         title->setText(tr("播放列表"));
     search_->setPlaceholderText(tr("搜索播放列表"));

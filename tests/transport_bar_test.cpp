@@ -266,16 +266,42 @@ class TransportBarTest final : public QObject {
     }
 
     void metricsFitNarrowFullscreenWidths() {
-        const auto compact = TransportBarMetrics::forWidth(560);
-        QVERIFY(compact.showTime);
-        QVERIFY(compact.showVolume);
-        QVERIFY(compact.minimumRowWidth <= 560);
-
         const auto narrow = TransportBarMetrics::forWidth(400);
         QVERIFY(!narrow.showTime);
         QVERIFY(narrow.showVolume);
-        QVERIFY(narrow.minimumRowWidth <= 400);
         QCOMPARE(narrow.buttonExtent, 32);
+        QCOMPARE(narrow.volumeWidth, 60);
+        QVERIFY(narrow.minimumRowWidth <= 400);
+
+        for (const int width : {480, 559}) {
+            const auto hidden = TransportBarMetrics::forWidth(width);
+            QVERIFY(!hidden.showTime);
+            QVERIFY(hidden.showVolume);
+            QCOMPARE(hidden.buttonExtent, 36);
+            QCOMPARE(hidden.volumeWidth, 76);
+            QCOMPARE(hidden.minimumRowWidth, 418);
+            QVERIFY(hidden.minimumRowWidth <= width);
+        }
+
+        for (const int width : {560, 639}) {
+            const auto compact = TransportBarMetrics::forWidth(width);
+            QVERIFY(compact.showTime);
+            QVERIFY(compact.showVolume);
+            QCOMPARE(compact.buttonExtent, 32);
+            QCOMPARE(compact.volumeWidth, 76);
+            QCOMPARE(compact.timeWidth, 150);
+            QCOMPARE(compact.minimumRowWidth, 540);
+            QVERIFY(compact.minimumRowWidth <= width);
+        }
+
+        const auto full = TransportBarMetrics::forWidth(640);
+        QVERIFY(full.showTime);
+        QVERIFY(full.showVolume);
+        QCOMPARE(full.buttonExtent, 36);
+        QCOMPARE(full.volumeWidth, 110);
+        QCOMPARE(full.timeWidth, 155);
+        QCOMPARE(full.minimumRowWidth, 607);
+        QVERIFY(full.minimumRowWidth <= 640);
     }
 
     void optionalLabelsHideWhenNarrow() {
@@ -309,12 +335,39 @@ class TransportBarTest final : public QObject {
             QCOMPARE(button->height(), 32);
         }
 
+        host.setFixedSize(480, 100);
+        host.layout()->activate();
+        transport.resize(480, 100);
+        QCoreApplication::processEvents();
+        QCOMPARE(transport.width(), 480);
+        QVERIFY(time->isHidden());
+        QVERIFY(dividers.at(0)->isHidden());
+        QCOMPARE(volume->width(), 76);
+        for (auto *button : transport.findChildren<QToolButton *>()) {
+            QCOMPARE(button->width(), 36);
+            QCOMPARE(button->height(), 32);
+        }
+
+        host.setFixedSize(559, 100);
+        host.layout()->activate();
+        transport.resize(559, 100);
+        QCoreApplication::processEvents();
+        QVERIFY(time->isHidden());
+        QVERIFY(dividers.at(0)->isHidden());
+
         host.setFixedSize(560, 100);
         host.layout()->activate();
         transport.resize(560, 100);
         QCoreApplication::processEvents();
-        QVERIFY(TransportBarMetrics::forWidth(560).showTime);
-        QVERIFY(TransportBarMetrics::forWidth(560).showVolume);
+        QVERIFY(!time->isHidden());
+        QVERIFY(!dividers.at(0)->isHidden());
+        QCOMPARE(time->minimumWidth(), 150);
+        QCOMPARE(time->maximumWidth(), 150);
+        QCOMPARE(volume->width(), 76);
+        for (auto *button : transport.findChildren<QToolButton *>()) {
+            QCOMPARE(button->width(), 32);
+            QCOMPARE(button->height(), 32);
+        }
     }
 };
 

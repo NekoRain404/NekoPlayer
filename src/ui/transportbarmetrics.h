@@ -20,9 +20,13 @@ inline Metrics forWidth(int width) {
         metrics.buttonExtent = 32;
         metrics.volumeWidth = 60;
         metrics.showTime = false;
-    } else if (width < 640) {
+    } else if (width < 560) {
         metrics.volumeWidth = 76;
-        metrics.timeWidth = 100;
+        metrics.showTime = false;
+    } else if (width < 640) {
+        metrics.buttonExtent = 32;
+        metrics.volumeWidth = 76;
+        metrics.timeWidth = 150;
     }
 
     // The row has 12 layout gaps, two explicit separators and 12 px margins.

@@ -145,6 +145,62 @@ class TrackLanguageTest final : public QObject {
         QVERIFY(errors.isEmpty());
     }
 
+    void defaultDoesNotAutoloadSiblingSubtitles() {
+        QTemporaryDir temporary;
+        QVERIFY(prepareSiblingMedia(temporary));
+
+        MpvController player(true, true);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        player.openFile(temporary.filePath(QStringLiteral("movie.mkv")));
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(loaded.count(), 1, 10000);
+        waitForTracks(player, 4);
+        QCOMPARE(externalSubtitleCount(player), 0);
+        QVERIFY(errors.isEmpty());
+    }
+
+    void dirtyLanguageTokensSelectEnglish() {
+        MpvController player(true, true);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        // Leading/trailing whitespace and empty entries must be normalized away.
+        player.setLanguagePreferences({QStringLiteral(" eng "), QString(), QStringLiteral("jpn")},
+                                      {QStringLiteral(" eng "), QString(), QStringLiteral("zho")});
+        player.openFile(QString::fromUtf8(TEST_LANGUAGE_MEDIA_PATH));
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        waitForTracks(player, 4);
+        QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Audio), QStringLiteral("eng"));
+        QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Subtitle), QStringLiteral("eng"));
+        QCOMPARE(selectedTrack(player, MediaTrack::Type::Audio), qint64(2));
+        QCOMPARE(selectedTrack(player, MediaTrack::Type::Subtitle), qint64(2));
+        QVERIFY(errors.isEmpty());
+    }
+
+    void emptyPreferencesResetSelectionOnReopen() {
+        MpvController player(true, true);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        const auto path = QString::fromUtf8(TEST_LANGUAGE_MEDIA_PATH);
+        player.setLanguagePreferences({QStringLiteral("eng")}, {QStringLiteral("eng")});
+        player.openFile(path);
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(loaded.count(), 1, 10000);
+        waitForTracks(player, 4);
+        QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Audio), QStringLiteral("eng"));
+        QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Subtitle), QStringLiteral("eng"));
+
+        player.setLanguagePreferences({}, {});
+        player.openFile(path);
+        QTRY_COMPARE_WITH_TIMEOUT(loaded.count(), 2, 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        waitForTracks(player, 4);
+        QTRY_COMPARE(selectedTrack(player, MediaTrack::Type::Audio), qint64(1));
+        QTRY_COMPARE(selectedTrack(player, MediaTrack::Type::Subtitle), qint64(1));
+        QCOMPARE(selectedLanguage(player, MediaTrack::Type::Audio), QStringLiteral("jpn"));
+        QCOMPARE(selectedLanguage(player, MediaTrack::Type::Subtitle), QStringLiteral("zho"));
+        QVERIFY(errors.isEmpty());
+    }
+
     void sessionRestoreAppliesLanguagesBeforeMediaLoad() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());
@@ -164,6 +220,34 @@ class TrackLanguageTest final : public QObject {
         QCOMPARE(session.languagePreferences().audioLanguages, saved.languages.audioLanguages);
         QCOMPARE(session.languagePreferences().subtitleLanguages,
                  saved.languages.subtitleLanguages);
+
+        playlist.playAt(0);
+        QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);
+        waitForTracks(player, 4);
+        QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Audio), QStringLiteral("eng"));
+        QTRY_COMPARE(selectedLanguage(player, MediaTrack::Type::Subtitle), QStringLiteral("eng"));
+    }
+
+    void sessionSetterAppliesPreferencesImmediately() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto sessionPath = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionState saved;
+        saved.paths = {QString::fromUtf8(TEST_LANGUAGE_MEDIA_PATH)};
+        saved.currentIndex = 0;
+        QVERIFY(SessionStore(sessionPath).save(saved).isEmpty());
+
+        MpvController player(true, true);
+        PlaylistController playlist(player);
+        SessionManager session(player, playlist, sessionPath);
+        QVERIFY(session.restore().error.isEmpty());
+
+        LanguagePreferences preferences;
+        preferences.audioLanguages = {QStringLiteral("eng")};
+        preferences.subtitleLanguages = {QStringLiteral("eng")};
+        session.setLanguagePreferences(preferences);
+        QCOMPARE(session.languagePreferences().audioLanguages, preferences.audioLanguages);
+        QCOMPARE(session.languagePreferences().subtitleLanguages, preferences.subtitleLanguages);
 
         playlist.playAt(0);
         QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 10000);

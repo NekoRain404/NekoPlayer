@@ -15,6 +15,9 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
         std::pair{"idle", "yes"}, std::pair{"audio-pitch-correction", "yes"},
         std::pair{"deinterlace", "auto"}, std::pair{"reset-on-next-file", "ab-loop-a,ab-loop-b"},
         std::pair{"keep-open", "no"}, std::pair{"video-timing-offset", "0"},
+        // Sessions may enable exact sibling matching; direct/headless controller
+        // use must not auto-load subtitles implicitly.
+        std::pair{"sub-auto", "no"},
         // Eight-tap kernels avoid mpv 0.41's uninitialized LUT padding.
         std::pair{"scale", "spline64"}, std::pair{"cscale", "spline64"},
         std::pair{"dscale", "spline64"}};

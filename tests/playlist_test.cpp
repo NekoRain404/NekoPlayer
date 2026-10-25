@@ -47,6 +47,59 @@ class PlaylistTest final : public QObject {
         QCOMPARE(model.rowCount(), 1);
     }
 
+    void displayNamesFollowPlaylistEdits() {
+        PlaylistModel model;
+        const auto local = QDir::current().absoluteFilePath(QStringLiteral("local.mkv"));
+        const auto duplicate = QDir::current().absoluteFilePath(QStringLiteral("duplicate.mkv"));
+        const auto network = QStringLiteral("https://example.test/media/network%20movie.mkv");
+        QCOMPARE(model.addFiles({QStringLiteral("local.mkv"), network,
+                                 QStringLiteral("duplicate.mkv"), QStringLiteral("duplicate.mkv")}),
+                 4);
+        QCOMPARE(model.pathAt(0), local);
+        QCOMPARE(model.pathAt(1), network);
+        QCOMPARE(model.pathAt(2), duplicate);
+        QCOMPARE(model.pathAt(3), duplicate);
+        QCOMPARE(model.data(model.index(0)).toString(), QStringLiteral("local.mkv"));
+        QCOMPARE(model.data(model.index(1)).toString(), QStringLiteral("network movie.mkv"));
+        QCOMPARE(model.data(model.index(2)).toString(), QStringLiteral("duplicate.mkv"));
+        QCOMPARE(model.data(model.index(3)).toString(), QStringLiteral("duplicate.mkv"));
+        QCOMPARE(model.data(model.index(1), PlaylistModel::PathRole).toString(), network);
+        QCOMPARE(model.data(model.index(1), Qt::ToolTipRole).toString(), network);
+
+        // Moving a row carries its cached display name with its path.
+        QVERIFY(model.moveRow({}, 1, {}, 0));
+        QCOMPARE(model.pathAt(0), network);
+        QCOMPARE(model.data(model.index(0)).toString(), QStringLiteral("network movie.mkv"));
+        QCOMPARE(model.data(model.index(1)).toString(), QStringLiteral("local.mkv"));
+        QCOMPARE(model.data(model.index(2)).toString(), QStringLiteral("duplicate.mkv"));
+        QCOMPARE(model.data(model.index(3)).toString(), QStringLiteral("duplicate.mkv"));
+
+        // Removing a row shifts the remaining cached names with their paths.
+        QVERIFY(model.removeAt(1));
+        QCOMPARE(model.rowCount(), 3);
+        QCOMPARE(model.pathAt(0), network);
+        QCOMPARE(model.data(model.index(0)).toString(), QStringLiteral("network movie.mkv"));
+        QCOMPARE(model.pathAt(1), duplicate);
+        QCOMPARE(model.pathAt(2), duplicate);
+        QCOMPARE(model.data(model.index(1)).toString(), QStringLiteral("duplicate.mkv"));
+        QCOMPARE(model.data(model.index(2)).toString(), QStringLiteral("duplicate.mkv"));
+
+        // Duplicate paths stay independent rows; moving one leaves the other in place.
+        QVERIFY(model.setCurrentIndex(2));
+        QVERIFY(model.moveRow({}, 2, {}, 0));
+        QCOMPARE(model.currentIndex(), 0);
+        QCOMPARE(model.pathAt(0), duplicate);
+        QCOMPARE(model.pathAt(1), network);
+        QCOMPARE(model.pathAt(2), duplicate);
+        QCOMPARE(model.data(model.index(0)).toString(), QStringLiteral("duplicate.mkv"));
+        QCOMPARE(model.data(model.index(1)).toString(), QStringLiteral("network movie.mkv"));
+        QCOMPARE(model.data(model.index(2)).toString(), QStringLiteral("duplicate.mkv"));
+
+        model.clear();
+        QCOMPARE(model.rowCount(), 0);
+        QVERIFY(model.paths().isEmpty());
+    }
+
     void modelIgnoresEmptyPaths() {
         PlaylistModel model;
         QCOMPARE(model.addFiles({QString{}, QStringLiteral("a.mkv"), QString{}}), 1);

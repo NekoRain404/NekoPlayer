@@ -26,7 +26,7 @@ class PlaylistModel final : public QAbstractListModel {
     [[nodiscard]] int currentIndex() const;
     [[nodiscard]] QString currentPath() const;
     [[nodiscard]] QString pathAt(int row) const;
-    [[nodiscard]] QStringList paths() const;
+    [[nodiscard]] const QStringList &paths() const;
 
     int addFiles(const QStringList &paths);
     bool removeAt(int row);
@@ -38,5 +38,6 @@ class PlaylistModel final : public QAbstractListModel {
 
   private:
     QStringList paths_;
+    QStringList displayNames_;
     int currentIndex_ = -1;
 };

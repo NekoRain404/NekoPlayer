@@ -31,7 +31,7 @@ QVariant PlaylistModel::data(const QModelIndex &index, int role) const {
     const auto &path = paths_.at(index.row());
     switch (role) {
     case Qt::DisplayRole:
-        return MediaSource::displayName(path);
+        return displayNames_.value(index.row());
     case PathRole:
     case Qt::ToolTipRole:
         return path;
@@ -87,6 +87,7 @@ bool PlaylistModel::moveRows(const QModelIndex &sourceParent, int sourceRow, int
     const auto target = destinationChild > sourceRow ? destinationChild - 1 : destinationChild;
     const auto previous = currentIndex_;
     paths_.move(sourceRow, target);
+    displayNames_.move(sourceRow, target);
     if (currentIndex_ == sourceRow)
         currentIndex_ = target;
     else if (sourceRow < currentIndex_ && currentIndex_ <= target)
@@ -106,22 +107,26 @@ QString PlaylistModel::currentPath() const {
 }
 
 QString PlaylistModel::pathAt(int row) const { return paths_.value(row); }
-QStringList PlaylistModel::paths() const { return paths_; }
+const QStringList &PlaylistModel::paths() const { return paths_; }
 
 int PlaylistModel::addFiles(const QStringList &paths) {
     QStringList additions;
+    QStringList displayNames;
     for (const auto &path : paths) {
         const QUrl url(path, QUrl::StrictMode);
         const auto absolute =
             url.isValid() && !url.scheme().isEmpty() ? path : QFileInfo(path).absoluteFilePath();
-        if (!absolute.isEmpty())
+        if (!absolute.isEmpty()) {
             additions.append(absolute);
+            displayNames.append(MediaSource::displayName(absolute));
+        }
     }
     if (additions.isEmpty())
         return 0;
     const auto first = paths_.size();
     beginInsertRows({}, first, first + additions.size() - 1);
     paths_.append(additions);
+    displayNames_.append(displayNames);
     endInsertRows();
     return additions.size();
 }
@@ -132,6 +137,7 @@ bool PlaylistModel::removeAt(int row) {
     const auto previousCurrent = currentIndex_;
     beginRemoveRows({}, row, row);
     paths_.removeAt(row);
+    displayNames_.removeAt(row);
     if (currentIndex_ > row)
         --currentIndex_;
     else if (currentIndex_ == row)
@@ -149,6 +155,7 @@ void PlaylistModel::clear() {
         return;
     beginResetModel();
     paths_.clear();
+    displayNames_.clear();
     const bool hadCurrent = currentIndex_ != -1;
     currentIndex_ = -1;
     endResetModel();

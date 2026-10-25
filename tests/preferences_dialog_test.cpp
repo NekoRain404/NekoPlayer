@@ -220,6 +220,37 @@ class PreferencesDialogTest final : public QObject {
         QCOMPARE(changed.constFirst().constFirst().toInt(), 7);
     }
 
+    void subtitlesRestoreDefaultsKeepsSeekStep() {
+        MpvController player(true, true);
+        PreferencesDialog dialog(player, nullptr, {}, true, 7);
+        auto *seekStep = dialog.findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
+        auto *subtitleScale =
+            dialog.findChild<QDoubleSpinBox *>(QStringLiteral("subtitleScaleChoice"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(seekStep && subtitleScale && buttons);
+        QCOMPARE(seekStep->value(), 7);
+        subtitleScale->setValue(2.0);
+        QSignalSpy changed(&dialog, &PreferencesDialog::seekStepSecondsChanged);
+        dialog.selectCategory(PreferencesDialog::Category::Subtitles);
+        buttons->button(QDialogButtonBox::RestoreDefaults)->click();
+        QCOMPARE(subtitleScale->value(), 1.0);
+        QCOMPARE(seekStep->value(), 7);
+        QVERIFY(changed.isEmpty());
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(seekStep->value(), 7);
+        QVERIFY(changed.isEmpty());
+        // An unapplied Playback draft must also survive a Subtitles-page reset.
+        seekStep->setValue(9);
+        subtitleScale->setValue(2.0);
+        buttons->button(QDialogButtonBox::RestoreDefaults)->click();
+        QCOMPARE(subtitleScale->value(), 1.0);
+        QCOMPARE(seekStep->value(), 9);
+        QVERIFY(changed.isEmpty());
+        buttons->button(QDialogButtonBox::Apply)->click();
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.constFirst().constFirst().toInt(), 9);
+    }
+
     void interactionCategoryExposesCurrentValues() {
         MpvController player(true, true);
         InteractionPreferences interaction;

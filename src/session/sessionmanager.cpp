@@ -347,8 +347,7 @@ bool SessionManager::resumePlaybackPositionEnabled() const {
 int SessionManager::seekStepSeconds() const { return seekStepSeconds_; }
 
 void SessionManager::setSeekStepSeconds(int seconds) {
-    if (seconds >= seekStepSecondsMinimum && seconds <= seekStepSecondsMaximum)
-        seekStepSeconds_ = seconds;
+    seekStepSeconds_ = normalizedSeekStepSeconds(seconds);
 }
 
 void SessionManager::setResumePlaybackPositionEnabled(bool enabled) {

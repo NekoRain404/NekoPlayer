@@ -208,21 +208,27 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
         qApp->setStyleSheet(appearanceStyleSheet_);
     });
     connect(restoreDefaultsButton_, &QPushButton::clicked, this, [this] {
-        if (tabs_->currentIndex() == static_cast<int>(Category::Appearance)) {
+        // Reset only the category whose page is showing; hidden pages keep their drafts.
+        switch (static_cast<Category>(tabs_->currentIndex())) {
+        case Category::Subtitles:
+            subtitleVisible_->setChecked(true);
+            subtitleScale_->setValue(1.0);
+            subtitlePosition_->setValue(100.0);
+            subtitleFont_->setEditText(SubtitlePreferences{}.font);
+            break;
+        case Category::Appearance:
             appearanceTheme_->setCurrentIndex(0);
             appearanceAccent_->setCurrentIndex(0);
             appearanceGlass_->setChecked(true);
-            return;
-        }
-        if (tabs_->currentIndex() == static_cast<int>(Category::Interaction)) {
+            break;
+        case Category::Interaction:
             displayInteractionPreferences(InteractionPreferences{});
-            return;
+            break;
+        case Category::Playback:
+        case Category::Audio:
+        case Category::MediaLibrary:
+            break;
         }
-        subtitleVisible_->setChecked(true);
-        subtitleScale_->setValue(1.0);
-        subtitlePosition_->setValue(100.0);
-        subtitleFont_->setEditText(SubtitlePreferences{}.font);
-        seekStepSeconds_->setValue(seekStepSecondsDefault);
     });
     updateApplyButton();
     updateActualDecoder();

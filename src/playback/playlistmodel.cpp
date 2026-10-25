@@ -31,6 +31,7 @@ QVariant PlaylistModel::data(const QModelIndex &index, int role) const {
     const auto &path = paths_.at(index.row());
     switch (role) {
     case Qt::DisplayRole:
+        Q_ASSERT(displayNames_.size() == paths_.size());
         return displayNames_.value(index.row());
     case PathRole:
     case Qt::ToolTipRole:

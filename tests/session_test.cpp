@@ -35,6 +35,7 @@ class SessionTest final : public QObject {
         // Saving before the first mpv observation must preserve loaded preferences.
         QVERIFY(session.save({}).isEmpty());
         QCOMPARE(SessionStore(file).load().state.audio.volume, 23.0);
+        QCOMPARE(SessionStore(file).load().state.seekStepSeconds, 7);
         QVERIFY(SessionStore(file).load().state.audio.muted);
         QTRY_COMPARE(player.state().volume, 23.0);
         QTRY_VERIFY(player.state().muted);

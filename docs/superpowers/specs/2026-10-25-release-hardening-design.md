@@ -37,7 +37,7 @@ Options: compute lazily on paint, cache on mutation, or store a display string i
 
 ### Seek interval
 
-Options: keep presets, add a custom combo entry, or use a spin box. A spin box is the clearest and validates a single range. **Chosen:** `QSpinBox` 1–120 seconds, default 5; session load clamps, malformed values fall back to 5.
+Options: keep presets, add a custom combo entry, or use a spin box. A spin box is the clearest and validates a single range. **Chosen:** `QSpinBox` 1–120 seconds, default 5; session load validates the range, and malformed or out-of-range values fall back to 5.
 
 ### Packaging
 

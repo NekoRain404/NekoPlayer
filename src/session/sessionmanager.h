@@ -25,6 +25,8 @@ class SessionManager final : public QObject {
     void setSeekStepSeconds(int seconds);
     [[nodiscard]] InteractionPreferences interactionPreferences() const;
     void setInteractionPreferences(InteractionPreferences preferences);
+    [[nodiscard]] LanguagePreferences languagePreferences() const;
+    void setLanguagePreferences(const LanguagePreferences &preferences);
     [[nodiscard]] QList<PlaybackHistoryEntry> playbackHistory() const;
     void rememberMedia(const QString &path);
 
@@ -47,6 +49,7 @@ class SessionManager final : public QObject {
     bool resumePlaybackPositionEnabled_ = true;
     int seekStepSeconds_ = 5;
     InteractionPreferences interaction_;
+    LanguagePreferences languages_;
     QString loadError_;
     QString historyError_;
     bool stopRequested_ = false;

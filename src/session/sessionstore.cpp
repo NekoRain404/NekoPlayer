@@ -83,6 +83,7 @@ SessionState normalized(SessionState state) {
     state.tuning = state.tuning.normalized();
     state.videoColor = state.videoColor.normalized();
     state.interaction = state.interaction.normalized();
+    state.languages = state.languages.normalized();
     state.seekStepSeconds = normalizedSeekStepSeconds(state.seekStepSeconds);
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
@@ -129,6 +130,24 @@ InteractionPreferences InteractionPreferences::normalized() const {
     auto result = *this;
     result.wheelVolumeStep = std::clamp(result.wheelVolumeStep, 1, 20);
     return result;
+}
+
+LanguagePreferences LanguagePreferences::normalized() const {
+    const auto normalizeLanguages = [](const QStringList &languages) {
+        constexpr qsizetype maximumLanguages = 16;
+        QStringList result;
+        for (const auto &language : languages) {
+            const auto trimmed = language.trimmed();
+            if (trimmed.isEmpty())
+                continue;
+            if (result.size() >= maximumLanguages)
+                break;
+            result.append(trimmed);
+        }
+        return result;
+    };
+    return {normalizeLanguages(audioLanguages), normalizeLanguages(subtitleLanguages),
+            autoLoadExternalSubtitles};
 }
 
 SessionStore::SessionStore(QString filePath) : filePath_(std::move(filePath)) {}
@@ -183,6 +202,12 @@ SessionLoadResult SessionStore::load() const {
     state.subtitles.position = valid ? position : 100;
     state.subtitles.font =
         settings.value(QStringLiteral("subtitles/font"), QStringLiteral("sans-serif")).toString();
+    state.languages.audioLanguages =
+        settings.value(QStringLiteral("tracks/preferredAudioLanguages")).toStringList();
+    state.languages.subtitleLanguages =
+        settings.value(QStringLiteral("tracks/preferredSubtitleLanguages")).toStringList();
+    state.languages.autoLoadExternalSubtitles =
+        readBool(settings, QStringLiteral("subtitles/autoLoadExternal"));
     state.paths = settings.value(QStringLiteral("playlist/paths")).toStringList();
     state.currentIndex = settings.value(QStringLiteral("playlist/currentIndex"), -1).toInt(&valid);
     if (!valid)
@@ -261,6 +286,12 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("subtitles/scale"), saved.subtitles.scale);
     settings.setValue(QStringLiteral("subtitles/position"), saved.subtitles.position);
     settings.setValue(QStringLiteral("subtitles/font"), saved.subtitles.font);
+    settings.setValue(QStringLiteral("tracks/preferredAudioLanguages"),
+                      saved.languages.audioLanguages);
+    settings.setValue(QStringLiteral("tracks/preferredSubtitleLanguages"),
+                      saved.languages.subtitleLanguages);
+    settings.setValue(QStringLiteral("subtitles/autoLoadExternal"),
+                      saved.languages.autoLoadExternalSubtitles);
     settings.setValue(QStringLiteral("playlist/paths"), saved.paths);
     settings.setValue(QStringLiteral("playlist/currentIndex"), saved.currentIndex);
     settings.setValue(QStringLiteral("playlist/resumePosition"), saved.resumePosition);

@@ -110,6 +110,7 @@ SessionLoadResult SessionManager::restore() {
     resumePlaybackPositionEnabled_ = loaded.state.resumePlaybackPosition;
     seekStepSeconds_ = loaded.state.seekStepSeconds;
     interaction_ = loaded.state.interaction.normalized();
+    languages_ = loaded.state.languages.normalized();
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
                            resumePlaybackPositionEnabled_ ? loaded.state.resumePosition : 0);
     player_.setVolume(audio_.volume);
@@ -152,6 +153,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.resumePlaybackPosition = resumePlaybackPositionEnabled_;
     saved.seekStepSeconds = seekStepSeconds_;
     saved.interaction = interaction_;
+    saved.languages = languages_;
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     if (!sessionError.isEmpty())
@@ -362,6 +364,12 @@ InteractionPreferences SessionManager::interactionPreferences() const { return i
 
 void SessionManager::setInteractionPreferences(InteractionPreferences preferences) {
     interaction_ = preferences.normalized();
+}
+
+LanguagePreferences SessionManager::languagePreferences() const { return languages_; }
+
+void SessionManager::setLanguagePreferences(const LanguagePreferences &preferences) {
+    languages_ = preferences.normalized();
 }
 
 void SessionManager::setMediaLibraryPreferences(MediaLibraryPreferences preferences) {

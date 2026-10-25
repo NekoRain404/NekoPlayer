@@ -58,6 +58,15 @@ struct InteractionPreferences {
     bool operator==(const InteractionPreferences &) const = default;
 };
 
+struct LanguagePreferences {
+    QStringList audioLanguages;
+    QStringList subtitleLanguages;
+    bool autoLoadExternalSubtitles = false;
+
+    [[nodiscard]] LanguagePreferences normalized() const;
+    bool operator==(const LanguagePreferences &) const = default;
+};
+
 struct SessionState {
     AudioPreferences audio;
     WindowPreferences window;
@@ -72,6 +81,7 @@ struct SessionState {
     bool resumePlaybackPosition = true;
     int seekStepSeconds = seekStepSecondsDefault;
     InteractionPreferences interaction;
+    LanguagePreferences languages;
 };
 
 struct SessionLoadResult {

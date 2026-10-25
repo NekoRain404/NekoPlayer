@@ -65,6 +65,11 @@ target_link_libraries(interaction_preferences_test PRIVATE neko_session Qt6::Tes
 add_test(NAME interaction-preferences COMMAND interaction_preferences_test)
 set_tests_properties(interaction-preferences PROPERTIES TIMEOUT 20)
 
+add_executable(language_preferences_test language_preferences_test.cpp)
+target_link_libraries(language_preferences_test PRIVATE neko_session Qt6::Test)
+add_test(NAME language-preferences COMMAND language_preferences_test)
+set_tests_properties(language-preferences PROPERTIES TIMEOUT 20)
+
 add_executable(external_audio_session_test external_audio_session_test.cpp)
 target_link_libraries(external_audio_session_test PRIVATE neko_session Qt6::Test)
 target_compile_definitions(external_audio_session_test PRIVATE

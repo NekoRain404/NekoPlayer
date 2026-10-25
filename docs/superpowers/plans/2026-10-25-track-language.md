@@ -63,17 +63,17 @@
 ## Status (2026-10-25)
 
 - [x] Task 1: Language preferences value and persistence — `dbe3908`
-- [x] Task 2: Controller application — `b2131f5`; subtitle auto-load default-off fix `5ed4be0`
+- [x] Task 2: Controller application — `b2131f5`; subtitle auto-load default-off fix `5ed4be0`; final-review explicit-origin fixes `de071d0`, `814455a`, suppression `6c36fd3`
 - [x] Task 3: Preferences UI and translations — `2ea3253`
-- [x] Task 4: Verification, documentation, and final review — recorded in `docs/verification.md`
+- [x] Task 4: Verification, documentation, and final review — recorded in `docs/verification.md`; whole-branch review fixes `de071d0`, `814455a`, `6c36fd3`, docs `4e4f47f`; scoped re-review clean with a documented file-local toggle caveat
 
 ### Verification checklist
 
 - [x] `cmake --preset debug` and `cmake --build --preset debug`
-- [x] Full non-window suite: 64/64 passed in 62.43 s (`LC_ALL=C LANG=C`)
-- [x] Focused selection: 7/7 passed in 4.91 s
-- [x] Focused sanitizer preset: 4/4 passed in 3.20 s with no ASan/UBSan reports; leak detection disabled only for documented platform-library exit allocations
-- [x] `code-size`: 1/1 passed; advisories `windowactions.cpp` 550, `preferencesdialog.cpp` 529, `preferences_dialog_test.cpp` 543, `playlist_pane_test.cpp` 502, `ui_surface_test.cpp` 550
+- [x] Full non-window suite: 64/64 passed in 63.67 s (`LC_ALL=C LANG=C`)
+- [x] Focused selection: 7/7 passed in 5.64 s
+- [x] Focused sanitizer preset: 4/4 passed in 4.03 s with no ASan/UBSan reports; leak detection disabled only for documented platform-library exit allocations
+- [x] `code-size`: 1/1 passed; advisories `windowactions.cpp` 550, `preferencesdialog.cpp` 529, `preferences_dialog_test.cpp` 543, `track_language_test.cpp` 499, `playlist_pane_test.cpp` 502, `ui_surface_test.cpp` 550
 - [x] English translations: 315 finished, 0 unfinished
 - [x] `clang-format --dry-run --Werror` and `git diff --check` clean
 - [x] Boundary checks: no mpv client API in `src/ui/`, no new polling or frame copies, NekoRain-only commits

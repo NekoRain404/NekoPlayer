@@ -283,6 +283,8 @@ PlaylistController *MainWindow::playlist() const { return playlist_.get(); }
 
 void MainWindow::setStartPaused(bool paused) { startPaused_ = paused; }
 
+void MainWindow::enterFullscreen() { setFullscreen(true); }
+
 void MainWindow::openFile(const QString &path) { openFiles({path}); }
 
 void MainWindow::openFiles(const QStringList &paths) {

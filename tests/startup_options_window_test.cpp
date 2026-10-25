@@ -36,16 +36,49 @@ class StartupOptionsWindowTest final : public QObject {
         window.openFiles({QStringLiteral("http://")});
     }
 
-    void fullscreenStartupPathIsCallable() {
+    void fullscreenStartupPathEntersAndExits() {
         MainWindow window(true);
         auto *fullscreen = action(window, "fullscreenAction");
         QVERIFY(fullscreen);
         QVERIFY(fullscreen->isCheckable());
-        // main.cpp calls show() then showFullScreen(); the existing
-        // WindowStateChange path synchronizes the action and presentation.
+        // Mirrors main.cpp: show(), then the controlled enterFullscreen()
+        // transition instead of a raw showFullScreen(). The controlled path
+        // captures the normal geometry before fullscreen so the action can
+        // restore it; raw showFullScreen() would encode fullscreen geometry
+        // and make exit re-enter fullscreen.
         window.show();
-        window.showFullScreen();
-        window.showNormal();
+        QVERIFY(window.isVisible());
+        window.enterFullscreen();
+        QVERIFY(window.isFullScreen());
+        QVERIFY(fullscreen->isChecked());
+
+        fullscreen->trigger();
+        QTRY_VERIFY(!window.isFullScreen());
+        QVERIFY(!fullscreen->isChecked());
+        QVERIFY(window.isVisible());
+    }
+
+    void alwaysOnTopWhileFullscreenSurvivesExit() {
+        MainWindow window(true);
+        auto *fullscreen = action(window, "fullscreenAction");
+        auto *top = action(window, "alwaysOnTopAction");
+        QVERIFY(fullscreen && top);
+
+        window.show();
+        window.enterFullscreen();
+        QVERIFY(window.isFullScreen());
+
+        // Fullscreen owns the top hint while active; the user's choice must be
+        // reapplied when the controlled exit restores the normal window.
+        top->trigger();
+        QVERIFY(top->isChecked());
+        QVERIFY(window.isFullScreen());
+
+        fullscreen->trigger();
+        QTRY_VERIFY(!window.isFullScreen());
+        QVERIFY(top->isChecked());
+        QVERIFY(window.windowFlags().testFlag(Qt::WindowStaysOnTopHint));
+        QVERIFY(window.isVisible());
     }
 };
 

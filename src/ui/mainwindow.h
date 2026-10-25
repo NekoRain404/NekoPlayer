@@ -47,6 +47,7 @@ class MainWindow final : public QMainWindow {
     void appendFiles(const QStringList &paths);
     void openFolder(const QString &directory, bool append = false, bool recursive = false);
     void setStartPaused(bool paused);
+    void enterFullscreen();
 
   signals:
     void userError(const QString &message);

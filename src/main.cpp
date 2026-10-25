@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     }
     window.show();
     if (parser.isSet(QStringLiteral("fullscreen")))
-        window.showFullScreen();
+        window.enterFullscreen();
     if (parser.isSet(QStringLiteral("smoke-test"))) {
         QObject::connect(&window, &MainWindow::userError, app.get(), [](const QString &message) {
             std::cerr << message.toStdString() << '\n';

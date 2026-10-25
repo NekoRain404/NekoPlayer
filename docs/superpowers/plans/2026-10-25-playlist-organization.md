@@ -112,13 +112,14 @@ appropriate.
 - [x] Focused sanitizer targets pass with the documented leak-detection caveat.
 - [x] `code-size`, changed-file formatting, and `git diff --check` pass.
 - [x] No raw mpv commands in UI code; no new polling or frame copies.
-- [ ] README/architecture/verification/plan updated; whole-branch review clean.
-      Documentation is updated; the whole-branch review findings are fixed at
-      `832fbe0`, with the scoped re-review still pending.
+- [x] README/architecture/verification/plan updated; whole-branch review clean.
+      The final review findings were fixed at `832fbe0` and the scoped re-review
+      is clean.
 
 ## Status (2026-10-25)
 
-Code at `acc623e`; commits `35961c2`, `cce15f8`, `8cf71e3`, `acc623e`.
+Code at `832fbe0`; commits `35961c2`, `cce15f8`, `8cf71e3`, `acc623e`,
+`832fbe0` (final review fixes).
 
 - [x] Task 1: model batch removal, stable natural title/path sorting, shared collation.
 - [x] Task 2: controller bulk removal, missing-file scan/removal, sort.

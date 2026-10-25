@@ -60,3 +60,13 @@
 - Update README/architecture/verification/plan.
 - Fresh whole-branch reviewer, one fix wave if needed.
 - Commit docs.
+
+## Status (2026-10-25)
+
+- [x] Task 1 — interaction settings completion (`5baf6ef`): shared `音量步进` for wheel and keyboard +/-, persisted `interaction/showRemainingTime`, transient click override.
+- [x] Task 2 — persisted always-on-top with mini-player restoration (`1896d2b`); test registration split by responsibility (`cb584c9`).
+- [x] Task 3 — `--fullscreen` / `--start-paused` startup options (`1ebb538`).
+- [x] Task 4 — reviewed start-paused rejection fix (`0edf2fe`), full verification, and documentation.
+- [ ] Native-Wayland visual/keyboard/pointer acceptance — requires an interactive Wayland desktop session.
+
+Verification summary: `cmake --preset debug` and `cmake --build --preset debug` succeeded; the non-window Debug suite passed **61/61** (58.24 s) under `LC_ALL=C LANG=C`; the focused session/preferences/transport/code-size selection passed **6/6**; focused ASan/UBSan passed **5/5** with `ASAN_OPTIONS=detect_leaks=0` (platform-library exit-allocation caveat, not a leak-free claim); `code-size` passed 1/1 with advisory over-target files `src/ui/windowactions.cpp` (534) and `tests/ui_surface_test.cpp` (550); translations reported **296 finished, 0 unfinished**; formatting and `git diff --check` were clean; install produced exactly three files. Window/startup tests were compiled only, not run.

@@ -5,8 +5,8 @@
 
 namespace {
 const QCollator &englishCollator() {
-    // A pinned locale ignores numeric mode on some Qt backends, so the numeric
-    // and case settings are explicit. One collator per thread keeps collation
+    // Some Qt backends ignore numeric mode under the C locale, so English plus
+    // numeric/case settings are explicit. One collator per thread keeps collation
     // setup out of the comparison loop while staying safe off the GUI thread.
     thread_local const QCollator collator = [] {
         QCollator value{QLocale(QLocale::English)};

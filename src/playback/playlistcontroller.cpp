@@ -6,7 +6,9 @@
 #include <QFileInfo>
 #include <QPersistentModelIndex>
 #include <QUrl>
+#include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace {
 bool isPlayablePath(const QString &path) {
@@ -236,10 +238,22 @@ void PlaylistController::moveItem(int from, int to) {
     model_->moveRow({}, from, {}, from < to ? to + 1 : to);
 }
 
-void PlaylistController::removeAt(int row) {
-    if (row < 0 || row >= model_->rowCount())
+void PlaylistController::removeRowsAt(const QList<int> &rows) {
+    std::vector<int> removed;
+    removed.reserve(rows.size());
+    for (const auto row : rows) {
+        if (row >= 0 && row < model_->rowCount())
+            removed.push_back(row);
+    }
+    std::sort(removed.begin(), removed.end());
+    removed.erase(std::unique(removed.begin(), removed.end()), removed.end());
+    if (removed.empty())
         return;
-    const bool removingCurrent = row == model_->currentIndex();
+
+    const auto isRemoved = [&removed](int row) {
+        return std::binary_search(removed.cbegin(), removed.cend(), row);
+    };
+    const bool removingCurrent = isRemoved(model_->currentIndex());
     if (removingCurrent) {
         // Removing the playing row is an explicit stop, so stopRequested
         // disarms stop-after-current just like player.stop() or clear().
@@ -251,12 +265,47 @@ void PlaylistController::removeAt(int row) {
     }
     QSet<int> remapped;
     for (const auto failed : std::as_const(failedRows_)) {
-        if (failed != row)
-            remapped.insert(failed > row ? failed - 1 : failed);
+        if (isRemoved(failed))
+            continue;
+        const auto removedBelow = static_cast<int>(
+            std::lower_bound(removed.cbegin(), removed.cend(), failed) - removed.cbegin());
+        remapped.insert(failed - removedBelow);
     }
     failedRows_ = std::move(remapped);
-    model_->removeAt(row);
+
+    QList<int> rowList;
+    rowList.reserve(removed.size());
+    for (const auto row : removed)
+        rowList.append(row);
+    model_->removeRowsAt(rowList);
     if (removingCurrent && shuffleEnabled_)
+        shuffle_.reset(*model_, model_->currentIndex());
+    emit currentChanged(model_->currentIndex());
+}
+
+void PlaylistController::removeAt(int row) { removeRowsAt({row}); }
+
+QList<int> PlaylistController::missingFileRows() const {
+    QList<int> rows;
+    const auto &paths = model_->paths();
+    for (auto row = 0; row < paths.size(); ++row) {
+        if (!isPlayablePath(paths.at(row)))
+            rows.append(row);
+    }
+    return rows;
+}
+
+int PlaylistController::removeMissingFiles() {
+    const auto rows = missingFileRows();
+    removeRowsAt(rows);
+    return static_cast<int>(rows.size());
+}
+
+void PlaylistController::sortPlaylist(PlaylistModel::SortKey key, Qt::SortOrder order) {
+    failedRows_.clear();
+    if (!model_->sortEntries(key, order))
+        return;
+    if (shuffleEnabled_)
         shuffle_.reset(*model_, model_->currentIndex());
     emit currentChanged(model_->currentIndex());
 }

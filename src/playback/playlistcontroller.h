@@ -1,5 +1,6 @@
 #pragma once
 
+#include "playlistmodel.h"
 #include "shuffleorder.h"
 
 #include <QObject>
@@ -28,6 +29,7 @@ class PlaylistController final : public QObject {
     [[nodiscard]] bool shuffleEnabled() const;
     [[nodiscard]] bool stopAfterCurrent() const;
     [[nodiscard]] double pendingResumePosition() const;
+    [[nodiscard]] QList<int> missingFileRows() const;
     void setResumePositionResolver(std::function<double(const QString &)> resolver);
 
   public slots:
@@ -38,6 +40,9 @@ class PlaylistController final : public QObject {
     void playNext();
     void playPrevious();
     void removeAt(int row);
+    void removeRowsAt(const QList<int> &rows);
+    int removeMissingFiles();
+    void sortPlaylist(PlaylistModel::SortKey key, Qt::SortOrder order);
     void moveItem(int from, int to);
     void clear();
     void setRepeatMode(RepeatMode mode);

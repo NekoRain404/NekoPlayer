@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QUrl>
 #include <QtTest>
 
 class PlaylistTest final : public QObject {
@@ -244,6 +245,215 @@ class PlaylistTest final : public QObject {
         QTRY_VERIFY_WITH_TIMEOUT(player.state().active, 5000);
         QCOMPARE(queue.model()->currentIndex(), 1);
         QVERIFY(!errors.isEmpty());
+    }
+
+    void bulkRemovalKeepsSurvivingPlayback() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        QStringList paths;
+        for (const auto *name : {"first.mkv", "second.mkv", "third.mkv", "fourth.mkv"}) {
+            const auto path = temporary.filePath(QString::fromLatin1(name));
+            QVERIFY(QFile::copy(media, path));
+            paths.append(path);
+        }
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy changed(&queue, &PlaylistController::currentChanged);
+        queue.restoreFiles(paths, 1);
+        queue.playAt(1);
+        QTRY_COMPARE(loaded.count(), 1);
+        player.setPaused(true);
+        QTRY_VERIFY(player.state().paused && player.state().seekable);
+        player.seekAbsolute(1.5);
+        QTRY_VERIFY(qAbs(player.state().position - 1.5) < 0.08);
+        changed.clear();
+        queue.removeRowsAt({0, 3, 3, -1, 9});
+        QCOMPARE(queue.model()->rowCount(), 2);
+        QCOMPARE(queue.model()->currentIndex(), 0);
+        QCOMPARE(queue.model()->currentPath(), paths.at(1));
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(player.state().path, paths.at(1));
+        QVERIFY(player.state().active && player.state().paused);
+        QVERIFY(qAbs(player.state().position - 1.5) < 0.08);
+        QCOMPARE(loaded.count(), 1);
+    }
+
+    void bulkRemovalOfCurrentStopsOnceAndSelectsSurvivor() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        QStringList paths;
+        for (const auto *name : {"first.mkv", "second.mkv", "third.mkv"}) {
+            const auto path = temporary.filePath(QString::fromLatin1(name));
+            QVERIFY(QFile::copy(media, path));
+            paths.append(path);
+        }
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy stops(&player, &MpvController::stopRequested);
+        QSignalSpy changed(&queue, &PlaylistController::currentChanged);
+        queue.restoreFiles(paths, 1);
+        queue.playAt(1);
+        QTRY_COMPARE(loaded.count(), 1);
+        changed.clear();
+        queue.removeRowsAt({1});
+        QCOMPARE(stops.count(), 1);
+        QTRY_VERIFY(!player.state().active);
+        QCOMPARE(queue.model()->rowCount(), 2);
+        QCOMPARE(queue.model()->currentIndex(), 1);
+        QCOMPARE(queue.model()->currentPath(), paths.at(2));
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(loaded.count(), 1);
+        queue.removeRowsAt({0, 1});
+        QCOMPARE(stops.count(), 2);
+        QCOMPARE(queue.model()->rowCount(), 0);
+        QCOMPARE(queue.model()->currentIndex(), -1);
+        QCOMPARE(changed.count(), 2);
+        QCOMPARE(loaded.count(), 1);
+    }
+
+    void missingFileRowsDistinguishExistingMissingAndNetwork() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto existing = temporary.filePath(QStringLiteral("existing.mkv"));
+        QFile file(existing);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.close();
+        const auto missing = temporary.filePath(QStringLiteral("missing.mkv"));
+        const auto network = QStringLiteral("https://example.test/movie.mkv");
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        queue.restoreFiles({existing, missing, network, QUrl::fromLocalFile(missing).toString(),
+                            QUrl::fromLocalFile(existing).toString()},
+                           0);
+        const auto rows = queue.missingFileRows();
+        QCOMPARE(rows.size(), 2);
+        QCOMPARE(rows.at(0), 1);
+        QCOMPARE(rows.at(1), 3);
+        QVERIFY(!player.state().active);
+    }
+
+    void removeMissingFilesRemovesOnlyMissingRows() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        const auto second = temporary.filePath(QStringLiteral("second.mkv"));
+        QVERIFY(QFile::copy(media, second));
+        const auto missingFirst = temporary.filePath(QStringLiteral("missing-first.mkv"));
+        const auto missingLast = temporary.filePath(QStringLiteral("missing-last.mkv"));
+        const auto network = QStringLiteral("https://example.test/movie.mkv");
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        queue.restoreFiles({missingFirst, media, network, missingLast}, 1);
+        queue.playAt(1);
+        QTRY_COMPARE(loaded.count(), 1);
+        QCOMPARE(queue.removeMissingFiles(), 2);
+        QCOMPARE(queue.model()->paths(), QStringList({media, network}));
+        QCOMPARE(queue.model()->currentIndex(), 0);
+        QCOMPARE(player.state().path, media);
+        QVERIFY(player.state().active);
+        QCOMPARE(loaded.count(), 1);
+
+        queue.restoreFiles({media, missingLast}, 1);
+        QCOMPARE(queue.model()->currentIndex(), 1);
+        QCOMPARE(queue.removeMissingFiles(), 1);
+        QCOMPARE(queue.model()->rowCount(), 1);
+        QCOMPARE(queue.model()->currentIndex(), 0);
+        QCOMPARE(queue.model()->currentPath(), media);
+        QTRY_VERIFY(!player.state().active);
+        QCOMPARE(loaded.count(), 1);
+    }
+
+    void sortKeepsPlaybackAndArmedStopAfterCurrent() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        QStringList paths;
+        for (const auto *name : {"episode3.mkv", "episode1.mkv", "episode2.mkv"}) {
+            const auto path = temporary.filePath(QString::fromLatin1(name));
+            QVERIFY(QFile::copy(media, path));
+            paths.append(path);
+        }
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy changed(&queue, &PlaylistController::currentChanged);
+        QSignalSpy finished(&queue, &PlaylistController::queueFinished);
+        queue.restoreFiles(paths, 0);
+        queue.playAt(0);
+        QTRY_COMPARE(loaded.count(), 1);
+        player.setPaused(true);
+        QTRY_VERIFY(player.state().paused && player.state().seekable);
+        player.seekAbsolute(1.5);
+        QTRY_VERIFY(qAbs(player.state().position - 1.5) < 0.08);
+        const auto currentPath = player.state().path;
+        queue.setStopAfterCurrent(true);
+        changed.clear();
+        queue.sortPlaylist(PlaylistModel::SortKey::Title, Qt::AscendingOrder);
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(queue.model()->paths(), QStringList({paths.at(1), paths.at(2), paths.at(0)}));
+        QCOMPARE(queue.model()->currentIndex(), 2);
+        QCOMPARE(queue.model()->currentPath(), currentPath);
+        QCOMPARE(player.state().path, currentPath);
+        QVERIFY(player.state().active && player.state().paused);
+        QVERIFY(qAbs(player.state().position - 1.5) < 0.08);
+        QCOMPARE(loaded.count(), 1);
+        QVERIFY(queue.stopAfterCurrent());
+
+        changed.clear();
+        queue.sortPlaylist(PlaylistModel::SortKey::Title, Qt::AscendingOrder);
+        QCOMPARE(changed.count(), 0);
+        QCOMPARE(loaded.count(), 1);
+        QVERIFY(queue.stopAfterCurrent());
+
+        player.setPaused(false);
+        player.seekAbsolute(3.8);
+        QTRY_COMPARE_WITH_TIMEOUT(finished.count(), 1, 3000);
+        QVERIFY(!queue.stopAfterCurrent());
+        QCOMPARE(loaded.count(), 1);
+    }
+
+    void shuffleRemainsCoherentAfterBulkRemovalAndSort() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        QStringList paths;
+        for (const auto *name : {"d.mkv", "b.mkv", "a.mkv", "c.mkv"}) {
+            const auto path = temporary.filePath(QString::fromLatin1(name));
+            QVERIFY(QFile::copy(media, path));
+            paths.append(path);
+        }
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        queue.restoreFiles(paths, 1);
+        queue.setShuffleEnabled(true);
+        queue.playAt(1);
+        QTRY_COMPARE(loaded.count(), 1);
+        queue.removeRowsAt({0, 3});
+        QCOMPARE(queue.model()->rowCount(), 2);
+        QCOMPARE(queue.model()->currentIndex(), 0);
+        QCOMPARE(queue.model()->currentPath(), paths.at(1));
+        QVERIFY(queue.hasNext());
+        QVERIFY(!queue.hasPrevious());
+        queue.playNext();
+        QTRY_COMPARE(loaded.count(), 2);
+        QCOMPARE(queue.model()->currentIndex(), 1);
+        QCOMPARE(queue.model()->currentPath(), paths.at(2));
+
+        queue.sortPlaylist(PlaylistModel::SortKey::Title, Qt::AscendingOrder);
+        QCOMPARE(queue.model()->currentPath(), paths.at(2));
+        QCOMPARE(player.state().path, paths.at(2));
+        QVERIFY(player.state().active);
+        QVERIFY(queue.hasNext());
+        QVERIFY(!queue.hasPrevious());
+        queue.playNext();
+        QTRY_COMPARE(loaded.count(), 3);
+        QCOMPARE(queue.model()->currentPath(), paths.at(1));
     }
 };
 

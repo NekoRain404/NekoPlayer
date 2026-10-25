@@ -28,6 +28,7 @@ PlaylistController::PlaylistController(MpvController &player, QObject *parent)
     connect(&player_, &MpvController::mediaLoadFailed, this, &PlaylistController::mediaLoadFailed);
     connect(&player_, &MpvController::stopRequested, this,
             &PlaylistController::snapshotCurrentPlayback, Qt::DirectConnection);
+    connect(&player_, &MpvController::stopRequested, this, [this] { setStopAfterCurrent(false); });
     const auto cancelResume = [this] { resumeEntry_ = QPersistentModelIndex{}; };
     connect(&player_, &MpvController::stopRequested, this, cancelResume);
     connect(&player_, &MpvController::fileOpenRequested, this, cancelResume);
@@ -81,6 +82,7 @@ bool PlaylistController::hasPrevious() const {
 
 PlaylistController::RepeatMode PlaylistController::repeatMode() const { return repeatMode_; }
 bool PlaylistController::shuffleEnabled() const { return shuffleEnabled_; }
+bool PlaylistController::stopAfterCurrent() const { return stopAfterCurrent_; }
 double PlaylistController::pendingResumePosition() const {
     return resumeEntry_.isValid() && resumeEntry_.row() == model_->currentIndex() ? resumePosition_
                                                                                   : 0;
@@ -109,6 +111,14 @@ void PlaylistController::setShuffleEnabled(bool enabled) {
     emit shuffleEnabledChanged(enabled);
 }
 
+void PlaylistController::setStopAfterCurrent(bool enabled) {
+    if (stopAfterCurrent_ == enabled)
+        return;
+    stopAfterCurrent_ = enabled;
+    updateFileLoop();
+    emit stopAfterCurrentChanged(enabled);
+}
+
 void PlaylistController::setRepeatMode(RepeatMode mode) {
     if (mode != RepeatMode::Off && mode != RepeatMode::One && mode != RepeatMode::All)
         return;
@@ -134,8 +144,9 @@ void PlaylistController::cycleRepeatMode() {
 }
 
 void PlaylistController::updateFileLoop() {
-    player_.setFileLoopEnabled(repeatMode_ == RepeatMode::One ||
-                               (repeatMode_ == RepeatMode::All && model_->rowCount() == 1));
+    player_.setFileLoopEnabled(!stopAfterCurrent_ &&
+                               (repeatMode_ == RepeatMode::One ||
+                                (repeatMode_ == RepeatMode::All && model_->rowCount() == 1)));
 }
 
 void PlaylistController::addFiles(const QStringList &paths) {
@@ -207,6 +218,7 @@ void PlaylistController::playPrevious() {
 }
 
 void PlaylistController::clear() {
+    setStopAfterCurrent(false);
     playbackQueued_ = false;
     ++playbackRevision_;
     exhausted_ = false;
@@ -252,6 +264,11 @@ void PlaylistController::playFinished() {
         return;
     emit mediaPlaybackFinished(model_->currentPath());
     failedRows_.clear();
+    if (stopAfterCurrent_) {
+        setStopAfterCurrent(false);
+        finishQueue();
+        return;
+    }
     if (shuffleEnabled_ && repeatMode_ != RepeatMode::One) {
         if (playShuffled(1) == ScanResult::Exhausted)
             finishQueue();

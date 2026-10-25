@@ -84,6 +84,7 @@
     <message><source>列表循环</source><translation>Repeat All</translation></message>
     <message><source>随机播放</source><translation>Shuffle</translation></message>
     <message><source>切换播放模式</source><translation>Cycle Repeat Mode</translation></message>
+    <message><source>播放完当前停止</source><translation>Stop After Current</translation></message>
     <message><source>播放模式 · %1</source><translation>Repeat · %1</translation></message>
     <message><source>%1 · %2</source><translation>%1 · %2</translation></message>
 </context>

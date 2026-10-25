@@ -24,7 +24,7 @@ After the playlist/discovery phase, the player needs a few finishing settings an
 - Volume step: reuse `InteractionPreferences::wheelVolumeStep` for keyboard +/-; keep the existing settings key for compatibility, relabel the UI to "音量步进".
 - Time display: add `interaction/showRemainingTime` (default false) and `TransportBar::setTimeShowsRemaining`; the label click is session-only.
 - Always-on-top: add `window/alwaysOnTop`; mini-player entry forces on-top, exit restores the persisted value; fullscreen toggling is not allowed to overwrite it.
-- CLI: `--fullscreen` calls `showFullScreen()` after `show()` so the existing WindowStateChange synchronization runs; `--start-paused` pauses once after the first successful `fileLoaded`.
+- CLI: `--fullscreen` enters through the controlled `MainWindow::enterFullscreen()` transition after `show()`, which captures normal geometry before fullscreen and keeps the existing WindowStateChange synchronization; `--start-paused` pauses once after the first successful `fileLoaded`.
 
 ## Verification
 

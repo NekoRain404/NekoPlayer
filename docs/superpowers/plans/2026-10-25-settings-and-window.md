@@ -47,7 +47,7 @@
 **Files:** `src/main.cpp`, `src/cli/commandlinearguments.{h,cpp}` if a helper is useful, `src/ui/mainwindow.{h,cpp}`, tests.
 
 **Behavior:**
-- `--fullscreen`: after `show()`, call `showFullScreen()`; existing WindowStateChange sync applies.
+- `--fullscreen`: after `show()`, enter through `MainWindow::enterFullscreen()` so the controlled `setFullscreen(true)` transition captures normal geometry before fullscreen; the existing WindowStateChange sync applies.
 - `--start-paused`: set a MainWindow flag before opening files; pause once after the first `fileLoaded`.
 - Keep `--check-backend`, `--smoke-test`, `--no-config`, `--silent-audio`.
 - Tests: parser/helper coverage where possible; compile-only window assertions.
@@ -65,7 +65,7 @@
 
 - [x] Task 1 — interaction settings completion (`5baf6ef`): shared `音量步进` for wheel and keyboard +/-, persisted `interaction/showRemainingTime`, transient click override.
 - [x] Task 2 — persisted always-on-top with mini-player restoration (`1896d2b`); test registration split by responsibility (`cb584c9`).
-- [x] Task 3 — `--fullscreen` / `--start-paused` startup options (`1ebb538`).
+- [x] Task 3 — `--fullscreen` / `--start-paused` startup options (`1ebb538`); final review fix routes startup fullscreen through the controlled transition (`1691ca5`).
 - [x] Task 4 — reviewed start-paused rejection fix (`0edf2fe`), full verification, and documentation.
 - [ ] Native-Wayland visual/keyboard/pointer acceptance — requires an interactive Wayland desktop session.
 

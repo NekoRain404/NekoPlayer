@@ -221,7 +221,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
         subtitleVisible_->setChecked(true);
         subtitleScale_->setValue(1.0);
         subtitlePosition_->setValue(100.0);
-        subtitleFont_->setEditText(QString());
+        subtitleFont_->setEditText(SubtitlePreferences{}.font);
         seekStepSeconds_->setCurrentIndex(seekStepSeconds_->findData(5));
     });
     updateApplyButton();

@@ -5,7 +5,6 @@
 #include "session/sessionstore.h"
 #include "ui/languagemanager.h"
 #include "ui/mainwindow.h"
-#include "ui/playbacksettingsdialog.h"
 #include "ui/preferencescoordinator.h"
 #include "ui/preferencesdialog.h"
 #include "ui/timeseekdialog.h"
@@ -67,10 +66,11 @@ class WindowTest final : public QObject {
     void playbackSettingsApplyAndCancelPreserveIntent() {
         MpvController player(true, true);
         {
-            PlaybackSettingsDialog dialog(player);
+            PreferencesDialog dialog(player);
+            dialog.selectCategory(PreferencesDialog::Category::Playback);
             auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
             auto *buttons =
-                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             auto *actual = dialog.findChild<QLabel *>(QStringLiteral("actualDecoder"));
             QVERIFY(choice && buttons && actual);
             QVERIFY(choice->currentData().toBool());
@@ -83,10 +83,11 @@ class WindowTest final : public QObject {
             QVERIFY(player.hardwareDecodingEnabled());
         }
         {
-            PlaybackSettingsDialog dialog(player);
+            PreferencesDialog dialog(player);
+            dialog.selectCategory(PreferencesDialog::Category::Playback);
             auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
             auto *buttons =
-                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             QVERIFY(choice && buttons);
             choice->setCurrentIndex(1);
             buttons->button(QDialogButtonBox::Apply)->click();
@@ -97,10 +98,11 @@ class WindowTest final : public QObject {
             QVERIFY(!player.hardwareDecodingEnabled());
         }
         {
-            PlaybackSettingsDialog dialog(player);
+            PreferencesDialog dialog(player);
+            dialog.selectCategory(PreferencesDialog::Category::Playback);
             auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
             auto *buttons =
-                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             QVERIFY(choice && buttons);
             QVERIFY(!choice->currentData().toBool());
             choice->setCurrentIndex(0);

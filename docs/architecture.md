@@ -34,9 +34,8 @@
 | `NavigationMenu` / `TimeSeekDialog` | 章节、逐帧、多档跳转、回到开头及指定时间输入校验 | 只调用控制器业务接口，共享菜单与快捷键；定位反馈复用全屏进度 |
 | `AbLoop` / `mpvcontroller_loop.cpp` | 当前媒体的 A–B 区间意图、端点校验和原生异步设置 | Qt Core 值类型与同一 mpv client，不依赖 UI |
 | `AbLoopMenu` | 共享区间菜单、当前时间端点动作和快捷键 | 只使用控制器业务 API，端点变化时刷新标题 |
-| `PlaybackSettingsDialog` | 解码方式草稿、应用／取消与实际解码状态 | 仅调用控制器业务 API，QObject 接收上下文随对话框销毁 |
 | `SubtitlePreferences` | 字幕可见性、缩放、位置及默认字体；统一归一化 | Qt Core 值类型，不依赖 mpv 或 UI |
-| `SubtitleDisplayMenu` / `SubtitleSettingsDialog` | 共享字幕显示动作、快捷键和应用／取消草稿 | 只使用字幕偏好与控制器业务 API，不订阅播放进度 |
+| `SubtitleDisplayMenu` | 共享字幕显示动作与快捷键 | 只使用字幕偏好与控制器业务 API，不订阅播放进度 |
 | `PreferencesCoordinator` | 按当前值装配共享 `PreferencesDialog` 并转发各页变更 | 依赖控制器公开接口与 MainWindow 提供的窄 getter/setter，不持有偏好存储或播放逻辑 |
 | `AppearancePreferences` / `AppearanceTokens` / `AppearanceStylesheet` / `AppearanceMenu` | Dark/Light/System 语义色、强调色派生、QSS 生成、启动/预览应用与持久化 | Qt Widgets 样式与调色板；System 保留平台标准调色板并覆盖强调色相关 role；不触碰 `VideoWidget`、libmpv 或渲染路径 |
 | `VideoPresentation` / `mpvcontroller_video.cpp` | 本次运行的画面比例与四分之一圈旋转意图、校验及异步提交 | 值类型不依赖 UI；实现只使用同一 mpv client |

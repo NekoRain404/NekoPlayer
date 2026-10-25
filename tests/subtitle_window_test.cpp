@@ -1,6 +1,6 @@
 #include "playback/mpvcontroller.h"
+#include "ui/preferencesdialog.h"
 #include "ui/subtitledisplaymenu.h"
-#include "ui/subtitlesettingsdialog.h"
 
 #include <QAction>
 #include <QCheckBox>
@@ -17,14 +17,15 @@ class SubtitleWindowTest final : public QObject {
     void dialogUsesDraftApplyAndCancel() {
         MpvController player(true, true);
         {
-            SubtitleSettingsDialog dialog(player);
+            PreferencesDialog dialog(player);
+            dialog.selectCategory(PreferencesDialog::Category::Subtitles);
             auto *visible = dialog.findChild<QCheckBox *>(QStringLiteral("subtitleVisibleChoice"));
             auto *scale = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("subtitleScaleChoice"));
             auto *position =
                 dialog.findChild<QDoubleSpinBox *>(QStringLiteral("subtitlePositionChoice"));
             auto *font = dialog.findChild<QFontComboBox *>(QStringLiteral("subtitleFontChoice"));
             auto *buttons =
-                dialog.findChild<QDialogButtonBox *>(QStringLiteral("subtitleSettingsButtons"));
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             QVERIFY(visible && scale && position && font && buttons);
             QCOMPARE(font->currentText(), QStringLiteral("sans-serif"));
             QVERIFY(!buttons->button(QDialogButtonBox::Apply)->isEnabled());
@@ -44,10 +45,10 @@ class SubtitleWindowTest final : public QObject {
             buttons->button(QDialogButtonBox::Cancel)->click();
             QCOMPARE(player.subtitlePreferences().scale, 1.5);
         }
-        SubtitleSettingsDialog dialog(player);
+        PreferencesDialog dialog(player);
+        dialog.selectCategory(PreferencesDialog::Category::Subtitles);
         auto *font = dialog.findChild<QFontComboBox *>(QStringLiteral("subtitleFontChoice"));
-        auto *buttons =
-            dialog.findChild<QDialogButtonBox *>(QStringLiteral("subtitleSettingsButtons"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
         QVERIFY(font && buttons);
         QCOMPARE(font->currentText(), QStringLiteral("unavailable family 猫"));
         buttons->button(QDialogButtonBox::RestoreDefaults)->click();

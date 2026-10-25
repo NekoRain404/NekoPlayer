@@ -76,11 +76,8 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
                 savePlaybackHistory();
                 emit playbackHistoryChanged();
             });
-    playlist_.setResumePositionResolver([this](const QString &path) {
-        return resumePlaybackPositionEnabled_
-                   ? resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0)
-                   : 0.0;
-    });
+    playlist_.setResumePositionResolver(
+        [this](const QString &path) { return resumePositionFor(path); });
 }
 
 SessionLoadResult SessionManager::restore() {
@@ -109,6 +106,11 @@ SessionLoadResult SessionManager::restore() {
     mediaLibraryPreferences_ = loaded.state.mediaLibrary;
     resumePlaybackPositionEnabled_ = loaded.state.resumePlaybackPosition;
     seekStepSeconds_ = loaded.state.seekStepSeconds;
+    interaction_ = loaded.state.interaction.normalized();
+    languages_ = loaded.state.languages.normalized();
+    // Apply language defaults before restoring media: mpv autoselects during load,
+    // while per-media track memory is applied after fileLoaded and wins explicitly.
+    applyLanguagePreferences();
     playlist_.restoreFiles(loaded.state.paths, loaded.state.currentIndex,
                            resumePlaybackPositionEnabled_ ? loaded.state.resumePosition : 0);
     player_.setVolume(audio_.volume);
@@ -133,8 +135,7 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
         rememberPlaybackPosition(state.path, position, state.duration);
     }
     window.mediaDirectory = mediaDirectory_;
-    const auto position = !resumePlaybackPositionEnabled_
-                              ? 0.0
+    const auto position = !resumePlaybackPositionEnabled_ ? 0.0
                           : player_.state().path == playlist_.model()->currentPath()
                               ? player_.resumePosition()
                               : playlist_.pendingResumePosition();
@@ -151,6 +152,8 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.mediaLibrary = mediaLibraryPreferences_;
     saved.resumePlaybackPosition = resumePlaybackPositionEnabled_;
     saved.seekStepSeconds = seekStepSeconds_;
+    saved.interaction = interaction_;
+    saved.languages = languages_;
     const auto sessionError = store_.save(saved);
     const auto historyError = savePlaybackHistory();
     if (!sessionError.isEmpty())
@@ -186,6 +189,23 @@ void SessionManager::rememberPlaybackPosition(const QString &path, double positi
     }
     savePlaybackHistory();
     emit playbackHistoryChanged();
+}
+
+double SessionManager::resumePositionFor(const QString &path) {
+    const auto mediaPath = TrackPreferenceStore::normalizedPath(path);
+    const auto saved = std::find_if(
+        trackPreferences_.cbegin(), trackPreferences_.cend(), [&mediaPath](const auto &entry) {
+            return entry.mediaPath == mediaPath && TrackPreferenceStore::matchesFingerprint(entry);
+        });
+    // Explicit external subtitle memory restores its own set; suppressing
+    // auto-discovery for this load avoids adding a duplicate stream.
+    const bool explicitSubtitleMemory = saved != trackPreferences_.cend() &&
+                                        (!saved->selection.externalSubtitlePaths.isEmpty() ||
+                                         !saved->selection.selectedExternalSubtitlePath.isEmpty());
+    player_.setSuppressAutoLoadForNextOpen(explicitSubtitleMemory);
+    return resumePlaybackPositionEnabled_
+               ? resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0)
+               : 0.0;
 }
 
 QString SessionManager::savePlaybackHistory() const {
@@ -267,6 +287,13 @@ void SessionManager::rememberTrackPreference() {
         for (const auto &track : tracks) {
             if (track.type != type || !track.external || track.externalPath.isEmpty())
                 continue;
+            if (!player_.isExplicitExternalPath(track.externalPath)) {
+                // Auto-discovered siblings are recreated by mpv's sub-auto rules,
+                // not user memory; never persist them or their automatic selection.
+                if (track.id == selectedId)
+                    internalId.reset();
+                continue;
+            }
             const auto externalPath = externalTrackPath(track);
             if (externalPath.isEmpty())
                 continue;
@@ -346,8 +373,7 @@ bool SessionManager::resumePlaybackPositionEnabled() const {
 int SessionManager::seekStepSeconds() const { return seekStepSeconds_; }
 
 void SessionManager::setSeekStepSeconds(int seconds) {
-    if (seconds == 5 || seconds == 10 || seconds == 30)
-        seekStepSeconds_ = seconds;
+    seekStepSeconds_ = normalizedSeekStepSeconds(seconds);
 }
 
 void SessionManager::setResumePlaybackPositionEnabled(bool enabled) {
@@ -356,6 +382,24 @@ void SessionManager::setResumePlaybackPositionEnabled(bool enabled) {
 
 MediaLibraryPreferences SessionManager::mediaLibraryPreferences() const {
     return mediaLibraryPreferences_;
+}
+
+InteractionPreferences SessionManager::interactionPreferences() const { return interaction_; }
+
+void SessionManager::setInteractionPreferences(InteractionPreferences preferences) {
+    interaction_ = preferences.normalized();
+}
+
+LanguagePreferences SessionManager::languagePreferences() const { return languages_; }
+
+void SessionManager::setLanguagePreferences(const LanguagePreferences &preferences) {
+    languages_ = preferences.normalized();
+    applyLanguagePreferences();
+}
+
+void SessionManager::applyLanguagePreferences() {
+    player_.setLanguagePreferences(languages_.audioLanguages, languages_.subtitleLanguages);
+    player_.setAutoLoadExternalSubtitles(languages_.autoLoadExternalSubtitles);
 }
 
 void SessionManager::setMediaLibraryPreferences(MediaLibraryPreferences preferences) {

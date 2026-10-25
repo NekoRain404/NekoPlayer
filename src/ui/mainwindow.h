@@ -1,5 +1,6 @@
 #pragma once
 
+#include "session/sessionstate.h"
 #include <QMainWindow>
 #include <QPersistentModelIndex>
 #include <QPoint>
@@ -13,6 +14,7 @@ class TrackMenus;
 class SessionManager;
 class PlaylistController;
 class PlaylistPane;
+class PlaylistMaintenanceMenu;
 class QAction;
 class QMenu;
 class QLabel;
@@ -23,7 +25,9 @@ class PlaybackOverlay;
 class FolderMenu;
 class RecentMediaHistory;
 class FullscreenControls;
+class PreferencesCoordinator;
 class QVBoxLayout;
+class QSplitter;
 class ThumbnailPreview;
 class ThumbnailService;
 struct ThumbnailResult;
@@ -43,6 +47,8 @@ class MainWindow final : public QMainWindow {
     void openFiles(const QStringList &paths);
     void appendFiles(const QStringList &paths);
     void openFolder(const QString &directory, bool append = false, bool recursive = false);
+    void setStartPaused(bool paused);
+    void enterFullscreen();
 
   signals:
     void userError(const QString &message);
@@ -73,7 +79,11 @@ class MainWindow final : public QMainWindow {
     void showSeekFeedback(const QString &message);
     void setFullscreen(bool enabled);
     void setMiniPlayer(bool enabled);
+    void setAlwaysOnTop(bool enabled);
+    void applyPlaylistWidth();
+    void rememberPlaylistWidth();
     void revealControls();
+    void applyInteractionPreferences(const InteractionPreferences &preferences);
     void restoreSession(const QString &path);
     QString saveSession();
     void requestThumbnailPreview(double seconds, QPoint globalPosition);
@@ -81,16 +91,21 @@ class MainWindow final : public QMainWindow {
     void showThumbnailPreview(quint64 requestId, const QString &source, double requestedSeconds,
                               ThumbnailResult result);
     [[nodiscard]] QString mediaDirectory() const;
+    [[nodiscard]] int seekStepSeconds() const;
+    [[nodiscard]] int interactionVolumeStep() const;
     std::unique_ptr<MpvController> controller_;
     std::unique_ptr<PlaylistController> playlist_;
     std::unique_ptr<SessionManager> session_;
     std::unique_ptr<RecentMediaHistory> recentMedia_;
+    PreferencesCoordinator *preferencesCoordinator_ = nullptr;
     VideoWidget *video_ = nullptr;
     TransportBar *transport_ = nullptr;
     FullscreenControls *fullscreenControls_ = nullptr;
     QVBoxLayout *centralLayout_ = nullptr;
     TrackMenus *trackMenus_ = nullptr;
     PlaylistPane *playlistPane_ = nullptr;
+    QSplitter *splitter_ = nullptr;
+    int playlistWidth_ = 0;
     LocalFileDrop *fileDrop_ = nullptr;
     WelcomePanel *welcomePanel_ = nullptr;
     ActionFeedbackOverlay *feedbackOverlay_ = nullptr;
@@ -107,14 +122,18 @@ class MainWindow final : public QMainWindow {
     QAction *stopAction_ = nullptr;
     QAction *muteAction_ = nullptr;
     QAction *fullscreenAction_ = nullptr;
+    QAction *exitFullscreenAction_ = nullptr;
     QAction *appendAction_ = nullptr;
     QAction *previousAction_ = nullptr;
     QAction *nextAction_ = nullptr;
     QAction *clearPlaylistAction_ = nullptr;
     QAction *showPlaylistAction_ = nullptr;
+    QAction *alwaysOnTopAction_ = nullptr;
     QMenu *contextMenu_ = nullptr;
     QMenu *playlistMenu_ = nullptr;
+    PlaylistMaintenanceMenu *playlistMaintenance_ = nullptr;
     QTimer controlsTimer_;
+    QString lastTitlePath_;
     QStringList pendingPaths_;
     QPersistentModelIndex pendingPlaylistIndex_;
     QByteArray normalGeometry_;
@@ -125,5 +144,12 @@ class MainWindow final : public QMainWindow {
     QRect miniPlayerGeometry_;
     bool miniPlayerMaximized_ = false;
     bool miniPlayerActive_ = false;
+    bool alwaysOnTop_ = false;
+    bool startPaused_ = false;
     bool sessionSaveAttempted_ = false;
+    // Session-only fallbacks used when --no-config leaves session_ null.
+    bool resumePlaybackPositionDefault_ = true;
+    int seekStepSecondsDefault_ = 5;
+    InteractionPreferences interactionPreferences_;
+    LanguagePreferences languagePreferences_;
 };

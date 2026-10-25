@@ -10,9 +10,6 @@
 #include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QPaintEvent>
-#include <QPainter>
-#include <QPainterPath>
 #include <QPixmap>
 #include <QProgressBar>
 #include <QPushButton>
@@ -50,6 +47,7 @@ void bindButton(QPushButton *button, QAction *action) {
 
 WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : QWidget(parent) {
     setObjectName(QStringLiteral("welcomePanel"));
+    setAttribute(Qt::WA_StyledBackground, true);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     setMinimumWidth(236);
     setMaximumWidth(500);
@@ -142,15 +140,6 @@ void WelcomePanel::changeEvent(QEvent *event) {
             label->setPixmap(icon.pixmap(18, 18));
         }
     }
-}
-
-void WelcomePanel::paintEvent(QPaintEvent *event) {
-    Q_UNUSED(event)
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    QPainterPath surface;
-    surface.addRoundedRect(rect().adjusted(0, 0, -1, -1), 14, 14);
-    painter.fillPath(surface, palette().color(QPalette::Window));
 }
 
 void WelcomePanel::resizeEvent(QResizeEvent *event) {

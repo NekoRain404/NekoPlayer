@@ -1,10 +1,12 @@
 #include "videowidget.h"
 #include "mpvcontroller.h"
 
+#include <QApplication>
 #include <QMouseEvent>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
 #include <QTimer>
+#include <QWheelEvent>
 #include <mpv/render_gl.h>
 
 namespace {
@@ -19,6 +21,9 @@ VideoWidget::VideoWidget(MpvController &controller, QWidget *parent)
     setMinimumSize(320, 180);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
+    singleClickTimer_.setSingleShot(true);
+    singleClickTimer_.setTimerType(Qt::PreciseTimer);
+    connect(&singleClickTimer_, &QTimer::timeout, this, &VideoWidget::singleClicked);
 }
 
 VideoWidget::~VideoWidget() {
@@ -129,11 +134,47 @@ void VideoWidget::cleanup() {
     disconnect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &VideoWidget::cleanup);
 }
 
-void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event) {
+void VideoWidget::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::LeftButton) {
+        suppressReleaseClick_ = false;
+        event->accept();
+    } else if (event->button() == Qt::MiddleButton) {
+        emit middleClicked();
+        event->accept();
+    } else {
+        QOpenGLWidget::mousePressEvent(event);
+    }
+}
+
+void VideoWidget::mouseReleaseEvent(QMouseEvent *event) {
+    if (event->button() != Qt::LeftButton) {
+        QOpenGLWidget::mouseReleaseEvent(event);
+        return;
+    }
+    event->accept();
+    if (suppressReleaseClick_) {
+        suppressReleaseClick_ = false;
+        return;
+    }
+    // Start after release so a held press cannot count as a click; the delay
+    // still lets a following double click cancel the single-click action.
+    singleClickTimer_.start(QApplication::doubleClickInterval());
+}
+
+void VideoWidget::mouseDoubleClickEvent(QMouseEvent *event) {
+    singleClickTimer_.stop();
+    if (event->button() == Qt::LeftButton) {
+        suppressReleaseClick_ = true;
         emit doubleClicked();
         event->accept();
     } else {
         QOpenGLWidget::mouseDoubleClickEvent(event);
     }
+}
+
+void VideoWidget::wheelEvent(QWheelEvent *event) {
+    const int deltaY = event->angleDelta().y();
+    if (deltaY != 0)
+        emit wheelScrolled(deltaY);
+    event->accept();
 }

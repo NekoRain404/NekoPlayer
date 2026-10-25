@@ -3,6 +3,7 @@
 #include "playback/mpvcontroller.h"
 #include "playback/videowidget.h"
 #include "ui/appearancepreferences.h"
+#include "ui/appicon.h"
 #include "ui/languagemanager.h"
 #include "ui/mainwindow.h"
 
@@ -12,6 +13,7 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
+#include <clocale>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -24,6 +26,9 @@ int main(int argc, char *argv[]) {
         app = std::make_unique<QCoreApplication>(argc, argv);
     else
         app = std::make_unique<QApplication>(argc, argv);
+    // Qt may adopt the desktop locale while constructing the application;
+    // libmpv requires C numeric formatting, so pin it after Qt initialization.
+    std::setlocale(LC_NUMERIC, "C");
     QCoreApplication::setApplicationName(QStringLiteral("NekoPlayer"));
     QCoreApplication::setOrganizationName(QStringLiteral("NekoPlayer"));
     QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));
@@ -40,6 +45,8 @@ int main(int argc, char *argv[]) {
         {QStringLiteral("silent-audio"), QStringLiteral("使用空音频输出，供自动化检查使用")});
     parser.addOption(
         {QStringLiteral("no-config"), QStringLiteral("不读取或保存播放列表和偏好设置")});
+    parser.addOption({QStringLiteral("fullscreen"), QStringLiteral("启动后进入全屏")});
+    parser.addOption({QStringLiteral("start-paused"), QStringLiteral("启动后暂停在第一帧")});
     parser.addPositionalArgument(QStringLiteral("files"),
                                  QStringLiteral("一个或多个媒体文件或网络地址"),
                                  QStringLiteral("[files...]"));
@@ -62,6 +69,8 @@ int main(int argc, char *argv[]) {
     app->setProperty("languageManager",
                      QVariant::fromValue(static_cast<QObject *>(&languageManager)));
     if (auto *gui = qobject_cast<QApplication *>(app.get())) {
+        QGuiApplication::setDesktopFileName(QStringLiteral("nekoplayer"));
+        QApplication::setWindowIcon(AppIcon::windowIcon());
         const auto appearance = useConfig ? AppearancePreferences::loadSettings(settings)
                                           : AppearancePreferences::Settings{};
         AppearancePreferences::applySettings(*gui, appearance);
@@ -71,9 +80,14 @@ int main(int argc, char *argv[]) {
                         .filePath(QStringLiteral("session.ini"))
                   : QString{};
     MainWindow window(parser.isSet(QStringLiteral("silent-audio")), sessionPath);
-    if (!paths.isEmpty())
+    if (!paths.isEmpty()) {
+        if (parser.isSet(QStringLiteral("start-paused")))
+            window.setStartPaused(true);
         window.openFiles(paths);
+    }
     window.show();
+    if (parser.isSet(QStringLiteral("fullscreen")))
+        window.enterFullscreen();
     if (parser.isSet(QStringLiteral("smoke-test"))) {
         QObject::connect(&window, &MainWindow::userError, app.get(), [](const QString &message) {
             std::cerr << message.toStdString() << '\n';

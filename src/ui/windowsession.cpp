@@ -1,5 +1,6 @@
 #include "foldermenu.h"
 #include "mainwindow.h"
+#include "playlistpane.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 #include "welcomepanel.h"
@@ -30,6 +31,7 @@ void MainWindow::restoreSession(const QString &path) {
     }
     folderMenu_->setMediaLibraryPreferences(loaded.state.mediaLibrary);
     updateSeekActionLabels(loaded.state.seekStepSeconds);
+    applyInteractionPreferences(session_->interactionPreferences());
     connect(session_.get(), &SessionManager::playbackHistoryChanged, this, [this] {
         if (welcomePanel_)
             welcomePanel_->setResumeEntries(session_->playbackHistory());
@@ -41,6 +43,9 @@ void MainWindow::restoreSession(const QString &path) {
         setWindowState(windowState() & ~Qt::WindowFullScreen);
     }
     showPlaylistAction_->setChecked(loaded.state.window.playlistVisible);
+    playlistWidth_ = loaded.state.window.playlistWidth;
+    applyPlaylistWidth();
+    setAlwaysOnTop(loaded.state.window.alwaysOnTop);
     if (!loaded.state.paths.isEmpty())
         statusBar()->showMessage(loaded.state.resumePosition > 0
                                      ? tr("已恢复播放列表 · 按空格从上次位置继续播放")
@@ -56,6 +61,10 @@ QString MainWindow::saveSession() {
                       : isFullScreen()  ? normalGeometry_
                                         : saveGeometry();
     window.playlistVisible = showPlaylistAction_->isChecked();
+    if (playlistPane_->isVisible())
+        rememberPlaylistWidth();
+    window.playlistWidth = playlistWidth_;
+    window.alwaysOnTop = alwaysOnTop_;
     const auto sessionError = session_->save(std::move(window), pendingPaths_);
     if (recentError.isEmpty())
         return sessionError;
@@ -66,6 +75,10 @@ QString MainWindow::mediaDirectory() const {
     if (session_ && !session_->mediaDirectory().isEmpty())
         return session_->mediaDirectory();
     return QStandardPaths::writableLocation(QStandardPaths::MoviesLocation);
+}
+
+int MainWindow::seekStepSeconds() const {
+    return session_ ? session_->seekStepSeconds() : seekStepSecondsDefault_;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

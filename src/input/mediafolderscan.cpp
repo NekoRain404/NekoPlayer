@@ -1,11 +1,10 @@
 #include "mediafolderscan.h"
 #include "mediafiletypes.h"
+#include "playback/naturalcompare.h"
 
-#include <QCollator>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QLocale>
 #include <algorithm>
 #include <filesystem>
 #include <vector>
@@ -89,15 +88,9 @@ MediaFolderScanResult scanMediaFolder(const QString &directory, bool recursive,
     }
     if (isCancelled())
         return {{}, {}, true};
-    // The C locale ignores numeric mode on some Qt backends. Pin a locale so
-    // ordering is natural and deterministic across the user's locale settings.
-    QCollator collator{QLocale(QLocale::English)};
-    collator.setNumericMode(true);
-    collator.setCaseSensitivity(Qt::CaseInsensitive);
-    std::sort(paths.begin(), paths.end(), [&collator](const QString &left, const QString &right) {
-        const auto compared = collator.compare(left, right);
-        return compared != 0 ? compared < 0 : left < right;
-    });
+    // The shared helper pins an English locale so ordering is natural and
+    // deterministic across the user's locale settings and matches title sorts.
+    std::sort(paths.begin(), paths.end(), naturalLess);
     if (isCancelled())
         return {{}, {}, true};
     return {std::move(paths), {}, false};

@@ -13,6 +13,7 @@
 #include "ui/welcomepanel.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QBoxLayout>
 #include <QDialog>
 #include <QGraphicsOpacityEffect>
@@ -20,12 +21,14 @@
 #include <QLabel>
 #include <QListView>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QProgressBar>
 #include <QPropertyAnimation>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTranslator>
+#include <QWheelEvent>
 #include <QtTest>
 
 class UiSurfaceTest final : public QObject {
@@ -161,6 +164,15 @@ class UiSurfaceTest final : public QObject {
         const auto networkImage = network.pixmap(QSize(24, 24)).toImage();
         QVERIFY(networkImage.pixelColor(12, 7).alpha() == 0);
 
+        const auto settingsImage = AppearanceIcons::icon(AppearanceIcons::Symbol::Settings, palette)
+                                       .pixmap(QSize(24, 24))
+                                       .toImage();
+        QVERIFY(!settingsImage.isNull());
+        const auto playImage = native.toImage();
+        QVERIFY(settingsImage != playImage);
+        QVERIFY(settingsImage.pixelColor(5, 12).alpha() > 0);
+        QCOMPARE(playImage.pixelColor(5, 12).alpha(), 0);
+
         const auto seekBack =
             AppearanceIcons::icon(AppearanceIcons::Symbol::SeekBackward, palette).pixmap(24, 24);
         const auto seekForward =
@@ -172,26 +184,37 @@ class UiSurfaceTest final : public QObject {
         QCOMPARE(disabled.size(), QSize(24, 24));
     }
 
-    void welcomePanelPaintsItsThemeSurface() {
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);
-        QAction open(QStringLiteral("打开文件…"));
-        QAction network(QStringLiteral("打开网络地址…"));
-        QWidget video;
-        WelcomePanel panel(&open, &network, &video);
-        video.resize(800, 600);
-        panel.setGeometry(200, 180, 400, 240);
-        video.show();
-        panel.show();
-        QCoreApplication::processEvents();
-
-        QImage image(panel.size(), QImage::Format_ARGB32_Premultiplied);
-        image.fill(Qt::transparent);
-        QPainter painter(&image);
-        panel.render(&painter, {}, {}, QWidget::DrawWindowBackground);
-        painter.end();
-
-        QCOMPARE(image.pixelColor(10, panel.height() / 2), panel.palette().color(QPalette::Window));
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+    void videoSurfaceStartsClickTimerOnReleaseAndIgnoresEmptyWheel() {
+        MpvController player(true, true);
+        VideoWidget video(player);
+        QSignalSpy wheel(&video, &VideoWidget::wheelScrolled);
+        QSignalSpy single(&video, &VideoWidget::singleClicked);
+        const QPointF local(20, 20);
+        const auto global = video.mapToGlobal(local.toPoint());
+        const auto sendWheel = [&video, local, global](int deltaY) {
+            QWheelEvent event(local, global, QPoint(), QPoint(0, deltaY), Qt::NoButton,
+                              Qt::NoModifier, Qt::NoScrollPhase, false);
+            QCoreApplication::sendEvent(&video, &event);
+        };
+        sendWheel(0);
+        QCOMPARE(wheel.count(), 0);
+        sendWheel(120);
+        QCOMPARE(wheel.count(), 1);
+        QCOMPARE(wheel.constFirst().constFirst().toInt(), 120);
+        const auto sendButton = [&video, local, global](QEvent::Type type,
+                                                        Qt::MouseButtons buttons) {
+            QMouseEvent event(type, local, global, Qt::LeftButton, buttons, Qt::NoModifier);
+            QCoreApplication::sendEvent(&video, &event);
+        };
+        sendButton(QEvent::MouseButtonPress, Qt::LeftButton);
+        QTest::qWait(QApplication::doubleClickInterval() + 50);
+        QCOMPARE(single.count(), 0);
+        sendButton(QEvent::MouseButtonRelease, Qt::NoButton);
+        QTRY_COMPARE(single.count(), 1);
+        sendButton(QEvent::MouseButtonDblClick, Qt::LeftButton);
+        sendButton(QEvent::MouseButtonRelease, Qt::NoButton);
+        QTest::qWait(QApplication::doubleClickInterval() + 50);
+        QCOMPARE(single.count(), 1);
     }
 
     void welcomePanelExposesPrimaryAndSecondaryActions() {
@@ -433,6 +456,48 @@ class UiSurfaceTest final : public QObject {
         QCoreApplication::processEvents();
         QCOMPARE(view->textElideMode(), Qt::ElideMiddle);
         QCOMPARE(queue.model()->index(0).data(Qt::ToolTipRole).toString(), path);
+    }
+
+    void playlistSingleClickActivationDefersAndCoexistsWithDoubleClick() {
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QAction append, previous, next, clear;
+        PlaylistPane pane(queue, &append, &previous, &next, &clear);
+        queue.restoreFiles({QStringLiteral("first.mkv"), QStringLiteral("second.mkv")}, -1);
+        pane.resize(320, 320);
+        pane.show();
+        QCoreApplication::processEvents();
+
+        auto *view = pane.view();
+        const auto target = queue.model()->index(1);
+        const auto position = view->visualRect(target).center();
+        QCOMPARE(view->indexAt(position), target);
+        QSignalSpy plays(&pane, &PlaylistPane::playRequested);
+
+        // Opt-in: the default keeps single clicks inert.
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QTest::qWait(QApplication::doubleClickInterval() + 100);
+        QVERIFY(plays.isEmpty());
+
+        pane.setSingleClickActivation(true);
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QCOMPARE(plays.count(), 0); // Deferred for the double-click interval.
+        QTRY_COMPARE_WITH_TIMEOUT(plays.count(), 1, 2000);
+        QCOMPARE(plays.at(0).at(0).toInt(), 1);
+
+        // A double click plays once through activation without a late single-click replay.
+        plays.clear();
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QTest::mouseDClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QTRY_COMPARE_WITH_TIMEOUT(plays.count(), 1, 1000);
+        QTest::qWait(QApplication::doubleClickInterval() + 100);
+        QCOMPARE(plays.count(), 1);
+
+        pane.setSingleClickActivation(false);
+        plays.clear();
+        QTest::mouseClick(view->viewport(), Qt::LeftButton, Qt::NoModifier, position, 10);
+        QTest::qWait(QApplication::doubleClickInterval() + 100);
+        QVERIFY(plays.isEmpty());
     }
 
     void welcomePanelRetranslatesAtRuntime() {

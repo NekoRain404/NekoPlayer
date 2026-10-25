@@ -23,6 +23,10 @@ class SessionManager final : public QObject {
     void setResumePlaybackPositionEnabled(bool enabled);
     [[nodiscard]] int seekStepSeconds() const;
     void setSeekStepSeconds(int seconds);
+    [[nodiscard]] InteractionPreferences interactionPreferences() const;
+    void setInteractionPreferences(InteractionPreferences preferences);
+    [[nodiscard]] LanguagePreferences languagePreferences() const;
+    void setLanguagePreferences(const LanguagePreferences &preferences);
     [[nodiscard]] QList<PlaybackHistoryEntry> playbackHistory() const;
     void rememberMedia(const QString &path);
 
@@ -44,6 +48,8 @@ class SessionManager final : public QObject {
     MediaLibraryPreferences mediaLibraryPreferences_;
     bool resumePlaybackPositionEnabled_ = true;
     int seekStepSeconds_ = 5;
+    InteractionPreferences interaction_;
+    LanguagePreferences languages_;
     QString loadError_;
     QString historyError_;
     bool stopRequested_ = false;
@@ -55,6 +61,8 @@ class SessionManager final : public QObject {
     std::optional<qint64> requestedAudioTrackId_;
     std::optional<qint64> requestedSubtitleTrackId_;
     void rememberPlaybackPosition(const QString &path, double position, double duration);
+    double resumePositionFor(const QString &path);
+    void applyLanguagePreferences();
     QString savePlaybackHistory() const;
     void restoreTrackPreference();
     void observeTrackPreference();

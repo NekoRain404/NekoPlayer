@@ -53,13 +53,38 @@ bool readBool(QSettings &settings, const QString &key, bool fallback = false) {
     return fallback;
 }
 
+MiddleClickAction readMiddleClickAction(QSettings &settings, const QString &key) {
+    const auto value = settings.value(key).toString();
+    if (value == QLatin1String("playPause"))
+        return MiddleClickAction::PlayPause;
+    if (value == QLatin1String("mute"))
+        return MiddleClickAction::Mute;
+    if (value == QLatin1String("fullscreen"))
+        return MiddleClickAction::Fullscreen;
+    return MiddleClickAction::None;
+}
+
+QString middleClickActionKey(MiddleClickAction action) {
+    switch (action) {
+    case MiddleClickAction::PlayPause:
+        return QStringLiteral("playPause");
+    case MiddleClickAction::Mute:
+        return QStringLiteral("mute");
+    case MiddleClickAction::Fullscreen:
+        return QStringLiteral("fullscreen");
+    case MiddleClickAction::None:
+        break;
+    }
+    return QStringLiteral("none");
+}
+
 SessionState normalized(SessionState state) {
     state.subtitles = state.subtitles.normalized();
     state.tuning = state.tuning.normalized();
     state.videoColor = state.videoColor.normalized();
-    if (state.seekStepSeconds != 5 && state.seekStepSeconds != 10 &&
-        state.seekStepSeconds != 30)
-        state.seekStepSeconds = 5;
+    state.interaction = state.interaction.normalized();
+    state.languages = state.languages.normalized();
+    state.seekStepSeconds = normalizedSeekStepSeconds(state.seekStepSeconds);
     state.audio.volume =
         std::isfinite(state.audio.volume) ? std::clamp(state.audio.volume, 0.0, 100.0) : 100.0;
     if (state.audio.outputDevice.isEmpty() || state.audio.outputDevice.contains(QChar::Null))
@@ -87,6 +112,8 @@ SessionState normalized(SessionState state) {
     const QFileInfo directory(state.window.mediaDirectory);
     if (!directory.isAbsolute() || !directory.isDir())
         state.window.mediaDirectory.clear();
+    if (state.window.playlistWidth != 0)
+        state.window.playlistWidth = std::clamp(state.window.playlistWidth, 240, 1000);
     return state;
 }
 } // namespace
@@ -97,6 +124,30 @@ TuningPreferences TuningPreferences::normalized() const {
         std::isfinite(audioDelay) ? std::clamp(audioDelay, -10.0, 10.0) : 0.0,
         std::isfinite(subtitleDelay) ? std::clamp(subtitleDelay, -600.0, 600.0) : 0.0,
     };
+}
+
+InteractionPreferences InteractionPreferences::normalized() const {
+    auto result = *this;
+    result.wheelVolumeStep = std::clamp(result.wheelVolumeStep, 1, 20);
+    return result;
+}
+
+LanguagePreferences LanguagePreferences::normalized() const {
+    const auto normalizeLanguages = [](const QStringList &languages) {
+        constexpr qsizetype maximumLanguages = 16;
+        QStringList result;
+        for (const auto &language : languages) {
+            const auto trimmed = language.trimmed();
+            if (trimmed.isEmpty())
+                continue;
+            if (result.size() >= maximumLanguages)
+                break;
+            result.append(trimmed);
+        }
+        return result;
+    };
+    return {normalizeLanguages(audioLanguages), normalizeLanguages(subtitleLanguages),
+            autoLoadExternalSubtitles};
 }
 
 SessionStore::SessionStore(QString filePath) : filePath_(std::move(filePath)) {}
@@ -119,10 +170,26 @@ SessionLoadResult SessionStore::load() const {
         readBool(settings, QStringLiteral("video/hardwareDecoding"), true);
     state.resumePlaybackPosition =
         readBool(settings, QStringLiteral("playback/resumePosition"), true);
-    const auto seekStep = settings.value(QStringLiteral("playback/seekStepSeconds"), 5).toInt(&valid);
-    state.seekStepSeconds = valid && (seekStep == 5 || seekStep == 10 || seekStep == 30)
-                                ? seekStep
-                                : 5;
+    const auto seekStep =
+        settings.value(QStringLiteral("playback/seekStepSeconds"), 5).toInt(&valid);
+    state.seekStepSeconds = valid ? normalizedSeekStepSeconds(seekStep) : seekStepSecondsDefault;
+    state.interaction.singleClickPlayPause =
+        readBool(settings, QStringLiteral("interaction/singleClickPlayPause"), true);
+    state.interaction.doubleClickFullscreen =
+        readBool(settings, QStringLiteral("interaction/doubleClickFullscreen"), true);
+    state.interaction.middleClick =
+        readMiddleClickAction(settings, QStringLiteral("interaction/middleClick"));
+    state.interaction.wheelAdjustsVolume =
+        readBool(settings, QStringLiteral("interaction/wheelAdjustsVolume"), true);
+    const auto wheelStep =
+        settings.value(QStringLiteral("interaction/wheelVolumeStep"), 5).toInt(&valid);
+    state.interaction.wheelVolumeStep = valid ? wheelStep : 5;
+    state.interaction.wheelSeeksTimeline =
+        readBool(settings, QStringLiteral("interaction/wheelSeeksTimeline"), true);
+    state.interaction.playlistSingleClick =
+        readBool(settings, QStringLiteral("interaction/playlistSingleClick"));
+    state.interaction.showRemainingTime =
+        readBool(settings, QStringLiteral("interaction/showRemainingTime"));
     state.mediaLibrary.scanningEnabled =
         readBool(settings, QStringLiteral("library/scanningEnabled"), true);
     state.mediaLibrary.recursiveByDefault =
@@ -135,6 +202,12 @@ SessionLoadResult SessionStore::load() const {
     state.subtitles.position = valid ? position : 100;
     state.subtitles.font =
         settings.value(QStringLiteral("subtitles/font"), QStringLiteral("sans-serif")).toString();
+    state.languages.audioLanguages =
+        settings.value(QStringLiteral("tracks/preferredAudioLanguages")).toStringList();
+    state.languages.subtitleLanguages =
+        settings.value(QStringLiteral("tracks/preferredSubtitleLanguages")).toStringList();
+    state.languages.autoLoadExternalSubtitles =
+        readBool(settings, QStringLiteral("subtitles/autoLoadExternal"));
     state.paths = settings.value(QStringLiteral("playlist/paths")).toStringList();
     state.currentIndex = settings.value(QStringLiteral("playlist/currentIndex"), -1).toInt(&valid);
     if (!valid)
@@ -146,6 +219,10 @@ SessionLoadResult SessionStore::load() const {
     state.window.playlistVisible = readBool(settings, QStringLiteral("window/playlistVisible"));
     state.window.mediaDirectory =
         settings.value(QStringLiteral("window/mediaDirectory")).toString();
+    const auto playlistWidth =
+        settings.value(QStringLiteral("window/playlistWidth"), 0).toInt(&valid);
+    state.window.playlistWidth = valid ? playlistWidth : 0;
+    state.window.alwaysOnTop = readBool(settings, QStringLiteral("window/alwaysOnTop"));
     const auto speed = settings.value(QStringLiteral("playback/speed"), 1).toDouble(&valid);
     state.tuning.playbackSpeed = valid ? speed : 1;
     const auto audioDelay =
@@ -185,6 +262,22 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("video/hardwareDecoding"), saved.hardwareDecodingEnabled);
     settings.setValue(QStringLiteral("playback/resumePosition"), saved.resumePlaybackPosition);
     settings.setValue(QStringLiteral("playback/seekStepSeconds"), saved.seekStepSeconds);
+    settings.setValue(QStringLiteral("interaction/singleClickPlayPause"),
+                      saved.interaction.singleClickPlayPause);
+    settings.setValue(QStringLiteral("interaction/doubleClickFullscreen"),
+                      saved.interaction.doubleClickFullscreen);
+    settings.setValue(QStringLiteral("interaction/middleClick"),
+                      middleClickActionKey(saved.interaction.middleClick));
+    settings.setValue(QStringLiteral("interaction/wheelAdjustsVolume"),
+                      saved.interaction.wheelAdjustsVolume);
+    settings.setValue(QStringLiteral("interaction/wheelVolumeStep"),
+                      saved.interaction.wheelVolumeStep);
+    settings.setValue(QStringLiteral("interaction/wheelSeeksTimeline"),
+                      saved.interaction.wheelSeeksTimeline);
+    settings.setValue(QStringLiteral("interaction/playlistSingleClick"),
+                      saved.interaction.playlistSingleClick);
+    settings.setValue(QStringLiteral("interaction/showRemainingTime"),
+                      saved.interaction.showRemainingTime);
     settings.setValue(QStringLiteral("library/scanningEnabled"),
                       saved.mediaLibrary.scanningEnabled);
     settings.setValue(QStringLiteral("library/recursiveByDefault"),
@@ -193,12 +286,20 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("subtitles/scale"), saved.subtitles.scale);
     settings.setValue(QStringLiteral("subtitles/position"), saved.subtitles.position);
     settings.setValue(QStringLiteral("subtitles/font"), saved.subtitles.font);
+    settings.setValue(QStringLiteral("tracks/preferredAudioLanguages"),
+                      saved.languages.audioLanguages);
+    settings.setValue(QStringLiteral("tracks/preferredSubtitleLanguages"),
+                      saved.languages.subtitleLanguages);
+    settings.setValue(QStringLiteral("subtitles/autoLoadExternal"),
+                      saved.languages.autoLoadExternalSubtitles);
     settings.setValue(QStringLiteral("playlist/paths"), saved.paths);
     settings.setValue(QStringLiteral("playlist/currentIndex"), saved.currentIndex);
     settings.setValue(QStringLiteral("playlist/resumePosition"), saved.resumePosition);
     settings.setValue(QStringLiteral("window/geometry"), saved.window.geometry);
     settings.setValue(QStringLiteral("window/playlistVisible"), saved.window.playlistVisible);
     settings.setValue(QStringLiteral("window/mediaDirectory"), saved.window.mediaDirectory);
+    settings.setValue(QStringLiteral("window/playlistWidth"), saved.window.playlistWidth);
+    settings.setValue(QStringLiteral("window/alwaysOnTop"), saved.window.alwaysOnTop);
     settings.setValue(QStringLiteral("playback/speed"), saved.tuning.playbackSpeed);
     settings.setValue(QStringLiteral("playback/audioDelay"), saved.tuning.audioDelay);
     settings.setValue(QStringLiteral("playback/subtitleDelay"), saved.tuning.subtitleDelay);

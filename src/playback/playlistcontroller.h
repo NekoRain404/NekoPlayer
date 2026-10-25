@@ -1,5 +1,6 @@
 #pragma once
 
+#include "playlistmodel.h"
 #include "shuffleorder.h"
 
 #include <QObject>
@@ -26,7 +27,9 @@ class PlaylistController final : public QObject {
     [[nodiscard]] bool hasPrevious() const;
     [[nodiscard]] RepeatMode repeatMode() const;
     [[nodiscard]] bool shuffleEnabled() const;
+    [[nodiscard]] bool stopAfterCurrent() const;
     [[nodiscard]] double pendingResumePosition() const;
+    [[nodiscard]] QList<int> missingFileRows() const;
     void setResumePositionResolver(std::function<double(const QString &)> resolver);
 
   public slots:
@@ -37,11 +40,15 @@ class PlaylistController final : public QObject {
     void playNext();
     void playPrevious();
     void removeAt(int row);
+    void removeRowsAt(const QList<int> &rows);
+    int removeMissingFiles();
+    void sortPlaylist(PlaylistModel::SortKey key, Qt::SortOrder order);
     void moveItem(int from, int to);
     void clear();
     void setRepeatMode(RepeatMode mode);
     void cycleRepeatMode();
     void setShuffleEnabled(bool enabled);
+    void setStopAfterCurrent(bool enabled);
 
   signals:
     void currentChanged(int row);
@@ -49,6 +56,7 @@ class PlaylistController final : public QObject {
     void queueError(const QString &message);
     void repeatModeChanged(RepeatMode mode);
     void shuffleEnabledChanged(bool enabled);
+    void stopAfterCurrentChanged(bool enabled);
     void navigationChanged();
     void playbackPositionSnapshot(const QString &path, double position, double duration);
     void mediaPlaybackFinished(const QString &path);
@@ -73,6 +81,7 @@ class PlaylistController final : public QObject {
     int navigationStep_ = 1;
     RepeatMode repeatMode_ = RepeatMode::Off;
     bool shuffleEnabled_ = false;
+    bool stopAfterCurrent_ = false;
     ShuffleOrder shuffle_;
     QSet<int> failedRows_;
     QPersistentModelIndex resumeEntry_;

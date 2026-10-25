@@ -15,6 +15,9 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
         std::pair{"idle", "yes"}, std::pair{"audio-pitch-correction", "yes"},
         std::pair{"deinterlace", "auto"}, std::pair{"reset-on-next-file", "ab-loop-a,ab-loop-b"},
         std::pair{"keep-open", "no"}, std::pair{"video-timing-offset", "0"},
+        // Sessions may enable exact sibling matching; direct/headless controller
+        // use must not auto-load subtitles implicitly.
+        std::pair{"sub-auto", "no"},
         // Eight-tap kernels avoid mpv 0.41's uninitialized LUT padding.
         std::pair{"scale", "spline64"}, std::pair{"cscale", "spline64"},
         std::pair{"dscale", "spline64"}};
@@ -248,14 +251,20 @@ void MpvController::setHardwareDecodingEnabled(bool enabled) {
 
 void MpvController::openFile(const QString &path) { openFileAtPosition(path, 0); }
 
+void MpvController::setSuppressAutoLoadForNextOpen(bool suppress) {
+    impl_->suppressAutoLoadForNextOpen = suppress;
+}
+
 void MpvController::openFileAtPosition(const QString &path, double seconds) {
+    const bool suppressAutoLoad = std::exchange(impl_->suppressAutoLoadForNextOpen, false);
     if (!isReady() || path.isEmpty() || !std::isfinite(seconds) || seconds < 0)
         return;
     const auto generation = ++impl_->openGeneration;
     impl_->openingPosition = seconds;
     impl_->openingEntry = -1;
-    const auto options =
-        QByteArray("aid=auto,sid=auto,start=") + QByteArray::number(seconds, 'f', 3);
+    auto options = QByteArray("aid=auto,sid=auto,start=") + QByteArray::number(seconds, 'f', 3);
+    if (suppressAutoLoad)
+        options += ",sub-auto=no";
     const auto [id, status] =
         impl_->submitCommand({"loadfile", path.toUtf8(), "replace", "-1", options});
     impl_->openingCommand = id;
@@ -384,7 +393,8 @@ void MpvController::selectSubtitleTrack(qint64 id) {
 void MpvController::prepareForRendererReset() {
     if (state().active) {
         impl_->recovery = Impl::RecoveryState{
-            state(), impl_->tracksToRestore.isEmpty() ? tracks() : impl_->tracksToRestore};
+            state(), impl_->tracksToRestore.isEmpty() ? tracks() : impl_->tracksToRestore,
+            impl_->explicitExternalPaths};
         if (impl_->openingPosition)
             impl_->recovery->playback.position = *impl_->openingPosition;
         impl_->recoveringRenderer = true;
@@ -410,7 +420,10 @@ void MpvController::resumeAfterRendererReset() {
     };
     // Releasing an mpv renderer disables video. Reload at the saved position,
     // including video-only files whose core may have reached END_FILE.
-    // Restore the saved external set explicitly to avoid auto-loading duplicates.
+    // Recovery overrides the session's sub-auto setting with an explicit no: the
+    // saved external set is restored below, so auto-loading would add duplicates.
+    // This file-local option outlives the property, so toggling auto-load while
+    // the recovered file plays takes effect on the next normal load, not a retry.
     const auto loopPoint = [](const std::optional<double> &value) {
         return value ? QByteArray::number(*value, 'g', 17) : QByteArray("no");
     };
@@ -429,6 +442,7 @@ void MpvController::resumeAfterRendererReset() {
     impl_->openingPosition = position;
     impl_->openingEntry = -1;
     impl_->resetPlayback();
+    impl_->explicitExternalPathsToRestore = std::move(saved.explicitExternalPaths);
     emit stateChanged();
     if (generation != impl_->openGeneration || identity != impl_->restoreIdentity)
         return;

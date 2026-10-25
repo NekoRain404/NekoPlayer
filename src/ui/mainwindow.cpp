@@ -6,6 +6,7 @@
 #include "fullscreencontrols.h"
 #include "input/localfiledrop.h"
 #include "input/mediafiletypes.h"
+#include "interactionpolicy.h"
 #include "networkopendialog.h"
 #include "playback/mediasource.h"
 #include "playback/mpvcontroller.h"
@@ -14,6 +15,7 @@
 #include "playback/videowidget.h"
 #include "playbackoverlay.h"
 #include "playlist/m3u8store.h"
+#include "playlistmaintenancemenu.h"
 #include "playlistpane.h"
 #include "preview/thumbnailservice.h"
 #include "session/recentmediahistory.h"
@@ -22,6 +24,7 @@
 #include "thumbnailpreviewpolicy.h"
 #include "transportbar.h"
 #include "welcomepanel.h"
+#include "windowtitle.h"
 
 #include <QAction>
 #include <QDragEnterEvent>
@@ -29,13 +32,14 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
-#include <QHBoxLayout>
 #include <QLabel>
 #include <QListView>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMimeData>
 #include <QScreen>
+#include <QSignalBlocker>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QStyle>
 #include <QUrl>
@@ -72,8 +76,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(folderMenu_, &FolderMenu::mediaLibraryPreferencesChanged, this,
             [this](bool scanningEnabled, bool recursiveByDefault) {
                 if (session_)
-                    session_->setMediaLibraryPreferences(
-                        {scanningEnabled, recursiveByDefault});
+                    session_->setMediaLibraryPreferences({scanningEnabled, recursiveByDefault});
             });
     connect(fileDrop_, &LocalFileDrop::foldersDropped, this, [this](const QStringList &paths) {
         folderMenu_->start(paths, true, folderMenu_->recursiveEnabled());
@@ -104,19 +107,28 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
                                      clearPlaylistAction_, content);
     playlistMenu_->addSeparator();
     playlistMenu_->addActions(playlistPane_->editingActions());
+    playlistMaintenance_ = new PlaylistMaintenanceMenu(*playlist_, this, this);
+    connect(playlistMaintenance_, &PlaylistMaintenanceMenu::feedback, this,
+            [this](const QString &message) { showActionFeedback(message, 2500); });
+    playlistMenu_->addSeparator();
+    playlistMenu_->addMenu(playlistMaintenance_->sortMenu());
+    playlistMenu_->addAction(playlistMaintenance_->removeMissingAction());
     playlistPane_->hide();
-    auto *body = new QWidget(content);
-    auto *bodyLayout = new QHBoxLayout(body);
-    bodyLayout->setContentsMargins(0, 0, 0, 0);
-    bodyLayout->setSpacing(0);
-    bodyLayout->addWidget(video_, 1);
-    bodyLayout->addWidget(playlistPane_);
+    splitter_ = new QSplitter(Qt::Horizontal, content);
+    splitter_->setObjectName(QStringLiteral("bodySplitter"));
+    splitter_->addWidget(video_);
+    splitter_->addWidget(playlistPane_);
+    splitter_->setStretchFactor(0, 1);
+    splitter_->setStretchFactor(1, 0);
+    splitter_->setCollapsible(0, false);
+    splitter_->setCollapsible(1, false);
+    connect(splitter_, &QSplitter::splitterMoved, this, [this] { rememberPlaylistWidth(); });
     transport_ = new TransportBar(openAction_, previousAction_, pauseAction_, nextAction_,
                                   stopAction_, muteAction_, fullscreenAction_, content);
     thumbnailService_ = new ThumbnailService(this);
     thumbnailPreview_ = new ThumbnailPreview(this);
     fullscreenControls_ = new FullscreenControls(*transport_, *video_, *centralLayout_, this);
-    layout->addWidget(body, 1);
+    layout->addWidget(splitter_, 1);
     layout->addWidget(transport_);
     setCentralWidget(content);
     statusBar()->setSizeGripEnabled(false);
@@ -136,6 +148,20 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         statusBar()->showMessage(
             tr("正在播放 · %1").arg(MediaSource::displayName(controller_->state().path)));
     });
+    // --start-paused pauses once on the first successful load. Failed loads and
+    // explicit stops consume the pending request so it cannot affect a later
+    // user-initiated load.
+    connect(controller_.get(), &MpvController::fileLoaded, this, [this] {
+        if (std::exchange(startPaused_, false)) {
+            controller_->setPaused(true);
+            statusBar()->showMessage(
+                tr("已暂停 · %1").arg(MediaSource::displayName(controller_->state().path)));
+        }
+    });
+    connect(controller_.get(), &MpvController::mediaLoadFailed, this,
+            [this] { startPaused_ = false; });
+    connect(controller_.get(), &MpvController::stopRequested, this,
+            [this] { startPaused_ = false; });
     connect(playlist_.get(), &PlaylistController::queueFinished, this,
             [this] { statusBar()->showMessage(tr("播放列表已结束")); });
     connect(playlist_.get(), &PlaylistController::queueError, this, &MainWindow::showError);
@@ -161,7 +187,38 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     });
     connect(video_, &VideoWidget::contextResetting, controller_.get(),
             &MpvController::prepareForRendererReset);
-    connect(video_, &VideoWidget::doubleClicked, fullscreenAction_, &QAction::trigger);
+    connect(video_, &VideoWidget::singleClicked, this, [this] {
+        if (interactionPreferences_.singleClickPlayPause)
+            pauseAction_->trigger();
+    });
+    connect(video_, &VideoWidget::doubleClicked, this, [this] {
+        if (interactionPreferences_.doubleClickFullscreen)
+            fullscreenAction_->trigger();
+    });
+    connect(video_, &VideoWidget::middleClicked, this, [this] {
+        switch (interactionPreferences_.middleClick) {
+        case MiddleClickAction::None:
+            break;
+        case MiddleClickAction::PlayPause:
+            pauseAction_->trigger();
+            break;
+        case MiddleClickAction::Mute:
+            muteAction_->trigger();
+            break;
+        case MiddleClickAction::Fullscreen:
+            fullscreenAction_->trigger();
+            break;
+        }
+    });
+    connect(video_, &VideoWidget::wheelScrolled, this, [this](int deltaY) {
+        if (deltaY == 0 || !interactionPreferences_.wheelAdjustsVolume || !controller_->isReady() ||
+            !controller_->state().active)
+            return;
+        const auto volume =
+            volumeAfterWheel(controller_->state().volume, deltaY, interactionVolumeStep());
+        controller_->setVolume(volume);
+        showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
     connect(video_, &VideoWidget::ready, this, [this] {
         const auto pendingPlaylistIndex =
             std::exchange(pendingPlaylistIndex_, QPersistentModelIndex{});
@@ -181,6 +238,13 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(transport_, &TransportBar::volumeRequested, this, [this](double volume) {
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
+    });
+    connect(transport_, &TransportBar::wheelSeekRequested, this, [this](int direction) {
+        if (!interactionPreferences_.wheelSeeksTimeline)
+            return;
+        const auto seconds = seekStepSeconds();
+        controller_->seekRelative(direction * seconds);
+        showSeekFeedback(ActionFeedbackText::seek(direction * seconds));
     });
     connect(transport_, &TransportBar::timelineHovered, this, &MainWindow::requestThumbnailPreview);
     connect(transport_, &TransportBar::timelineHoverEnded, this, &MainWindow::hideThumbnailPreview);
@@ -224,18 +288,28 @@ MpvController *MainWindow::controller() const { return controller_.get(); }
 VideoWidget *MainWindow::videoWidget() const { return video_; }
 PlaylistController *MainWindow::playlist() const { return playlist_.get(); }
 
+void MainWindow::setStartPaused(bool paused) { startPaused_ = paused; }
+
+void MainWindow::enterFullscreen() { setFullscreen(true); }
+
 void MainWindow::openFile(const QString &path) { openFiles({path}); }
 
 void MainWindow::openFiles(const QStringList &paths) {
     folderMenu_->cancel();
-    if (paths.isEmpty())
+    // A rejected open must not leave the --start-paused one-shot armed; only an
+    // accepted startup open may carry it to fileLoaded.
+    if (paths.isEmpty()) {
+        startPaused_ = false;
         return;
+    }
     const auto sources = normalizedSources(paths);
     if (sources.isEmpty()) {
+        startPaused_ = false;
         showError(tr("媒体地址无效；网络地址需要包含受支持的协议与主机名"));
         return;
     }
     if (video_->hasFailed()) {
+        startPaused_ = false;
         showError(tr("OpenGL 初始化失败，无法打开媒体文件"));
         return;
     }
@@ -368,9 +442,10 @@ void MainWindow::updateState() {
                                      !pendingPaths_.isEmpty());
     transport_->present(state);
     welcomePanel_->setVisible(!state.active);
-    setWindowTitle(state.path.isEmpty()
-                       ? QStringLiteral("NekoPlayer")
-                       : MediaSource::displayName(state.path) + QStringLiteral(" — NekoPlayer"));
+    if (state.path != lastTitlePath_) {
+        lastTitlePath_ = state.path;
+        setWindowTitle(windowTitleForPath(lastTitlePath_));
+    }
 }
 
 void MainWindow::showError(const QString &message) {
@@ -464,6 +539,7 @@ void MainWindow::setFullscreen(bool enabled) {
         return;
     if (enabled == fullscreenPresentationActive_ && enabled == isFullScreen())
         return;
+    exitFullscreenAction_->setEnabled(enabled);
 
     if (enabled && miniPlayerActive_)
         setMiniPlayer(false);
@@ -510,7 +586,15 @@ void MainWindow::setFullscreen(bool enabled) {
             statusBar()->show();
             showPlaylistAction_->setEnabled(true);
             playlistPane_->setVisible(showPlaylistAction_->isChecked());
+            applyPlaylistWidth();
         }
+    }
+    if (!enabled && !miniPlayerActive_ &&
+        windowFlags().testFlag(Qt::WindowStaysOnTopHint) != alwaysOnTop_) {
+        const bool wasVisible = isVisible();
+        setWindowFlag(Qt::WindowStaysOnTopHint, alwaysOnTop_);
+        if (wasVisible)
+            show();
     }
     fullscreenAction_->setChecked(enabled);
     fullscreenAction_->setText(enabled ? tr("退出全屏") : tr("全屏"));
@@ -550,13 +634,14 @@ void MainWindow::setMiniPlayer(bool enabled) {
         statusBar()->show();
         showPlaylistAction_->setEnabled(true);
         setWindowFlag(Qt::Tool, false);
-        setWindowFlag(Qt::WindowStaysOnTopHint, false);
+        setWindowFlag(Qt::WindowStaysOnTopHint, alwaysOnTop_);
         show();
         if (miniPlayerGeometry_.isValid())
             setGeometry(miniPlayerGeometry_);
         if (miniPlayerMaximized_)
             showMaximized();
         playlistPane_->setVisible(showPlaylistAction_->isChecked());
+        applyPlaylistWidth();
     }
     if (action) {
         action->setChecked(enabled);
@@ -568,6 +653,49 @@ void MainWindow::setMiniPlayer(bool enabled) {
     }
 }
 
+void MainWindow::setAlwaysOnTop(bool enabled) {
+    if (enabled == alwaysOnTop_)
+        return;
+    alwaysOnTop_ = enabled;
+    if (alwaysOnTopAction_) {
+        const QSignalBlocker blocker(alwaysOnTopAction_);
+        alwaysOnTopAction_->setChecked(enabled);
+        const auto label = tr("窗口置顶");
+        alwaysOnTopAction_->setText(label);
+        alwaysOnTopAction_->setToolTip(label);
+        alwaysOnTopAction_->setStatusTip(label);
+    }
+    // Fullscreen and mini-player own the top flag while active; apply the
+    // user's choice when they exit without disturbing the current mode.
+    if (isFullScreen() || miniPlayerActive_)
+        return;
+    const bool wasVisible = isVisible();
+    setWindowFlag(Qt::WindowStaysOnTopHint, enabled);
+    if (wasVisible)
+        show();
+}
+
+void MainWindow::applyPlaylistWidth() {
+    if (!splitter_ || playlistWidth_ <= 0)
+        return;
+    // The splitter has no layout geometry until the window is shown; use the
+    // window width only for that initial restore.
+    const int available = splitter_->isVisible() ? splitter_->width() : width();
+    if (available <= 1)
+        return;
+    const int requested = std::clamp(playlistWidth_, 240, 1000);
+    const int effective = std::min(requested, std::max(240, available - 1));
+    splitter_->setSizes({available - effective, effective});
+}
+
+void MainWindow::rememberPlaylistWidth() {
+    if (!playlistPane_)
+        return;
+    const int width = playlistPane_->width();
+    if (width > 0)
+        playlistWidth_ = std::clamp(width, 240, 1000);
+}
+
 void MainWindow::revealControls() {
     if (!isFullScreen())
         return;
@@ -576,12 +704,25 @@ void MainWindow::revealControls() {
     controlsTimer_.start();
 }
 
+int MainWindow::interactionVolumeStep() const { return interactionPreferences_.wheelVolumeStep; }
+
+void MainWindow::applyInteractionPreferences(const InteractionPreferences &preferences) {
+    interactionPreferences_ = preferences.normalized();
+    if (playlistPane_)
+        playlistPane_->setSingleClickActivation(interactionPreferences_.playlistSingleClick);
+    if (transport_)
+        transport_->setTimeShowsRemaining(interactionPreferences_.showRemainingTime);
+}
+
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
     if (watched == video_ && event->type() == QEvent::Resize) {
         feedbackOverlay_->setGeometry(video_->rect());
         playbackOverlay_->setGeometry(video_->rect());
     }
-    if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress)
+    if (watched == playlistPane_ && event->type() == QEvent::Hide)
+        rememberPlaylistWidth();
+    if (event->type() == QEvent::MouseMove || event->type() == QEvent::MouseButtonPress ||
+        event->type() == QEvent::Wheel)
         revealControls();
     return QMainWindow::eventFilter(watched, event);
 }

@@ -1,5 +1,6 @@
 #include "preferencesdialog.h"
 #include "playback/mpvcontroller.h"
+#include "preferencesappearancepage.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -12,6 +13,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QSignalBlocker>
+#include <QSpinBox>
 #include <QStyle>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -19,7 +21,9 @@
 PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
                                      MediaLibraryPreferences initialMediaLibrary,
                                      bool resumePlaybackPosition, int seekStepSeconds,
-                                     AppearancePreferences::Settings appearance)
+                                     AppearancePreferences::Settings appearance,
+                                     InteractionPreferences interaction,
+                                     LanguagePreferences languages)
     : QDialog(parent), appearanceBaseline_(appearance), appearancePalette_(qApp->palette()),
       appearanceStyleSheet_(qApp->styleSheet()), player_(player), tabs_(new QTabWidget(this)),
       hardwareDecoding_(new QComboBox(this)), actualDecoder_(new QLabel(this)),
@@ -29,9 +33,10 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       mediaScanningEnabled_(new QCheckBox(tr("允许扫描文件夹中的媒体文件"), this)),
       recursiveFolderScan_(new QCheckBox(tr("默认包含子文件夹"), this)),
       resumePlaybackPosition_(new QCheckBox(tr("恢复上次播放位置"), this)),
-      seekStepSeconds_(new QComboBox(this)), mediaLibraryPreferences_(initialMediaLibrary),
+      seekStepSeconds_(new QSpinBox(this)), mediaLibraryPreferences_(initialMediaLibrary),
       resumePlaybackPositionDefault_(resumePlaybackPosition),
-      seekStepSecondsDefault_(seekStepSeconds) {
+      seekStepSecondsDefault_(normalizedSeekStepSeconds(seekStepSeconds)),
+      languagePreferences_(languages.normalized()), lastApplyActive_(player.state().active) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
@@ -49,10 +54,9 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     playbackForm->addRow(resumePlaybackPosition_);
     seekStepSeconds_->setObjectName(QStringLiteral("seekStepChoice"));
     seekStepSeconds_->setAccessibleName(tr("左右键跳转时长"));
-    for (const int seconds : {5, 10, 30})
-        seekStepSeconds_->addItem(tr("%1 秒").arg(seconds), seconds);
-    const auto seekIndex = seekStepSeconds_->findData(seekStepSeconds);
-    seekStepSeconds_->setCurrentIndex(seekIndex >= 0 ? seekIndex : 0);
+    seekStepSeconds_->setRange(seekStepSecondsMinimum, seekStepSecondsMaximum);
+    seekStepSeconds_->setSuffix(tr(" 秒"));
+    seekStepSeconds_->setValue(seekStepSecondsDefault_);
     playbackForm->addRow(tr("左右键跳转时长："), seekStepSeconds_);
     actualDecoder_->setObjectName(QStringLiteral("actualDecoder"));
     actualDecoder_->setTextFormat(Qt::PlainText);
@@ -70,6 +74,13 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     audioDevice_->setObjectName(QStringLiteral("audioOutputDeviceChoice"));
     audioDevice_->setAccessibleName(tr("音频输出设备"));
     audioForm->addRow(tr("输出设备："), audioDevice_);
+    preferredAudioLanguages_ = new QLineEdit(audio);
+    preferredAudioLanguages_->setObjectName(QStringLiteral("preferredAudioLanguagesEdit"));
+    preferredAudioLanguages_->setAccessibleName(tr("首选音轨语言"));
+    preferredAudioLanguages_->setPlaceholderText(tr("例如：jpn,eng"));
+    preferredAudioLanguages_->setText(
+        languagePreferences_.audioLanguages.join(QStringLiteral(", ")));
+    audioForm->addRow(tr("首选音轨语言："), preferredAudioLanguages_);
     auto *audioHelp =
         new QLabel(tr("输出设备切换会立即生效；设备不可用时将回退到自动选择。"), audio);
     audioHelp->setWordWrap(true);
@@ -100,6 +111,17 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     subtitleForm->addRow(tr("缩放(&S)："), subtitleScale_);
     subtitleForm->addRow(tr("垂直位置(&P)："), subtitlePosition_);
     subtitleForm->addRow(tr("默认字体(&F)："), subtitleFont_);
+    preferredSubtitleLanguages_ = new QLineEdit(subtitles);
+    preferredSubtitleLanguages_->setObjectName(QStringLiteral("preferredSubtitleLanguagesEdit"));
+    preferredSubtitleLanguages_->setAccessibleName(tr("首选字幕语言"));
+    preferredSubtitleLanguages_->setText(
+        languagePreferences_.subtitleLanguages.join(QStringLiteral(", ")));
+    subtitleForm->addRow(tr("首选字幕语言："), preferredSubtitleLanguages_);
+    autoLoadExternalSubtitles_ = new QCheckBox(tr("自动加载同名字幕"), subtitles);
+    autoLoadExternalSubtitles_->setObjectName(QStringLiteral("autoLoadExternalSubtitlesCheck"));
+    autoLoadExternalSubtitles_->setAccessibleName(tr("自动加载同名字幕"));
+    autoLoadExternalSubtitles_->setChecked(languagePreferences_.autoLoadExternalSubtitles);
+    subtitleForm->addRow(autoLoadExternalSubtitles_);
     auto *subtitleHelp =
         new QLabel(tr("隐藏字幕会保留轨道选择。位置越小越靠上，100% "
                       "为原始位置。默认字体仅用于未指定字体的文本字幕；ASS 保留自带样式。"),
@@ -125,6 +147,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     mediaLibraryForm->addRow(scanHelp);
     tabs_->addTab(mediaLibraryPage, style()->standardIcon(QStyle::SP_DirOpenIcon), tr("媒体库"));
     createAppearancePage();
+    createInteractionPage(interaction);
 
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(tabs_);
@@ -138,8 +161,10 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     restoreDefaultsButton_->setVisible(false);
     layout->addWidget(buttons);
     connect(tabs_, &QTabWidget::currentChanged, this, [this](int index) {
-        restoreDefaultsButton_->setVisible(index == static_cast<int>(Category::Subtitles) ||
-                                           index == static_cast<int>(Category::Appearance));
+        restoreDefaultsButton_->setVisible(index == static_cast<int>(Category::Audio) ||
+                                           index == static_cast<int>(Category::Subtitles) ||
+                                           index == static_cast<int>(Category::Appearance) ||
+                                           index == static_cast<int>(Category::Interaction));
     });
 
     refreshAudioDevices();
@@ -154,8 +179,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             &PreferencesDialog::updateApplyButton);
     connect(resumePlaybackPosition_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
-    connect(seekStepSeconds_, &QComboBox::currentIndexChanged, this,
-            &PreferencesDialog::updateApplyButton);
+    connect(seekStepSeconds_, &QSpinBox::valueChanged, this, &PreferencesDialog::updateApplyButton);
     connect(subtitleVisible_, &QCheckBox::toggled, this, &PreferencesDialog::updateApplyButton);
     connect(subtitleScale_, &QDoubleSpinBox::valueChanged, this,
             &PreferencesDialog::updateApplyButton);
@@ -163,15 +187,43 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             &PreferencesDialog::updateApplyButton);
     connect(subtitleFont_, &QFontComboBox::currentTextChanged, this,
             &PreferencesDialog::updateApplyButton);
+    connect(preferredAudioLanguages_, &QLineEdit::textChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(preferredSubtitleLanguages_, &QLineEdit::textChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(autoLoadExternalSubtitles_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
     connect(mediaScanningEnabled_, &QCheckBox::toggled, this,
             &PreferencesDialog::updateApplyButton);
     connect(recursiveFolderScan_, &QCheckBox::toggled, this, &PreferencesDialog::updateApplyButton);
+    connect(interactionSingleClick_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionDoubleClick_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionMiddleClick_, &QComboBox::currentIndexChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionWheelVolume_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionWheelStep_, &QComboBox::currentIndexChanged, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionWheelSeek_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionPlaylistClick_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
+    connect(interactionRemainingTime_, &QCheckBox::toggled, this,
+            &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::hardwareDecodingPreferenceChanged, this,
             &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::subtitlePreferencesChanged, this,
             &PreferencesDialog::updateApplyButton);
     connect(&player_, &MpvController::stateChanged, this, [this] {
-        updateApplyButton();
+        // Position ticks fire continuously; only an active-state transition
+        // can change the Apply draft. Decoder text keeps its own early-out.
+        const bool active = player_.state().active;
+        if (active != lastApplyActive_) {
+            lastApplyActive_ = active;
+            updateApplyButton();
+        }
         updateActualDecoder();
     });
     connect(applyButton_, &QPushButton::clicked, this, &PreferencesDialog::apply);
@@ -185,17 +237,29 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
         qApp->setStyleSheet(appearanceStyleSheet_);
     });
     connect(restoreDefaultsButton_, &QPushButton::clicked, this, [this] {
-        if (tabs_->currentIndex() == static_cast<int>(Category::Appearance)) {
-            appearanceTheme_->setCurrentIndex(0);
-            appearanceAccent_->setCurrentIndex(0);
-            appearanceGlass_->setChecked(true);
-            return;
+        // Reset only the category whose page is showing; hidden pages keep their drafts.
+        switch (static_cast<Category>(tabs_->currentIndex())) {
+        case Category::Audio:
+            preferredAudioLanguages_->clear();
+            break;
+        case Category::Subtitles:
+            subtitleVisible_->setChecked(true);
+            subtitleScale_->setValue(1.0);
+            subtitlePosition_->setValue(100.0);
+            subtitleFont_->setEditText(SubtitlePreferences{}.font);
+            preferredSubtitleLanguages_->clear();
+            autoLoadExternalSubtitles_->setChecked(false);
+            break;
+        case Category::Appearance:
+            appearancePage_->restoreDefaults();
+            break;
+        case Category::Interaction:
+            displayInteractionPreferences(InteractionPreferences{});
+            break;
+        case Category::Playback:
+        case Category::MediaLibrary:
+            break;
         }
-        subtitleVisible_->setChecked(true);
-        subtitleScale_->setValue(1.0);
-        subtitlePosition_->setValue(100.0);
-        subtitleFont_->setEditText(QString());
-        seekStepSeconds_->setCurrentIndex(seekStepSeconds_->findData(5));
     });
     updateApplyButton();
     updateActualDecoder();
@@ -209,7 +273,10 @@ void PreferencesDialog::selectCategory(Category category) {
 void PreferencesDialog::apply() {
     if (appearanceChanged()) {
         appearanceBaseline_ = appearanceDraft();
-        AppearancePreferences::applySettings(*qApp, appearanceBaseline_);
+        appearancePage_->accept();
+        // The draft is already live through previewAppearance(); snapshot that
+        // state so Cancel after Apply returns to the committed appearance. The
+        // appearance owner handles the final apply and persistence below.
         appearancePalette_ = qApp->palette();
         appearanceStyleSheet_ = qApp->styleSheet();
         emit appearancePreferencesChanged(appearanceBaseline_);
@@ -222,7 +289,7 @@ void PreferencesDialog::apply() {
         resumePlaybackPositionDefault_ = resumePlaybackPosition_->isChecked();
         emit resumePlaybackPositionChanged(resumePlaybackPositionDefault_);
     }
-    const auto seekStep = seekStepSeconds_->currentData().toInt();
+    const auto seekStep = seekStepSeconds_->value();
     if (seekStep != seekStepSecondsDefault_) {
         seekStepSecondsDefault_ = seekStep;
         emit seekStepSecondsChanged(seekStep);
@@ -241,6 +308,17 @@ void PreferencesDialog::apply() {
         emit mediaLibraryPreferencesChanged(mediaLibraryDraft.scanningEnabled,
                                             mediaLibraryDraft.recursiveByDefault);
     }
+    if (interactionChanged()) {
+        interactionPreferences_ = interactionDraft();
+        emit interactionPreferencesChanged(interactionPreferences_);
+    }
+    if (languageChanged()) {
+        languagePreferences_ = languageDraft();
+        player_.setLanguagePreferences(languagePreferences_.audioLanguages,
+                                       languagePreferences_.subtitleLanguages);
+        player_.setAutoLoadExternalSubtitles(languagePreferences_.autoLoadExternalSubtitles);
+        emit languagePreferencesChanged(languagePreferences_);
+    }
     displaySubtitlePreferences();
     updateApplyButton();
 }
@@ -256,60 +334,23 @@ void PreferencesDialog::updateApplyButton() {
     const bool playbackChange =
         decodingChanged || draft.normalized() != player_.subtitlePreferences() ||
         resumePlaybackPosition_->isChecked() != resumePlaybackPositionDefault_ ||
-        seekStepSeconds_->currentData().toInt() != seekStepSecondsDefault_;
-    applyButton_->setEnabled(appearanceChanged() || mediaLibraryChanged ||
-                             (player_.isReady() && playbackChange));
+        seekStepSeconds_->value() != seekStepSecondsDefault_;
+    applyButton_->setEnabled(appearanceChanged() || mediaLibraryChanged || interactionChanged() ||
+                             languageChanged() || (player_.isReady() && playbackChange));
 }
 
 void PreferencesDialog::createAppearancePage() {
-    auto *page = new QWidget(tabs_);
-    auto *form = new QFormLayout(page);
-    appearanceTheme_ = new QComboBox(page);
-    appearanceAccent_ = new QComboBox(page);
-    appearanceGlass_ = new QCheckBox(tr("启用玻璃质感"), page);
-    appearanceTheme_->setObjectName(QStringLiteral("appearanceThemeChoice"));
-    appearanceTheme_->setAccessibleName(tr("基础主题"));
-    appearanceAccent_->setObjectName(QStringLiteral("appearanceAccentChoice"));
-    appearanceAccent_->setAccessibleName(tr("强调色"));
-    appearanceGlass_->setObjectName(QStringLiteral("appearanceGlassChoice"));
-    appearanceGlass_->setAccessibleName(tr("启用玻璃质感"));
-    for (const auto theme : AppearancePreferences::themes())
-        appearanceTheme_->addItem(AppearancePreferences::themeName(theme), static_cast<int>(theme));
-    for (const auto accent : AppearancePreferences::accents())
-        appearanceAccent_->addItem(AppearancePreferences::accentName(accent),
-                                   static_cast<int>(accent));
-    appearanceTheme_->setCurrentIndex(
-        appearanceTheme_->findData(static_cast<int>(appearanceBaseline_.theme)));
-    appearanceAccent_->setCurrentIndex(
-        appearanceAccent_->findData(static_cast<int>(appearanceBaseline_.accent)));
-    appearanceGlass_->setChecked(appearanceBaseline_.glassEnabled);
-    form->addRow(tr("基础主题："), appearanceTheme_);
-    form->addRow(tr("强调色："), appearanceAccent_);
-    form->addRow(appearanceGlass_);
-    auto *help = new QLabel(tr("更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频"
-                               "；不支持背景模糊时使用半透明样式。"),
-                            page);
-    help->setWordWrap(true);
-    form->addRow(help);
-    tabs_->addTab(page, style()->standardIcon(QStyle::SP_DesktopIcon), tr("外观"));
-    connect(appearanceTheme_, &QComboBox::currentIndexChanged, this,
+    appearancePage_ = new PreferencesAppearancePage(appearanceBaseline_, tabs_);
+    connect(appearancePage_, &PreferencesAppearancePage::edited, this,
             &PreferencesDialog::previewAppearance);
-    connect(appearanceAccent_, &QComboBox::currentIndexChanged, this,
-            &PreferencesDialog::previewAppearance);
-    connect(appearanceGlass_, &QCheckBox::toggled, this, &PreferencesDialog::previewAppearance);
+    tabs_->addTab(appearancePage_, style()->standardIcon(QStyle::SP_DesktopIcon), tr("外观"));
 }
 
 AppearancePreferences::Settings PreferencesDialog::appearanceDraft() const {
-    return {static_cast<AppearancePreferences::Theme>(appearanceTheme_->currentData().toInt()),
-            static_cast<AppearancePreferences::Accent>(appearanceAccent_->currentData().toInt()),
-            appearanceGlass_->isChecked()};
+    return appearancePage_->draft();
 }
 
-bool PreferencesDialog::appearanceChanged() const {
-    const auto draft = appearanceDraft();
-    return draft.theme != appearanceBaseline_.theme || draft.accent != appearanceBaseline_.accent ||
-           draft.glassEnabled != appearanceBaseline_.glassEnabled;
-}
+bool PreferencesDialog::appearanceChanged() const { return appearancePage_->changed(); }
 
 void PreferencesDialog::previewAppearance() {
     AppearancePreferences::applySettings(*qApp, appearanceDraft());
@@ -354,3 +395,98 @@ void PreferencesDialog::displaySubtitlePreferences() {
     subtitlePosition_->setValue(preferences.position);
     subtitleFont_->setEditText(preferences.font);
 }
+
+void PreferencesDialog::createInteractionPage(InteractionPreferences interaction) {
+    auto *page = new QWidget(tabs_);
+    auto *form = new QFormLayout(page);
+    interactionSingleClick_ = new QCheckBox(tr("单击视频时播放或暂停"), page);
+    interactionSingleClick_->setObjectName(QStringLiteral("interactionSingleClickChoice"));
+    interactionSingleClick_->setAccessibleName(tr("单击视频时播放或暂停"));
+    interactionDoubleClick_ = new QCheckBox(tr("双击视频时切换全屏"), page);
+    interactionDoubleClick_->setObjectName(QStringLiteral("interactionDoubleClickChoice"));
+    interactionDoubleClick_->setAccessibleName(tr("双击视频时切换全屏"));
+    interactionMiddleClick_ = new QComboBox(page);
+    interactionMiddleClick_->setObjectName(QStringLiteral("interactionMiddleClickChoice"));
+    interactionMiddleClick_->setAccessibleName(tr("中键单击操作"));
+    interactionMiddleClick_->addItem(tr("无操作"), static_cast<int>(MiddleClickAction::None));
+    interactionMiddleClick_->addItem(tr("播放/暂停"),
+                                     static_cast<int>(MiddleClickAction::PlayPause));
+    interactionMiddleClick_->addItem(tr("静音"), static_cast<int>(MiddleClickAction::Mute));
+    interactionMiddleClick_->addItem(tr("全屏"), static_cast<int>(MiddleClickAction::Fullscreen));
+    interactionWheelVolume_ = new QCheckBox(tr("滚轮调节音量"), page);
+    interactionWheelVolume_->setObjectName(QStringLiteral("interactionWheelVolumeChoice"));
+    interactionWheelVolume_->setAccessibleName(tr("滚轮调节音量"));
+    interactionWheelStep_ = new QComboBox(page);
+    interactionWheelStep_->setObjectName(QStringLiteral("interactionWheelStepChoice"));
+    interactionWheelStep_->setAccessibleName(tr("音量步进"));
+    for (int step = 1; step <= 20; ++step)
+        interactionWheelStep_->addItem(tr("%1%").arg(step), step);
+    interactionWheelSeek_ = new QCheckBox(tr("时间轴滚轮跳转"), page);
+    interactionWheelSeek_->setObjectName(QStringLiteral("interactionWheelSeekChoice"));
+    interactionWheelSeek_->setAccessibleName(tr("时间轴滚轮跳转"));
+    interactionPlaylistClick_ = new QCheckBox(tr("播放列表单击播放"), page);
+    interactionPlaylistClick_->setObjectName(QStringLiteral("interactionPlaylistClickChoice"));
+    interactionPlaylistClick_->setAccessibleName(tr("播放列表单击播放"));
+    interactionRemainingTime_ = new QCheckBox(tr("显示剩余时间"), page);
+    interactionRemainingTime_->setObjectName(QStringLiteral("interactionRemainingTimeChoice"));
+    interactionRemainingTime_->setAccessibleName(tr("显示剩余时间"));
+    form->addRow(interactionSingleClick_);
+    form->addRow(interactionDoubleClick_);
+    form->addRow(tr("中键单击："), interactionMiddleClick_);
+    form->addRow(interactionWheelVolume_);
+    form->addRow(tr("音量步进："), interactionWheelStep_);
+    form->addRow(interactionWheelSeek_);
+    form->addRow(interactionPlaylistClick_);
+    form->addRow(interactionRemainingTime_);
+    auto *help =
+        new QLabel(tr("单击会等待双击间隔，避免双击时也触发播放/暂停；关闭后该操作不执行。"), page);
+    help->setWordWrap(true);
+    form->addRow(help);
+    tabs_->addTab(page, style()->standardIcon(QStyle::SP_FileDialogListView), tr("交互"));
+    interactionPreferences_ = interaction.normalized();
+    displayInteractionPreferences(interactionPreferences_);
+}
+
+void PreferencesDialog::displayInteractionPreferences(const InteractionPreferences &preferences) {
+    interactionSingleClick_->setChecked(preferences.singleClickPlayPause);
+    interactionDoubleClick_->setChecked(preferences.doubleClickFullscreen);
+    const auto middleIndex =
+        interactionMiddleClick_->findData(static_cast<int>(preferences.middleClick));
+    interactionMiddleClick_->setCurrentIndex(middleIndex >= 0 ? middleIndex : 0);
+    interactionWheelVolume_->setChecked(preferences.wheelAdjustsVolume);
+    const auto stepIndex = interactionWheelStep_->findData(preferences.wheelVolumeStep);
+    interactionWheelStep_->setCurrentIndex(
+        stepIndex >= 0 ? stepIndex
+                       : interactionWheelStep_->findData(InteractionPreferences{}.wheelVolumeStep));
+    interactionWheelSeek_->setChecked(preferences.wheelSeeksTimeline);
+    interactionPlaylistClick_->setChecked(preferences.playlistSingleClick);
+    interactionRemainingTime_->setChecked(preferences.showRemainingTime);
+}
+
+InteractionPreferences PreferencesDialog::interactionDraft() const {
+    return {.singleClickPlayPause = interactionSingleClick_->isChecked(),
+            .doubleClickFullscreen = interactionDoubleClick_->isChecked(),
+            .middleClick =
+                static_cast<MiddleClickAction>(interactionMiddleClick_->currentData().toInt()),
+            .wheelAdjustsVolume = interactionWheelVolume_->isChecked(),
+            .wheelVolumeStep = interactionWheelStep_->currentData().toInt(),
+            .wheelSeeksTimeline = interactionWheelSeek_->isChecked(),
+            .playlistSingleClick = interactionPlaylistClick_->isChecked(),
+            .showRemainingTime = interactionRemainingTime_->isChecked()};
+}
+
+bool PreferencesDialog::interactionChanged() const {
+    return interactionDraft() != interactionPreferences_;
+}
+
+LanguagePreferences PreferencesDialog::languageDraft() const {
+    const auto parse = [](const QString &text) {
+        return LanguagePreferences{text.split(QLatin1Char(',')), {}, false}
+            .normalized()
+            .audioLanguages;
+    };
+    return {parse(preferredAudioLanguages_->text()), parse(preferredSubtitleLanguages_->text()),
+            autoLoadExternalSubtitles_->isChecked()};
+}
+
+bool PreferencesDialog::languageChanged() const { return languageDraft() != languagePreferences_; }

@@ -5,7 +5,8 @@
 #include "session/sessionstore.h"
 #include "ui/languagemanager.h"
 #include "ui/mainwindow.h"
-#include "ui/playbacksettingsdialog.h"
+#include "ui/preferencescoordinator.h"
+#include "ui/preferencesdialog.h"
 #include "ui/timeseekdialog.h"
 #include <QAction>
 #include <QComboBox>
@@ -22,12 +23,16 @@
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QSlider>
+#include <QSpinBox>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QTemporaryDir>
 #include <QVariant>
 #include <QtTest>
 
 namespace {
+constexpr auto appearanceIconSymbolProperty = "appearanceIconSymbol";
+constexpr auto appearanceIconPaletteCacheProperty = "appearanceIconPaletteCache";
 QString mediaPath() { return QString::fromUtf8(TEST_MEDIA_PATH); }
 bool hasColoredVideo(const QImage &image) {
     if (image.isNull())
@@ -62,10 +67,11 @@ class WindowTest final : public QObject {
     void playbackSettingsApplyAndCancelPreserveIntent() {
         MpvController player(true, true);
         {
-            PlaybackSettingsDialog dialog(player);
+            PreferencesDialog dialog(player);
+            dialog.selectCategory(PreferencesDialog::Category::Playback);
             auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
             auto *buttons =
-                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             auto *actual = dialog.findChild<QLabel *>(QStringLiteral("actualDecoder"));
             QVERIFY(choice && buttons && actual);
             QVERIFY(choice->currentData().toBool());
@@ -78,10 +84,11 @@ class WindowTest final : public QObject {
             QVERIFY(player.hardwareDecodingEnabled());
         }
         {
-            PlaybackSettingsDialog dialog(player);
+            PreferencesDialog dialog(player);
+            dialog.selectCategory(PreferencesDialog::Category::Playback);
             auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
             auto *buttons =
-                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             QVERIFY(choice && buttons);
             choice->setCurrentIndex(1);
             buttons->button(QDialogButtonBox::Apply)->click();
@@ -92,10 +99,11 @@ class WindowTest final : public QObject {
             QVERIFY(!player.hardwareDecodingEnabled());
         }
         {
-            PlaybackSettingsDialog dialog(player);
+            PreferencesDialog dialog(player);
+            dialog.selectCategory(PreferencesDialog::Category::Playback);
             auto *choice = dialog.findChild<QComboBox *>(QStringLiteral("hardwareDecodingChoice"));
             auto *buttons =
-                dialog.findChild<QDialogButtonBox *>(QStringLiteral("playbackSettingsButtons"));
+                dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
             QVERIFY(choice && buttons);
             QVERIFY(!choice->currentData().toBool());
             choice->setCurrentIndex(0);
@@ -130,6 +138,15 @@ class WindowTest final : public QObject {
         auto *about = action(window, "aboutAction");
         QVERIFY(themeMenuAction && themeMenuAction->menu() && playbackSettings &&
                 subtitleSettings && about);
+        auto *shortcuts = action(window, "shortcutsAction");
+        QVERIFY(shortcuts);
+        QCOMPARE(shortcuts->shortcut(), QKeySequence(Qt::Key_F1));
+        const auto menus = window.menuBar()->actions();
+        QVERIFY(!menus.isEmpty() && menus.constLast()->menu());
+        auto *helpMenu = menus.constLast()->menu();
+        QCOMPARE(menus.constLast()->text(), QStringLiteral("帮助(&H)"));
+        QVERIFY(helpMenu->actions().contains(shortcuts));
+        QVERIFY(helpMenu->actions().contains(about));
         const auto shortcut = playbackSettings->shortcut();
         const auto checkedTheme = themeMenuAction->menu()->actions().at(0)->isChecked();
         QCOMPARE(themeMenuAction->menu()->actions().size(), 3);
@@ -142,6 +159,8 @@ class WindowTest final : public QObject {
         QCOMPARE(themeMenuAction->menu()->actions().at(2)->text(), QStringLiteral("Follow System"));
         QCOMPARE(playbackSettings->text(), QStringLiteral("Playback Settings…"));
         QCOMPARE(about->text(), QStringLiteral("About NekoPlayer…"));
+        QCOMPARE(shortcuts->text(), QStringLiteral("Keyboard Shortcuts…"));
+        QCOMPARE(menus.constLast()->text(), QStringLiteral("&Help"));
         QCOMPARE(playbackSettings->shortcut(), shortcut);
         QCOMPARE(themeMenuAction->menu()->actions().at(0)->isChecked(), checkedTheme);
 
@@ -150,6 +169,8 @@ class WindowTest final : public QObject {
         QCOMPARE(themeMenuAction->text(), QStringLiteral("主题"));
         QCOMPARE(playbackSettings->text(), QStringLiteral("播放设置…"));
         QCOMPARE(about->text(), QStringLiteral("关于 NekoPlayer…"));
+        QCOMPARE(shortcuts->text(), QStringLiteral("快捷键…"));
+        QCOMPARE(menus.constLast()->text(), QStringLiteral("帮助(&H)"));
         qApp->setProperty("languageManager", previousLanguageManager);
         qApp->setProperty("configurationEnabled", previousConfiguration);
     }
@@ -194,6 +215,55 @@ class WindowTest final : public QObject {
         window.close();
 
         QCOMPARE(SessionStore(sessionPath).load().state.window.geometry, normalGeometry);
+    }
+
+    void playlistWidthTracksLiveResizeAndTransitions() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto sessionPath = temporary.filePath(QStringLiteral("playlist-width.ini"));
+        SessionState saved;
+        saved.window.playlistVisible = true;
+        saved.window.playlistWidth = 400;
+        QVERIFY(SessionStore(sessionPath).save(saved).isEmpty());
+        {
+            MainWindow window(true, sessionPath);
+            auto *splitter = window.findChild<QSplitter *>(QStringLiteral("bodySplitter"));
+            auto *pane = window.findChild<QWidget *>(QStringLiteral("playlistPane"));
+            auto *showPlaylist = action(window, "showPlaylistAction");
+            QVERIFY(splitter && pane && showPlaylist);
+            window.show();
+            QTRY_VERIFY(showPlaylist->isChecked());
+            QTRY_COMPARE(pane->width(), 400);
+
+            // A user drag updates the stored width through splitterMoved.
+            splitter->setSizes({500, 600});
+            emit splitter->splitterMoved(600, 1);
+            QCOMPARE(pane->width(), 600);
+
+            showPlaylist->trigger();
+            QVERIFY(!pane->isVisible());
+            showPlaylist->trigger();
+            QVERIFY(pane->isVisible());
+            QTRY_COMPARE(pane->width(), 600);
+
+            action(window, "fullscreenAction")->trigger();
+            QTRY_VERIFY(window.isFullScreen());
+            action(window, "fullscreenAction")->trigger();
+            QTRY_VERIFY(!window.isFullScreen());
+            QTRY_COMPARE(pane->width(), 600);
+
+            action(window, "miniPlayerAction")->trigger();
+            QVERIFY(!pane->isVisible());
+            action(window, "miniPlayerAction")->trigger();
+            QVERIFY(pane->isVisible());
+            QTRY_COMPARE(pane->width(), 600);
+
+            // Hiding before close must retain the live width captured at hide time.
+            showPlaylist->trigger();
+            QVERIFY(!pane->isVisible());
+            window.close();
+        }
+        QCOMPARE(SessionStore(sessionPath).load().state.window.playlistWidth, 600);
     }
 
     void chapterActionsFollowSelectionAndKeepPause() {
@@ -465,13 +535,18 @@ class WindowTest final : public QObject {
                 qRound(window.videoWidget()->height() * window.videoWidget()->devicePixelRatioF()));
             QCOMPARE(frame.size(), expected);
         };
+        auto *exitFullscreen = action(window, "exitFullscreenAction");
+        QVERIFY(exitFullscreen);
+        QVERIFY(!exitFullscreen->isEnabled());
         action(window, "fullscreenAction")->trigger();
         QTRY_VERIFY(window.isFullScreen());
+        QVERIFY(exitFullscreen->isEnabled());
         verifyFrameGeometry();
         // The compositor may suspend an unfocused test surface, so shortcut
         // dispatch cannot be exercised here. Test the shared QAction instead.
-        action(window, "exitFullscreenAction")->trigger();
+        exitFullscreen->trigger();
         QTRY_VERIFY(!window.isFullScreen());
+        QVERIFY(!exitFullscreen->isEnabled());
         QTRY_COMPARE(window.size(), size);
         verifyFrameGeometry();
         QTest::mouseDClick(window.videoWidget(), Qt::LeftButton);
@@ -621,6 +696,52 @@ class WindowTest final : public QObject {
         QTRY_VERIFY(hasColoredVideo(window.videoWidget()->grabFramebuffer()));
         QVERIFY2(errors.isEmpty(),
                  qPrintable(errors.isEmpty() ? QString() : errors.front().front().toString()));
+    }
+
+    void repeatedStateTicksReuseIconsAndTitle() {
+        MainWindow window(true);
+        auto *pause = action(window, "pauseAction");
+        auto *mute = action(window, "muteAction");
+        QVERIFY(pause && mute);
+        const auto pauseIcon = pause->icon();
+        const auto muteIcon = mute->icon();
+        const auto pauseSymbol = pause->property(appearanceIconSymbolProperty);
+        const auto pausePaletteCache = pause->property(appearanceIconPaletteCacheProperty);
+        const auto title = window.windowTitle();
+        QVERIFY(!pauseIcon.isNull() && !muteIcon.isNull());
+
+        // time-pos keeps stateChanged hot; unchanged symbols and path must reuse
+        // the existing icon engines and window caption.
+        for (int tick = 0; tick < 5; ++tick)
+            window.controller()->stateChanged();
+        QCOMPARE(pause->icon().cacheKey(), pauseIcon.cacheKey());
+        QCOMPARE(mute->icon().cacheKey(), muteIcon.cacheKey());
+        QCOMPARE(pause->property(appearanceIconSymbolProperty), pauseSymbol);
+        QCOMPARE(pause->property(appearanceIconPaletteCacheProperty), pausePaletteCache);
+        QCOMPARE(window.windowTitle(), title);
+    }
+
+    void sessionLessSeekStepUsesRememberedFallback() {
+        MainWindow window(true);
+        auto *coordinator = window.findChild<PreferencesCoordinator *>();
+        QVERIFY(coordinator);
+        auto first = coordinator->createDialog(&window, PreferencesDialog::Category::Playback);
+        auto *firstChoice = first->findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
+        QVERIFY(firstChoice);
+        QCOMPARE(firstChoice->value(), 5);
+        firstChoice->setValue(10);
+        auto *buttons = first->findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        QVERIFY(buttons);
+        buttons->button(QDialogButtonBox::Apply)->click();
+        auto *back = action(window, "seekBackAction");
+        auto *forward = action(window, "seekForwardAction");
+        QVERIFY(back && forward);
+        QCOMPARE(back->text(), QStringLiteral("后退 10 秒"));
+        QCOMPARE(forward->text(), QStringLiteral("前进 10 秒"));
+        auto second = coordinator->createDialog(&window, PreferencesDialog::Category::Playback);
+        auto *secondChoice = second->findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
+        QVERIFY(secondChoice);
+        QCOMPARE(secondChoice->value(), 10);
     }
 
     void reportsMissingGraphicsContext() {

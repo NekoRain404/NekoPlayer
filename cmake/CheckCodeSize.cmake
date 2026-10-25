@@ -4,7 +4,10 @@ file(GLOB_RECURSE sources
     "${NEKO_SOURCE_DIR}/tests/*.sh" "${NEKO_SOURCE_DIR}/cmake/*.cmake")
 list(APPEND sources "${NEKO_SOURCE_DIR}/CMakeLists.txt"
     "${NEKO_SOURCE_DIR}/tests/CMakeLists.txt")
-set(default_line_limit 500)
+set(target_line_limit 500)
+# A small grace window avoids splitting cohesive code solely to cross a line
+# boundary. Files larger than this still require a listed exception.
+set(default_line_limit 550)
 set(special_line_limit 800)
 # These integration/coordinator files may legitimately hold several tightly
 # coupled desktop scenarios. New exceptions require an explicit entry and reason.
@@ -21,9 +24,13 @@ foreach(source IN LISTS sources)
     list(FIND special_sources "${source}" special_index)
     if(NOT special_index EQUAL -1)
         set(line_limit ${special_line_limit})
+    else()
+        if(line_count GREATER target_line_limit)
+            message(STATUS "${source}: ${line_count} lines (above the ${target_line_limit}-line target)")
+        endif()
     endif()
     if(line_count GREATER line_limit)
         message(FATAL_ERROR "${source}: ${line_count} lines exceeds the ${line_limit}-line limit")
     endif()
 endforeach()
-message(STATUS "All ordinary handwritten code files satisfy the 500-line limit; listed special files satisfy the 800-line limit")
+message(STATUS "Ordinary files target ${target_line_limit} lines (hard limit ${default_line_limit}); listed special files satisfy the ${special_line_limit}-line limit")

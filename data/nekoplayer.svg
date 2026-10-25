@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"
+     viewBox="0 0 256 256" role="img" aria-label="NekoPlayer">
+  <title>NekoPlayer</title>
+  <!-- This 256x256 path geometry is mirrored by src/ui/appicon.cpp for the runtime
+       window icon; keep both definitions in sync. -->
+  <!-- Original mark: a rounded dark cat-eared tile with an accent play triangle. -->
+  <path d="M 24 88 L 24 78 Q 24 72 28 66 L 48 22 Q 52 12 61 19 L 104 56
+           L 152 56 L 195 19 Q 204 12 208 22 L 228 66 Q 232 72 232 78
+           L 232 188 Q 232 232 188 232 L 68 232 Q 24 232 24 188 Z"
+        fill="#1f2228" stroke="#8ba9ef" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M 108 106 Q 108 100 114 104 L 174 140 Q 180 144 174 148
+           L 114 184 Q 108 188 108 182 Z"
+        fill="#8ba9ef"/>
+</svg>

@@ -131,6 +131,17 @@ void paintSymbol(QPainter &painter, Symbol symbol) {
         painter.drawEllipse(QPointF(12, 8), 0.8, 0.8);
         line(12, 11, 12, 17);
         break;
+    case Symbol::Settings:
+        line(4, 6, 20, 6);
+        line(4, 12, 20, 12);
+        line(4, 18, 20, 18);
+        painter.save();
+        painter.setBrush(painter.pen().color());
+        painter.drawEllipse(QPointF(9, 6), 2.2, 2.2);
+        painter.drawEllipse(QPointF(15, 12), 2.2, 2.2);
+        painter.drawEllipse(QPointF(8, 18), 2.2, 2.2);
+        painter.restore();
+        break;
     }
 }
 

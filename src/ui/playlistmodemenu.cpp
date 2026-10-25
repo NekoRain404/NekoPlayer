@@ -45,6 +45,15 @@ PlaylistModeMenu::PlaylistModeMenu(PlaylistController &queue, QWidget *window)
         update();
         emit feedback(menu_->title());
     });
+    stopAfterCurrentAction_ = menu_->addAction(tr("播放完当前停止"));
+    stopAfterCurrentAction_->setObjectName(QStringLiteral("stopAfterCurrentAction"));
+    stopAfterCurrentAction_->setCheckable(true);
+    connect(stopAfterCurrentAction_, &QAction::triggered, &queue_,
+            &PlaylistController::setStopAfterCurrent);
+    connect(&queue_, &PlaylistController::stopAfterCurrentChanged, this, [this] {
+        update();
+        emit feedback(menu_->title());
+    });
     update();
 }
 
@@ -52,6 +61,7 @@ QMenu *PlaylistModeMenu::menu() const { return menu_; }
 
 void PlaylistModeMenu::update() {
     shuffleAction_->setChecked(queue_.shuffleEnabled());
+    stopAfterCurrentAction_->setChecked(queue_.stopAfterCurrent());
     QString title;
     for (auto *action : group_->actions()) {
         const bool selected =
@@ -74,5 +84,6 @@ void PlaylistModeMenu::retranslate() {
     shuffleAction_->setText(tr("随机播放"));
     if (auto *cycle = menu_->findChild<QAction *>(QStringLiteral("cycleRepeatAction")))
         cycle->setText(tr("切换播放模式"));
+    stopAfterCurrentAction_->setText(tr("播放完当前停止"));
     update();
 }

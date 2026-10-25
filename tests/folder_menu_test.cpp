@@ -32,6 +32,28 @@ class FolderMenuTest final : public QObject {
         QCOMPARE(feedback.count(), 1);
     }
 
+    void setMediaLibraryPreferencesDoesNotEmitAProgrammaticChange() {
+        QWidget window;
+        FolderMenu folders(&window, [] { return QString{}; });
+        const auto recursive = window.findChild<QAction *>(QStringLiteral("recursiveFolderAction"));
+        QVERIFY(recursive);
+        QSignalSpy changed(&folders, &FolderMenu::mediaLibraryPreferencesChanged);
+
+        folders.setMediaLibraryPreferences({true, true});
+        QVERIFY(recursive->isChecked());
+        QVERIFY(changed.isEmpty());
+
+        folders.setMediaLibraryPreferences({true, false});
+        QVERIFY(!recursive->isChecked());
+        QVERIFY(changed.isEmpty());
+
+        // A real user toggle still notifies the session owner exactly once.
+        recursive->setChecked(true);
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(changed.constFirst().at(0).toBool(), true);
+        QCOMPARE(changed.constFirst().at(1).toBool(), true);
+    }
+
     void enabledRecursivePreferenceIsUsedForManualScans() {
         QTemporaryDir directory;
         QVERIFY(directory.isValid());

@@ -6,7 +6,9 @@
 #include <QFileInfo>
 #include <QPersistentModelIndex>
 #include <QUrl>
+#include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace {
 bool isPlayablePath(const QString &path) {
@@ -28,6 +30,7 @@ PlaylistController::PlaylistController(MpvController &player, QObject *parent)
     connect(&player_, &MpvController::mediaLoadFailed, this, &PlaylistController::mediaLoadFailed);
     connect(&player_, &MpvController::stopRequested, this,
             &PlaylistController::snapshotCurrentPlayback, Qt::DirectConnection);
+    connect(&player_, &MpvController::stopRequested, this, [this] { setStopAfterCurrent(false); });
     const auto cancelResume = [this] { resumeEntry_ = QPersistentModelIndex{}; };
     connect(&player_, &MpvController::stopRequested, this, cancelResume);
     connect(&player_, &MpvController::fileOpenRequested, this, cancelResume);
@@ -81,6 +84,7 @@ bool PlaylistController::hasPrevious() const {
 
 PlaylistController::RepeatMode PlaylistController::repeatMode() const { return repeatMode_; }
 bool PlaylistController::shuffleEnabled() const { return shuffleEnabled_; }
+bool PlaylistController::stopAfterCurrent() const { return stopAfterCurrent_; }
 double PlaylistController::pendingResumePosition() const {
     return resumeEntry_.isValid() && resumeEntry_.row() == model_->currentIndex() ? resumePosition_
                                                                                   : 0;
@@ -109,6 +113,14 @@ void PlaylistController::setShuffleEnabled(bool enabled) {
     emit shuffleEnabledChanged(enabled);
 }
 
+void PlaylistController::setStopAfterCurrent(bool enabled) {
+    if (stopAfterCurrent_ == enabled)
+        return;
+    stopAfterCurrent_ = enabled;
+    updateFileLoop();
+    emit stopAfterCurrentChanged(enabled);
+}
+
 void PlaylistController::setRepeatMode(RepeatMode mode) {
     if (mode != RepeatMode::Off && mode != RepeatMode::One && mode != RepeatMode::All)
         return;
@@ -134,8 +146,9 @@ void PlaylistController::cycleRepeatMode() {
 }
 
 void PlaylistController::updateFileLoop() {
-    player_.setFileLoopEnabled(repeatMode_ == RepeatMode::One ||
-                               (repeatMode_ == RepeatMode::All && model_->rowCount() == 1));
+    player_.setFileLoopEnabled(!stopAfterCurrent_ &&
+                               (repeatMode_ == RepeatMode::One ||
+                                (repeatMode_ == RepeatMode::All && model_->rowCount() == 1)));
 }
 
 void PlaylistController::addFiles(const QStringList &paths) {
@@ -207,6 +220,7 @@ void PlaylistController::playPrevious() {
 }
 
 void PlaylistController::clear() {
+    setStopAfterCurrent(false);
     playbackQueued_ = false;
     ++playbackRevision_;
     exhausted_ = false;
@@ -224,11 +238,25 @@ void PlaylistController::moveItem(int from, int to) {
     model_->moveRow({}, from, {}, from < to ? to + 1 : to);
 }
 
-void PlaylistController::removeAt(int row) {
-    if (row < 0 || row >= model_->rowCount())
+void PlaylistController::removeRowsAt(const QList<int> &rows) {
+    std::vector<int> removed;
+    removed.reserve(rows.size());
+    for (const auto row : rows) {
+        if (row >= 0 && row < model_->rowCount())
+            removed.push_back(row);
+    }
+    std::sort(removed.begin(), removed.end());
+    removed.erase(std::unique(removed.begin(), removed.end()), removed.end());
+    if (removed.empty())
         return;
-    const bool removingCurrent = row == model_->currentIndex();
+
+    const auto isRemoved = [&removed](int row) {
+        return std::binary_search(removed.cbegin(), removed.cend(), row);
+    };
+    const bool removingCurrent = isRemoved(model_->currentIndex());
     if (removingCurrent) {
+        // Removing the playing row is an explicit stop, so stopRequested
+        // disarms stop-after-current just like player.stop() or clear().
         playbackQueued_ = false;
         ++playbackRevision_;
         exhausted_ = false;
@@ -237,12 +265,49 @@ void PlaylistController::removeAt(int row) {
     }
     QSet<int> remapped;
     for (const auto failed : std::as_const(failedRows_)) {
-        if (failed != row)
-            remapped.insert(failed > row ? failed - 1 : failed);
+        if (isRemoved(failed))
+            continue;
+        const auto removedBelow = static_cast<int>(
+            std::lower_bound(removed.cbegin(), removed.cend(), failed) - removed.cbegin());
+        remapped.insert(failed - removedBelow);
     }
     failedRows_ = std::move(remapped);
-    model_->removeAt(row);
+
+    QList<int> rowList;
+    rowList.reserve(removed.size());
+    for (const auto row : removed)
+        rowList.append(row);
+    model_->removeRowsAt(rowList);
     if (removingCurrent && shuffleEnabled_)
+        shuffle_.reset(*model_, model_->currentIndex());
+    emit currentChanged(model_->currentIndex());
+}
+
+void PlaylistController::removeAt(int row) { removeRowsAt({row}); }
+
+QList<int> PlaylistController::missingFileRows() const {
+    QList<int> rows;
+    const auto &paths = model_->paths();
+    for (auto row = 0; row < paths.size(); ++row) {
+        if (!isPlayablePath(paths.at(row)))
+            rows.append(row);
+    }
+    return rows;
+}
+
+int PlaylistController::removeMissingFiles() {
+    const auto rows = missingFileRows();
+    removeRowsAt(rows);
+    return static_cast<int>(rows.size());
+}
+
+void PlaylistController::sortPlaylist(PlaylistModel::SortKey key, Qt::SortOrder order) {
+    // Only a real reorder invalidates row-scoped failure history; an
+    // already-sorted call must not re-arm retries of failed rows.
+    if (!model_->sortEntries(key, order))
+        return;
+    failedRows_.clear();
+    if (shuffleEnabled_)
         shuffle_.reset(*model_, model_->currentIndex());
     emit currentChanged(model_->currentIndex());
 }
@@ -252,6 +317,14 @@ void PlaylistController::playFinished() {
         return;
     emit mediaPlaybackFinished(model_->currentPath());
     failedRows_.clear();
+    if (stopAfterCurrent_) {
+        // Disarming may re-enable native loop-file for repeat modes, but libmpv
+        // already committed this EOF before delivering END_FILE, so the queue
+        // finishes without reopening the file.
+        setStopAfterCurrent(false);
+        finishQueue();
+        return;
+    }
     if (shuffleEnabled_ && repeatMode_ != RepeatMode::One) {
         if (playShuffled(1) == ScanResult::Exhausted)
             finishQueue();
@@ -285,6 +358,7 @@ void PlaylistController::mediaLoadFailed(const QString &message) {
 }
 
 void PlaylistController::finishQueue() {
+    setStopAfterCurrent(false);
     playbackQueued_ = false;
     exhausted_ = true;
     emit navigationChanged();
@@ -343,10 +417,12 @@ PlaylistController::ScanResult PlaylistController::playFirstAvailable(int firstR
 
 void PlaylistController::startRow(int row, int step) {
     snapshotCurrentPlayback();
+    const auto path = model_->pathAt(row);
+    // Resolve before every open: SessionManager uses this hook to prepare
+    // one-shot load options that must exist before the command is submitted.
+    const auto resolvedPosition = resumePositionResolver_ ? resumePositionResolver_(path) : 0.0;
     const auto startPosition =
-        resumeEntry_.isValid() && resumeEntry_.row() == row
-            ? resumePosition_
-            : (resumePositionResolver_ ? resumePositionResolver_(model_->pathAt(row)) : 0);
+        resumeEntry_.isValid() && resumeEntry_.row() == row ? resumePosition_ : resolvedPosition;
     resumeEntry_ = QPersistentModelIndex{};
     exhausted_ = false;
     playbackQueued_ = true;
@@ -354,7 +430,7 @@ void PlaylistController::startRow(int row, int step) {
     if (shuffleEnabled_)
         shuffle_.select(*model_, row);
     model_->setCurrentIndex(row);
-    player_.openFileAtPosition(model_->pathAt(row), startPosition);
+    player_.openFileAtPosition(path, startPosition);
     emit currentChanged(row);
 }
 

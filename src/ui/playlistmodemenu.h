@@ -24,4 +24,5 @@ class PlaylistModeMenu final : public QObject {
     QMenu *menu_;
     QActionGroup *group_;
     QAction *shuffleAction_;
+    QAction *stopAfterCurrentAction_;
 };

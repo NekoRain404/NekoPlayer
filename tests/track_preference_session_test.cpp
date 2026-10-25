@@ -244,7 +244,7 @@ class TrackPreferenceSessionTest final : public QObject {
             QVERIFY(session.restore().error.isEmpty());
             playlist.restoreFiles({media}, 0);
             playlist.playOrPause();
-            QTRY_VERIFY(player.state().active);
+            QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
             const auto alternate = std::find_if(
                 player.tracks().cbegin(), player.tracks().cend(), [](const auto &track) {
                     return track.type == MediaTrack::Type::Audio && !track.selected;

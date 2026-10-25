@@ -1,4 +1,5 @@
 #include "transportbar.h"
+#include "interactionpolicy.h"
 #include "playback/mpvcontroller.h"
 #include "seekslidergeometry.h"
 #include "transportbarmetrics.h"
@@ -8,8 +9,11 @@
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QPaintEvent>
+#include <QPainter>
 #include <QResizeEvent>
 #include <QSignalBlocker>
 #include <QSizePolicy>
@@ -19,6 +23,7 @@
 #include <QToolButton>
 #include <QToolTip>
 #include <QVBoxLayout>
+#include <QWheelEvent>
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -32,6 +37,7 @@ class SeekSlider final : public QSlider {
     std::function<void(int)> onDirectSeek;
     std::function<void(int, QPoint)> onHover;
     std::function<void()> onHoverEnd;
+    std::function<void(int)> onWheel;
 
   protected:
     void mousePressEvent(QMouseEvent *event) override {
@@ -93,6 +99,14 @@ class SeekSlider final : public QSlider {
         QSlider::leaveEvent(event);
     }
 
+    void wheelEvent(QWheelEvent *event) override {
+        // Never fall through to QSlider's hidden single-step seek; the window
+        // decides whether timeline wheel seeking is enabled.
+        event->accept();
+        if (onWheel)
+            onWheel(event->angleDelta().y());
+    }
+
   public:
     bool takeSuppressedReleaseSeek() { return std::exchange(suppressReleaseSeek_, false); }
 
@@ -124,6 +138,66 @@ class SeekSlider final : public QSlider {
     bool movedAfterClick_ = false;
     bool suppressReleaseSeek_ = false;
     int lastHoverValue_ = -1;
+};
+
+class ClickableTimeLabel final : public QLabel {
+  public:
+    explicit ClickableTimeLabel(QWidget *parent) : QLabel(parent) {
+        setFocusPolicy(Qt::StrongFocus);
+        setCursor(Qt::PointingHandCursor);
+    }
+
+    std::function<void()> onActivate;
+
+  protected:
+    bool event(QEvent *event) override {
+        if (event->type() == QEvent::ShortcutOverride && hasFocus()) {
+            const auto *keyEvent = static_cast<QKeyEvent *>(event);
+            if (isActivationKey(keyEvent->key())) {
+                event->accept();
+                return true;
+            }
+        }
+        return QLabel::event(event);
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override {
+        if (event->button() == Qt::LeftButton && rect().contains(event->pos())) {
+            event->accept();
+            activate();
+            return;
+        }
+        QLabel::mouseReleaseEvent(event);
+    }
+
+    void paintEvent(QPaintEvent *event) override {
+        QLabel::paintEvent(event);
+        if (!hasFocus())
+            return;
+        QPainter painter(this);
+        painter.setPen(palette().color(QPalette::Highlight));
+        painter.drawRect(rect().adjusted(0, 0, -1, -1));
+    }
+
+    void keyPressEvent(QKeyEvent *event) override {
+        if (!isActivationKey(event->key())) {
+            QLabel::keyPressEvent(event);
+            return;
+        }
+        event->accept();
+        if (!event->isAutoRepeat())
+            activate();
+    }
+
+  private:
+    static bool isActivationKey(int key) {
+        return key == Qt::Key_Space || key == Qt::Key_Return || key == Qt::Key_Enter;
+    }
+
+    void activate() {
+        if (onActivate)
+            onActivate();
+    }
 };
 
 QString timeText(double seconds) {
@@ -168,7 +242,8 @@ QFrame *divider(QWidget *parent) {
 TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAction *next,
                            QAction *stop, QAction *mute, QAction *fullscreen, QWidget *parent)
     : QWidget(parent), timeline_(new SeekSlider(this)), volume_(new QSlider(Qt::Horizontal, this)),
-      time_(new QLabel(this)), timeDivider_(divider(this)), audioDivider_(divider(this)) {
+      time_(new ClickableTimeLabel(this)), timeDivider_(divider(this)),
+      audioDivider_(divider(this)) {
     setObjectName(QStringLiteral("transportBar"));
     setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
     timeline_->setObjectName(QStringLiteral("timelineSlider"));
@@ -183,6 +258,10 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     time_->setMinimumWidth(155);
     time_->setObjectName(QStringLiteral("timeLabel"));
     time_->setAccessibleName(tr("播放时间"));
+    static_cast<ClickableTimeLabel *>(time_)->onActivate = [this] {
+        timeShowsRemaining_ = !timeShowsRemaining_;
+        updateTimeLabel();
+    };
     auto *layout = new QVBoxLayout(this);
     layout->setSizeConstraint(QLayout::SetNoConstraint);
     layout->setContentsMargins(12, 4, 12, 8);
@@ -223,9 +302,9 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     connect(volume_, &QSlider::valueChanged, this,
             [this](int value) { emit volumeRequested(value); });
     connect(timeline_, &QSlider::sliderMoved, this, [this](int value) {
-        const auto text =
-            timeText(duration_ * value / 10000.0) + QStringLiteral(" / ") + timeText(duration_);
-        time_->setText(text);
+        position_ = duration_ * value / 10000.0;
+        updateTimeLabel();
+        const auto text = timeText(position_) + QStringLiteral(" / ") + timeText(duration_);
         timeline_->setToolTip(text);
         timeline_->setAccessibleDescription(text);
     });
@@ -241,8 +320,23 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
         emit timelineHovered(duration_ * value / 10000.0, globalPosition);
     };
     static_cast<SeekSlider *>(timeline_)->onHoverEnd = [this] { emit timelineHoverEnded(); };
+    static_cast<SeekSlider *>(timeline_)->onWheel = [this](int deltaY) {
+        const int notches = wheelNotches(deltaY);
+        if (notches != 0)
+            emit wheelSeekRequested(notches > 0 ? 1 : -1);
+    };
+    updateTimeLabel();
     applyResponsiveMetrics();
 }
+
+void TransportBar::setTimeShowsRemaining(bool remaining) {
+    if (timeShowsRemaining_ == remaining)
+        return;
+    timeShowsRemaining_ = remaining;
+    updateTimeLabel();
+}
+
+bool TransportBar::timeShowsRemaining() const { return timeShowsRemaining_; }
 
 QRect TransportBar::timelineGlobalGeometry() const {
     return QRect(timeline_->mapToGlobal(QPoint()), timeline_->size());
@@ -285,10 +379,28 @@ void TransportBar::present(const PlaybackState &state) {
     const auto position = timeline_->isSliderDown()
                               ? duration_ * timeline_->sliderPosition() / 10000.0
                               : state.position;
-    time_->setText(timeText(position) + QStringLiteral(" / ") + timeText(duration_));
+    position_ = position;
+    updateTimeLabel();
     const auto timelineText = timeText(position) + QStringLiteral(" / ") + timeText(duration_);
     timeline_->setToolTip(timelineText);
     timeline_->setAccessibleDescription(timelineText);
+}
+
+void TransportBar::updateTimeLabel() {
+    const auto total = timeText(duration_);
+    const auto remaining = timeText(std::max(0.0, duration_ - position_));
+    const QString reading = timeShowsRemaining_
+                                ? QStringLiteral("-%1 / %2").arg(remaining, total)
+                                : QStringLiteral("%1 / %2").arg(timeText(position_), total);
+    const auto alternate = timeShowsRemaining_ ? tr("已播放 %1").arg(timeText(position_))
+                                               : tr("剩余 %1").arg(remaining);
+    const auto action = timeShowsRemaining_ ? tr("按空格键或回车键切换为已播放时间")
+                                            : tr("按空格键或回车键切换为剩余时间");
+    const auto description = reading + QLatin1Char('\n') + alternate + QLatin1Char('\n') + action;
+    const auto toolTip = description + QLatin1Char('\n') + tr("点击切换时间显示");
+    time_->setText(reading);
+    time_->setToolTip(toolTip);
+    time_->setAccessibleDescription(description);
 }
 
 void TransportBar::changeEvent(QEvent *event) {
@@ -298,5 +410,6 @@ void TransportBar::changeEvent(QEvent *event) {
     timeline_->setAccessibleName(tr("播放进度"));
     volume_->setAccessibleName(tr("音量"));
     time_->setAccessibleName(tr("播放时间"));
+    updateTimeLabel();
     volume_->setToolTip(tr("音量 %1%").arg(volume_->value()));
 }

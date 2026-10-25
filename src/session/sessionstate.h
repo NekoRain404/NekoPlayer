@@ -5,6 +5,16 @@
 #include <QByteArray>
 #include <QStringList>
 
+inline constexpr int seekStepSecondsMinimum = 1;
+inline constexpr int seekStepSecondsMaximum = 120;
+inline constexpr int seekStepSecondsDefault = 5;
+
+[[nodiscard]] constexpr int normalizedSeekStepSeconds(int seconds) {
+    return seconds >= seekStepSecondsMinimum && seconds <= seekStepSecondsMaximum
+               ? seconds
+               : seekStepSecondsDefault;
+}
+
 struct AudioPreferences {
     double volume = 100;
     bool muted = false;
@@ -23,11 +33,38 @@ struct WindowPreferences {
     QByteArray geometry;
     bool playlistVisible = false;
     QString mediaDirectory;
+    int playlistWidth = 0; // 0 = default width.
+    bool alwaysOnTop = false;
 };
 
 struct MediaLibraryPreferences {
     bool scanningEnabled = true;
     bool recursiveByDefault = false;
+};
+
+enum class MiddleClickAction { None, PlayPause, Mute, Fullscreen };
+
+struct InteractionPreferences {
+    bool singleClickPlayPause = true;
+    bool doubleClickFullscreen = true;
+    MiddleClickAction middleClick = MiddleClickAction::None;
+    bool wheelAdjustsVolume = true;
+    int wheelVolumeStep = 5; // 1..20
+    bool wheelSeeksTimeline = true;
+    bool playlistSingleClick = false;
+    bool showRemainingTime = false;
+
+    [[nodiscard]] InteractionPreferences normalized() const;
+    bool operator==(const InteractionPreferences &) const = default;
+};
+
+struct LanguagePreferences {
+    QStringList audioLanguages;
+    QStringList subtitleLanguages;
+    bool autoLoadExternalSubtitles = false;
+
+    [[nodiscard]] LanguagePreferences normalized() const;
+    bool operator==(const LanguagePreferences &) const = default;
 };
 
 struct SessionState {
@@ -42,7 +79,9 @@ struct SessionState {
     VideoColorAdjustment videoColor;
     MediaLibraryPreferences mediaLibrary;
     bool resumePlaybackPosition = true;
-    int seekStepSeconds = 5;
+    int seekStepSeconds = seekStepSecondsDefault;
+    InteractionPreferences interaction;
+    LanguagePreferences languages;
 };
 
 struct SessionLoadResult {

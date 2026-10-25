@@ -29,31 +29,31 @@ QColor accentColor(AppearancePreferences::Accent accent, bool dark) {
 
 AppearanceTokens darkTokens() {
     AppearanceTokens tokens;
-    tokens.canvas = QColor(31, 34, 40);
-    tokens.surface = QColor(22, 24, 29);
-    tokens.raisedSurface = QColor(38, 41, 48);
-    tokens.primaryText = QColor(232, 234, 238);
-    tokens.secondaryText = QColor(191, 199, 216);
-    tokens.mutedText = QColor(146, 154, 169);
-    tokens.separator = QColor(59, 65, 77);
-    tokens.disabledText = QColor(119, 123, 133);
-    tokens.hoverSurface = QColor(52, 56, 66);
-    tokens.pressedSurface = QColor(69, 75, 88);
+    tokens.canvas = QColor(28, 28, 30);
+    tokens.surface = QColor(44, 44, 46);
+    tokens.raisedSurface = QColor(58, 58, 60);
+    tokens.primaryText = QColor(245, 245, 247);
+    tokens.secondaryText = QColor(209, 209, 214);
+    tokens.mutedText = QColor(161, 161, 166);
+    tokens.separator = QColor(72, 72, 74);
+    tokens.disabledText = QColor(99, 99, 102);
+    tokens.hoverSurface = QColor(58, 58, 60);
+    tokens.pressedSurface = QColor(72, 72, 74);
     return tokens;
 }
 
 AppearanceTokens lightTokens() {
     AppearanceTokens tokens;
-    tokens.canvas = QColor(245, 246, 248);
+    tokens.canvas = QColor(245, 245, 247);
     tokens.surface = QColor(255, 255, 255);
-    tokens.raisedSurface = QColor(240, 241, 244);
-    tokens.primaryText = QColor(32, 35, 40);
-    tokens.secondaryText = QColor(85, 91, 100);
-    tokens.mutedText = QColor(104, 112, 122);
-    tokens.separator = QColor(214, 219, 227);
-    tokens.disabledText = QColor(154, 157, 162);
-    tokens.hoverSurface = QColor(230, 233, 238);
-    tokens.pressedSurface = QColor(215, 220, 228);
+    tokens.raisedSurface = QColor(236, 236, 239);
+    tokens.primaryText = QColor(29, 29, 31);
+    tokens.secondaryText = QColor(66, 66, 69);
+    tokens.mutedText = QColor(110, 110, 115);
+    tokens.separator = QColor(210, 210, 215);
+    tokens.disabledText = QColor(174, 174, 178);
+    tokens.hoverSurface = QColor(232, 232, 237);
+    tokens.pressedSurface = QColor(220, 220, 225);
     return tokens;
 }
 } // namespace

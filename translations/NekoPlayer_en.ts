@@ -10,20 +10,51 @@
     <message><source>基础主题：</source><translation>Base theme:</translation></message>
     <message><source>强调色：</source><translation>Accent:</translation></message>
     <message><source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不支持背景模糊时使用半透明样式。</source><translation>Changes are previewed immediately and saved when applied. Glass treatment affects interface panels only and does not blur video; translucent styling is used when background blur is unavailable.</translation></message>
+    <message><source>玻璃不透明度</source><translation>Glass opacity</translation></message>
+    <message><source>玻璃模糊程度</source><translation>Glass blur</translation></message>
+    <message><source>玻璃不透明度：</source><translation>Glass opacity:</translation></message>
+    <message><source>玻璃模糊程度：</source><translation>Glass blur:</translation></message>
+    <message><source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不透明度控制面板半透明程度，模糊程度调节渐变的柔化层次，不是对窗口后方内容的真实高斯模糊。</source><translation>Changes preview immediately and are saved when applied. Glass affects interface panels only, never video; opacity controls panel translucency, while blur softens the gradient layers. This is not a true Gaussian blur of content behind the window.</translation></message>
     <message><source>偏好设置</source><translation>Preferences</translation></message>
     <message><source>恢复上次播放位置</source><translation>Resume from the last playback position</translation></message>
     <message><source>左右键跳转时长</source><translation>Left/right seek interval</translation></message>
     <message><source>左右键跳转时长：</source><translation>Left/right seek interval:</translation></message>
     <message><source>%1 秒</source><translation>%1 seconds</translation></message>
+    <message><source> 秒</source><translation> s</translation></message>
     <message><source>媒体库</source><translation>Media Library</translation></message>
     <message><source>允许扫描文件夹中的媒体文件</source><translation>Allow scanning folders for media files</translation></message>
     <message><source>默认包含子文件夹</source><translation>Include subfolders by default</translation></message>
     <message><source>扫描仅在你打开、添加或拖入文件夹时进行，不会在启动时自动遍历目录。关闭后，文件夹扫描入口将停用；直接打开媒体文件仍可使用。</source><translation>Scanning runs only when you open, add, or drop a folder; directories are not scanned automatically at startup. When disabled, folder scanning is unavailable, while opening media files directly remains available.</translation></message>
+    <message><source>交互</source><translation>Interaction</translation></message>
+    <message><source>单击视频时播放或暂停</source><translation>Click video to play or pause</translation></message>
+    <message><source>双击视频时切换全屏</source><translation>Double-click video to toggle fullscreen</translation></message>
+    <message><source>中键单击操作</source><translation>Middle-click action</translation></message>
+    <message><source>无操作</source><translation>Do nothing</translation></message>
+    <message><source>播放/暂停</source><translation>Play/pause</translation></message>
+    <message><source>静音</source><translation>Mute</translation></message>
+    <message><source>全屏</source><translation>Fullscreen</translation></message>
+    <message><source>滚轮调节音量</source><translation>Adjust volume with the wheel</translation></message>
+    <message><source>音量步进</source><translation>Volume step</translation></message>
+    <message><source>时间轴滚轮跳转</source><translation>Seek with the timeline wheel</translation></message>
+    <message><source>播放列表单击播放</source><translation>Play playlist item on single click</translation></message>
+    <message><source>显示剩余时间</source><translation>Show remaining time</translation></message>
+    <message><source>中键单击：</source><translation>Middle click:</translation></message>
+    <message><source>音量步进：</source><translation>Volume step:</translation></message>
+    <message><source>%1%</source><translation>%1%</translation></message>
+    <message><source>单击会等待双击间隔，避免双击时也触发播放/暂停；关闭后该操作不执行。</source><translation>Single clicks wait for the double-click interval so a double click does not also play or pause. When disabled, the action does nothing.</translation></message>
+    <message><source>首选音轨语言：</source><translation>Preferred audio languages:</translation></message>
+    <message><source>首选音轨语言</source><translation>Preferred audio languages</translation></message>
+    <message><source>例如：jpn,eng</source><translation>For example: jpn,eng</translation></message>
+    <message><source>首选字幕语言：</source><translation>Preferred subtitle languages:</translation></message>
+    <message><source>首选字幕语言</source><translation>Preferred subtitle languages</translation></message>
+    <message><source>自动加载同名字幕</source><translation>Automatically load matching subtitles</translation></message>
 </context>
 <context>
     <name>MainWindow</name>
     <message><source>外观设置…</source><translation>Appearance Settings…</translation></message>
     <message><source>媒体库设置…</source><translation>Media Library Settings…</translation></message>
+    <message><source>交互设置…</source><translation>Interaction Settings…</translation></message>
+    <message><source>窗口置顶</source><translation>Always on Top</translation></message>
 </context>
 <context>
     <name>FolderMenu</name>
@@ -66,8 +97,22 @@
     <message><source>列表循环</source><translation>Repeat All</translation></message>
     <message><source>随机播放</source><translation>Shuffle</translation></message>
     <message><source>切换播放模式</source><translation>Cycle Repeat Mode</translation></message>
+    <message><source>播放完当前停止</source><translation>Stop After Current</translation></message>
     <message><source>播放模式 · %1</source><translation>Repeat · %1</translation></message>
     <message><source>%1 · %2</source><translation>%1 · %2</translation></message>
+</context>
+<context>
+    <name>PlaylistMaintenanceMenu</name>
+    <message><source>排序</source><translation>Sort</translation></message>
+    <message><source>标题升序</source><translation>Title Ascending</translation></message>
+    <message><source>标题降序</source><translation>Title Descending</translation></message>
+    <message><source>路径升序</source><translation>Path Ascending</translation></message>
+    <message><source>路径降序</source><translation>Path Descending</translation></message>
+    <message><source>移除缺失文件…</source><translation>Remove Missing Files…</translation></message>
+    <message><source>移除缺失文件</source><translation>Remove Missing Files</translation></message>
+    <message><source>没有缺失文件</source><translation>No missing files</translation></message>
+    <message><source>找到 %1 个缺失文件。要从播放列表中移除吗？</source><translation>Found %1 missing files. Remove them from the playlist?</translation></message>
+    <message><source>已移除 %1 个缺失文件</source><translation>Removed %1 missing files</translation></message>
 </context>
 <context>
     <name>TuningMenus</name>
@@ -107,7 +152,18 @@
     <message><source>上移所选项</source><translation>Move Selected Up</translation></message>
     <message><source>下移所选项</source><translation>Move Selected Down</translation></message>
     <message><source>播放列表</source><translation>Playlist</translation></message>
+    <message><source>搜索播放列表</source><translation>Search playlist</translation></message>
+    <message><source>清除播放列表搜索</source><translation>Clear playlist search</translation></message>
     <message><source>%1 项</source><translation>%1 items</translation></message>
+    <message><source>%1 / %2 项</source><translation>%1 / %2 items</translation></message>
+    <message>
+        <source>播放列表为空
+打开文件或文件夹，或拖入媒体</source>
+        <translation>Playlist is empty
+Open a file or folder, or drop media here</translation>
+    </message>
+    <message><source>没有匹配项</source><translation>No matches</translation></message>
+    <message><source>播放列表提示</source><translation>Playlist hint</translation></message>
 </context>
 <context>
     <name>WelcomePanel</name>
@@ -155,6 +211,7 @@
     <name>MainWindow</name>
     <message><source>就绪 · Qt 6 + libmpv</source><translation>Ready · Qt 6 + libmpv</translation></message>
     <message><source>正在播放 · %1</source><translation>Playing · %1</translation></message>
+    <message><source>已暂停 · %1</source><translation>Paused · %1</translation></message>
     <message><source>播放列表已结束</source><translation>Playlist finished</translation></message>
     <message><source>媒体地址无效；网络地址需要包含受支持的协议与主机名</source><translation>Invalid media address; network addresses must include a supported protocol and host name</translation></message>
     <message><source>OpenGL 初始化失败，无法打开媒体文件</source><translation>OpenGL initialization failed; cannot open media</translation></message>
@@ -186,6 +243,8 @@
     <message><source>退出全屏</source><translation>Exit Fullscreen</translation></message>
     <message><source>后退 5 秒</source><translation>Seek Back 5 Seconds</translation></message>
     <message><source>前进 5 秒</source><translation>Seek Forward 5 Seconds</translation></message>
+    <message><source>后退 %1 秒</source><translation>Back %1 s</translation></message>
+    <message><source>前进 %1 秒</source><translation>Forward %1 s</translation></message>
     <message><source>增加音量</source><translation>Volume Up</translation></message>
     <message><source>降低音量</source><translation>Volume Down</translation></message>
     <message><source>退出</source><translation>Quit</translation></message>
@@ -198,6 +257,8 @@
     <message><source>显示当前播放信息</source><translation>Show Playback Information</translation></message>
     <message><source>显示播放列表</source><translation>Show Playlist</translation></message>
     <message><source>设置(&amp;S)</source><translation>&amp;Settings</translation></message>
+    <message><source>帮助(&amp;H)</source><translation>&amp;Help</translation></message>
+    <message><source>快捷键…</source><translation>Keyboard Shortcuts…</translation></message>
     <message><source>播放设置…</source><translation>Playback Settings…</translation></message>
     <message><source>无法恢复会话：%1</source><translation>Could not restore session: %1</translation></message>
     <message><source>已恢复播放列表 · 按空格从上次位置继续播放</source><translation>Playlist restored · Press Space to resume from the previous position</translation></message>
@@ -231,10 +292,10 @@ Ctrl+U to open a network URL</translation></message>
     <message><source>NekoPlayer 0.1.0
 
 Qt runtime: %1
-libmpv client API: %2.%3</source><translation>NekoPlayer 0.1.0
+libmpv client API: %2</source><translation>NekoPlayer 0.1.0
 
 Qt runtime: %1
-libmpv client API: %2.%3</translation></message>
+libmpv client API: %2</translation></message>
     <message><source>关于 NekoPlayer</source><translation>About NekoPlayer</translation></message>
 </context>
 <context>
@@ -272,8 +333,14 @@ libmpv client API: %2.%3</translation></message>
 <context>
     <name>TransportBar</name>
     <message><source>播放进度</source><translation>Playback position</translation></message>
+    <message><source>播放时间</source><translation>Playback time</translation></message>
     <message><source>音量</source><translation>Volume</translation></message>
     <message><source>音量 %1%</source><translation>Volume %1%</translation></message>
+    <message><source>已播放 %1</source><translation>Played %1</translation></message>
+    <message><source>剩余 %1</source><translation>Remaining %1</translation></message>
+    <message><source>按空格键或回车键切换为已播放时间</source><translation>Press Space or Return to switch to elapsed time</translation></message>
+    <message><source>按空格键或回车键切换为剩余时间</source><translation>Press Space or Return to switch to remaining time</translation></message>
+    <message><source>点击切换时间显示</source><translation>Click to toggle the time display</translation></message>
 </context>
 <context>
     <name>VideoMenu</name>
@@ -326,5 +393,15 @@ libmpv client API: %2.%3</translation></message>
     <message><source>采样率</source><translation>Sample rate</translation></message>
     <message><source>声道</source><translation>Channels</translation></message>
     <message><source>采样格式</source><translation>Sample format</translation></message>
+</context>
+<context>
+    <name>ShortcutsDialog</name>
+    <message><source>快捷键</source><translation>Shortcuts</translation></message>
+    <message><source>操作</source><translation>Action</translation></message>
+    <message><source>范围</source><translation>Scope</translation></message>
+    <message><source>列表聚焦</source><translation>Playlist Focus</translation></message>
+    <message><source>当前面板</source><translation>Current Panel</translation></message>
+    <message><source>面板快捷键</source><translation>Panel Shortcuts</translation></message>
+    <message><source>全局</source><translation>Global</translation></message>
 </context>
 </TS>

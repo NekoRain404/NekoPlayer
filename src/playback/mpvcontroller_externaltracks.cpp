@@ -2,6 +2,19 @@
 
 #include <QDir>
 
+QString MpvController::Impl::canonicalExternalPath(const QString &path) {
+    if (path.isEmpty())
+        return {};
+    const QFileInfo info(path);
+    const auto canonical = info.canonicalFilePath();
+    return canonical.isEmpty() ? QDir::cleanPath(info.absoluteFilePath()) : canonical;
+}
+
+bool MpvController::isExplicitExternalPath(const QString &path) const {
+    const auto canonical = Impl::canonicalExternalPath(path);
+    return !canonical.isEmpty() && impl_->explicitExternalPaths.contains(canonical);
+}
+
 void MpvController::addAudio(const QString &path) {
     impl_->addExternalTrack(MediaTrack::Type::Audio, path);
 }
@@ -26,6 +39,7 @@ void MpvController::Impl::addExternalTrack(MediaTrack::Type type, const QString 
     if (generation != openGeneration || identity != restoreIdentity || !state.active ||
         pendingPlayback)
         return;
+    explicitExternalPaths.insert(canonicalExternalPath(path));
     command({type == MediaTrack::Type::Audio ? "audio-add" : "sub-add",
              QFileInfo(path).absoluteFilePath().toUtf8(), "select"});
 }
@@ -59,11 +73,14 @@ void MpvController::Impl::restoreExternalTracks() {
         const auto canonical = file.canonicalFilePath();
         track.externalPath =
             canonical.isEmpty() ? QDir::cleanPath(file.absoluteFilePath()) : canonical;
+        if (explicitExternalPathsToRestore.contains(track.externalPath))
+            explicitExternalPaths.insert(track.externalPath);
         if (!paths.contains(track.externalPath)) {
             paths.insert(track.externalPath);
             externalPathsToRestore.append({track.type, track.externalPath});
         }
     }
+    explicitExternalPathsToRestore.clear();
     restoreNextExternalTrack();
 }
 

@@ -19,6 +19,8 @@ class TransportBar final : public QWidget {
     TransportBar(QAction *open, QAction *previous, QAction *pause, QAction *next, QAction *stop,
                  QAction *mute, QAction *fullscreen, QWidget *parent = nullptr);
     void present(const PlaybackState &state);
+    void setTimeShowsRemaining(bool remaining);
+    [[nodiscard]] bool timeShowsRemaining() const;
     [[nodiscard]] QRect timelineGlobalGeometry() const;
 
   protected:
@@ -28,15 +30,19 @@ class TransportBar final : public QWidget {
   signals:
     void seekRequested(double seconds);
     void volumeRequested(double volume);
+    void wheelSeekRequested(int direction);
     void timelineHovered(double seconds, QPoint globalPosition);
     void timelineHoverEnded();
 
   private:
     void applyResponsiveMetrics();
+    void updateTimeLabel();
     QSlider *timeline_;
     QSlider *volume_;
     QLabel *time_;
     QFrame *timeDivider_;
     QFrame *audioDivider_;
+    double position_ = 0;
     double duration_ = 0;
+    bool timeShowsRemaining_ = false;
 };

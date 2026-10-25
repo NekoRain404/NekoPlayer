@@ -28,11 +28,14 @@ class SessionTest final : public QObject {
         SessionManager session(player, queue, file);
         QSignalSpy loaded(&player, &MpvController::fileLoaded);
         QVERIFY(session.restore().error.isEmpty());
+        session.setSeekStepSeconds(7);
+        QCOMPARE(session.seekStepSeconds(), 7);
         QCOMPARE(queue.model()->rowCount(), 3);
         QCOMPARE(queue.model()->currentIndex(), 1);
         // Saving before the first mpv observation must preserve loaded preferences.
         QVERIFY(session.save({}).isEmpty());
         QCOMPARE(SessionStore(file).load().state.audio.volume, 23.0);
+        QCOMPARE(SessionStore(file).load().state.seekStepSeconds, 7);
         QVERIFY(SessionStore(file).load().state.audio.muted);
         QTRY_COMPARE(player.state().volume, 23.0);
         QTRY_VERIFY(player.state().muted);
@@ -95,6 +98,117 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.tuning.playbackSpeed, 1.0);
         QCOMPARE(loaded.state.tuning.audioDelay, 0.0);
         QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
+    }
+
+    void windowPlaylistWidthDefaultsToZero() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("schemaVersion"), 1);
+            settings.sync();
+        }
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QCOMPARE(loaded.state.window.playlistWidth, 0);
+    }
+
+    void windowPlaylistWidthRoundTrips() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionState saved;
+        saved.window.playlistWidth = 360;
+        QVERIFY(SessionStore(path).save(saved).isEmpty());
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QCOMPARE(loaded.state.window.playlistWidth, 360);
+        QSettings persisted(path, QSettings::IniFormat);
+        QCOMPARE(persisted.value(QStringLiteral("window/playlistWidth")).toInt(), 360);
+    }
+
+    void windowPlaylistWidthClampsNonZeroValues() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        QSettings settings(path, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("schemaVersion"), 1);
+        settings.setValue(QStringLiteral("window/playlistWidth"), 100);
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 240);
+
+        settings.setValue(QStringLiteral("window/playlistWidth"), 5000);
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 1000);
+
+        settings.setValue(QStringLiteral("window/playlistWidth"), 0);
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 0);
+
+        settings.setValue(QStringLiteral("window/playlistWidth"), -20);
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 240);
+
+        settings.setValue(QStringLiteral("window/playlistWidth"), QStringLiteral("garbage"));
+        settings.sync();
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 0);
+
+        SessionState oversized;
+        oversized.window.playlistWidth = 1200;
+        QVERIFY(SessionStore(path).save(oversized).isEmpty());
+        QCOMPARE(SessionStore(path).load().state.window.playlistWidth, 1000);
+    }
+
+    void windowAlwaysOnTopDefaultsToFalse() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        {
+            QSettings settings(path, QSettings::IniFormat);
+            settings.setValue(QStringLiteral("schemaVersion"), 1);
+            settings.sync();
+        }
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QVERIFY(!loaded.state.window.alwaysOnTop);
+
+        QSettings settings(path, QSettings::IniFormat);
+        settings.setValue(QStringLiteral("window/alwaysOnTop"), QStringLiteral("garbage"));
+        settings.sync();
+        QVERIFY(!SessionStore(path).load().state.window.alwaysOnTop);
+    }
+
+    void windowAlwaysOnTopRoundTrips() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        SessionState saved;
+        saved.window.alwaysOnTop = true;
+        QVERIFY(SessionStore(path).save(saved).isEmpty());
+        const auto loaded = SessionStore(path).load();
+        QVERIFY(loaded.error.isEmpty());
+        QVERIFY(loaded.state.window.alwaysOnTop);
+        QSettings persisted(path, QSettings::IniFormat);
+        QCOMPARE(persisted.value(QStringLiteral("window/alwaysOnTop")).toBool(), true);
+
+        saved.window.alwaysOnTop = false;
+        QVERIFY(SessionStore(path).save(saved).isEmpty());
+        QVERIFY(!SessionStore(path).load().state.window.alwaysOnTop);
+    }
+
+    void sessionManagerPersistsAlwaysOnTop() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        SessionManager session(player, queue, path);
+        QVERIFY(session.restore().error.isEmpty());
+        WindowPreferences window;
+        window.alwaysOnTop = true;
+        QVERIFY(session.save(window).isEmpty());
+        QVERIFY(SessionStore(path).load().state.window.alwaysOnTop);
     }
 
     void legacyConfigurationDefaultsToEnabledOnDemandScanning() {
@@ -330,7 +444,8 @@ class SessionTest final : public QObject {
             settings.setValue(QStringLiteral("playback/speed"), 99.0);
             settings.setValue(QStringLiteral("playback/audioDelay"), -99.0);
             settings.setValue(QStringLiteral("playback/subtitleDelay"), QStringLiteral("nan"));
-            settings.setValue(QStringLiteral("playback/seekStepSeconds"), 15);
+            settings.setValue(QStringLiteral("playback/seekStepSeconds"),
+                              QStringLiteral("garbage"));
             settings.sync();
         }
         const auto loaded = SessionStore(file).load();
@@ -344,6 +459,12 @@ class SessionTest final : public QObject {
         QCOMPARE(loaded.state.tuning.audioDelay, -10.0);
         QCOMPARE(loaded.state.tuning.subtitleDelay, 0.0);
         QCOMPARE(loaded.state.seekStepSeconds, 5);
+        const QList<QPair<int, int>> seekCases{{0, 5}, {121, 5}, {1, 1}, {7, 7}, {120, 120}};
+        for (const auto &[stored, expected] : seekCases) {
+            QSettings(file, QSettings::IniFormat)
+                .setValue(QStringLiteral("playback/seekStepSeconds"), stored);
+            QCOMPARE(SessionStore(file).load().state.seekStepSeconds, expected);
+        }
     }
 
     void inaccessibleDestinationReportsFailure() {

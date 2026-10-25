@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.nekorain.NekoPlayer</id>
+  <name>NekoPlayer</name>
+  <summary>A compact Qt 6 and libmpv desktop media player</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <description>
+    <p>NekoPlayer is a PotPlayer-inspired desktop media player built with Qt 6 Widgets and the libmpv render API.</p>
+    <p>It provides a playlist with search and sorting, track and subtitle selection, keyboard-driven transport, session restore, and a single GPU-backed playback path.</p>
+  </description>
+  <launchable type="desktop-id">nekoplayer.desktop</launchable>
+  <url type="homepage">https://github.com/NekoRain</url>
+  <developer id="io.github.nekorain">
+    <name>NekoRain</name>
+  </developer>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Player</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-25"/>
+  </releases>
+</component>

@@ -328,6 +328,170 @@ class PlaylistEditTest final : public QObject {
         QCOMPARE(queue.model()->currentIndex(), 1);
         QCOMPARE(queue.model()->rowCount(), moving ? 3 : 2);
     }
+    void batchRemovalDeduplicatesAndKeepsCurrentEntry() {
+        PlaylistModel model;
+        QAbstractItemModelTester tester(&model,
+                                        QAbstractItemModelTester::FailureReportingMode::QtTest);
+        model.addFiles({"a.mkv", "b.mkv", "a.mkv", "c.mkv", "d.mkv"});
+        model.setCurrentIndex(2);
+        QPersistentModelIndex current(model.index(2));
+        QSignalSpy changed(&model, &PlaylistModel::currentIndexChanged);
+        QCOMPARE(model.removeRowsAt({0, 4, 0, -1, 7}), 2);
+        QCOMPARE(model.rowCount(), 3);
+        QCOMPARE(model.data(model.index(0)).toString(), QStringLiteral("b.mkv"));
+        QCOMPARE(model.data(model.index(1)).toString(), QStringLiteral("a.mkv"));
+        QCOMPARE(model.data(model.index(2)).toString(), QStringLiteral("c.mkv"));
+        QCOMPARE(model.currentIndex(), 1);
+        QCOMPARE(current.row(), 1);
+        QVERIFY(model.data(model.index(1), PlaylistModel::CurrentRole).toBool());
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(model.removeRowsAt({1, 1, 1}), 1);
+        QCOMPARE(model.rowCount(), 2);
+        QCOMPARE(model.currentIndex(), 1);
+        QCOMPARE(changed.count(), 2);
+    }
+
+    void batchRemovalSelectsSurvivorsAndClears() {
+        PlaylistModel model;
+        QAbstractItemModelTester tester(&model,
+                                        QAbstractItemModelTester::FailureReportingMode::QtTest);
+        model.addFiles({"a.mkv", "b.mkv", "c.mkv", "d.mkv"});
+        QSignalSpy changed(&model, &PlaylistModel::currentIndexChanged);
+        model.setCurrentIndex(1);
+        changed.clear();
+        QCOMPARE(model.removeRowsAt({1}), 1);
+        QCOMPARE(model.currentIndex(), 1);
+        QCOMPARE(model.data(model.index(1)).toString(), QStringLiteral("c.mkv"));
+        QCOMPARE(changed.count(), 1);
+
+        model.setCurrentIndex(2);
+        changed.clear();
+        QCOMPARE(model.removeRowsAt({2}), 1);
+        QCOMPARE(model.currentIndex(), 1);
+        QCOMPARE(model.data(model.index(1)).toString(), QStringLiteral("c.mkv"));
+        QCOMPARE(changed.count(), 1);
+
+        changed.clear();
+        QCOMPARE(model.removeRowsAt({0, 1}), 2);
+        QCOMPARE(model.currentIndex(), -1);
+        QCOMPARE(model.rowCount(), 0);
+        QCOMPARE(changed.count(), 1);
+    }
+
+    void invalidRowsAreIgnoredAndRemoveAtMatchesBulk() {
+        PlaylistModel bulk;
+        PlaylistModel single;
+        for (auto *model : {&bulk, &single}) {
+            model->addFiles({"a.mkv", "b.mkv", "c.mkv", "d.mkv"});
+            model->setCurrentIndex(2);
+        }
+        QSignalSpy bulkChanged(&bulk, &PlaylistModel::currentIndexChanged);
+        QSignalSpy singleChanged(&single, &PlaylistModel::currentIndexChanged);
+        QCOMPARE(bulk.removeRowsAt({-2, 4, 99, 1, 1}), 1);
+        QVERIFY(single.removeAt(1));
+        QCOMPARE(bulk.paths(), single.paths());
+        QCOMPARE(bulk.currentIndex(), single.currentIndex());
+        QCOMPARE(bulk.currentIndex(), 1);
+        QCOMPARE(bulkChanged.count(), 1);
+        QCOMPARE(singleChanged.count(), 1);
+        QVERIFY(!single.removeAt(-1));
+        QVERIFY(!single.removeAt(3));
+        QCOMPARE(single.removeRowsAt({}), 0);
+        QCOMPARE(single.rowCount(), 3);
+    }
+
+    void titleSortIsNaturalCaseInsensitiveAndStable() {
+        PlaylistModel model;
+        QAbstractItemModelTester tester(&model,
+                                        QAbstractItemModelTester::FailureReportingMode::QtTest);
+        model.addFiles({"Episode10.mkv", "episode2.mkv", "EPISODE1.mkv", "episode2.mkv"});
+        QPersistentModelIndex lowerDuplicate(model.index(3));
+        QPersistentModelIndex ten(model.index(0));
+        QVERIFY(model.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+        QCOMPARE(model.data(model.index(0)).toString(), QStringLiteral("EPISODE1.mkv"));
+        QCOMPARE(model.data(model.index(1)).toString(), QStringLiteral("episode2.mkv"));
+        QCOMPARE(model.data(model.index(2)).toString(), QStringLiteral("episode2.mkv"));
+        QCOMPARE(model.data(model.index(3)).toString(), QStringLiteral("Episode10.mkv"));
+        QCOMPARE(lowerDuplicate.row(), 2);
+        QCOMPARE(ten.row(), 3);
+
+        PlaylistModel chinese;
+        chinese.addFiles({QStringLiteral("第 10 集.mkv"), QStringLiteral("第 2 集.mkv")});
+        QVERIFY(chinese.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+        QCOMPARE(chinese.data(chinese.index(0)).toString(), QStringLiteral("第 2 集.mkv"));
+        QCOMPARE(chinese.data(chinese.index(1)).toString(), QStringLiteral("第 10 集.mkv"));
+        QVERIFY(!chinese.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+    }
+
+    void pathSortIsNaturalAndRemapsPersistentIndexes() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto file = [&directory](const char *name) {
+            return directory.filePath(QString::fromLatin1(name));
+        };
+        PlaylistModel model;
+        QAbstractItemModelTester tester(&model,
+                                        QAbstractItemModelTester::FailureReportingMode::QtTest);
+        model.addFiles({file("episode10.mkv"), file("Episode2.mkv"), file("episode1.mkv")});
+        model.setCurrentIndex(0);
+        QPersistentModelIndex ten(model.index(0));
+        QPersistentModelIndex two(model.index(1));
+        QSignalSpy changed(&model, &PlaylistModel::currentIndexChanged);
+        QSignalSpy data(&model, &PlaylistModel::dataChanged);
+        QSignalSpy layouts(&model, &QAbstractItemModel::layoutAboutToBeChanged);
+        QVERIFY(model.sortEntries(PlaylistModel::SortKey::Path, Qt::AscendingOrder));
+        QCOMPARE(model.paths(),
+                 QStringList({file("episode1.mkv"), file("Episode2.mkv"), file("episode10.mkv")}));
+        QCOMPARE(ten.row(), 2);
+        QCOMPARE(two.row(), 1);
+        QCOMPARE(model.currentIndex(), 2);
+        QCOMPARE(model.pathAt(2), file("episode10.mkv"));
+        QCOMPARE(changed.count(), 1);
+        QVERIFY(!data.isEmpty());
+        QCOMPARE(layouts.count(), 1);
+
+        changed.clear();
+        data.clear();
+        layouts.clear();
+        QVERIFY(!model.sortEntries(PlaylistModel::SortKey::Path, Qt::AscendingOrder));
+        QCOMPARE(changed.count(), 0);
+        QVERIFY(data.isEmpty());
+        QCOMPARE(layouts.count(), 0);
+
+        QVERIFY(model.sortEntries(PlaylistModel::SortKey::Path, Qt::DescendingOrder));
+        QCOMPARE(model.paths(),
+                 QStringList({file("episode10.mkv"), file("Episode2.mkv"), file("episode1.mkv")}));
+        QCOMPARE(model.currentIndex(), 0);
+        QCOMPARE(ten.row(), 0);
+    }
+
+    void sortKeepsCurrentEntryAndOnlySignalsWhenItsRowMoves() {
+        PlaylistModel model;
+        QAbstractItemModelTester tester(&model,
+                                        QAbstractItemModelTester::FailureReportingMode::QtTest);
+        model.addFiles({"c.mkv", "a.mkv", "b.mkv"});
+        model.setCurrentIndex(0);
+        const auto currentPath = model.pathAt(0);
+        QPersistentModelIndex current(model.index(0));
+        QSignalSpy changed(&model, &PlaylistModel::currentIndexChanged);
+        QSignalSpy data(&model, &PlaylistModel::dataChanged);
+        QVERIFY(model.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+        QCOMPARE(model.currentIndex(), 2);
+        QCOMPARE(model.pathAt(2), currentPath);
+        QCOMPARE(current.row(), 2);
+        QCOMPARE(changed.count(), 1);
+        QVERIFY(!data.isEmpty());
+
+        PlaylistModel stable;
+        stable.addFiles({"a.mkv", "c.mkv", "b.mkv"});
+        stable.setCurrentIndex(0);
+        QSignalSpy stableChanged(&stable, &PlaylistModel::currentIndexChanged);
+        QSignalSpy stableData(&stable, &PlaylistModel::dataChanged);
+        QVERIFY(stable.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+        QCOMPARE(stable.currentIndex(), 0);
+        QCOMPARE(stableChanged.count(), 0);
+        QVERIFY(!stableData.isEmpty());
+    }
 };
 
 QTEST_GUILESS_MAIN(PlaylistEditTest)

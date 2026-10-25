@@ -23,6 +23,9 @@ void MpvController::Impl::startPreferenceExternalLoad() {
            !preferenceRestore->paths.isEmpty()) {
         const auto identity = preferenceRestore->identity;
         const auto [type, path] = preferenceRestore->paths.takeFirst();
+        // These paths come only from saved explicit memory, so restoring them
+        // preserves their explicit origin for the next persistence snapshot.
+        explicitExternalPaths.insert(canonicalExternalPath(path));
         const auto [id, status] = submitCommand(
             {type == MediaTrack::Type::Audio ? "audio-add" : "sub-add", path.toUtf8(), "auto"});
         preferenceRestore->command = id;
@@ -193,8 +196,13 @@ void MpvController::restoreTrackPreference(const TrackSelectionPreference &prefe
                     unavailablePaths.append({type, path});
                 continue;
             }
-            if (uniquePaths.contains(canonical))
+            if (uniquePaths.contains(canonical)) {
+                // mpv already auto-loaded this saved path. It is still explicit
+                // per-media memory, so keep it explicit for the next save rather
+                // than dropping it when the auto-discovered tracks are filtered.
+                impl_->explicitExternalPaths.insert(canonical);
                 continue;
+            }
             uniquePaths.insert(canonical);
             restore.paths.append({type, canonical});
         }

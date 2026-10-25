@@ -1,4 +1,5 @@
 #include "backenddiagnostic.h"
+#include "backendinfo.h"
 
 #include <array>
 #include <cstdlib>
@@ -40,8 +41,11 @@ int checkBackend() {
         std::cerr << "Cannot read mpv-version\n";
         return EXIT_FAILURE;
     }
-    const auto api = mpv_client_api_version();
-    std::cout << "Backend ready: " << version.get() << "; client API " << (api >> 16U) << '.'
-              << (api & 0xffffU) << '\n';
+    const auto api = BackendInfo::clientApiVersion();
+    if (api.isEmpty()) {
+        std::cerr << "Cannot determine mpv client API version\n";
+        return EXIT_FAILURE;
+    }
+    std::cout << "Backend ready: " << version.get() << "; client API " << api.toStdString() << '\n';
     return EXIT_SUCCESS;
 }

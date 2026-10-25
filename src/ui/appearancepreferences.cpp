@@ -1,13 +1,13 @@
 #include "appearancepreferences.h"
 #include "appearancestylesheet.h"
 #include "appearancetokens.h"
+#include "playback/backendinfo.h"
 
 #include <QApplication>
 #include <QMessageBox>
 #include <QSettings>
 #include <QStyle>
 #include <QtGlobal>
-#include <mpv/client.h>
 
 AppearancePreferences::Settings AppearancePreferences::loadSettings(QSettings &settings) {
     Settings appearance;
@@ -20,7 +20,17 @@ AppearancePreferences::Settings AppearancePreferences::loadSettings(QSettings &s
         accentFromKey(settings.value(QStringLiteral("appearance/accent")).toString());
     appearance.glassEnabled =
         settings.value(QStringLiteral("appearance/glassEnabled"), true).toBool();
-    return appearance;
+    bool valid = false;
+    appearance.glassOpacity = normalizedGlassOpacity(
+        settings.value(QStringLiteral("appearance/glassOpacity"), glassOpacityDefault)
+            .toInt(&valid));
+    if (!valid)
+        appearance.glassOpacity = glassOpacityDefault;
+    appearance.glassBlur = normalizedGlassBlur(
+        settings.value(QStringLiteral("appearance/glassBlur"), glassBlurDefault).toInt(&valid));
+    if (!valid)
+        appearance.glassBlur = glassBlurDefault;
+    return appearance.normalized();
 }
 
 void AppearancePreferences::saveSettings(QSettings &settings, const Settings &appearance) {
@@ -29,15 +39,30 @@ void AppearancePreferences::saveSettings(QSettings &settings, const Settings &ap
                                                            : QStringLiteral("dark");
     settings.setValue(QStringLiteral("appearance/theme"), theme);
     settings.setValue(QStringLiteral("appearance/accent"), accentKey(appearance.accent));
-    settings.setValue(QStringLiteral("appearance/glassEnabled"), appearance.glassEnabled);
+    const auto saved = appearance.normalized();
+    settings.setValue(QStringLiteral("appearance/glassEnabled"), saved.glassEnabled);
+    settings.setValue(QStringLiteral("appearance/glassOpacity"), saved.glassOpacity);
+    settings.setValue(QStringLiteral("appearance/glassBlur"), saved.glassBlur);
 }
 
 void AppearancePreferences::applySettings(QApplication &application, const Settings &appearance) {
-    const auto tokens = appearanceTokens(appearance.theme, appearance.accent);
-    application.setPalette(appearance.theme == Theme::System
-                               ? application.style()->standardPalette()
-                               : paletteForTokens(tokens));
-    application.setStyleSheet(appearanceStyleSheet(tokens, appearance.glassEnabled));
+    const auto saved = appearance.normalized();
+    const auto tokens = appearanceTokens(saved.theme, saved.accent);
+    if (saved.theme == Theme::System) {
+        auto palette = application.style()->standardPalette();
+        // Keep the platform's disabled selection/link roles intact; only the
+        // enabled groups should express the user's accent.
+        for (const auto group : {QPalette::Active, QPalette::Inactive}) {
+            palette.setColor(group, QPalette::Highlight, tokens.selection);
+            palette.setColor(group, QPalette::HighlightedText, tokens.selectedText);
+            palette.setColor(group, QPalette::Link, tokens.accent);
+        }
+        application.setPalette(palette);
+    } else {
+        application.setPalette(paletteForTokens(tokens));
+    }
+    application.setStyleSheet(
+        appearanceStyleSheet(tokens, saved.glassEnabled, saved.glassOpacity, saved.glassBlur));
 }
 
 QList<AppearancePreferences::Accent> AppearancePreferences::accents() {
@@ -114,12 +139,8 @@ void AppearancePreferences::applyTheme(QApplication &application, Theme theme) {
 }
 
 void AppearancePreferences::showAboutDialog(QWidget *parent) {
-    const auto apiVersion = mpv_client_api_version();
-    const auto apiMajor = static_cast<qulonglong>(apiVersion >> 16U);
-    const auto apiMinor = static_cast<qulonglong>(apiVersion & 0xffffU);
-    const auto text = QObject::tr("NekoPlayer 0.1.0\n\nQt runtime: %1\nlibmpv client API: %2.%3")
+    const auto text = QObject::tr("NekoPlayer 0.1.0\n\nQt runtime: %1\nlibmpv client API: %2")
                           .arg(QString::fromLatin1(qVersion()))
-                          .arg(apiMajor)
-                          .arg(apiMinor);
+                          .arg(BackendInfo::clientApiVersion());
     QMessageBox::about(parent, QObject::tr("关于 NekoPlayer"), text);
 }

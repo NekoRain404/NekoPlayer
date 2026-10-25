@@ -15,6 +15,7 @@
 #include <QList>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <memory>
 #include <mpv/client.h>
 
@@ -61,8 +62,17 @@ class MpvController final : public QObject {
     [[nodiscard]] bool hardwareDecodingEnabled() const;
     [[nodiscard]] const SubtitlePreferences &subtitlePreferences() const;
     void setSubtitlePreferences(const SubtitlePreferences &preferences);
+    // Normalized (trimmed, non-empty, capped) mpv alang/slang priorities.
+    void setLanguagePreferences(const QStringList &audio, const QStringList &subtitle);
+    void setAutoLoadExternalSubtitles(bool enabled);
+    // Consume on the next openFile/openFileAtPosition: that load only uses a
+    // file-local sub-auto=no, leaving the persisted preference untouched.
+    void setSuppressAutoLoadForNextOpen(bool suppress);
     void restoreTrackPreference(const TrackSelectionPreference &preference);
     [[nodiscard]] bool trackRestorationPending() const;
+    // True when this external path was explicitly added or selected by the user
+    // for the current media, not merely auto-discovered by mpv.
+    [[nodiscard]] bool isExplicitExternalPath(const QString &path) const;
     void applyAudioDevicePreference(const QString &name);
     // Session-only accepted intent; asynchronous errors are reported separately.
     [[nodiscard]] const VideoPresentation &videoPresentation() const;

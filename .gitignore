@@ -4,3 +4,12 @@
 /.idea/
 /.vscode/
 *.user
+
+# Generated translation binaries
+/translations/*.qm
+
+# Arch package source archives
+/packaging/arch/*.tar.gz
+/packaging/arch/*.pkg.tar.zst
+/packaging/arch/src/
+/packaging/arch/pkg/

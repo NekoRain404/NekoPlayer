@@ -4,6 +4,8 @@ project(NekoPlayer VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include(GNUInstallDirs)
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
@@ -36,6 +38,7 @@ add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.
     src/playback/audiodevice.cpp src/playback/mpvcontroller_audio.cpp
     src/playback/mpvcontroller_events.cpp src/playback/mpvcontroller_information.cpp
     src/playback/mpvcontroller_trackpreferences.cpp
+    src/playback/mpvcontroller_languages.cpp
     src/playback/mpvcontroller_externaltracks.cpp
     src/playback/mpvcontroller_navigation.cpp
     src/playback/mpvcontroller_loop.cpp
@@ -47,7 +50,9 @@ add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.
     src/playback/mpvcontroller_hdr.cpp
     src/playback/mpvcontroller_deinterlace.cpp
     src/playback/mpvchapters.cpp src/playback/playbacktime.cpp src/playback/mediasource.cpp
-    src/playback/playlistcontroller.cpp src/playback/playlistmodel.cpp src/playback/shuffleorder.cpp)
+    src/playback/backendinfo.cpp src/playback/playlistcontroller.cpp
+    src/playback/playlistmodel.cpp src/playback/shuffleorder.cpp
+    src/playback/naturalcompare.cpp)
 target_include_directories(neko_playback PUBLIC src)
 target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV)
 
@@ -66,7 +71,7 @@ target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Concurrent
     PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
-    src/ui/appearanceicons.cpp
+    src/ui/appearanceicons.cpp src/ui/appicon.cpp
     src/ui/playlistitemdelegate.cpp
     src/ui/welcomepanel.cpp
     src/playlist/m3u8store.cpp
@@ -74,6 +79,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp
     src/ui/windowactions.cpp src/ui/appearancemenu.cpp src/ui/windowsession.cpp
     src/ui/transportbar.cpp src/ui/foldermenu.cpp
+    src/ui/interactionpolicy.cpp
     src/ui/thumbnailpreview.cpp
     src/ui/thumbnailpreviewpolicy.cpp
     src/ui/recentmediamenu.cpp
@@ -82,18 +88,32 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/languagemanager.cpp
     src/ui/videoframingmenu.cpp
     src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
-    src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/navigationmenu.cpp src/ui/videomenu.cpp
-    src/ui/timeseekdialog.cpp src/ui/playbacksettingsdialog.cpp src/ui/networkopendialog.cpp
+    src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/playlistmaintenancemenu.cpp
+    src/ui/navigationmenu.cpp src/ui/videomenu.cpp
+    src/ui/timeseekdialog.cpp src/ui/networkopendialog.cpp
     src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp src/ui/screenshotmenu.cpp
-    src/ui/subtitledisplaymenu.cpp src/ui/subtitlesettingsdialog.cpp
-    src/ui/preferencesdialog.cpp src/ui/videocolordialog.cpp)
+    src/ui/subtitledisplaymenu.cpp
+    src/ui/preferencesdialog.cpp src/ui/preferencescoordinator.cpp src/ui/preferencesappearancepage.cpp src/ui/videocolordialog.cpp
+    src/ui/shortcutsdialog.cpp src/ui/windowtitle.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
     Qt6::OpenGLWidgets)
+qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
+    FILES data/checkmark.png)
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)
 qt_add_translations(NekoPlayer TS_FILES translations/NekoPlayer_en.ts
     RESOURCE_PREFIX "/i18n")
+
+install(TARGETS NekoPlayer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES data/nekoplayer.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+install(FILES data/nekoplayer.svg
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+install(FILES data/nekoplayer.metainfo.xml
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+install(FILES LICENSE
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/nekoplayer)
 
 include(CTest)
 if(BUILD_TESTING)

@@ -117,6 +117,7 @@ class MainWindow final : public QMainWindow {
     QAction *stopAction_ = nullptr;
     QAction *muteAction_ = nullptr;
     QAction *fullscreenAction_ = nullptr;
+    QAction *exitFullscreenAction_ = nullptr;
     QAction *appendAction_ = nullptr;
     QAction *previousAction_ = nullptr;
     QAction *nextAction_ = nullptr;

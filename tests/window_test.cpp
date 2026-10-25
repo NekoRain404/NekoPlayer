@@ -535,13 +535,18 @@ class WindowTest final : public QObject {
                 qRound(window.videoWidget()->height() * window.videoWidget()->devicePixelRatioF()));
             QCOMPARE(frame.size(), expected);
         };
+        auto *exitFullscreen = action(window, "exitFullscreenAction");
+        QVERIFY(exitFullscreen);
+        QVERIFY(!exitFullscreen->isEnabled());
         action(window, "fullscreenAction")->trigger();
         QTRY_VERIFY(window.isFullScreen());
+        QVERIFY(exitFullscreen->isEnabled());
         verifyFrameGeometry();
         // The compositor may suspend an unfocused test surface, so shortcut
         // dispatch cannot be exercised here. Test the shared QAction instead.
-        action(window, "exitFullscreenAction")->trigger();
+        exitFullscreen->trigger();
         QTRY_VERIFY(!window.isFullScreen());
+        QVERIFY(!exitFullscreen->isEnabled());
         QTRY_COMPARE(window.size(), size);
         verifyFrameGeometry();
         QTest::mouseDClick(window.videoWidget(), Qt::LeftButton);

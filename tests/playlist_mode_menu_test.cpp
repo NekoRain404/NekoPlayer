@@ -33,12 +33,16 @@ class PlaylistModeMenuTest final : public QObject {
         QVERIFY(stop->isChecked());
 
         auto *repeatAll = modeMenu.menu()->findChild<QAction *>(QStringLiteral("repeatAllAction"));
+        auto *shuffle = modeMenu.menu()->findChild<QAction *>(QStringLiteral("shuffleAction"));
         QVERIFY(repeatAll);
+        QVERIFY(shuffle);
         stop->setText(QStringLiteral("stale"));
         repeatAll->setText(QStringLiteral("stale repeat"));
+        shuffle->setText(QStringLiteral("stale shuffle"));
         modeMenu.retranslate();
         QCOMPARE(stop->text(), QStringLiteral("播放完当前停止"));
         QCOMPARE(repeatAll->text(), QStringLiteral("列表循环"));
+        QCOMPARE(shuffle->text(), QStringLiteral("随机播放"));
         QVERIFY(stop->isChecked());
         QVERIFY(modeMenu.menu()->title().contains(QStringLiteral("播放模式")));
     }

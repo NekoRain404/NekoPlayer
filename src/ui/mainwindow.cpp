@@ -507,6 +507,7 @@ void MainWindow::setFullscreen(bool enabled) {
         return;
     if (enabled == fullscreenPresentationActive_ && enabled == isFullScreen())
         return;
+    exitFullscreenAction_->setEnabled(enabled);
 
     if (enabled && miniPlayerActive_)
         setMiniPlayer(false);

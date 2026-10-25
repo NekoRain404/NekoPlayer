@@ -104,9 +104,13 @@ void MainWindow::createActions() {
     fullscreenAction_->setCheckable(true);
     setAppearanceIcon(fullscreenAction_, AppearanceIcons::Symbol::Fullscreen);
     connect(fullscreenAction_, &QAction::triggered, this, &MainWindow::setFullscreen);
-    auto *escape = make(tr("退出全屏"), "exitFullscreenAction", QKeySequence(Qt::Key_Escape));
-    setAppearanceIcon(escape, AppearanceIcons::Symbol::Restore);
-    connect(escape, &QAction::triggered, this, [this] { setFullscreen(false); });
+    exitFullscreenAction_ =
+        make(tr("退出全屏"), "exitFullscreenAction", QKeySequence(Qt::Key_Escape));
+    // Escape must not stay active outside fullscreen: it would be ambiguous
+    // with the playlist pane's clear-search action and fire neither.
+    exitFullscreenAction_->setEnabled(false);
+    setAppearanceIcon(exitFullscreenAction_, AppearanceIcons::Symbol::Restore);
+    connect(exitFullscreenAction_, &QAction::triggered, this, [this] { setFullscreen(false); });
     auto *back = make(tr("后退 5 秒"), "seekBackAction", QKeySequence(Qt::Key_Left));
     auto *forward = make(tr("前进 5 秒"), "seekForwardAction", QKeySequence(Qt::Key_Right));
     setAppearanceIcon(back, AppearanceIcons::Symbol::SeekBackward);

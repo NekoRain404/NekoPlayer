@@ -106,8 +106,10 @@ ShortcutsDialog::ShortcutsDialog(QMenuBar *menuBar, const QList<QAction *> &extr
     }
     auto *panelItem = new QTreeWidgetItem(tree_);
     panelItem->setText(0, tr("面板快捷键"));
-    for (auto *action : extraActions)
-        appendAction(panelItem, action);
+    for (auto *action : extraActions) {
+        if (action)
+            appendAction(panelItem, action);
+    }
     if (panelItem->childCount() == 0)
         delete panelItem;
     tree_->expandAll();

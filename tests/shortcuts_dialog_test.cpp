@@ -158,7 +158,8 @@ class ShortcutsDialogTest final : public QObject {
         clearAction.setShortcutContext(Qt::WidgetWithChildrenShortcut);
         QAction noShortcut(literal("No Shortcut"));
 
-        ShortcutsDialog dialog(&menuBar, {&menuAction, &focusAction, &clearAction, &noShortcut});
+        ShortcutsDialog dialog(&menuBar,
+                               {&menuAction, nullptr, &focusAction, &clearAction, &noShortcut});
         auto *tree = treeOf(dialog);
         QCOMPARE(tree->topLevelItemCount(), 2);
         QCOMPARE(tree->topLevelItem(0)->text(0), QStringLiteral("Playlist"));

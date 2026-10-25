@@ -3,6 +3,7 @@
 #include "playback/mpvcontroller.h"
 #include "playback/videowidget.h"
 #include "ui/appearancepreferences.h"
+#include "ui/appicon.h"
 #include "ui/languagemanager.h"
 #include "ui/mainwindow.h"
 
@@ -63,6 +64,7 @@ int main(int argc, char *argv[]) {
                      QVariant::fromValue(static_cast<QObject *>(&languageManager)));
     if (auto *gui = qobject_cast<QApplication *>(app.get())) {
         QGuiApplication::setDesktopFileName(QStringLiteral("nekoplayer"));
+        QApplication::setWindowIcon(AppIcon::windowIcon());
         const auto appearance = useConfig ? AppearancePreferences::loadSettings(settings)
                                           : AppearancePreferences::Settings{};
         AppearancePreferences::applySettings(*gui, appearance);

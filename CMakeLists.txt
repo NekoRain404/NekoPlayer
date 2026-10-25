@@ -69,7 +69,7 @@ target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Concurrent
     PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
 
 add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
-    src/ui/appearanceicons.cpp
+    src/ui/appearanceicons.cpp src/ui/appicon.cpp
     src/ui/playlistitemdelegate.cpp
     src/ui/welcomepanel.cpp
     src/playlist/m3u8store.cpp

@@ -294,6 +294,12 @@ add_test(NAME shortcuts-dialog COMMAND shortcuts_dialog_test)
 set_tests_properties(shortcuts-dialog PROPERTIES TIMEOUT 20
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(app_icon_test app_icon_test.cpp)
+target_link_libraries(app_icon_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME app-icon COMMAND app_icon_test)
+set_tests_properties(app-icon PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(playlist_modes_test playlist_modes_test.cpp)
 target_link_libraries(playlist_modes_test PRIVATE neko_playback Qt6::Test)
 target_compile_definitions(playlist_modes_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")

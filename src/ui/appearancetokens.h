@@ -24,8 +24,8 @@ struct AppearanceTokens {
     QColor hoverSurface;
     QColor pressedSurface;
     int spaceUnit = 4;
-    int controlRadius = 6;
-    int surfaceRadius = 10;
+    int controlRadius = 8;
+    int surfaceRadius = 12;
     int transportHitTarget = 32;
 };
 

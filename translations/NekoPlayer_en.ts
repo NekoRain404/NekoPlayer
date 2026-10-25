@@ -10,6 +10,11 @@
     <message><source>基础主题：</source><translation>Base theme:</translation></message>
     <message><source>强调色：</source><translation>Accent:</translation></message>
     <message><source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不支持背景模糊时使用半透明样式。</source><translation>Changes are previewed immediately and saved when applied. Glass treatment affects interface panels only and does not blur video; translucent styling is used when background blur is unavailable.</translation></message>
+    <message><source>玻璃不透明度</source><translation>Glass opacity</translation></message>
+    <message><source>玻璃模糊程度</source><translation>Glass blur</translation></message>
+    <message><source>玻璃不透明度：</source><translation>Glass opacity:</translation></message>
+    <message><source>玻璃模糊程度：</source><translation>Glass blur:</translation></message>
+    <message><source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不透明度控制面板半透明程度，模糊程度调节渐变的柔化层次，不是对窗口后方内容的真实高斯模糊。</source><translation>Changes preview immediately and are saved when applied. Glass affects interface panels only, never video; opacity controls panel translucency, while blur softens the gradient layers. This is not a true Gaussian blur of content behind the window.</translation></message>
     <message><source>偏好设置</source><translation>Preferences</translation></message>
     <message><source>恢复上次播放位置</source><translation>Resume from the last playback position</translation></message>
     <message><source>左右键跳转时长</source><translation>Left/right seek interval</translation></message>

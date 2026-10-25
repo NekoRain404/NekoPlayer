@@ -7,6 +7,25 @@ class QApplication;
 class QSettings;
 class QWidget;
 
+inline constexpr int glassOpacityMinimum = 40;
+inline constexpr int glassOpacityMaximum = 100;
+inline constexpr int glassOpacityDefault = 88;
+inline constexpr int glassBlurMinimum = 0;
+inline constexpr int glassBlurMaximum = 100;
+inline constexpr int glassBlurDefault = 38;
+
+[[nodiscard]] constexpr int normalizedGlassOpacity(int value) {
+    return value < glassOpacityMinimum   ? glassOpacityMinimum
+           : value > glassOpacityMaximum ? glassOpacityMaximum
+                                         : value;
+}
+
+[[nodiscard]] constexpr int normalizedGlassBlur(int value) {
+    return value < glassBlurMinimum   ? glassBlurMinimum
+           : value > glassBlurMaximum ? glassBlurMaximum
+                                      : value;
+}
+
 class AppearancePreferences final {
   public:
     enum class Theme { Dark, Light, System };
@@ -16,6 +35,14 @@ class AppearancePreferences final {
         Theme theme = Theme::Dark;
         Accent accent = Accent::Ocean;
         bool glassEnabled = true;
+        int glassOpacity = glassOpacityDefault;
+        int glassBlur = glassBlurDefault;
+
+        [[nodiscard]] Settings normalized() const {
+            return {theme, accent, glassEnabled, normalizedGlassOpacity(glassOpacity),
+                    normalizedGlassBlur(glassBlur)};
+        }
+        bool operator==(const Settings &) const = default;
     };
 
     [[nodiscard]] static Settings loadSettings(QSettings &settings);

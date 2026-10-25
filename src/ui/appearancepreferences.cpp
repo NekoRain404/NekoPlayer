@@ -20,7 +20,17 @@ AppearancePreferences::Settings AppearancePreferences::loadSettings(QSettings &s
         accentFromKey(settings.value(QStringLiteral("appearance/accent")).toString());
     appearance.glassEnabled =
         settings.value(QStringLiteral("appearance/glassEnabled"), true).toBool();
-    return appearance;
+    bool valid = false;
+    appearance.glassOpacity = normalizedGlassOpacity(
+        settings.value(QStringLiteral("appearance/glassOpacity"), glassOpacityDefault)
+            .toInt(&valid));
+    if (!valid)
+        appearance.glassOpacity = glassOpacityDefault;
+    appearance.glassBlur = normalizedGlassBlur(
+        settings.value(QStringLiteral("appearance/glassBlur"), glassBlurDefault).toInt(&valid));
+    if (!valid)
+        appearance.glassBlur = glassBlurDefault;
+    return appearance.normalized();
 }
 
 void AppearancePreferences::saveSettings(QSettings &settings, const Settings &appearance) {
@@ -29,12 +39,16 @@ void AppearancePreferences::saveSettings(QSettings &settings, const Settings &ap
                                                            : QStringLiteral("dark");
     settings.setValue(QStringLiteral("appearance/theme"), theme);
     settings.setValue(QStringLiteral("appearance/accent"), accentKey(appearance.accent));
-    settings.setValue(QStringLiteral("appearance/glassEnabled"), appearance.glassEnabled);
+    const auto saved = appearance.normalized();
+    settings.setValue(QStringLiteral("appearance/glassEnabled"), saved.glassEnabled);
+    settings.setValue(QStringLiteral("appearance/glassOpacity"), saved.glassOpacity);
+    settings.setValue(QStringLiteral("appearance/glassBlur"), saved.glassBlur);
 }
 
 void AppearancePreferences::applySettings(QApplication &application, const Settings &appearance) {
-    const auto tokens = appearanceTokens(appearance.theme, appearance.accent);
-    if (appearance.theme == Theme::System) {
+    const auto saved = appearance.normalized();
+    const auto tokens = appearanceTokens(saved.theme, saved.accent);
+    if (saved.theme == Theme::System) {
         auto palette = application.style()->standardPalette();
         // Keep the platform's disabled selection/link roles intact; only the
         // enabled groups should express the user's accent.
@@ -47,7 +61,8 @@ void AppearancePreferences::applySettings(QApplication &application, const Setti
     } else {
         application.setPalette(paletteForTokens(tokens));
     }
-    application.setStyleSheet(appearanceStyleSheet(tokens, appearance.glassEnabled));
+    application.setStyleSheet(
+        appearanceStyleSheet(tokens, saved.glassEnabled, saved.glassOpacity, saved.glassBlur));
 }
 
 QList<AppearancePreferences::Accent> AppearancePreferences::accents() {

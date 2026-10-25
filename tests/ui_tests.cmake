@@ -9,6 +9,11 @@ target_link_libraries(preferences_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME preferences-dialog COMMAND preferences_dialog_test)
 set_tests_properties(preferences-dialog PROPERTIES TIMEOUT 20)
 
+add_executable(preferences_appearance_test preferences_appearance_test.cpp)
+target_link_libraries(preferences_appearance_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME preferences-appearance COMMAND preferences_appearance_test)
+set_tests_properties(preferences-appearance PROPERTIES TIMEOUT 20)
+
 add_executable(preferences_coordinator_test preferences_coordinator_test.cpp)
 target_link_libraries(preferences_coordinator_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME preferences-coordinator COMMAND preferences_coordinator_test)

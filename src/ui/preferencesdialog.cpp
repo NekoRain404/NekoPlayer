@@ -1,5 +1,6 @@
 #include "preferencesdialog.h"
 #include "playback/mpvcontroller.h"
+#include "preferencesappearancepage.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -250,9 +251,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
             autoLoadExternalSubtitles_->setChecked(false);
             break;
         case Category::Appearance:
-            appearanceTheme_->setCurrentIndex(0);
-            appearanceAccent_->setCurrentIndex(0);
-            appearanceGlass_->setChecked(true);
+            appearancePage_->restoreDefaults();
             break;
         case Category::Interaction:
             displayInteractionPreferences(InteractionPreferences{});
@@ -274,6 +273,7 @@ void PreferencesDialog::selectCategory(Category category) {
 void PreferencesDialog::apply() {
     if (appearanceChanged()) {
         appearanceBaseline_ = appearanceDraft();
+        appearancePage_->accept();
         // The draft is already live through previewAppearance(); snapshot that
         // state so Cancel after Apply returns to the committed appearance. The
         // appearance owner handles the final apply and persistence below.
@@ -340,54 +340,17 @@ void PreferencesDialog::updateApplyButton() {
 }
 
 void PreferencesDialog::createAppearancePage() {
-    auto *page = new QWidget(tabs_);
-    auto *form = new QFormLayout(page);
-    appearanceTheme_ = new QComboBox(page);
-    appearanceAccent_ = new QComboBox(page);
-    appearanceGlass_ = new QCheckBox(tr("启用玻璃质感"), page);
-    appearanceTheme_->setObjectName(QStringLiteral("appearanceThemeChoice"));
-    appearanceTheme_->setAccessibleName(tr("基础主题"));
-    appearanceAccent_->setObjectName(QStringLiteral("appearanceAccentChoice"));
-    appearanceAccent_->setAccessibleName(tr("强调色"));
-    appearanceGlass_->setObjectName(QStringLiteral("appearanceGlassChoice"));
-    appearanceGlass_->setAccessibleName(tr("启用玻璃质感"));
-    for (const auto theme : AppearancePreferences::themes())
-        appearanceTheme_->addItem(AppearancePreferences::themeName(theme), static_cast<int>(theme));
-    for (const auto accent : AppearancePreferences::accents())
-        appearanceAccent_->addItem(AppearancePreferences::accentName(accent),
-                                   static_cast<int>(accent));
-    appearanceTheme_->setCurrentIndex(
-        appearanceTheme_->findData(static_cast<int>(appearanceBaseline_.theme)));
-    appearanceAccent_->setCurrentIndex(
-        appearanceAccent_->findData(static_cast<int>(appearanceBaseline_.accent)));
-    appearanceGlass_->setChecked(appearanceBaseline_.glassEnabled);
-    form->addRow(tr("基础主题："), appearanceTheme_);
-    form->addRow(tr("强调色："), appearanceAccent_);
-    form->addRow(appearanceGlass_);
-    auto *help = new QLabel(tr("更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频"
-                               "；不支持背景模糊时使用半透明样式。"),
-                            page);
-    help->setWordWrap(true);
-    form->addRow(help);
-    tabs_->addTab(page, style()->standardIcon(QStyle::SP_DesktopIcon), tr("外观"));
-    connect(appearanceTheme_, &QComboBox::currentIndexChanged, this,
+    appearancePage_ = new PreferencesAppearancePage(appearanceBaseline_, tabs_);
+    connect(appearancePage_, &PreferencesAppearancePage::edited, this,
             &PreferencesDialog::previewAppearance);
-    connect(appearanceAccent_, &QComboBox::currentIndexChanged, this,
-            &PreferencesDialog::previewAppearance);
-    connect(appearanceGlass_, &QCheckBox::toggled, this, &PreferencesDialog::previewAppearance);
+    tabs_->addTab(appearancePage_, style()->standardIcon(QStyle::SP_DesktopIcon), tr("外观"));
 }
 
 AppearancePreferences::Settings PreferencesDialog::appearanceDraft() const {
-    return {static_cast<AppearancePreferences::Theme>(appearanceTheme_->currentData().toInt()),
-            static_cast<AppearancePreferences::Accent>(appearanceAccent_->currentData().toInt()),
-            appearanceGlass_->isChecked()};
+    return appearancePage_->draft();
 }
 
-bool PreferencesDialog::appearanceChanged() const {
-    const auto draft = appearanceDraft();
-    return draft.theme != appearanceBaseline_.theme || draft.accent != appearanceBaseline_.accent ||
-           draft.glassEnabled != appearanceBaseline_.glassEnabled;
-}
+bool PreferencesDialog::appearanceChanged() const { return appearancePage_->changed(); }
 
 void PreferencesDialog::previewAppearance() {
     AppearancePreferences::applySettings(*qApp, appearanceDraft());

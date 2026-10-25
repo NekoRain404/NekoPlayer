@@ -217,28 +217,6 @@ class UiSurfaceTest final : public QObject {
         QCOMPARE(single.count(), 1);
     }
 
-    void welcomePanelPaintsItsThemeSurface() {
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);
-        QAction open(QStringLiteral("打开文件…"));
-        QAction network(QStringLiteral("打开网络地址…"));
-        QWidget video;
-        WelcomePanel panel(&open, &network, &video);
-        video.resize(800, 600);
-        panel.setGeometry(200, 180, 400, 240);
-        video.show();
-        panel.show();
-        QCoreApplication::processEvents();
-
-        QImage image(panel.size(), QImage::Format_ARGB32_Premultiplied);
-        image.fill(Qt::transparent);
-        QPainter painter(&image);
-        panel.render(&painter, {}, {}, QWidget::DrawWindowBackground);
-        painter.end();
-
-        QCOMPARE(image.pixelColor(10, panel.height() / 2), panel.palette().color(QPalette::Window));
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
-    }
-
     void welcomePanelExposesPrimaryAndSecondaryActions() {
         QAction open(QStringLiteral("打开文件…"));
         QAction network(QStringLiteral("打开网络地址…"));

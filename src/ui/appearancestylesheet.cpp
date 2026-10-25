@@ -1,5 +1,13 @@
 #include "appearancestylesheet.h"
 
+void initAppearanceResources() {
+    static const bool initialized = [] {
+        Q_INIT_RESOURCE(appearance_resources);
+        return true;
+    }();
+    Q_UNUSED(initialized)
+}
+
 namespace {
 QString color(const QColor &value) { return value.name(QColor::HexRgb); }
 
@@ -11,24 +19,34 @@ QString translucent(const QColor &value, int alpha) {
         .arg(alpha);
 }
 
-QString panelFill(const QColor &value, bool glassEnabled) {
+QString panelFill(const QColor &value, bool glassEnabled, int opacity, int blur) {
     if (!glassEnabled) {
         return color(value);
     }
-    // A shaded lower rim supplies inexpensive depth without an offscreen graphics effect.
-    return QStringLiteral("qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 %1,stop:0.96 %2,stop:1 %3)")
-        .arg(translucent(value.lighter(108), 238), translucent(value, 218),
-             translucent(value.darker(108), 238));
+    const int baseAlpha = qRound(normalizedGlassOpacity(opacity) * 2.55);
+    // More blur means softer, lower-contrast rims; the fill remains a layered
+    // gradient because Qt Widgets cannot sample the content behind a window.
+    const int rimBoost = qRound((glassBlurMaximum - normalizedGlassBlur(blur)) * 0.04);
+    const int edgeAlpha = qMin(255, baseAlpha + rimBoost);
+    const int centerAlpha = qMax(0, baseAlpha - qRound(normalizedGlassBlur(blur) * 0.06));
+    const int lighten = 106 + normalizedGlassBlur(blur) / 16;
+    const int darken = 104 - normalizedGlassBlur(blur) / 16;
+    return QStringLiteral("qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 %1,stop:0.35 %2,stop:0.78 "
+                          "%2,stop:1 %3)")
+        .arg(translucent(value.lighter(lighten), edgeAlpha), translucent(value, centerAlpha),
+             translucent(value.darker(darken), edgeAlpha));
 }
 } // namespace
 
-QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled) {
+QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int glassOpacity,
+                             int glassBlur) {
+    initAppearanceResources();
     const auto unit = t.spaceUnit;
     return QStringLiteral(
                "QMainWindow{background:%1;color:%2;}"
-               "QWidget#transportBar{background:%27;color:%2;border-top:1px solid %3;}"
+               "QWidget#transportBar{background:%29;color:%2;border-top:1px solid %3;}"
                "QFrame#transportDivider{background:%3;color:%3;}"
-               "QWidget#playlistPane{background:%28;border-left:1px solid %3;}"
+               "QWidget#playlistPane{background:%27;border-left:1px solid %3;}"
                "QWidget#playlistHeader{background:%29;border-bottom:1px solid %3;}"
                "QLineEdit#playlistSearchEdit{color:%2;background:%4;border:1px solid "
                "%3;border-radius:%13px;padding:%8px %14px;}"
@@ -67,7 +85,8 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled) {
                "%3;border-radius:%6px;}"
                "QPushButton[welcomeContinueAction]:hover{background:%15;} "
                "QPushButton[welcomeContinueAction]:pressed{background:%16;}"
-               "QMenuBar,QStatusBar{background:%4;color:%2;}"
+               "QMenuBar,QStatusBar{background:%28;color:%2;border-bottom:1px solid %3;}"
+               "QStatusBar{border-top:1px solid %3;border-bottom:none;}"
                "QMenu{background:%28;color:%2;border:1px solid %3;border-radius:%13px;}"
                "QDialog{background:%28;color:%2;}"
                "QMenuBar::item{padding:%8px %23px;border-radius:%13px;}"
@@ -111,8 +130,44 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled) {
                "QListView#playlistView::item:selected{color:%26;background:%24;}"
                "QListView#playlistView::item:selected:!active{color:%7;background:%4;}"
                "QListView#playlistView:focus{border:1px solid %18;border-radius:%13px;}"
-               "QFocusFrame{border:1px solid %18;} QToolTip{color:%2;background:%4;border:1px "
-               "solid %3;}")
+               "QFocusFrame{border:1px solid %18;} "
+               "QComboBox,QFontComboBox,QLineEdit{background:%5;color:%2;"
+               "border:1px solid %3;border-radius:%13px;padding:%23px %14px;"
+               "selection-background-color:%11;selection-color:%19;}"
+               "QComboBox:hover,QFontComboBox:hover,QLineEdit:hover{border-color:%7;}"
+               "QComboBox:focus,QFontComboBox:focus,QLineEdit:focus{border:1px solid %18;}"
+               "QComboBox::drop-down{border:none;width:24px;}"
+               "QComboBox QAbstractItemView{background:%28;color:%2;border:1px solid %3;"
+               "border-radius:%6px;padding:%23px;selection-background-color:%24;"
+               "selection-color:%26;outline:none;}"
+               "QTabWidget::pane{border:1px solid %3;border-radius:%6px;background:%29;"
+               "top:-1px;}"
+               "QTabBar::tab{background:transparent;color:%7;padding:%23px %14px;margin:2px;"
+               "border:none;border-radius:%13px;}"
+               "QTabBar::tab:selected{background:%5;color:%2;font-weight:600;}"
+               "QTabBar::tab:hover:!selected{background:%15;}"
+               "QScrollBar:vertical{background:transparent;width:10px;margin:2px;}"
+               "QScrollBar::handle:vertical{background:%3;min-height:32px;border-radius:5px;}"
+               "QScrollBar::handle:vertical:hover{background:%7;}"
+               "QScrollBar:horizontal{background:transparent;height:10px;margin:2px;}"
+               "QScrollBar::handle:horizontal{background:%3;min-width:32px;border-radius:5px;}"
+               "QScrollBar::handle:horizontal:hover{background:%7;}"
+               "QScrollBar::add-line,QScrollBar::sub-line{width:0;height:0;}"
+               "QScrollBar::add-page,QScrollBar::sub-page{background:transparent;}"
+               "QMenu::separator{height:1px;background:%3;margin:%23px %25px;}"
+               "QCheckBox{spacing:%23px;}"
+               "QCheckBox::indicator{width:16px;height:16px;border:1px solid %3;"
+               "border-radius:5px;background:%5;}"
+               "QCheckBox::indicator:hover{border-color:%7;}"
+               "QCheckBox::indicator:checked{background:%11;border-color:%11;image:url(:/"
+               "appearance/data/checkmark.png);}"
+               "QCheckBox::indicator:checked:hover{background:%21;border-color:%21;}"
+               "QCheckBox::indicator:disabled{background:%4;border-color:%3;}"
+               "QDialogButtonBox QPushButton{min-width:76px;}"
+               "QStatusBar{font-size:11px;}"
+               "QLabel#appearanceGlassOpacityValue,QLabel#appearanceGlassBlurValue{color:%7;}"
+               "QToolTip{color:%2;background:%4;border:1px solid %3;border-radius:%13px;"
+               "padding:%23px %14px;}")
         .arg(color(t.canvas), color(t.primaryText), color(t.separator), color(t.raisedSurface),
              color(t.surface), QString::number(t.surfaceRadius), color(t.secondaryText),
              QString::number(unit), QString::number(t.controlRadius), QString::number(unit / 2),
@@ -121,6 +176,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled) {
              color(t.disabledText), color(t.focus), color(t.accentText), color(t.accentHover),
              color(t.accentHover), color(t.accentPressed), QString::number(unit + 1),
              color(t.selection), QString::number(unit * 7), color(t.selectedText),
-             panelFill(t.canvas, glassEnabled), panelFill(t.raisedSurface, glassEnabled),
-             panelFill(t.surface, glassEnabled));
+             panelFill(t.canvas, glassEnabled, glassOpacity, glassBlur),
+             panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
+             panelFill(t.surface, glassEnabled, glassOpacity, glassBlur));
 }

@@ -14,6 +14,7 @@ class QLineEdit;
 class QPushButton;
 class QSpinBox;
 class QTabWidget;
+class PreferencesAppearancePage;
 
 class PreferencesDialog final : public QDialog {
     Q_OBJECT
@@ -52,9 +53,7 @@ class PreferencesDialog final : public QDialog {
     void previewAppearance();
     AppearancePreferences::Settings appearanceDraft() const;
     bool appearanceChanged() const;
-    QComboBox *appearanceTheme_;
-    QComboBox *appearanceAccent_;
-    QCheckBox *appearanceGlass_;
+    PreferencesAppearancePage *appearancePage_ = nullptr;
     AppearancePreferences::Settings appearanceBaseline_;
     QPalette appearancePalette_;
     QString appearanceStyleSheet_;

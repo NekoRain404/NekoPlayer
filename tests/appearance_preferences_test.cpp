@@ -1,8 +1,12 @@
 #include "ui/appearancepreferences.h"
 #include "ui/appearancestylesheet.h"
 #include "ui/appearancetokens.h"
+#include "ui/welcomepanel.h"
 
+#include <QAction>
 #include <QApplication>
+#include <QImage>
+#include <QPainter>
 #include <QPalette>
 #include <QRegularExpression>
 #include <QSettings>
@@ -25,6 +29,8 @@ class AppearancePreferencesTest final : public QObject {
         QCOMPARE(settings.theme, AppearancePreferences::Theme::Dark);
         QCOMPARE(settings.accent, AppearancePreferences::Accent::Ocean);
         QVERIFY(settings.glassEnabled);
+        QCOMPARE(settings.glassOpacity, glassOpacityDefault);
+        QCOMPARE(settings.glassBlur, glassBlurDefault);
         QVERIFY(store.allKeys().isEmpty());
     }
 
@@ -130,6 +136,76 @@ class AppearancePreferencesTest final : public QObject {
         }
         qApp->setStyleSheet(previousStyle);
         qApp->setPalette(previousPalette);
+    }
+
+    void glassTuningRoundTripsAndClampsIndependently() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto path = directory.filePath(QStringLiteral("appearance.ini"));
+        {
+            QSettings store(path, QSettings::IniFormat);
+            AppearancePreferences::saveSettings(store, {AppearancePreferences::Theme::Light,
+                                                        AppearancePreferences::Accent::Emerald,
+                                                        true, 140, -30});
+            store.sync();
+            QCOMPARE(store.value(QStringLiteral("appearance/glassOpacity")).toInt(),
+                     glassOpacityMaximum);
+            QCOMPARE(store.value(QStringLiteral("appearance/glassBlur")).toInt(), glassBlurMinimum);
+        }
+        {
+            QSettings store(path, QSettings::IniFormat);
+            const auto loaded = AppearancePreferences::loadSettings(store);
+            QCOMPARE(loaded.glassOpacity, glassOpacityMaximum);
+            QCOMPARE(loaded.glassBlur, glassBlurMinimum);
+        }
+        {
+            QSettings store(path, QSettings::IniFormat);
+            store.setValue(QStringLiteral("appearance/glassOpacity"), QStringLiteral("garbage"));
+            store.setValue(QStringLiteral("appearance/glassBlur"), 61);
+            const auto loaded = AppearancePreferences::loadSettings(store);
+            QCOMPARE(loaded.glassOpacity, glassOpacityDefault);
+            QCOMPARE(loaded.glassBlur, 61);
+        }
+        AppearancePreferences::Settings settings;
+        settings.glassOpacity = 0;
+        settings.glassBlur = 101;
+        const auto normalized = settings.normalized();
+        QCOMPARE(normalized.glassOpacity, glassOpacityMinimum);
+        QCOMPARE(normalized.glassBlur, glassBlurMaximum);
+    }
+
+    void glassOpacityAndBlurChangeThePanelMaterial() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto clear = appearanceStyleSheet(tokens, true, glassOpacityMinimum, 0);
+        const auto dense = appearanceStyleSheet(tokens, true, glassOpacityMaximum, 100);
+        QVERIFY(clear.contains(QStringLiteral("rgba(")));
+        QVERIFY(dense.contains(QStringLiteral("rgba(")));
+        QVERIFY(clear != dense);
+        const auto opaque = appearanceStyleSheet(tokens, false, glassOpacityMinimum, 100);
+        QVERIFY(!opaque.contains(QStringLiteral("rgba(")));
+    }
+
+    void welcomePanelPaintsItsThemeSurface() {
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);
+        QAction open(QStringLiteral("打开文件…"));
+        QAction network(QStringLiteral("打开网络地址…"));
+        QWidget video;
+        WelcomePanel panel(&open, &network, &video);
+        video.resize(800, 600);
+        panel.setGeometry(200, 180, 400, 240);
+        video.show();
+        panel.show();
+        QCoreApplication::processEvents();
+
+        QImage image(panel.size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        panel.render(&painter, {}, {}, QWidget::DrawWindowBackground);
+        painter.end();
+
+        const auto surface = appearanceTokens(AppearancePreferences::Theme::Dark).surface;
+        QCOMPARE(image.pixelColor(10, panel.height() / 2), surface);
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
     }
 
     void accentKeysRoundTripAndUnknownKeysFallBackToOcean() {

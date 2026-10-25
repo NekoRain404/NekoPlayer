@@ -62,20 +62,20 @@ CTest 自动生成包含音轨的彩色测试视频及无音轨版本，覆盖�
 
 ## 安装
 
-当前只提供基于 GNUInstallDirs 的安装规则，不包含 CPack、Flatpak 或发行版打包；许可证尚未选定。
+提供基于 GNUInstallDirs 的安装规则和 Arch Linux `PKGBUILD`（`packaging/arch/`）；构建和运行依赖见该目录说明。项目使用 **GPL-3.0-only** 许可证。
 
 ```bash
 cmake --install build/debug --prefix ~/.local
 ```
 
-安装后写入 `bin/NekoPlayer`、`share/applications/nekoplayer.desktop` 和 `share/icons/hicolor/scalable/apps/nekoplayer.svg`。运行时窗口图标由同一图形在内存中按多尺寸绘制，不新增 Qt SVG 或外部资源依赖；安装的 SVG 仍是桌面条目图标。桌面条目通过 `Exec=NekoPlayer %F` 启动，因此 `~/.local/bin` 需要位于 `PATH` 中。若菜单中仍未出现条目或图标，可刷新用户级桌面数据库和图标缓存：
+安装后写入 `bin/NekoPlayer`、`share/applications/nekoplayer.desktop`、`share/icons/hicolor/scalable/apps/nekoplayer.svg`、`share/metainfo/nekoplayer.metainfo.xml` 和 `share/licenses/nekoplayer/LICENSE`。运行时窗口图标由同一图形在内存中按多尺寸绘制，不新增 Qt SVG 或外部资源依赖；安装的 SVG 仍是桌面条目图标。桌面条目通过 `Exec=NekoPlayer %F` 启动，因此 `~/.local/bin` 需要位于 `PATH` 中。若菜单中仍未出现条目或图标，可刷新用户级桌面数据库和图标缓存：
 
 ```bash
 update-desktop-database ~/.local/share/applications
 gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
 ```
 
-可用 `cmake --install build/debug --prefix /tmp/neko-install` 检查安装布局。
+可用 `cmake --install build/debug --prefix /tmp/neko-install` 检查安装布局。Arch Linux 用户可在仓库根目录生成源码归档后执行 `makepkg -si`，详见 [`packaging/arch/README.md`](packaging/arch/README.md)。
 
 ## 常用操作
 
@@ -181,6 +181,6 @@ HDR 媒体会根据 libmpv 的 PQ/HLG 传递函数识别，并在 Tab 播放信�
 
 普通手写代码文件以 **500 行**为目标，自动检查允许少量超出至 **550 行**。少数明确列入 `cmake/CheckCodeSize.cmake` 的窗口协调或桌面集成文件可不超过 **800 行**，新增例外必须附带理由；CTest 的 `code-size` 检查自动执行这些限制。播放业务、GPU 资源、窗口协调与控制条分别实现，详见 [架构说明](docs/architecture.md)。使用 `clang-format`，警告默认开启；回调寿命变更必须运行 sanitizer 预设。
 
-自动化以 Linux 原生 Wayland 为基准，并保留 Linux X11 软件 OpenGL 回归。当前实际验证为单个 1.75 缩放显示器；真实扬声器听感、音画同步、混合缩放多显示器、不同 GPU、硬解、HDR 与 Windows 尚需专项验收；不能由 null 音频或软件渲染测试推断。合成器可以使未聚焦的测试窗口 suspended，因此自动化通过共享 QAction 验证命令行为；真实 Wayland 键盘焦点/快捷键路由需要桌面手工验收。GL 上下文重建时重新打开当前媒体并恢复暂停状态，本地文件和可定位网络媒体恢复时间，不可定位流重新打开；此过程可能短暂中断播放。本阶段最终轮次在 `LC_ALL=C` 下通过非窗口 Debug 套件 **64/64**（62.43 秒），聚焦选择 **7/7**，并在 sanitizer 预设运行 4 个聚焦 ASan/UBSan 测试（关闭泄漏检测以避开平台库退出分配）；英文翻译 **315** 条全部完成。窗口行为测试只编译不运行，详细命令与结果见 [验证记录](docs/verification.md)。
+自动化以 Linux 原生 Wayland 为基准，并保留 Linux X11 软件 OpenGL 回归。当前实际验证为单个 1.75 缩放显示器；真实扬声器听感、音画同步、混合缩放多显示器、不同 GPU、硬解、HDR 与 Windows 尚需专项验收；不能由 null 音频或软件渲染测试推断。合成器可以使未聚焦的测试窗口 suspended，因此自动化通过共享 QAction 验证命令行为；真实 Wayland 键盘焦点/快捷键路由需要桌面手工验收。GL 上下文重建时重新打开当前媒体并恢复暂停状态，本地文件和可定位网络媒体恢复时间，不可定位流重新打开；此过程可能短暂中断播放。本阶段最终轮次在 `LC_ALL=C` 下通过非窗口 Debug 套件 **64/64**（63.67 秒），聚焦选择 **7/7**，并在 sanitizer 预设运行 4 个聚焦 ASan/UBSan 测试（关闭泄漏检测以避开平台库退出分配）；英文翻译 **315** 条全部完成。窗口行为测试只编译不运行，详细命令与结果见 [验证记录](docs/verification.md)。
 
-参考源码见 [docs/references.md](docs/references.md)，skills 见 [docs/skills.md](docs/skills.md)。`references/` 已忽略，不参与主项目构建或 Git 版本管理。项目自身许可证尚未选定。
+参考源码见 [docs/references.md](docs/references.md)，skills 见 [docs/skills.md](docs/skills.md)。`references/` 已忽略，不参与主项目构建或 Git 版本管理。项目许可证为 GPL-3.0-only。

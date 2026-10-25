@@ -1,0 +1,29 @@
+# Maintainer: NekoRain <yukathleenlxy@gmail.com>
+# Build the source archive from the repository HEAD first:
+#   git archive --format=tar.gz --prefix=nekoplayer-$pkgver/ \
+#       -o packaging/arch/nekoplayer-$pkgver.tar.gz HEAD
+# For a published release, replace the local source with the release tarball
+# URL and run `updpkgsums` before uploading to the AUR.
+pkgname=nekoplayer
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="A compact Qt 6 and libmpv desktop media player"
+arch=('x86_64')
+license=('GPL-3.0-only')
+depends=('qt6-base' 'mpv' 'ffmpeg' 'hicolor-icon-theme')
+makedepends=('cmake' 'ninja' 'qt6-tools' 'pkgconf')
+source=("$pkgname-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cmake -S "$pkgname-$pkgver" -B build \
+        -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_TESTING=OFF
+    cmake --build build
+}
+
+package() {
+    DESTDIR="$pkgdir" cmake --install build
+}

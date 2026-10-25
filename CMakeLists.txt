@@ -108,6 +108,10 @@ install(FILES data/nekoplayer.desktop
     DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES data/nekoplayer.svg
     DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+install(FILES data/nekoplayer.metainfo.xml
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+install(FILES LICENSE
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/nekoplayer)
 
 include(CTest)
 if(BUILD_TESTING)

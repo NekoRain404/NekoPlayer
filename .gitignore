@@ -7,3 +7,6 @@
 
 # Generated translation binaries
 /translations/*.qm
+
+# Arch package source archives
+/packaging/arch/*.tar.gz

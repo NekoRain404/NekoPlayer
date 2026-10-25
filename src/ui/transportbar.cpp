@@ -264,11 +264,11 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
     };
     auto *layout = new QVBoxLayout(this);
     layout->setSizeConstraint(QLayout::SetNoConstraint);
-    layout->setContentsMargins(12, 4, 12, 8);
-    layout->setSpacing(4);
+    layout->setContentsMargins(14, 6, 14, 10);
+    layout->setSpacing(5);
     layout->addWidget(timeline_);
     auto *row = new QHBoxLayout;
-    row->setSpacing(5);
+    row->setSpacing(6);
     row->addWidget(button(previous, this));
     row->addWidget(button(pause, this, true));
     row->addWidget(button(next, this));

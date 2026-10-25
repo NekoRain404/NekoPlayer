@@ -125,7 +125,9 @@
     <message><source>上移所选项</source><translation>Move Selected Up</translation></message>
     <message><source>下移所选项</source><translation>Move Selected Down</translation></message>
     <message><source>播放列表</source><translation>Playlist</translation></message>
+    <message><source>搜索播放列表</source><translation>Search playlist</translation></message>
     <message><source>%1 项</source><translation>%1 items</translation></message>
+    <message><source>%1 / %2 项</source><translation>%1 / %2 items</translation></message>
 </context>
 <context>
     <name>WelcomePanel</name>

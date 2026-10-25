@@ -1,0 +1,194 @@
+#include "playback/mpvcontroller.h"
+#include "playback/playlistcontroller.h"
+#include "playback/playlistmodel.h"
+#include "ui/playlistitemdelegate.h"
+#include "ui/playlistpane.h"
+
+#include <QAction>
+#include <QApplication>
+#include <QLabel>
+#include <QLineEdit>
+#include <QListView>
+#include <QSignalSpy>
+#include <QStyleOptionViewItem>
+#include <QVBoxLayout>
+#include <QtTest>
+
+namespace {
+QString literal(const char *text) { return QString::fromLatin1(text); }
+
+struct PaneFixture {
+    MpvController player{true, true};
+    PlaylistController queue{player};
+    QAction append;
+    QAction previous;
+    QAction next;
+    QAction clear;
+    QWidget host;
+    PlaylistPane pane{queue, &append, &previous, &next, &clear};
+
+    PaneFixture() {
+        queue.model()->addFiles({literal("alpha.mkv"), literal("beta.mkv"), literal("gamma.mkv")});
+        auto *layout = new QVBoxLayout(&host);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(&pane);
+        host.resize(360, 480);
+        host.show();
+        QCoreApplication::processEvents();
+    }
+
+    [[nodiscard]] QLineEdit *search() const {
+        return pane.findChild<QLineEdit *>(literal("playlistSearchEdit"));
+    }
+    [[nodiscard]] QListView *view() const { return pane.view(); }
+    [[nodiscard]] QString countText() const {
+        const auto *count = pane.findChild<QLabel *>(literal("playlistCount"));
+        return count ? count->text() : QString{};
+    }
+};
+} // namespace
+
+class PlaylistPaneTest final : public QObject {
+    Q_OBJECT
+  private slots:
+    void searchNarrowsRowsAndShowsFilteredCount() {
+        PaneFixture fixture;
+        auto *search = fixture.search();
+        QVERIFY(search);
+        QCOMPARE(search->placeholderText(), QStringLiteral("搜索播放列表"));
+        QCOMPARE(search->accessibleName(), QStringLiteral("搜索播放列表"));
+        QVERIFY(search->isClearButtonEnabled());
+        QVERIFY(fixture.view()->model() == fixture.queue.model());
+        QCOMPARE(fixture.countText(), QStringLiteral("3 项"));
+
+        search->setText(literal("beta"));
+        QCOMPARE(fixture.view()->model()->rowCount(), 1);
+        QCOMPARE(fixture.view()->model()->index(0, 0).data().toString(), literal("beta.mkv"));
+        QCOMPARE(fixture.countText(), QStringLiteral("1 / 3 项"));
+
+        search->setText(literal("BETA"));
+        QCOMPARE(fixture.view()->model()->rowCount(), 1);
+        QCOMPARE(fixture.countText(), QStringLiteral("1 / 3 项"));
+
+        search->setText(literal("missing"));
+        QCOMPARE(fixture.view()->model()->rowCount(), 0);
+        QCOMPARE(fixture.countText(), QStringLiteral("0 / 3 项"));
+    }
+
+    void activationMapsFilteredRowToSourceRow() {
+        PaneFixture fixture;
+        fixture.search()->setText(literal("beta"));
+        auto *view = fixture.view();
+        QCOMPARE(view->model()->rowCount(), 1);
+        const auto proxyIndex = view->model()->index(0, 0);
+        QVERIFY(proxyIndex.isValid());
+        QSignalSpy plays(&fixture.pane, &PlaylistPane::playRequested);
+
+        QVERIFY(QMetaObject::invokeMethod(view, "activated", Qt::DirectConnection,
+                                          Q_ARG(QModelIndex, proxyIndex)));
+        QCOMPARE(plays.count(), 1);
+        QCOMPARE(plays.at(0).at(0).toInt(), 1);
+    }
+
+    void singleClickMapsFilteredRowToSourceRow() {
+        PaneFixture fixture;
+        fixture.pane.setSingleClickActivation(true);
+        fixture.search()->setText(literal("beta"));
+        auto *view = fixture.view();
+        const auto proxyIndex = view->model()->index(0, 0);
+        QVERIFY(proxyIndex.isValid());
+        QSignalSpy plays(&fixture.pane, &PlaylistPane::playRequested);
+
+        QVERIFY(QMetaObject::invokeMethod(view, "clicked", Qt::DirectConnection,
+                                          Q_ARG(QModelIndex, proxyIndex)));
+        QTRY_COMPARE_WITH_TIMEOUT(plays.count(), 1, 2000);
+        QCOMPARE(plays.at(0).at(0).toInt(), 1);
+    }
+
+    void editingActionsDisableWhileFilteringAndRestoreAfterClearing() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(0);
+        const auto actions = fixture.pane.editingActions();
+        QCOMPARE(actions.size(), 3);
+        QVERIFY(actions.at(0)->isEnabled());
+        QVERIFY(!actions.at(1)->isEnabled());
+        QVERIFY(actions.at(2)->isEnabled());
+
+        fixture.search()->setText(literal("beta"));
+        for (auto *action : actions)
+            QVERIFY(!action->isEnabled());
+
+        fixture.search()->clear();
+        QVERIFY(actions.at(0)->isEnabled());
+        QVERIFY(!actions.at(1)->isEnabled());
+        QVERIFY(actions.at(2)->isEnabled());
+    }
+
+    void clearingRestoresFullQueueDragDropAndCurrentRow() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(1);
+        QCOMPARE(fixture.view()->currentIndex().row(), 1);
+        auto *search = fixture.search();
+
+        search->setText(literal("beta"));
+        QCOMPARE(fixture.view()->dragDropMode(), QAbstractItemView::NoDragDrop);
+        QCOMPARE(fixture.view()->model()->rowCount(), 1);
+        QCOMPARE(fixture.view()->currentIndex().data().toString(), literal("beta.mkv"));
+
+        search->clear();
+        QVERIFY(fixture.view()->model() == fixture.queue.model());
+        QCOMPARE(fixture.view()->dragDropMode(), QAbstractItemView::InternalMove);
+        QCOMPARE(fixture.view()->model()->rowCount(), 3);
+        QCOMPARE(fixture.view()->currentIndex().row(), 1);
+        QCOMPARE(fixture.countText(), QStringLiteral("3 项"));
+    }
+
+    void escapeClearsSearchAndRestoresSourceModel() {
+        PaneFixture fixture;
+        auto *search = fixture.search();
+        fixture.host.activateWindow();
+        search->setFocus();
+        QCoreApplication::processEvents();
+        search->setText(literal("beta"));
+        QCOMPARE(fixture.view()->model()->rowCount(), 1);
+
+        QTest::keyClick(search, Qt::Key_Escape);
+        QVERIFY(search->text().isEmpty());
+        QVERIFY(fixture.view()->model() == fixture.queue.model());
+        QCOMPARE(fixture.view()->model()->rowCount(), 3);
+    }
+
+    void hiddenCurrentRowClearsViewSelection() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(2);
+        QCOMPARE(fixture.view()->currentIndex().row(), 2);
+
+        fixture.search()->setText(literal("alpha"));
+        QCOMPARE(fixture.view()->model()->rowCount(), 1);
+        QVERIFY(!fixture.view()->currentIndex().isValid());
+
+        fixture.search()->clear();
+        QVERIFY(fixture.view()->model() == fixture.queue.model());
+        QCOMPARE(fixture.view()->currentIndex().row(), 2);
+    }
+
+    void playingRowStaysBoldWhenVisible() {
+        PaneFixture fixture;
+        fixture.queue.model()->setCurrentIndex(1);
+        fixture.search()->setText(literal("beta"));
+        auto *view = fixture.view();
+        QCOMPARE(view->model()->rowCount(), 1);
+        const auto index = view->model()->index(0, 0);
+        QCOMPARE(index.data(PlaylistModel::CurrentRole).toBool(), true);
+
+        auto *delegate = qobject_cast<PlaylistItemDelegate *>(view->itemDelegate());
+        QVERIFY(delegate);
+        QStyleOptionViewItem option;
+        delegate->initStyleOption(&option, index);
+        QVERIFY(option.font.bold());
+        QVERIFY(option.text.startsWith(QStringLiteral("▶ ")));
+    }
+};
+
+QTEST_MAIN(PlaylistPaneTest)
+#include "playlist_pane_test.moc"

@@ -282,6 +282,12 @@ add_dependencies(playlist_edit_test test_media)
 add_test(NAME playlist-edit COMMAND playlist_edit_test)
 set_tests_properties(playlist-edit PROPERTIES TIMEOUT 60)
 
+add_executable(playlist_pane_test playlist_pane_test.cpp)
+target_link_libraries(playlist_pane_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME playlist-pane COMMAND playlist_pane_test)
+set_tests_properties(playlist-pane PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(playlist_modes_test playlist_modes_test.cpp)
 target_link_libraries(playlist_modes_test PRIVATE neko_playback Qt6::Test)
 target_compile_definitions(playlist_modes_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")

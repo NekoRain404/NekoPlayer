@@ -9,8 +9,12 @@
 #include <QApplication>
 #include <QEvent>
 #include <QHBoxLayout>
+#include <QItemSelectionModel>
 #include <QLabel>
+#include <QLineEdit>
 #include <QListView>
+#include <QShortcut>
+#include <QSortFilterProxyModel>
 #include <QTimer>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -35,14 +39,23 @@ QToolButton *actionButton(QAction *action, QWidget *parent) {
 
 PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *previous,
                            QAction *next, QAction *clear, QWidget *parent)
-    : QWidget(parent), queue_(queue), view_(new QListView(this)),
-      remove_(new QAction(tr("从列表移除"), this)), moveUp_(new QAction(tr("上移所选项"), this)),
-      moveDown_(new QAction(tr("下移所选项"), this)), singleClickTimer_(new QTimer(this)) {
-    auto *model = queue_.model();
+    : QWidget(parent), queue_(queue), model_(queue_.model()),
+      filter_(new QSortFilterProxyModel(this)), search_(new QLineEdit(this)),
+      view_(new QListView(this)), remove_(new QAction(tr("从列表移除"), this)),
+      moveUp_(new QAction(tr("上移所选项"), this)), moveDown_(new QAction(tr("下移所选项"), this)),
+      singleClickTimer_(new QTimer(this)) {
     setObjectName(QStringLiteral("playlistPane"));
     setMinimumWidth(240);
+    filter_->setSourceModel(model_);
+    filter_->setFilterCaseSensitivity(Qt::CaseInsensitive);
+    filter_->setFilterKeyColumn(0);
+    filter_->setDynamicSortFilter(true);
+    search_->setObjectName(QStringLiteral("playlistSearchEdit"));
+    search_->setPlaceholderText(tr("搜索播放列表"));
+    search_->setAccessibleName(tr("搜索播放列表"));
+    search_->setClearButtonEnabled(true);
     view_->setObjectName(QStringLiteral("playlistView"));
-    view_->setModel(model);
+    view_->setModel(model_);
     view_->setTextElideMode(Qt::ElideMiddle);
     view_->setItemDelegate(new PlaylistItemDelegate(view_));
     view_->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -65,25 +78,34 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     }
     view_->setContextMenuPolicy(Qt::ActionsContextMenu);
     connect(remove_, &QAction::triggered, this,
-            [this] { queue_.removeAt(view_->currentIndex().row()); });
+            [this] { queue_.removeAt(sourceRow(view_->currentIndex())); });
     connect(moveUp_, &QAction::triggered, this, [this] {
-        const auto row = view_->currentIndex().row();
+        const auto row = sourceRow(view_->currentIndex());
         queue_.moveItem(row, row - 1);
     });
     connect(moveDown_, &QAction::triggered, this, [this] {
-        const auto row = view_->currentIndex().row();
+        const auto row = sourceRow(view_->currentIndex());
         queue_.moveItem(row, row + 1);
     });
-    connect(view_->selectionModel(), &QItemSelectionModel::currentChanged, this,
-            &PlaylistPane::updateEditingActions);
-    connect(model, &PlaylistModel::currentIndexChanged, this, &PlaylistPane::synchronizeCurrent);
-    connect(model, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateEditingActions);
-    connect(model, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateEditingActions);
-    connect(model, &PlaylistModel::rowsMoved, this, &PlaylistPane::updateEditingActions);
-    connect(model, &PlaylistModel::modelReset, this, &PlaylistPane::updateEditingActions);
-    connect(model, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateItemCount);
-    connect(model, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateItemCount);
-    connect(model, &PlaylistModel::modelReset, this, &PlaylistPane::updateItemCount);
+    connectSelectionModel();
+    connect(search_, &QLineEdit::textChanged, this, &PlaylistPane::applyFilter);
+    auto *clearSearchShortcut = new QShortcut(QKeySequence(Qt::Key_Escape), search_);
+    clearSearchShortcut->setContext(Qt::WidgetShortcut);
+    connect(clearSearchShortcut, &QShortcut::activated, search_, &QLineEdit::clear);
+    auto *focusSearchShortcut = new QShortcut(QKeySequence::Find, this);
+    focusSearchShortcut->setContext(Qt::WidgetWithChildrenShortcut);
+    connect(focusSearchShortcut, &QShortcut::activated, this, [this] {
+        search_->setFocus(Qt::ShortcutFocusReason);
+        search_->selectAll();
+    });
+    connect(model_, &PlaylistModel::currentIndexChanged, this, &PlaylistPane::synchronizeCurrent);
+    connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateEditingActions);
+    connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateEditingActions);
+    connect(model_, &PlaylistModel::rowsMoved, this, &PlaylistPane::updateEditingActions);
+    connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateEditingActions);
+    connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateItemCount);
+    connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateItemCount);
+    connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateItemCount);
     view_->setAlternatingRowColors(false);
     view_->setUniformItemSizes(true);
     view_->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -105,6 +127,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     headerLayout->addStretch();
     headerLayout->addWidget(count);
     layout->addWidget(header);
+    layout->addWidget(search_);
     layout->addWidget(view_, 1);
     auto *buttons = new QHBoxLayout;
     buttons->setContentsMargins(0, 0, 0, 0);
@@ -126,7 +149,9 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     connect(view_, &QListView::clicked, this, [this](const QModelIndex &index) {
         if (!singleClickActivation_)
             return;
-        pendingClickIndex_ = index;
+        const auto row = sourceRow(index);
+        if (row >= 0)
+            pendingClickIndex_ = model_->index(row);
         singleClickTimer_->start(QApplication::doubleClickInterval());
     });
     connect(view_, &QListView::doubleClicked, this, [this] {
@@ -136,7 +161,9 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     connect(view_, &QListView::activated, this, [this](const QModelIndex &index) {
         singleClickTimer_->stop();
         pendingClickIndex_ = QPersistentModelIndex{};
-        emit playRequested(index.row());
+        const auto row = sourceRow(index);
+        if (row >= 0)
+            emit playRequested(row);
     });
     synchronizeCurrent();
     updateItemCount();
@@ -168,6 +195,8 @@ void PlaylistPane::changeEvent(QEvent *event) {
     moveDown_->setText(tr("下移所选项"));
     if (auto *title = findChild<QLabel *>(QStringLiteral("playlistTitle")))
         title->setText(tr("播放列表"));
+    search_->setPlaceholderText(tr("搜索播放列表"));
+    search_->setAccessibleName(tr("搜索播放列表"));
     view_->setAccessibleName(tr("播放列表"));
     view_->setToolTip(tr("双击播放；可拖动排序"));
     updateItemCount();
@@ -179,25 +208,89 @@ void PlaylistPane::refreshIcons() {
     moveDown_->setIcon(AppearanceIcons::icon(AppearanceIcons::Symbol::MoveDown, palette()));
 }
 
+void PlaylistPane::applyFilter() {
+    const auto text = search_->text().trimmed();
+    const bool filtering = !text.isEmpty();
+    filter_->setFilterFixedString(text);
+    filtering_ = filtering;
+    if (filtering) {
+        if (view_->model() != filter_) {
+            view_->setModel(filter_);
+            view_->setDragDropMode(QAbstractItemView::NoDragDrop);
+            connectSelectionModel();
+        }
+    } else if (view_->model() != model_) {
+        view_->setModel(model_);
+        view_->setDragDropMode(QAbstractItemView::InternalMove);
+        connectSelectionModel();
+    }
+    selectSourceCurrent();
+    updateItemCount();
+    updateEditingActions();
+}
+
+void PlaylistPane::connectSelectionModel() {
+    if (view_->selectionModel())
+        connect(view_->selectionModel(), &QItemSelectionModel::currentChanged, this,
+                &PlaylistPane::updateEditingActions, Qt::UniqueConnection);
+}
+
+int PlaylistPane::sourceRow(const QModelIndex &index) const {
+    if (!index.isValid())
+        return -1;
+    return index.model() == filter_ ? filter_->mapToSource(index).row() : index.row();
+}
+
+QModelIndex PlaylistPane::sourceIndexForCurrent() const {
+    const auto row = model_->currentIndex();
+    if (row < 0 || row >= model_->rowCount())
+        return {};
+    const auto source = model_->index(row);
+    return filtering_ ? filter_->mapFromSource(source) : source;
+}
+
+void PlaylistPane::selectSourceCurrent() {
+    if (auto *selection = view_->selectionModel()) {
+        const auto index = sourceIndexForCurrent();
+        if (index.isValid()) {
+            view_->setCurrentIndex(index);
+            return;
+        }
+        selection->clearSelection();
+        selection->clearCurrentIndex();
+    }
+}
+
 void PlaylistPane::updateItemCount() {
-    if (auto *count = findChild<QLabel *>(QStringLiteral("playlistCount")))
-        count->setText(tr("%1 项").arg(queue_.model()->rowCount()));
+    auto *count = findChild<QLabel *>(QStringLiteral("playlistCount"));
+    if (!count)
+        return;
+    if (filtering_)
+        count->setText(tr("%1 / %2 项").arg(filter_->rowCount()).arg(model_->rowCount()));
+    else
+        count->setText(tr("%1 项").arg(model_->rowCount()));
 }
 
 void PlaylistPane::synchronizeCurrent() {
-    const auto current = queue_.model()->index(queue_.model()->currentIndex());
+    const auto current = model_->index(model_->currentIndex());
     // Reordering changes row numbers, but not the playing entry's identity.
     // Preserve a separate editing selection until playback changes entries.
     if (playingIndex_ != current) {
         playingIndex_ = current;
-        view_->setCurrentIndex(current);
+        selectSourceCurrent();
     }
     updateEditingActions();
 }
 
 void PlaylistPane::updateEditingActions() {
+    if (filtering_) {
+        remove_->setEnabled(false);
+        moveUp_->setEnabled(false);
+        moveDown_->setEnabled(false);
+        return;
+    }
     const auto row = view_->currentIndex().row();
     remove_->setEnabled(row >= 0);
     moveUp_->setEnabled(row > 0);
-    moveDown_->setEnabled(row >= 0 && row + 1 < queue_.model()->rowCount());
+    moveDown_->setEnabled(row >= 0 && row + 1 < model_->rowCount());
 }

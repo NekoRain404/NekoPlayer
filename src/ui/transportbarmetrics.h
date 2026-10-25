@@ -24,9 +24,10 @@ inline Metrics forWidth(int width) {
         metrics.volumeWidth = 76;
         metrics.showTime = false;
     } else if (width < 640) {
+        // Shrink the buttons to 32 px so the full 155 px time label fits at 560 px.
         metrics.buttonExtent = 32;
         metrics.volumeWidth = 76;
-        metrics.timeWidth = 150;
+        metrics.timeWidth = 155;
     }
 
     // The row has 12 layout gaps, two explicit separators and 12 px margins.

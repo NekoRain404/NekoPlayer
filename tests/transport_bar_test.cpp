@@ -1,4 +1,6 @@
 #include "playback/mpvcontroller.h"
+#include "ui/appearancestylesheet.h"
+#include "ui/appearancetokens.h"
 #include "ui/transportbar.h"
 #include "ui/transportbarmetrics.h"
 
@@ -9,6 +11,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QSlider>
 #include <QToolButton>
@@ -289,8 +292,8 @@ class TransportBarTest final : public QObject {
             QVERIFY(compact.showVolume);
             QCOMPARE(compact.buttonExtent, 32);
             QCOMPARE(compact.volumeWidth, 76);
-            QCOMPARE(compact.timeWidth, 150);
-            QCOMPARE(compact.minimumRowWidth, 540);
+            QCOMPARE(compact.timeWidth, 155);
+            QCOMPARE(compact.minimumRowWidth, 545);
             QVERIFY(compact.minimumRowWidth <= width);
         }
 
@@ -305,6 +308,13 @@ class TransportBarTest final : public QObject {
     }
 
     void optionalLabelsHideWhenNarrow() {
+        const auto previousStyleSheet = qApp->styleSheet();
+        const auto restoreStyleSheet =
+            qScopeGuard([previousStyleSheet] { qApp->setStyleSheet(previousStyleSheet); });
+        qApp->setStyleSheet(
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark)));
+        QCoreApplication::processEvents();
+
         QAction open(QStringLiteral("打开文件"));
         QAction previous(QStringLiteral("上一个"));
         QAction pause(QStringLiteral("播放"));
@@ -352,8 +362,14 @@ class TransportBarTest final : public QObject {
         host.layout()->activate();
         transport.resize(559, 100);
         QCoreApplication::processEvents();
+        QCOMPARE(transport.width(), 559);
         QVERIFY(time->isHidden());
         QVERIFY(dividers.at(0)->isHidden());
+        QCOMPARE(volume->width(), 76);
+        for (auto *button : transport.findChildren<QToolButton *>()) {
+            QCOMPARE(button->width(), 36);
+            QCOMPARE(button->height(), 32);
+        }
 
         host.setFixedSize(560, 100);
         host.layout()->activate();
@@ -361,13 +377,34 @@ class TransportBarTest final : public QObject {
         QCoreApplication::processEvents();
         QVERIFY(!time->isHidden());
         QVERIFY(!dividers.at(0)->isHidden());
-        QCOMPARE(time->minimumWidth(), 150);
-        QCOMPARE(time->maximumWidth(), 150);
+        QCOMPARE(time->minimumWidth(), 155);
+        QCOMPARE(time->maximumWidth(), 155);
         QCOMPARE(volume->width(), 76);
         for (auto *button : transport.findChildren<QToolButton *>()) {
             QCOMPARE(button->width(), 32);
             QCOMPARE(button->height(), 32);
         }
+
+        PlaybackState state;
+        state.active = true;
+        state.seekable = true;
+        state.position = 75;
+        state.duration = 120;
+        transport.present(state);
+        QCOMPARE(time->text(), QStringLiteral("00:01:15 / 00:02:00"));
+        QVERIFY(time->fontMetrics().horizontalAdvance(time->text()) <=
+                time->contentsRect().width());
+
+        const QPoint center = time->rect().center();
+        QMouseEvent press(QEvent::MouseButtonPress, center, time->mapToGlobal(center),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, center, time->mapToGlobal(center),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(time, &release);
+        QCOMPARE(time->text(), QStringLiteral("-00:00:45 / 00:02:00"));
+        QVERIFY(time->fontMetrics().horizontalAdvance(time->text()) <=
+                time->contentsRect().width());
     }
 };
 

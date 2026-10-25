@@ -1,10 +1,15 @@
 #include "playlistmodel.h"
 #include "mediasource.h"
+#include "naturalcompare.h"
 
 #include <QFileInfo>
 #include <QMimeData>
 #include <QPersistentModelIndex>
 #include <QUrl>
+
+#include <algorithm>
+#include <numeric>
+#include <vector>
 
 namespace {
 constexpr auto playlistMimeType = "application/x-nekoplayer-playlist-entry";
@@ -132,21 +137,146 @@ int PlaylistModel::addFiles(const QStringList &paths) {
     return additions.size();
 }
 
-bool PlaylistModel::removeAt(int row) {
-    if (row < 0 || row >= paths_.size())
-        return false;
-    const auto previousCurrent = currentIndex_;
-    beginRemoveRows({}, row, row);
-    paths_.removeAt(row);
-    displayNames_.removeAt(row);
-    if (currentIndex_ > row)
-        --currentIndex_;
-    else if (currentIndex_ == row)
-        currentIndex_ = paths_.isEmpty() ? -1 : qMin(row, paths_.size() - 1);
-    endRemoveRows();
+int PlaylistModel::removeRowsAt(const QList<int> &rows) {
+    std::vector<int> removed;
+    removed.reserve(rows.size());
+    for (const auto row : rows) {
+        if (row >= 0 && row < paths_.size())
+            removed.push_back(row);
+    }
+    std::sort(removed.begin(), removed.end());
+    removed.erase(std::unique(removed.begin(), removed.end()), removed.end());
+    if (removed.empty())
+        return 0;
+
+    const auto isRemoved = [&removed](int row) {
+        return std::binary_search(removed.cbegin(), removed.cend(), row);
+    };
+    const auto removedBefore = [&removed](int row) {
+        return static_cast<int>(std::lower_bound(removed.cbegin(), removed.cend(), row) -
+                                removed.cbegin());
+    };
+
+    const int previousCurrent = currentIndex_;
+    const bool currentRemoved = previousCurrent >= 0 && isRemoved(previousCurrent);
+    int finalCurrent = -1;
+    if (previousCurrent >= 0) {
+        if (!currentRemoved) {
+            // The current entry survives; only rows above it shift its row.
+            finalCurrent = previousCurrent - removedBefore(previousCurrent);
+        } else {
+            // Prefer the next surviving original row, then the previous one.
+            auto replacement = previousCurrent + 1;
+            while (replacement < paths_.size() && isRemoved(replacement))
+                ++replacement;
+            if (replacement == paths_.size()) {
+                replacement = previousCurrent - 1;
+                while (replacement >= 0 && isRemoved(replacement))
+                    --replacement;
+            }
+            if (replacement >= 0)
+                finalCurrent = replacement - removedBefore(replacement);
+        }
+    }
+
+    // Descending removals keep every intermediate row number valid.
+    for (auto it = removed.crbegin(); it != removed.crend(); ++it) {
+        const auto row = *it;
+        beginRemoveRows({}, row, row);
+        paths_.removeAt(row);
+        displayNames_.removeAt(row);
+        if (currentIndex_ == row)
+            currentIndex_ = -1;
+        else if (currentIndex_ > row)
+            --currentIndex_;
+        endRemoveRows();
+    }
+    currentIndex_ = finalCurrent;
     if (currentIndex_ >= 0)
         emit dataChanged(index(currentIndex_), index(currentIndex_), {CurrentRole});
-    if (currentIndex_ != previousCurrent || previousCurrent == row)
+    if (finalCurrent != previousCurrent || currentRemoved)
+        emit currentIndexChanged(finalCurrent);
+    return static_cast<int>(removed.size());
+}
+
+bool PlaylistModel::removeAt(int row) { return removeRowsAt({row}) == 1; }
+
+bool PlaylistModel::sortEntries(SortKey key, Qt::SortOrder order) {
+    const auto count = paths_.size();
+    if (count < 2)
+        return false;
+    std::vector<int> permutation(static_cast<std::size_t>(count));
+    std::iota(permutation.begin(), permutation.end(), 0);
+    const auto ascending = order == Qt::AscendingOrder;
+    const auto compareRows = [this, key](int left, int right) {
+        auto compared = key == SortKey::Title
+                            ? naturalCompare(displayNames_.at(left), displayNames_.at(right))
+                            : naturalCompare(paths_.at(left), paths_.at(right));
+        if (compared == 0 && key == SortKey::Title)
+            compared = QString::compare(paths_.at(left), paths_.at(right), Qt::CaseSensitive);
+        return compared;
+    };
+    // Stable sorting keeps duplicates in their original order; the comparator
+    // itself only considers the requested key and its deterministic tiebreak.
+    std::stable_sort(permutation.begin(), permutation.end(),
+                     [&compareRows, ascending](int left, int right) {
+                         const auto compared = compareRows(left, right);
+                         return ascending ? compared < 0 : compared > 0;
+                     });
+    auto unchanged = true;
+    for (auto row = 0; row < count; ++row) {
+        if (permutation[static_cast<std::size_t>(row)] != row) {
+            unchanged = false;
+            break;
+        }
+    }
+    if (unchanged)
+        return false;
+
+    std::vector<int> newRows(static_cast<std::size_t>(count));
+    for (auto row = 0; row < count; ++row) {
+        newRows[static_cast<std::size_t>(permutation[static_cast<std::size_t>(row)])] = row;
+    }
+    const int previousCurrent = currentIndex_;
+    const int newCurrent =
+        previousCurrent >= 0 ? newRows[static_cast<std::size_t>(previousCurrent)] : -1;
+    emit layoutAboutToBeChanged({}, QAbstractItemModel::VerticalSortHint);
+    // Views and the model tester create persistent indexes in response to the
+    // signal above; capture them afterwards so every one is remapped exactly
+    // once and no two entries end up sharing a row.
+    const auto persistent = persistentIndexList();
+    QModelIndexList from;
+    QModelIndexList to;
+    from.reserve(persistent.size());
+    to.reserve(persistent.size());
+    for (const auto &index : persistent) {
+        if (!index.isValid())
+            continue;
+        from.append(index);
+        to.append(createIndex(newRows[static_cast<std::size_t>(index.row())], index.column()));
+    }
+    if (!from.isEmpty())
+        changePersistentIndexList(from, to);
+    QStringList sortedPaths;
+    QStringList sortedNames;
+    sortedPaths.reserve(count);
+    sortedNames.reserve(count);
+    for (const auto source : permutation) {
+        sortedPaths.append(paths_.at(source));
+        sortedNames.append(displayNames_.at(source));
+    }
+    paths_ = std::move(sortedPaths);
+    displayNames_ = std::move(sortedNames);
+    currentIndex_ = newCurrent;
+    emit layoutChanged({}, QAbstractItemModel::VerticalSortHint);
+
+    // Refresh the delegate at the old and new current rows; the entry itself
+    // stays current, only its row (and therefore its CurrentRole) may move.
+    if (previousCurrent >= 0 && previousCurrent != currentIndex_)
+        emit dataChanged(index(previousCurrent), index(previousCurrent), {CurrentRole});
+    if (currentIndex_ >= 0)
+        emit dataChanged(index(currentIndex_), index(currentIndex_), {CurrentRole});
+    if (currentIndex_ != previousCurrent)
         emit currentIndexChanged(currentIndex_);
     return true;
 }

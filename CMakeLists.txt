@@ -50,7 +50,8 @@ add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.
     src/playback/mpvcontroller_deinterlace.cpp
     src/playback/mpvchapters.cpp src/playback/playbacktime.cpp src/playback/mediasource.cpp
     src/playback/backendinfo.cpp src/playback/playlistcontroller.cpp
-    src/playback/playlistmodel.cpp src/playback/shuffleorder.cpp)
+    src/playback/playlistmodel.cpp src/playback/shuffleorder.cpp
+    src/playback/naturalcompare.cpp)
 target_include_directories(neko_playback PUBLIC src)
 target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV)
 

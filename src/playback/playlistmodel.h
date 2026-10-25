@@ -1,12 +1,14 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QList>
 #include <QStringList>
 
 class PlaylistModel final : public QAbstractListModel {
     Q_OBJECT
   public:
     enum Roles { PathRole = Qt::UserRole + 1, CurrentRole };
+    enum class SortKey { Title, Path };
 
     explicit PlaylistModel(QObject *parent = nullptr);
 
@@ -29,7 +31,9 @@ class PlaylistModel final : public QAbstractListModel {
     [[nodiscard]] const QStringList &paths() const;
 
     int addFiles(const QStringList &paths);
+    int removeRowsAt(const QList<int> &rows);
     bool removeAt(int row);
+    bool sortEntries(SortKey key, Qt::SortOrder order);
     void clear();
     bool setCurrentIndex(int row);
 

@@ -4,6 +4,7 @@
 #include <QIcon>
 #include <QImage>
 #include <QPixmap>
+#include <QRect>
 #include <QSize>
 #include <QtTest>
 #include <array>
@@ -31,10 +32,10 @@ bool hasAccentPixel(const QImage &image) {
     return false;
 }
 
-bool hasVisiblePixelAbove(const QImage &image, int maxY) {
-    for (int y = 0; y < maxY; ++y)
-        for (int x = 0; x < image.width(); ++x)
-            if (image.pixelColor(x, y).alpha() > 0)
+bool hasOpaquePixelIn(const QImage &image, const QRect &region) {
+    for (int y = region.top(); y <= region.bottom(); ++y)
+        for (int x = region.left(); x <= region.right(); ++x)
+            if (image.pixelColor(x, y).alpha() >= 128)
                 return true;
     return false;
 }
@@ -81,7 +82,13 @@ void AppIconTest::remainsLegibleAtSmallSizes() {
     }
     const QImage small = icon.pixmap(QSize(16, 16)).toImage();
     QCOMPARE(small.size(), QSize(16, 16));
-    QVERIFY(hasVisiblePixelAbove(small, small.height() / 4));
+    const int earHeight = small.height() / 4;
+    const int leftEarWidth = small.width() / 2;
+    QVERIFY2(hasOpaquePixelIn(small, QRect(0, 0, leftEarWidth, earHeight)),
+             "left ear is not opaque at 16 px");
+    QVERIFY2(
+        hasOpaquePixelIn(small, QRect(leftEarWidth, 0, small.width() - leftEarWidth, earHeight)),
+        "right ear is not opaque at 16 px");
 }
 
 QTEST_MAIN(AppIconTest)

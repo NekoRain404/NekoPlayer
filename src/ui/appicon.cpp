@@ -13,7 +13,8 @@ constexpr std::array<int, 7> kIconSizes = {16, 24, 32, 48, 64, 128, 256};
 const QColor kTileColor(0x1f, 0x22, 0x28);
 const QColor kAccentColor(0x8b, 0xa9, 0xef);
 
-// Paths use the 256x256 coordinate space of data/nekoplayer.svg.
+// The 256x256 path geometry is intentionally duplicated from data/nekoplayer.svg,
+// which remains the installed desktop icon; keep both definitions in sync.
 QPainterPath tilePath() {
     QPainterPath path;
     path.moveTo(24, 88);

@@ -2,6 +2,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"
      viewBox="0 0 256 256" role="img" aria-label="NekoPlayer">
   <title>NekoPlayer</title>
+  <!-- This 256x256 path geometry is mirrored by src/ui/appicon.cpp for the runtime
+       window icon; keep both definitions in sync. -->
   <!-- Original mark: a rounded dark cat-eared tile with an accent play triangle. -->
   <path d="M 24 88 L 24 78 Q 24 72 28 66 L 48 22 Q 52 12 61 19 L 104 56
            L 152 56 L 195 19 Q 204 12 208 22 L 228 66 Q 232 72 232 78

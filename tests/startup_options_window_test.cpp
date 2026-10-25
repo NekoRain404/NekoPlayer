@@ -24,6 +24,18 @@ class StartupOptionsWindowTest final : public QObject {
         window.setStartPaused(true);
     }
 
+    void rejectedStartupOpenKeepsCompilationCovered() {
+        MainWindow window(true);
+        window.setStartPaused(true);
+        // The pending-pause flag is private and the pause only becomes
+        // observable after a real fileLoaded, so a rejected-then-accepted open
+        // cannot be asserted in this compile-only target. This slot keeps the
+        // synchronous rejection paths covered at compile time; the flag itself
+        // is cleared there and is verified by inspection only.
+        window.openFiles({});
+        window.openFiles({QStringLiteral("http://")});
+    }
+
     void fullscreenStartupPathIsCallable() {
         MainWindow window(true);
         auto *fullscreen = action(window, "fullscreenAction");

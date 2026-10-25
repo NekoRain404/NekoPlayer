@@ -145,8 +145,11 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     // explicit stops consume the pending request so it cannot affect a later
     // user-initiated load.
     connect(controller_.get(), &MpvController::fileLoaded, this, [this] {
-        if (std::exchange(startPaused_, false))
+        if (std::exchange(startPaused_, false)) {
             controller_->setPaused(true);
+            statusBar()->showMessage(
+                tr("已暂停 · %1").arg(MediaSource::displayName(controller_->state().path)));
+        }
     });
     connect(controller_.get(), &MpvController::mediaLoadFailed, this,
             [this] { startPaused_ = false; });
@@ -284,14 +287,20 @@ void MainWindow::openFile(const QString &path) { openFiles({path}); }
 
 void MainWindow::openFiles(const QStringList &paths) {
     folderMenu_->cancel();
-    if (paths.isEmpty())
+    // A rejected open must not leave the --start-paused one-shot armed; only an
+    // accepted startup open may carry it to fileLoaded.
+    if (paths.isEmpty()) {
+        startPaused_ = false;
         return;
+    }
     const auto sources = normalizedSources(paths);
     if (sources.isEmpty()) {
+        startPaused_ = false;
         showError(tr("媒体地址无效；网络地址需要包含受支持的协议与主机名"));
         return;
     }
     if (video_->hasFailed()) {
+        startPaused_ = false;
         showError(tr("OpenGL 初始化失败，无法打开媒体文件"));
         return;
     }

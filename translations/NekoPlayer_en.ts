@@ -179,6 +179,7 @@
     <name>MainWindow</name>
     <message><source>就绪 · Qt 6 + libmpv</source><translation>Ready · Qt 6 + libmpv</translation></message>
     <message><source>正在播放 · %1</source><translation>Playing · %1</translation></message>
+    <message><source>已暂停 · %1</source><translation>Paused · %1</translation></message>
     <message><source>播放列表已结束</source><translation>Playlist finished</translation></message>
     <message><source>媒体地址无效；网络地址需要包含受支持的协议与主机名</source><translation>Invalid media address; network addresses must include a supported protocol and host name</translation></message>
     <message><source>OpenGL 初始化失败，无法打开媒体文件</source><translation>OpenGL initialization failed; cannot open media</translation></message>

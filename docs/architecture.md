@@ -15,12 +15,12 @@
 | `MediaSource` | 本地路径、file URL 与受支持网络地址的校验、规范化和显示名称 | Qt Core，无 I/O、播放或窗口状态；保留签名 URL 的路径与查询转义 |
 | `mediafiletypes.cpp` | 统一支持的媒体扩展名与 Qt 文件选择器过滤模式 | Qt Core 值数据；目录扫描与打开/添加对话框共享，不依赖播放状态 |
 | `NetworkOpenDialog` | 网络地址输入与播放按钮可用性 | Qt Widgets / MediaSource；确认后由 MainWindow 交给队列业务 API |
-| `PlaylistModel` | 本地／网络媒体队列、当前项与原生单项移动；提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器 |
+| `PlaylistModel` | 本地／网络媒体队列、当前项与原生单项移动；维护与队列同步的显示名缓存，提供 Qt model 角色和内部拖放数据 | Qt Core，不直接控制播放器 |
 | `M3u8Store` | UTF-8 播放列表导入、整批来源校验、当前行注释与原子保存 | Qt Core / MediaSource，不操作队列或播放器，不联网探测 |
 | `PlaylistController` | 连接队列、播放控制器和 EOF/加载失败事件；顺序／循环／随机策略与有界失败恢复 | 依赖播放业务 API、队列模型和 `ShuffleOrder`，不依赖 UI |
 | `ShuffleOrder` | 随机候选池、实际访问历史与前后导航 | Qt Core 持久模型索引，不控制播放器，不改变显示顺序 |
 | `VideoWidget` | GL 上下文、物理像素 FBO、帧更新、隐藏时跳帧、资源释放 | 只处理渲染，不提交播放命令 |
-| `TransportBar` | 展示时间/进度/音量，拖动与时间条滚轮定位意图，时间显示切换 | 状态快照和 QAction，不操作 mpv；滚轮档位由纯 `interactionpolicy` 提供 |
+| `TransportBar` | 展示时间/进度/音量，拖动与时间条滚轮定位意图，时间显示切换；`TransportBarMetrics::forWidth` 计算窄宽布局 | 状态快照和 QAction，不操作 mpv；滚轮档位由纯 `interactionpolicy` 提供 |
 | `InteractionPolicy` / `interactionpolicy.cpp` | 将滚轮 delta 归一化为档位，并按档位计算夹在 0–100 的音量 | Qt Core 纯函数，不依赖控件、偏好或 mpv |
 | `ThumbnailPreviewPolicy` | 校验本地动态视频预览条件，避免对音频、网络或不可定位媒体启动解码 | 只读取播放状态与动态视频可用性，不访问帧或播放器句柄 |
 | `ThumbnailService` / `ffmpegthumbnaildecoder` / `ThumbnailPreview` | 有界后台缩略图解码、缓存、取消与时间条悬停预览 | 独立 FFmpeg 解码实例，不触碰主 libmpv client 或视频帧；预览控件只显示 QImage |
@@ -41,7 +41,7 @@
 | `VideoPresentation` / `mpvcontroller_video.cpp` | 本次运行的画面比例与四分之一圈旋转意图、校验及异步提交 | 值类型不依赖 UI；实现只使用同一 mpv client |
 | `VideoMenu` | 互斥比例动作、旋转快捷键与共享菜单 | 仅调用控制器业务 API，按专用信号刷新 |
 | `ScreenshotMenu` / `mpvcontroller_screenshot.cpp` | 含字幕／无字幕截图入口、保存位置选择与原生命令完成确认 | UI 不读取帧；控制器校验目标与视频状态，通过同一 client 异步编码保存 |
-| `SessionState` / `SessionStore` | 音频、输出设备、解码、字幕、倍速／延迟、窗口偏好（含播放列表宽度）、交互偏好和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
+| `SessionState` / `SessionStore` | 音频、输出设备、解码、字幕、倍速／延迟、窗口偏好（含播放列表宽度）、交互偏好、1–120 秒定位步长和队列值类型；版本化 INI 校验与原子保存 | Qt Core，不依赖 UI 或 libmpv |
 | `PlaybackHistoryStore` | 独立版本化 INI 文件；按规范化绝对路径保存最近 100 个媒体位置 | Qt Core，不依赖队列、播放控制器或 UI |
 | `RecentMediaHistory` | 独立版本化 JSON；保留最近成功播放的 20 个来源、去重、清空与原子保存 | Qt Core / MediaSource；不查找媒体文件、不联网，与续播位置分离 |
 | `RecentMediaMenu` | 文件／右键共享最近播放菜单及重开快捷键 | 只读取历史并发出打开意图，复用 MainWindow 原有入口；菜单打开时才构建条目 |
@@ -113,7 +113,7 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 
 交互层把策略与控件分开：`interactionpolicy` 提供纯函数 `wheelNotches` 和 `volumeAfterWheel`，控件只发出意图信号。`VideoWidget` 在释放后启动 `Qt::PreciseTimer` 单次计时，双击到来时取消，避免双击同时触发暂停；它不知道 mpv 或偏好。`MainWindow` 读取规范化后的 `InteractionPreferences`，将单击、双击、中键映射到共享 QAction，滚轮按 1–20 步进调节音量，时间条滚轮发出 ±1 方向并按定位步长 seek。时间条滚轮不会落入 QSlider 的隐藏单步 seek；禁用时完全不定位。此路径没有新增轮询、CPU 帧复制或渲染改动。
 
-性能边界集中在 GUI 线程的重复工作：`MainWindow::setAppearanceIcon()` 按符号和 palette cache key 缓存每个 QAction 的图标，窗口标题按路径缓存，避免每个 `time-pos` tick 重新分配。`PreferencesDialog` 只在 active/实际解码器或专用偏好信号变化时重算草稿和 Apply 状态，播放位置变化不驱动对话框工作。`FolderMenu` 在程序化设置勾选时阻断 `toggled`，防止同一变更写两次会话。libmpv client API 版本查询移入 `BackendInfo`，UI 不再为 About 文本包含 `mpv/client.h`。这些优化不改变命令语义、轮询行为或渲染路径。
+性能边界集中在 GUI 线程的重复工作：`MainWindow::setAppearanceIcon()` 按符号和 palette cache key 缓存每个 QAction 的图标，窗口标题按路径缓存，避免每个 `time-pos` tick 重新分配。`PreferencesDialog` 只在 active/实际解码器或专用偏好信号变化时重算草稿和 Apply 状态，播放位置变化不驱动对话框工作。`FolderMenu` 在程序化设置勾选时阻断 `toggled`，防止同一变更写两次会话。libmpv client API 版本查询移入 `BackendInfo`，UI 不再为 About 文本包含 `mpv/client.h`。`PlaylistModel` 在添加、移动、删除和清空时同步维护显示名缓存，`data(Qt::DisplayRole)` 不再逐行每帧重新计算 `MediaSource::displayName`，`paths()` 返回 const 引用。定位步长在会话中按 1–120 秒归一化，左右键动作、动态动作标签与时间条滚轮共用同一值。这些优化不改变命令语义、轮询行为或渲染路径。
 视频去隔行同样由 `VideoMenu` 作为轻量意图层管理，`Off/Auto/On` 映射为 libmpv 的 `no/auto/yes`，不引入 Qt 侧帧处理或额外的 CPU 复制路径。
 
 画面比例与旋转使用独立的 `VideoPresentation` 值和 `mpvcontroller_video.cpp`，不与播放进度、字幕或持久配置耦合。`VideoAspect` 限定六种模式，控制器将其映射为 `video-aspect-override` 和 `keepaspect`；离开拉伸时恢复保留比例，原始比例及拉伸均清除旧比例覆盖。旋转只接受 90° 的整数倍并归一化到 0／90／180／270，使用 `video-rotate` 叠加文件方向元数据，拒绝任意角度以符合无回拷硬解的限制。状态表示成功入队的最新意图，快速连按立即累积；异步执行错误仍通过已有信号报告。两条比例命令不构成事务：回复队列耗尽可导致部分提交并提示错误，菜单恢复上次完整提交的勾选，用户重新选择任一比例会再次提交两项设置以恢复。`VideoMenu` 在菜单栏与右键菜单复用同一菜单和 QAction，在专用变更信号及比例动作结束时刷新互斥勾选、标题和重置可用性，不订阅逐帧进度，不重载文件，不插入 CPU 视频滤镜。偏好仅本次运行有效，停止、换片及渲染恢复不清除。
@@ -123,3 +123,5 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 列表编辑沿用 Qt 的 `beginMoveRows`／`endMoveRows` 与 QListView InternalMove，不重载媒体。内部 MIME 对象持有 `QPersistentModelIndex`，跨移动和删除跟踪真实条目，区分重复路径并拒绝外部或已失效数据。当前行和失败行集合随结构变更映射；删除当前项先停止并取消自动续播，再选择邻项，迟到 EOF／加载错误不能自行启动它。面板通过持久索引区分编辑选择与播放项，仅播放项身份改变才同步选择；代理用 CurrentRole 加粗，不让 model 依赖字体。编辑 QAction 由面板提供给列表、按钮和主菜单，快捷键仅在列表聚焦时生效；不订阅播放进度，不新增帧处理或配置写盘。
 
 缺失文件的同步错误回调也允许修改队列：顺序扫描在首次报错前才为剩余候选建立持久索引快照，按原遍历顺序最多尝试每个仍存在的候选一次，回调中新追加的项留给下一次导航。随机扫描沿持久候选池继续，可在固定扫描预算内访问回调新加入的项。正常有效文件入口不构建整表快照。新扫描、清空或移除当前项会使旧扫描修订号失效；取消与耗尽是不同结果，取消不能发出 queueFinished 或覆盖重入的新播放请求。
+
+安装与桌面集成：CMake 使用 GNUInstallDirs 将 `NekoPlayer` 安装到 `bin/`，并将 `data/nekoplayer.desktop` 与原创 SVG 图标安装到应用和图标目录；`main.cpp` 调用 `QGuiApplication::setDesktopFileName("nekoplayer")` 关联桌面条目。桌面条目使用 `Exec=NekoPlayer %F`，声明常见音视频 MIME 类型。本阶段只提供 `cmake --install` 布局，不包含 CPack、Flatpak、发行版打包或许可证选择。

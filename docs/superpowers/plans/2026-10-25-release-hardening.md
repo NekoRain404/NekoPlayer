@@ -18,6 +18,17 @@
 - No playback, rendering, HDR, decoding, polling, or frame-copy changes.
 - Use subagents for implementation and review; keep the controller context small.
 
+## Phase Status
+
+- [x] Task 1: Remove the legacy settings dialogs
+- [x] Task 2: Responsive transport time width
+- [x] Task 3: Playlist display-name cache
+- [x] Task 4: Custom seek interval
+- [x] Task 5: Install rules and desktop integration
+- [x] Task 6: Verification and documentation
+- [ ] Task 6: Whole-branch review (not dispatched during the documentation task)
+- [ ] Optional: native Wayland real-display acceptance
+
 ---
 
 ## Task 1: Remove the legacy settings dialogs
@@ -137,9 +148,9 @@
 
 ## Verification Checklist
 
-- [ ] Full Debug build succeeds; window tests compile only.
-- [ ] Non-window Debug suite passes.
-- [ ] Focused sanitizer tests pass with the documented leak-detection caveat.
-- [ ] `code-size`, changed-file formatting, and `git diff --check` pass.
-- [ ] `cmake --install` produces a binary, desktop entry, and icon.
-- [ ] No raw mpv commands in UI code; no polling or frame copies.
+- [x] Full Debug build succeeds; window tests compile only.
+- [x] Non-window Debug suite passes.
+- [x] Focused sanitizer tests pass with the documented leak-detection caveat.
+- [x] `code-size`, changed-file formatting, and `git diff --check` pass.
+- [x] `cmake --install` produces a binary, desktop entry, and icon.
+- [x] No raw mpv commands in UI code; no polling or frame copies.

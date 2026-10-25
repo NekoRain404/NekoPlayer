@@ -1,5 +1,19 @@
 # Verification Record
 
+Release-hardening final verification (2026-10-25, code at `1d582ed`):
+
+- Scope: removal of the production-dead `PlaybackSettingsDialog` / `SubtitleSettingsDialog`, the narrow-width transport time fix, the playlist display-name cache, the custom 1–120 s seek interval, and GNUInstallDirs install/desktop/icon integration. No production code changed in this documentation round.
+- `cmake --preset debug` succeeded. `cmake --build --preset debug -j4` succeeded with Ninja reporting `no work to do` on the already-built tree; the player and every test target, including the compile-only window suites, were up to date. Window-behavior tests were compiled but not executed.
+- `LC_ALL=C LANG=C ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passed **54/54** in **58.62 s**. The selection excluded 14 window/desktop tests (`preferences-dialog`, `video-color-dialog`, `file-startup`, and eleven `*window*` suites) out of 68 registered tests. `LC_ALL=C` remains required because the host's non-C locale makes mpv reject playback.
+- Focused selection `LC_ALL=C LANG=C ctest --test-dir build/debug -R '^(code-size|preferences-dialog|preferences-coordinator|transport-bar|playlist|playlist-edit|session)$' --output-on-failure` passed **7/7** in **5.94 s**.
+- `cmake --preset sanitizers` and `cmake --build --preset sanitizers --target preferences_dialog_test transport_bar_test playlist_test playlist_edit_test session_test -j4` succeeded. `LC_ALL=C LANG=C ASAN_OPTIONS=detect_leaks=0 ctest --test-dir build/sanitizers -R '^(preferences-dialog|transport-bar|playlist|playlist-edit|session)$' --output-on-failure` passed **5/5** in **6.65 s** with no ASan/UBSan reports. Leak detection was disabled only to exclude documented platform-library exit allocations (Qt Wayland client, GTK/Pango/fontconfig); this result does not claim leak-free execution.
+- `rm -rf /tmp/neko-install && cmake --install build/debug --prefix /tmp/neko-install` installed exactly three files: `/tmp/neko-install/bin/NekoPlayer`, `/tmp/neko-install/share/applications/nekoplayer.desktop`, and `/tmp/neko-install/share/icons/hicolor/scalable/apps/nekoplayer.svg`.
+- `ctest --test-dir build/debug -R '^code-size$' --output-on-failure` passed **1/1** (0.32 s). The guard enforces a 500-line target, a 550-line ordinary hard limit, and 800 lines for the listed `mainwindow.cpp` / `window_test.cpp` exceptions.
+- `clang-format --dry-run --Werror` (clang-format 23.1.3) passed for the **16** changed C++ source/header files that still exist across `7357e35..1d582ed`. `git diff --check -- . ':(exclude)docs/skills.md'` passed.
+- `cmake --build --preset debug --target release_translations -j4` succeeded with Ninja reporting `no work to do`; `lrelease6 translations/NekoPlayer_en.ts` reported **280 finished, 0 unfinished** translations.
+- Boundary checks: no `mpv_` / `MPV_` / `mpv/client.h` usage in `src/ui/`; the remaining UI timers are single-shot hide, feedback, or click-disambiguation timers rather than playback polling; no CPU frame copies or render-path changes.
+- Not verified by this round: native Wayland visual/keyboard/pointer behavior, HDR output and tone mapping on an HDR display, GPU hardware decoding, physical audio devices, multi-monitor mixed scaling, Windows, and distro packaging. Window-behavior tests were not run.
+
 Final post-review regression (2026-10-24, code at `987d46a`):
 
 - The final test-only fixes changed no production code. The standard non-window selection `LC_ALL=C LANG=C ctest --test-dir build/debug --output-on-failure -E '(window|^file-startup$|^preferences-dialog$|^video-color-dialog$)'` passed **54/54** in **58.50 s** on the final tree. Window-behavior tests were compiled but not executed.

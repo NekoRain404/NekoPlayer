@@ -97,8 +97,8 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QStatusBar{background:%27;color:%2;border-top:1px solid %3;border-bottom:none;}"
                "QStatusBar QLabel{background:transparent;color:%7;}"
                "QStatusBar::item{border:none;}"
-               "QMenu{background:%27;color:%2;border:1px solid %3;border-radius:%13px;padding:6px;}"
-               "QDialog{background:%27;color:%2;}"
+               "QMenu{background:%32;color:%2;border:1px solid %3;border-radius:%13px;padding:6px;}"
+               "QDialog{background:%32;color:%2;}"
                "QMenuBar{padding:2px 6px;} QMenuBar::item{padding:6px 10px;border-radius:%13px;}"
                "QMenuBar::item:selected,QMenu::item:selected{background:%24;}"
                "QMenu::item{padding:7px %25px 7px 12px;margin:1px 4px;border-radius:%13px;"
@@ -161,7 +161,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "chevron-down.png);"
                "subcontrol-origin:border;subcontrol-position:bottom right;width:20px;height:50%;"
                "background:transparent;border:none;}"
-               "QComboBox QAbstractItemView{background:%27;color:%2;border:1px solid %3;"
+               "QComboBox QAbstractItemView{background:%32;color:%2;border:1px solid %3;"
                "border-radius:%6px;padding:%23px;selection-background-color:%24;"
                "selection-color:%26;outline:none;}"
                "QTabWidget::pane{border:1px solid %3;border-radius:%6px;background:%27;"
@@ -191,7 +191,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QDialogButtonBox QPushButton{min-width:76px;}"
                "QStatusBar{font-size:11px;}"
                "QLabel#appearanceGlassOpacityValue,QLabel#appearanceGlassBlurValue{color:%7;}"
-               "QToolTip{color:%2;background:%27;border:1px solid %3;border-radius:%13px;"
+               "QToolTip{color:%2;background:%32;border:1px solid %3;border-radius:%13px;"
                "padding:%23px %14px;}")
         .arg(color(t.canvas), color(t.primaryText), color(t.border), color(t.raisedSurface),
              color(t.surface), QString::number(t.surfaceRadius), color(t.secondaryText),
@@ -203,5 +203,6 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
              color(t.selection), QString::number(unit * 7), color(t.selectedText),
              panelFill(t.surface, glassEnabled, glassOpacity, glassBlur),
              windowBackdrop(t, glassEnabled), QString::number(t.controlHeight),
-             QString::number(t.rowHeight), QString::number(t.menuItemHeight));
+             QString::number(t.rowHeight), QString::number(t.menuItemHeight),
+             panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur));
 }

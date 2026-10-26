@@ -153,3 +153,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 时间轴缩略图预览现在复用同一 160 ms 动效 token，以 paint opacity 淡入/淡出，不安装 graphics effect，也不在每次 hover 帧更新时重启动画；Qt 6.12+ Reduce Motion 下即时显示/隐藏。`thumbnail-preview` 覆盖此行为；见验证记录。
 - 当前可用环境没有完成 Dark/Light、玻璃开关、不同 accent、100%/175% 缩放、全屏视频几何与 mini-player 的原生组合验收。HDR、`hwdec-current`、音频设备与 compositor blur 仍是独立的硬件/桌面验收项；本轮不声称已通过。
 - Wayland 映射复查仍未解决：niri 下 Debug 窗口启动后 Qt 收到 `xdg_toplevel.configure`，日志随后标记 `suspended true`，但窗口不出现在 `niri msg windows`；以进程级 `LIBGL_ALWAYS_SOFTWARE=1` 重试结果相同。没有改桌面配置或播放器渲染路径。需先在可映射窗口的原生会话复查，才能进行设计规格要求的 1.75× 实机视觉验收。
+- 四级 surface 后续复核发现弹出控件之前复用了普通 panel fill。现已将菜单、对话框、组合框弹出列表和 tooltip 映射到 `raisedSurface`，普通 transport/内容面板保留 `surface`；统一由 `panelFill()` 处理玻璃与不透明 fallback，不触碰视频渲染区域。定向 Debug 与 ASan/UBSan 结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。

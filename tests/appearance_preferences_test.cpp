@@ -417,7 +417,7 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(style.contains(QStringLiteral("QListView#playlistView::item:selected")));
         QVERIFY(style.contains(QStringLiteral("QPushButton:focus")));
         QVERIFY(style.contains(QStringLiteral("QPushButton:pressed")));
-        QVERIFY(style.contains(QStringLiteral("QSlider:focus")));
+        QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:focus")));
         QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:pressed")));
         QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:disabled")));
         QVERIFY(style.contains(QStringLiteral("QMenu::item:disabled")));

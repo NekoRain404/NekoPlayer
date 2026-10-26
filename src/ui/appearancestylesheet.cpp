@@ -216,15 +216,16 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                  panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur));
     style +=
         QStringLiteral(
-            "QLabel#playbackInformationOverlay{color:%1;background:%2;border-radius:6px;"
-            "padding:12px;font-family:monospace;font-size:14px;}"
-            "QFrame#seekProgressOverlay{background:%3;border-radius:6px;}"
+            "QLabel#playbackInformationOverlay{color:%1;background:%2;border-radius:%6px;"
+            "padding:%7px;font-family:monospace;font-size:14px;}"
+            "QFrame#seekProgressOverlay{background:%3;border-radius:%6px;}"
             "QFrame#seekProgressOverlay QLabel{color:%1;background:transparent;font-size:16px;}"
-            "QProgressBar#seekProgressBar{background:%4;border:none;border-radius:4px;}"
-            "QProgressBar#seekProgressBar::chunk{background:%5;border-radius:4px;}")
+            "QProgressBar#seekProgressBar{background:%4;border:none;border-radius:%8px;}"
+            "QProgressBar#seekProgressBar::chunk{background:%5;border-radius:%8px;}")
             .arg(color(t.primaryText),
                  panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
                  panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
-                 color(t.separator), color(t.accent));
+                 color(t.separator), color(t.accent), QString::number(t.surfaceRadius),
+                 QString::number(t.spaceUnit * 3), QString::number(t.spaceUnit));
     return style;
 }

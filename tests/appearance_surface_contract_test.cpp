@@ -70,6 +70,20 @@ class AppearanceSurfaceContractTest final : public QObject {
         }
     }
 
+    void playbackOverlaysUseSharedSurfaceAndSpacingTokens() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(tokens, false);
+        const auto information =
+            style.mid(style.indexOf(QStringLiteral("QLabel#playbackInformationOverlay")))
+                .section('}', 0, 0);
+        const auto seek = style.mid(style.indexOf(QStringLiteral("QFrame#seekProgressOverlay")))
+                              .section('}', 0, 0);
+        QVERIFY(
+            information.contains(QStringLiteral("border-radius:%1px;").arg(tokens.surfaceRadius)));
+        QVERIFY(information.contains(QStringLiteral("padding:%1px;").arg(tokens.spaceUnit * 3)));
+        QVERIFY(seek.contains(QStringLiteral("border-radius:%1px;").arg(tokens.surfaceRadius)));
+    }
+
     void keyboardFocusRingIsExplicitAndContrastsAcrossAccents() {
         const auto style =
             appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark));

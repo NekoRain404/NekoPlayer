@@ -183,6 +183,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QCheckBox{spacing:%23px;}"
                "QCheckBox::indicator{width:16px;height:16px;border:1px solid %3;"
                "border-radius:5px;background:%5;}"
+               "QCheckBox:focus::indicator{border:2px solid %18;}"
                "QCheckBox::indicator:hover{border-color:%7;}"
                "QCheckBox::indicator:checked{background:%11;border-color:%11;image:url(:/"
                "appearance/data/checkmark.png);}"

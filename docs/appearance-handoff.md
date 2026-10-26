@@ -155,3 +155,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - Wayland 映射复查仍未解决：niri 下 Debug 窗口启动后 Qt 收到 `xdg_toplevel.configure`，日志随后标记 `suspended true`，但窗口不出现在 `niri msg windows`；以进程级 `LIBGL_ALWAYS_SOFTWARE=1` 重试结果相同。没有改桌面配置或播放器渲染路径。需先在可映射窗口的原生会话复查，才能进行设计规格要求的 1.75× 实机视觉验收。
 - 四级 surface 后续复核发现弹出控件之前复用了普通 panel fill。现已将菜单、对话框、组合框弹出列表和 tooltip 映射到 `raisedSurface`，普通 transport/内容面板保留 `surface`；统一由 `panelFill()` 处理玻璃与不透明 fallback，不触碰视频渲染区域。定向 Debug 与 ASan/UBSan 结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
 - 对比度复核新增 Dark/Light 全表面 WCAG AA 测试，覆盖正文、次级和辅助文字在 canvas/surface/raised/hover/pressed 上的组合；发现并修正了浅色 muted 文字偏淡、深色 muted 文字偏暗的问题。合同测试单独位于 `appearance_surface_contract_test.cpp`，设置测试主体保持在 500 行以内。自动化结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)；原生合成后的对比度仍需 Wayland 屏幕检查。
+- 键盘焦点复核给复选框 indicator 增加了基于 `focus` token 的 2px 边界，并由 surface contract 验证五种 accent 与 Dark/Light 核心表面至少 3:1；实际合成可见性仍需原生 Wayland 检查。

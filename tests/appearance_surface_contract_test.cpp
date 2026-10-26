@@ -60,6 +60,33 @@ class AppearanceSurfaceContractTest final : public QObject {
         }
     }
 
+    void keyboardFocusRingIsExplicitAndContrastsAcrossAccents() {
+        const auto style =
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark));
+        QVERIFY(style.contains(QStringLiteral("QCheckBox:focus::indicator")));
+
+        const auto luminance = [](const QColor &color) {
+            const auto linear = [](qreal channel) {
+                return channel <= 0.04045 ? channel / 12.92
+                                          : std::pow((channel + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) +
+                   0.0722 * linear(color.blueF());
+        };
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light}) {
+            for (const auto accent : AppearancePreferences::accents()) {
+                const auto tokens = appearanceTokens(theme, accent);
+                for (const auto &surface : {tokens.canvas, tokens.surface, tokens.raisedSurface}) {
+                    const auto high = std::max(luminance(tokens.focus), luminance(surface));
+                    const auto low = std::min(luminance(tokens.focus), luminance(surface));
+                    QVERIFY2((high + 0.05) / (low + 0.05) >= 3.0,
+                             "Focus boundary must meet UI contrast on core surfaces");
+                }
+            }
+        }
+    }
+
     void textTokensMeetContrastOnEveryDarkAndLightSurface() {
         const auto luminance = [](const QColor &color) {
             const auto linear = [](qreal channel) {

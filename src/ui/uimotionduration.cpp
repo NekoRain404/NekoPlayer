@@ -7,3 +7,5 @@ int uiMotionDuration(int requestedDurationMs, bool reduceMotion) {
         return 0;
     return qMax(0, requestedDurationMs);
 }
+
+QEasingCurve uiMotionEasingCurve() { return QEasingCurve(QEasingCurve::OutCubic); }

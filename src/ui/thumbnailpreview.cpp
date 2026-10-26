@@ -45,7 +45,7 @@ ThumbnailPreview::ThumbnailPreview(QWidget *parent)
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_DeleteOnClose, false);
     setMouseTracking(false);
-    animation_->setEasingCurve(QEasingCurve::OutCubic);
+    animation_->setEasingCurve(uiMotionEasingCurve());
     animation_->setDuration(currentMotionDuration());
     connect(animation_, &QPropertyAnimation::finished, this, [this] {
         if (contentOpacity_ == 0.0) {

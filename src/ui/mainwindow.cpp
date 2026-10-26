@@ -25,6 +25,7 @@
 #include "thumbnailpreviewpolicy.h"
 #include "transportbar.h"
 #include "welcomepanel.h"
+#include "windowopacitytransition.h"
 #include "windowtitle.h"
 
 #include <QAction>
@@ -140,6 +141,15 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     layout->addWidget(splitter_, 1);
     layout->addWidget(transport_);
     setCentralWidget(content);
+    miniPlayerAnimation_ = new WindowOpacityTransition(*this, this);
+    connect(miniPlayerAnimation_, &WindowOpacityTransition::reached, this, [this](qreal opacity) {
+        if (opacity == 0.0) {
+            applyMiniPlayerState(miniPlayerDesired_);
+            animateMiniPlayerWindow(1.0);
+        } else if (miniPlayerDesired_ != miniPlayerActive_) {
+            animateMiniPlayerWindow(0.0);
+        }
+    });
     statusBar()->setSizeGripEnabled(false);
     statusBar()->setAttribute(Qt::WA_TranslucentBackground, true);
     statusBar()->setAttribute(Qt::WA_NoSystemBackground, true);
@@ -554,8 +564,8 @@ void MainWindow::setFullscreen(bool enabled) {
         return;
     exitFullscreenAction_->setEnabled(enabled);
 
-    if (enabled && miniPlayerActive_)
-        setMiniPlayer(false);
+    if (enabled && (miniPlayerActive_ || miniPlayerDesired_))
+        setMiniPlayerImmediately(false);
     hideThumbnailPreview();
 
     syncingWindowState_ = true;
@@ -619,9 +629,24 @@ void MainWindow::setFullscreen(bool enabled) {
 }
 
 void MainWindow::setMiniPlayer(bool enabled) {
-    auto *action = findChild<QAction *>(QStringLiteral("miniPlayerAction"));
+    if (enabled == miniPlayerActive_ && !miniPlayerAnimation_->isRunning())
+        return;
+    miniPlayerDesired_ = enabled;
+    if (miniPlayerAnimation_->isRunning() && miniPlayerAnimation_->targetOpacity() == 0.0)
+        return;
+    animateMiniPlayerWindow(0.0);
+}
+
+void MainWindow::setMiniPlayerImmediately(bool enabled) {
+    miniPlayerDesired_ = enabled;
+    miniPlayerAnimation_->stopAt(1.0);
+    applyMiniPlayerState(enabled);
+}
+
+void MainWindow::applyMiniPlayerState(bool enabled) {
     if (enabled == miniPlayerActive_)
         return;
+    auto *action = findChild<QAction *>(QStringLiteral("miniPlayerAction"));
     hideThumbnailPreview();
     if (enabled) {
         if (isFullScreen())
@@ -665,6 +690,8 @@ void MainWindow::setMiniPlayer(bool enabled) {
                                           : AppearanceIcons::Symbol::Restore);
     }
 }
+
+void MainWindow::animateMiniPlayerWindow(qreal opacity) { miniPlayerAnimation_->fadeTo(opacity); }
 
 void MainWindow::setAlwaysOnTop(bool enabled) {
     if (enabled == alwaysOnTop_)

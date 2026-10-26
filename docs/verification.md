@@ -1,5 +1,24 @@
 # Verification Record
 
+Release candidate closure (2026-10-26, source at `555a663`):
+
+- Fresh final non-window Debug run: `QT_QPA_PLATFORM=offscreen LC_ALL=C LANG=C ctest --test-dir build/debug --exclude-regex 'window|backend-startup' --output-on-failure` passed **70/70** in **65.89 seconds**. Window behavior tests remain intentionally unrun.
+- `cmake -DNEKO_SOURCE_DIR="$PWD" -P cmake/CheckCodeSize.cmake` passed. It reports several named project files above the 500-line target but within the configured 550-line hard gate; the plan's separately listed integration exceptions remain below 800 lines.
+- `git diff --check -- docs/appearance-handoff.md docs/verification.md` passed. Installed `/usr/local/bin/NekoPlayer` and `build/debug/NekoPlayer` match at SHA-256 `120dd50debc421be7f6c08e16f1b5999e25ce6f4b2ad4a5bb474114bc2ff57ba`.
+- Manual Wayland evidence remains limited to the previously recorded Dark/Ocean, glass-enabled empty-home/fullscreen observation at 1.75×. This release does not claim completion of the full theme/accent/material/DPI/playback/menu/mini-player acceptance matrix.
+
+Fresh main-branch regression verification (2026-10-26, code at `7cfa700`):
+
+- `cmake --build --preset debug -j4` reported no pending build work; all Debug targets were already current.
+- `QT_QPA_PLATFORM=offscreen LC_ALL=C LANG=C ctest --test-dir build/debug --exclude-regex 'window|backend-startup' --output-on-failure` passed **70/70** in **65.01 seconds**. This includes the preferences, transport, surface-contract, playlist, Quick Actions and media-path regressions; native window behavior tests were not run.
+- This run is fresh automated evidence only. It does not expand the existing native Wayland evidence: the full theme/glass/accent/DPI, active-video, menu/settings, fullscreen, mini-player and focus/keyboard matrix remains open.
+
+Opaque video-surface fallback follow-up (2026-10-26):
+
+- A contract review found that the empty/error `VideoWidget` clear path used the configured glass opacity as its OpenGL alpha. This could reveal the desktop through the video region even though glass is limited to UI chrome. An initial framebuffer assertion could not provide reliable evidence because the offscreen platform does not support `QOpenGLWidget`; the test was therefore reduced to the deterministic `emptySurfaceClearColor()` contract. Glass-enabled empty surfaces now use the palette tint at alpha 255, while glass-disabled empty surfaces remain black and opaque. Active libmpv frames are untouched; final composited pixels still require native Wayland inspection.
+- `cmake --build --preset debug -j4` succeeded. `QT_QPA_PLATFORM=offscreen ctest --test-dir build/debug --exclude-regex 'window|backend-startup' --output-on-failure` passed **70/70** in **67.72 seconds**; window behavior tests were not run. `cmake -DNEKO_SOURCE_DIR="$PWD" -P cmake/CheckCodeSize.cmake`, clang-format on the three changed C++ files, and scoped `git diff --check` passed.
+- A fresh native session check confirmed the installed process is mapped under Qt Wayland/niri on eDP-1 at 2880×1800, 120 Hz, 1.75×; the empty fullscreen page is centered and windowed transport remains at the bottom. Native keyboard routing became unreliable in the multi-workspace remote-desktop session, so no appearance preference changes or further matrix claims are made. Dark/Light/System × glass on/off × accents, 100% scale, active video, playlist, settings/popups, mini-player, focus/disabled states, and actual video/OSD composition remain unverified.
+
 Fullscreen transport material follow-up (2026-10-26):
 
 - Fullscreen transport now exposes a semantic `fullscreenOverlay` property consumed by the application-level QSS. With glass enabled, only this video-overlaid control surface uses the same neutral surface token at a stronger opacity (at least 90%); windowed transport remains at the user's configured opacity. With glass disabled, both retain the opaque token fallback. No video, libmpv, HDR, or hardware-decoding path changed.
@@ -876,7 +895,42 @@ Preferences/transport density follow-up (2026-10-26):
 - Native Wayland startup follow-up: `QT_QPA_PLATFORM=wayland QT_LOGGING_RULES='qt.qpa.wayland.*=true;qt.qpa.*=true' ./build/debug/NekoPlayer --smoke-test --silent-audio --no-config` exited successfully, proving renderer/window initialization is possible. A persistent `--no-config` launch in the same niri session remained alive but Qt Wayland logged `xdg_toplevel.configure ... suspended true` (805×1005 followed by 0×0); niri did not enumerate that instance. It was stopped with Ctrl-C. This reproduces a mapping/suspension condition rather than an application crash; the smoke result does not prove a mapped window or visual behavior.
 - An XWayland window belonging to the pre-existing Debug process was directly captured by X11 window ID (1408×1758 physical pixels, corresponding to 805×1005 logical at the session's 1.75 scale) and inspected, then the temporary screenshot was removed. Dark/Ocean, default glass setting, empty welcome page and transport fit without visible overlap or center shift. This is XWayland-only single-configuration evidence, not a substitute for native Wayland or the required appearance matrix. No window behavior tests were run.
 
+Playback transport material convergence follow-up (2026-10-26):
+
+- Added `main-window-transport-material`, which constructs the real `MainWindow` and renders its actual `transportBar` with glass enabled and disabled. A second case toggles the actual Appearance page's `appearanceGlassChoice`, exercising `PreferencesDialog::previewAppearance()` and the application stylesheet update before checking the main-window pixels and the transport's non-translucent attribute.
+- Mutation check: temporarily restoring the old `QWidget#transportBar` mapping to the glass `panelFill()` made the test fail on glass-enabled pixels (`#b92f2f32`, alpha 185) versus the required opaque `surface` (`#ff2c2c2e`). Restoring the solid `surface` mapping made both actual-settings and direct-state cases pass. This confirms the regression test detects the reported material leak through the real main-window composition hierarchy; it does not claim compositor output verification.
+- Fresh non-window Debug CTest selection passed **69/69** in **64.47 seconds**, including code-size, all UI/material tests and backend integration. Focused repeat passed `code-size`, `appearance-surface-contract`, `ui-surface` and `main-window-transport-material` **4/4**. The UI target is `QT_QPA_PLATFORM=offscreen`; no window behavior test was run.
+- The current compositor capture showed the session lock screen rather than the application, so no fresh visual inspection was possible. Direct XWayland window capture is not accepted as composited evidence, and the native Qt Wayland toplevel mapping remains intermittent. Keep the real Wayland appearance matrix outstanding; do not infer visual acceptance from these pixel tests.
+- The new settings-to-main-window material test also builds under the Sanitizers preset and passes with `ASAN_OPTIONS=detect_leaks=0` (**1/1**, 1.59 seconds); formatting and the Debug code-size gate pass. This excludes leak-check claims and does not replace native Wayland compositing verification.
+
 Keyboard tab-focus follow-up (2026-10-26):
 
 - A real `QTabBar` render regression found that changing keyboard focus onto the preferences tabs produced identical pixels; the shared stylesheet had no tab focus treatment. Added a token-driven 2 px focus border to `QTabBar::tab:focus`. The test failed before the rule and passed afterward, while selected/hover treatment remains separate.
 - `cmake --build --preset debug --target appearance_surface_contract_test appearance_preferences_test ui_surface_test NekoPlayer -j4` succeeded. The offscreen appearance selection (`code-size`, `appearance-preferences`, `appearance-surface-contract`, `ui-surface`) passed **4/4**; ASan/UBSan `appearance-surface-contract` passed **1/1** with `ASAN_OPTIONS=detect_leaks=0`. Changed C++ files passed clang-format and scoped diff checks. No window behavior test was run; focus rendering under native Wayland composition remains unverified.
+
+Mini-player motion convergence follow-up (2026-10-26):
+
+- Mini-player entry/exit now uses `WindowOpacityTransition`, sharing the 160 ms `OutCubic` motion token and Qt 6.12+ Reduce Motion behavior used by the other animated UI. The toplevel fades out, applies its window flags/size once, then fades back in; it does not resize the OpenGL video widget frame-by-frame and does not install `QGraphicsOpacityEffect`.
+- Full Debug build succeeded, including compilation of desktop/window test targets; no window behavior test was executed. Fresh non-window Debug CTest (`ctest --preset debug -E 'window|backend-startup' --output-on-failure`) passed **70/70** in **65.98 seconds**, including `code-size`. Changed C++ passed `clang-format --dry-run --Werror`; scoped diff check passed. The existing `docs/skills.md` user edit was excluded from checks/commit.
+- This is implementation/build evidence, not runtime verification of the compositor opacity transition. Native Wayland mini-player entry/exit, visibility continuity and video-frame behavior remain unverified, as does the broader theme/DPI/fullscreen appearance matrix. Window behavior tests remain intentionally skipped.
+
+Shared motion easing follow-up (2026-10-26):
+
+- The four optional UI transitions (fullscreen transport, thumbnail preview, action feedback and mini-player toplevel opacity) now consume one `uiMotionEasingCurve()` policy (`OutCubic`) in addition to the shared 160 ms token. A focused interaction regression failed to compile before the policy existed and passes afterward, preventing future curve drift between overlays.
+- Debug non-window CTest passed **70/70**; the focused Sanitizer interaction test passed **1/1** with `ASAN_OPTIONS=detect_leaks=0` and `UBSAN_OPTIONS=halt_on_error=1`. Changed C++ passed clang-format and code-size checks. Window behavior tests and native Wayland motion inspection remain skipped.
+
+Native Wayland mapping recheck (2026-10-26):
+
+- A fresh `QT_QPA_PLATFORM=wayland QT_LOGGING_RULES='qt.qpa.wayland.*=true' ./build/debug/NekoPlayer --no-config --silent-audio` instance was observed for five seconds in the active niri session. It remained alive but never appeared in `niri msg windows`; its log contained only an unrelated AT-SPI bus warning and no application crash. The diagnostic process was terminated after observation, while the pre-existing user process was left untouched.
+- This is another environment/mapping failure, not evidence about the new mini-player or motion rendering. No compositor or desktop configuration was changed; the required native Wayland theme/DPI/fullscreen/mini-player visual matrix remains open.
+
+Mini-player/fullscreen race follow-up (2026-10-26):
+
+- Review of the asynchronous mini-player transition found that entering fullscreen immediately during mini-player fade could interleave two state machines. `MainWindow::setFullscreen(true)` now cancels the pending opacity animation, restores the toplevel opacity, and exits mini-player synchronously before entering fullscreen. Normal mini-player action toggles remain animated.
+- Added `window-opacity-transition`, a real offscreen QWidget regression for cancelling a pending fade at an exact opacity. Debug full non-window CTest passed **70/70**; the focused Sanitizer test passed **1/1** with `ASAN_OPTIONS=detect_leaks=0` and `UBSAN_OPTIONS=halt_on_error=1`. Window behavior tests were not run, so the actual compositor/fullscreen sequence still needs native Wayland inspection.
+
+Post-install Wayland/runtime recheck (2026-10-26):
+
+- Rebuilt the current Debug tree (`ninja: no work to do`) and ran `QT_QPA_PLATFORM=offscreen ctest --test-dir build/debug --exclude-regex 'window|backend-startup' --output-on-failure`; all **70/70** non-window tests passed in **65.92 seconds**. No window behavior test was run.
+- The installed `/usr/local/bin/NekoPlayer` was launched with `QT_QPA_PLATFORM=wayland --no-config --silent-audio`; niri mapped the native Qt Wayland toplevel and reported the connected eDP-1 output at 2880×1800, 120 Hz, 1.75× scale (1645×1028 logical). A fullscreen capture showed the centered empty-state actions and the bottom transport remaining fixed to the window edge without an observable video-area shift. The capture was temporary and deleted after inspection.
+- This is a fresh Dark/Ocean, glass-enabled, empty-state/fullscreen observation only. The compositor session subsequently locked while attempting further keyboard interaction, so Light, glass-off, alternate accents, settings/menus, active playback, playlist, mini-player, focus/disabled states, and the 100% scale branch remain unverified. The observed scan-progress dialog was not reproducible on a second no-config launch; static call-site inspection still shows folder scans only begin from explicit folder actions/drop handlers, so no production change was made.

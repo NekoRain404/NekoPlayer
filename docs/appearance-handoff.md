@@ -2,8 +2,16 @@
 
 更新时间：2026-10-26
 仓库：`/home/nekorain/Development/NekoPlayer`
-分支：`feat/first-playable`
-基础外观实现提交：`6aa897e`。本轮 Apple UI 收敛代码已提交至 `995a5b5`；原生 Wayland 视觉验收仍未进行。
+分支：`main`
+基础外观实现提交：`6aa897e`。本轮 Apple UI 收敛最新代码基线：`555a663`（`main` 与 `origin/main` 同步）。
+
+## 收束状态
+
+本阶段的 UI 实现与自动化回归已交付，用户决定在此收束开发。当前安装版与 `build/debug/NekoPlayer` 二进制 SHA-256 一致；最近一次非窗口 Debug CTest 为 70/70 通过。窗口行为测试按用户要求未运行。
+
+原生 Wayland 已有局部实机观察：niri、Qt Wayland、eDP-1 2880×1800@120 Hz、1.75×；一次空首页/全屏检查中，内容居中且 transport 固定于底部。此证据不代表完整视觉矩阵通过。Light、玻璃关闭、其他强调色、100% 缩放、真实播放/OSD、播放列表、设置和弹出菜单、mini-player、焦点/禁用态均未完成系统化检查。后续如恢复开发，应先补这些验收；当前不再以此为由继续扩展代码。
+
+这次收束不宣称所有人工 Wayland 验收标准均已满足，也不覆盖 HDR 输出、硬件解码或合成器 blur 验证。播放器进程 PID `2055146` 属于用户当前会话，交接时应保留；工作区中 `docs/skills.md` 是用户已有未提交修改，不属于本阶段提交。
 
 ## 1. 交接结论
 
@@ -134,7 +142,7 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 ## 6. 接手建议
 
 1. 先运行 `git status --short --branch`。当前共享工作区有一个用户已有的 `docs/skills.md` 修改，必须保留，不要重置、覆盖或顺手纳入外观提交。
-2. 确认 `feat/first-playable` 上已经包含上述外观提交、统一入口（`4cd7108`）和发布准备提交。不要自行 merge 或 push。
+2. 确认 `main` 已包含上述外观提交、统一入口（`4cd7108`）和发布准备提交；本项目不创建额外开发分支或 worktree。
 3. 统一 Preferences 入口已由 `4cd7108` 完成。下一步优先安排在目标 Wayland 桌面做视觉与输入验收；若发现问题，再按窄范围补测试和修正。
 4. 验收后按 `docs/verification.md` 的发布准备记录复核构建、非窗口套件、聚焦 sanitizer、格式和 diff 检查；分别报告自动化与人工证据。
 5. 除非用户另行要求，不要改动 mpv、HDR、硬解或 OpenGL 呈现实现来追求 UI blur。
@@ -175,3 +183,11 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 旧记录：全屏曾使用至少 90% 玻璃不透明度、普通播放栏跟随用户透明度；该行为已由后续收敛取代。当前普通/全屏 transport 均固定使用不透明 `surface` token，玻璃开关只影响其他 UI 面板；淡入淡出仍只改变可见度。
 - 2026-10-26 transport 材质修正：真实 QWidget 像素测试复现玻璃开启时 transport alpha 为 185；QSS 原因是 transport 误用了共享的玻璃 `%27` 面板填充。现改为不透明 `surface` token，普通/全屏背景在玻璃开关两种状态下相同，且 alpha 为 255。`fullscreen-transport-material`、`appearance-surface-contract`、`ui-surface` 和 `code-size` 通过；不涉及视频帧、libmpv、HDR 或硬件解码路径。原生 Wayland 播放画面仍未完成全矩阵验收。
 - 播放列表面板的玻璃开关现有独立真实 QWidget 像素契约：启用时 alpha 小于 255，关闭时 alpha 为 255 且填充改变；该断言确认玻璃设置仍作用于 UI，而不是简单全局关闭透明度。
+- transport 另外有一条经过真实 Appearance 设置页的集成像素契约：切换 `appearanceGlassChoice` 会即时重建应用 QSS，而普通/全屏共用的 transport 始终不透明地绘制 `surface`。将样式映射故意改回玻璃 `panelFill()` 后，回归以 alpha 185 失败；恢复后实际设置链路通过。此测试验证 QWidget 样式，不验证合成器最终输出。最近非窗口 Debug CTest 69/69；人工 Wayland 外观矩阵仍未完成。
+- 上述设置链路测试也已在 Sanitizers 构建通过 1/1（`ASAN_OPTIONS=detect_leaks=0`，不宣称 leak 检查）；格式与 code-size 门禁通过。人工 Wayland 合成观感仍待复核。
+- Mini-player 转场现抽为 `WindowOpacityTransition`，复用全屏 transport/缩略图一致的 160ms `OutCubic` 和 Reduce Motion 策略；窗口 flags 与尺寸只在淡出完成后切换一次，再淡入恢复。没有逐帧缩放 OpenGL 视频面，也没有添加 graphics opacity effect。fresh Debug 非窗口 CTest 70/70，窗口行为测试未运行；原生 Wayland mini-player 连续性和完整外观矩阵仍需人工验收。
+- 四类可选 UI 动效现在还共享唯一 `uiMotionEasingCurve()`（`OutCubic`），避免全屏 transport、缩略图、操作反馈和 mini-player 的曲线漂移；Debug 70/70、Sanitizer 定向 1/1。原生 Wayland 的实际动效观感仍需人工验收。
+- 最新原生 Wayland 诊断实例观察 5 秒仍未出现在 niri 窗口列表，日志没有应用崩溃，仅有 AT-SPI 总线警告；诊断进程已结束，未修改桌面配置。该会话仍不能提供可信的原生 UI/mini-player 视觉证据。
+- 另外修正了 mini-player 淡出期间立即进入全屏的状态竞态：全屏路径现在同步取消 pending opacity 转场并退出 mini-player，再进入全屏；普通 mini-player 切换仍使用统一淡入淡出。新增转场取消回归，Debug 非窗口 70/70、Sanitizer 1/1；真实 Wayland 合成序列仍未验收。
+- 2026-10-26 安装版运行复查：`/usr/local/bin/NekoPlayer` 在显式 `QT_QPA_PLATFORM=wayland` 下成功映射到 niri；eDP-1 为 2880×1800@120 Hz、1.75×。全屏空状态截图中内容保持居中，transport 固定在底部且未观察到画面区域跳动；这只覆盖 Dark/Ocean、玻璃开启、无媒体的一种配置。随后桌面锁屏，Light/玻璃关闭/其他 accent/设置菜单/播放列表/mini-player/焦点态和 100% 缩放仍未完成人工验收。完整非窗口 Debug 回归在本次复查中通过 70/70，窗口行为测试仍按要求跳过。
+- 2026-10-26 发现空/失败媒体状态的 `VideoWidget::paintGL()` 曾把玻璃透明度应用到 OpenGL 清屏 alpha，让 UI 玻璃设置穿透到视频 surface。已改为玻璃开启时仅取 palette 色并强制 alpha 255，玻璃关闭仍清为不透明黑色；活动视频帧仍由原有 libmpv GPU 路径渲染。offscreen 平台不支持可靠的 `QOpenGLWidget` framebuffer 断言，因此自动化覆盖集中在可确定的 clear-color 契约，真实合成仍需 Wayland 检查。修复后定向测试与完整非窗口 Debug 70/70 通过。真实 Wayland 的媒体播放像素/OSD、100% DPI 与其余外观组合依旧未完成验收。

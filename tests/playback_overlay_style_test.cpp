@@ -72,6 +72,14 @@ class PlaybackOverlayStyleTest final : public QObject {
         QVERIFY(playback.testAttribute(Qt::WA_TranslucentBackground));
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
     }
+
+    void emptyVideoSurfaceClearColorStaysOpaqueWhenGlassIsEnabled() {
+        QPalette palette;
+        palette.setColor(QPalette::Base, QColor(11, 22, 33, 24));
+
+        QCOMPARE(VideoWidget::emptySurfaceClearColor(palette, true), QColor(11, 22, 33, 255));
+        QCOMPARE(VideoWidget::emptySurfaceClearColor(palette, false), QColor(Qt::black));
+    }
 };
 
 QTEST_MAIN(PlaybackOverlayStyleTest)

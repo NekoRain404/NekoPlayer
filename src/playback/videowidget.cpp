@@ -34,6 +34,15 @@ VideoWidget::~VideoWidget() {
 bool VideoWidget::isReady() const { return renderer_ != nullptr; }
 bool VideoWidget::hasFailed() const { return failed_; }
 
+QColor VideoWidget::emptySurfaceClearColor(const QPalette &palette, bool glassEnabled) {
+    if (!glassEnabled)
+        return QColor(Qt::black);
+
+    auto tint = palette.color(QPalette::Base);
+    tint.setAlpha(255);
+    return tint;
+}
+
 void VideoWidget::showEvent(QShowEvent *event) {
     QOpenGLWidget::showEvent(event);
     QTimer::singleShot(500, this, [this] {
@@ -81,13 +90,10 @@ void VideoWidget::paintGL() {
     gl->glDisable(GL_BLEND);
     if (!renderer_ || !controller_.state().active) {
         const bool glass = qApp->property("glassEnabled").toBool();
-        if (glass) {
-            const int opacity = qBound(0, qApp->property("glassOpacity").toInt(), 100);
-            const auto tint = palette().color(QPalette::Base);
-            gl->glClearColor(tint.redF(), tint.greenF(), tint.blueF(), opacity / 100.0);
-        } else {
-            gl->glClearColor(0, 0, 0, 1);
-        }
+        // The video surface is always opaque. Glass belongs to the chrome
+        // around it; it must not expose the desktop through an empty surface.
+        const auto tint = emptySurfaceClearColor(palette(), glass);
+        gl->glClearColor(tint.redF(), tint.greenF(), tint.blueF(), tint.alphaF());
         gl->glClear(GL_COLOR_BUFFER_BIT);
         return;
     }

@@ -79,6 +79,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp
     src/ui/windowactions.cpp src/ui/appearancemenu.cpp src/ui/windowsession.cpp
     src/ui/transportbar.cpp src/ui/foldermenu.cpp
+    src/ui/windowopacitytransition.cpp
     src/ui/interactionpolicy.cpp src/ui/uimotionduration.cpp
     src/ui/thumbnailpreview.cpp
     src/ui/thumbnailpreviewpolicy.cpp

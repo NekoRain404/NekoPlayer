@@ -213,8 +213,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                  panelFill(t.surface, glassEnabled, glassOpacity, glassBlur),
                  windowBackdrop(t, glassEnabled), QString::number(t.controlHeight),
                  QString::number(t.rowHeight), QString::number(t.menuItemHeight),
-                 panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
-                 panelFill(t.surface, glassEnabled, glassOpacity, glassBlur));
+                 panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur));
     style +=
         QStringLiteral(
             "QLabel#playbackInformationOverlay{color:%1;background:%2;border-radius:6px;"

@@ -9,7 +9,7 @@ license=('GPL-3.0-only')
 depends=('qt6-base' 'qt6-translations' 'mpv' 'ffmpeg' 'hicolor-icon-theme')
 makedepends=('cmake' 'ninja' 'qt6-tools' 'pkgconf')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/NekoRain404/NekoPlayer/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('49305bae2694da79ea911a8c9a43990340fac8ea6bbec6ef0b15fb9312cb8e76')
+sha256sums=('0831886528f9554bc05a0ddfe5453c77f501a0ea2d2428235b6bd3744fd836b1')
 
 build() {
     cmake -S "$pkgname-$pkgver" -B build \

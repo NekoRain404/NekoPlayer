@@ -1,15 +1,18 @@
 #include "playback/mpvcontroller.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
+#include "ui/appearancepreferences.h"
 #include "ui/playlistitemdelegate.h"
 #include "ui/playlistpane.h"
 
 #include <QAction>
 #include <QApplication>
+#include <QImage>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
+#include <QPainter>
 #include <QSignalSpy>
 #include <QStyleOptionViewItem>
 #include <QVBoxLayout>
@@ -58,6 +61,38 @@ struct PaneFixture {
 class PlaylistPaneTest final : public QObject {
     Q_OBJECT
   private slots:
+    void layoutUsesUnifiedPanelDensity() {
+        PaneFixture fixture;
+        const auto *layout = qobject_cast<QVBoxLayout *>(fixture.pane.layout());
+        QVERIFY(layout);
+        QCOMPARE(layout->contentsMargins(), QMargins(12, 12, 12, 12));
+        QCOMPARE(layout->spacing(), 8);
+        QVERIFY(fixture.search()->minimumHeight() >= 32);
+    }
+
+    void playlistSurfaceFollowsGlassPreference() {
+        PaneFixture fixture;
+        const auto renderFill = [&fixture] {
+            QImage image(fixture.pane.size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            fixture.pane.render(&painter, {}, {}, QWidget::DrawWindowBackground);
+            return image.pixelColor(5, 5);
+        };
+
+        AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Dark,
+                                                     AppearancePreferences::Accent::Ocean, true});
+        const auto glassFill = renderFill();
+        QVERIFY(glassFill.alpha() < 255);
+
+        AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Dark,
+                                                     AppearancePreferences::Accent::Ocean, false});
+        const auto opaqueFill = renderFill();
+        QCOMPARE(opaqueFill.alpha(), 255);
+        QVERIFY(opaqueFill != glassFill);
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+    }
+
     void searchNarrowsRowsAndShowsFilteredCount() {
         PaneFixture fixture;
         auto *search = fixture.search();

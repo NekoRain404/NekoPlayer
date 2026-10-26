@@ -1,9 +1,18 @@
 #include "thumbnailpreview.h"
+#include "appearancetokens.h"
+#include "uimotionduration.h"
 
+#include <QGuiApplication>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPalette>
+#include <QShowEvent>
+#include <QStyleHints>
 #include <algorithm>
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
+#include <QAccessibilityHints>
+#endif
 
 namespace {
 QString timestampText(double seconds) {
@@ -15,13 +24,47 @@ QString timestampText(double seconds) {
 }
 } // namespace
 
+namespace {
+int currentMotionDuration() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
+    const auto preference = QGuiApplication::styleHints()->accessibility()->motionPreference();
+    return uiMotionDuration(appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs,
+                            preference == Qt::MotionPreference::ReducedMotion);
+#else
+    return uiMotionDuration(appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs,
+                            false);
+#endif
+}
+} // namespace
+
 ThumbnailPreview::ThumbnailPreview(QWidget *parent)
-    : QWidget(parent, Qt::ToolTip | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint) {
+    : QWidget(parent, Qt::ToolTip | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint),
+      animation_(new QPropertyAnimation(this, QByteArrayLiteral("contentOpacity"), this)) {
     setObjectName(QStringLiteral("thumbnailPreview"));
     setAttribute(Qt::WA_ShowWithoutActivating);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_DeleteOnClose, false);
     setMouseTracking(false);
+    animation_->setEasingCurve(QEasingCurve::OutCubic);
+    animation_->setDuration(currentMotionDuration());
+    connect(animation_, &QPropertyAnimation::finished, this, [this] {
+        if (contentOpacity_ == 0.0) {
+            image_ = {};
+            QWidget::hide();
+        }
+    });
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
+    connect(QGuiApplication::styleHints()->accessibility(),
+            &QAccessibilityHints::motionPreferenceChanged, this,
+            [this](Qt::MotionPreference preference) {
+                if (preference != Qt::MotionPreference::ReducedMotion ||
+                    animation_->state() != QAbstractAnimation::Running)
+                    return;
+                const qreal target = animation_->endValue().toReal();
+                animation_->stop();
+                animateContentTo(target);
+            });
+#endif
 }
 
 void ThumbnailPreview::present(const QImage &image, double seconds) {
@@ -32,16 +75,49 @@ void ThumbnailPreview::present(const QImage &image, double seconds) {
 }
 
 void ThumbnailPreview::clear() {
-    image_ = {};
-    hide();
-    update();
+    animation_->stop();
+    if (!isVisible()) {
+        image_ = {};
+        return;
+    }
+    animateContentTo(0.0);
 }
 
 QSize ThumbnailPreview::sizeHint() const { return QSize(248, 166); }
 
+qreal ThumbnailPreview::contentOpacity() const { return contentOpacity_; }
+
+void ThumbnailPreview::setContentOpacity(qreal opacity) {
+    contentOpacity_ = qBound(0.0, opacity, 1.0);
+    update();
+}
+
+void ThumbnailPreview::animateContentTo(qreal opacity) {
+    animation_->stop();
+    animation_->setDuration(currentMotionDuration());
+    if (animation_->duration() == 0 || qFuzzyCompare(contentOpacity_ + 1, opacity + 1)) {
+        setContentOpacity(opacity);
+        if (opacity == 0.0) {
+            image_ = {};
+            QWidget::hide();
+        }
+        return;
+    }
+    animation_->setStartValue(contentOpacity_);
+    animation_->setEndValue(opacity);
+    animation_->start();
+}
+
+void ThumbnailPreview::showEvent(QShowEvent *event) {
+    QWidget::showEvent(event);
+    if (contentOpacity_ < 1.0)
+        animateContentTo(1.0);
+}
+
 void ThumbnailPreview::paintEvent(QPaintEvent *event) {
     Q_UNUSED(event)
     QPainter painter(this);
+    painter.setOpacity(contentOpacity_);
     painter.setRenderHint(QPainter::Antialiasing);
     const auto frame = rect().adjusted(1, 1, -1, -1);
     const auto panel = palette().color(QPalette::Window);

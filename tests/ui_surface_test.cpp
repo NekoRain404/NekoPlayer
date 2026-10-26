@@ -6,8 +6,9 @@
 #include "ui/actionfeedbackoverlay.h"
 #include "ui/appearanceicons.h"
 #include "ui/appearancepreferences.h"
+#include "ui/appearancestylesheet.h"
+#include "ui/appearancetokens.h"
 #include "ui/fullscreencontrols.h"
-#include "ui/playbackoverlay.h"
 #include "ui/playlistpane.h"
 #include "ui/transportbar.h"
 #include "ui/welcomepanel.h"
@@ -34,7 +35,22 @@
 class UiSurfaceTest final : public QObject {
     Q_OBJECT
   private slots:
-    void glassChangesTransportMenuAndDialogMaterial() {
+    void stylesheetUsesTheUnifiedSurfaceContract() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark,
+                                             AppearancePreferences::Accent::Rose);
+        const auto style =
+            appearanceStyleSheet(tokens, true, glassOpacityDefault, glassBlurDefault);
+        QVERIFY(style.contains(tokens.accentSurface.name(QColor::HexRgb)));
+        QVERIFY(style.contains(tokens.focus.name(QColor::HexRgb)));
+        QVERIFY(style.contains(tokens.disabledText.name(QColor::HexRgb)));
+        QVERIFY(style.contains(QStringLiteral("QPushButton:focus")));
+        QVERIFY(style.contains(QStringLiteral("QPushButton:disabled")));
+        QVERIFY(style.contains(QStringLiteral("QMenu::item:disabled")));
+        QVERIFY(style.contains(QStringLiteral("QToolButton:pressed")));
+        QVERIFY(style.contains(QStringLiteral("QToolTip{color:")));
+    }
+
+    void glassChangesPanelsButNotTransportMaterial() {
         QAction action;
         TransportBar transport(&action, &action, &action, &action, &action, &action, &action);
         QMenu menu;
@@ -57,43 +73,13 @@ class UiSurfaceTest final : public QObject {
                 const auto fill = image.pixelColor(5, 5);
                 if (!glass)
                     opaqueColors.append(fill);
+                else if (index == 0)
+                    QCOMPARE(fill, opaqueColors.at(index));
                 else
                     QVERIFY(fill != opaqueColors.at(index));
                 ++index;
                 QVERIFY(!surface->testAttribute(Qt::WA_TranslucentBackground));
                 QVERIFY(!surface->graphicsEffect());
-            }
-        }
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
-    }
-
-    void appearanceLeavesVideoAndPlaybackOverlaysUnmodified() {
-        MpvController player(true, true);
-        VideoWidget video(player);
-        PlaybackOverlay playback(player, &video);
-        ActionFeedbackOverlay feedback(&video);
-        const auto playbackStyle = playback.styleSheet();
-        const auto feedbackStyle = feedback.styleSheet();
-        const auto playbackTranslucent = playback.testAttribute(Qt::WA_TranslucentBackground);
-        const auto feedbackTranslucent = feedback.testAttribute(Qt::WA_TranslucentBackground);
-        for (const auto theme : AppearancePreferences::themes()) {
-            for (const bool glass : {false, true}) {
-                AppearancePreferences::applySettings(
-                    *qApp, {theme, AppearancePreferences::Accent::Amber, glass});
-                video.ensurePolished();
-                playback.ensurePolished();
-                feedback.ensurePolished();
-                for (auto *surface :
-                     {static_cast<QWidget *>(&video), static_cast<QWidget *>(&playback),
-                      static_cast<QWidget *>(&feedback)}) {
-                    QVERIFY(!surface->graphicsEffect());
-                }
-                QVERIFY(!video.testAttribute(Qt::WA_TranslucentBackground));
-                QCOMPARE(playback.testAttribute(Qt::WA_TranslucentBackground), playbackTranslucent);
-                QCOMPARE(feedback.testAttribute(Qt::WA_TranslucentBackground), feedbackTranslucent);
-                QVERIFY(video.styleSheet().isEmpty());
-                QCOMPARE(playback.styleSheet(), playbackStyle);
-                QCOMPARE(feedback.styleSheet(), feedbackStyle);
             }
         }
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
@@ -112,6 +98,8 @@ class UiSurfaceTest final : public QObject {
         auto *opacity = qobject_cast<QGraphicsOpacityEffect *>(transport.graphicsEffect());
         auto *animation = controls.findChild<QPropertyAnimation *>();
         QVERIFY(opacity && animation);
+        QCOMPARE(animation->duration(),
+                 appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs);
         host.show();
         for (const bool glass : {false, true}) {
             AppearancePreferences::applySettings(
@@ -297,6 +285,25 @@ class UiSurfaceTest final : public QObject {
         QCOMPARE(location->text(), QStringLiteral("https://example.test/video/Episode.mkv"));
         QVERIFY(!location->text().contains(QStringLiteral("secret")));
         QVERIFY(!location->text().contains(QStringLiteral("token")));
+    }
+
+    void welcomeRecentTextUsesTheSharedSpacingUnit() {
+        QAction open(QStringLiteral("打开文件…"));
+        QAction network(QStringLiteral("打开网络地址…"));
+        WelcomePanel panel(&open, &network);
+        panel.resize(640, 520);
+        panel.setRecentSources({QStringLiteral("/media/Episode.mkv")});
+        panel.show();
+        QCoreApplication::processEvents();
+
+        auto *button = panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1"));
+        auto *title = panel.findChild<QLabel *>(QStringLiteral("welcomeRecentTitle1"));
+        auto *location = panel.findChild<QLabel *>(QStringLiteral("welcomeRecentLocation1"));
+        QVERIFY(button && title && location);
+        const int titleBottom = title->mapTo(button, QPoint(0, title->height())).y();
+        const int locationTop = location->mapTo(button, QPoint(0, 0)).y();
+        QCOMPARE(locationTop - titleBottom,
+                 appearanceTokens(AppearancePreferences::Theme::Dark).spaceUnit);
     }
 
     void welcomePanelShowsResumablePlaybackHistory() {

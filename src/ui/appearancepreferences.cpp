@@ -61,6 +61,9 @@ void AppearancePreferences::applySettings(QApplication &application, const Setti
     } else {
         application.setPalette(paletteForTokens(tokens));
     }
+    application.setProperty("glassEnabled", saved.glassEnabled);
+    application.setProperty("glassOpacity", saved.glassOpacity);
+    application.setProperty("glassBlur", saved.glassBlur);
     application.setStyleSheet(
         appearanceStyleSheet(tokens, saved.glassEnabled, saved.glassOpacity, saved.glassBlur));
 }
@@ -135,6 +138,9 @@ void AppearancePreferences::applyTheme(QApplication &application, Theme theme) {
 
     const auto tokens = appearanceTokens(theme);
     application.setPalette(paletteForTokens(tokens));
+    application.setProperty("glassEnabled", false);
+    application.setProperty("glassOpacity", glassOpacityDefault);
+    application.setProperty("glassBlur", glassBlurDefault);
     application.setStyleSheet(appearanceStyleSheet(tokens));
 }
 

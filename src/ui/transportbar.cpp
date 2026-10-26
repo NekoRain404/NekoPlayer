@@ -1,4 +1,5 @@
 #include "transportbar.h"
+#include "appearancetokens.h"
 #include "interactionpolicy.h"
 #include "playback/mpvcontroller.h"
 #include "seekslidergeometry.h"
@@ -216,7 +217,8 @@ QToolButton *button(QAction *action, QWidget *parent, bool primary = false) {
     }
     result->setToolButtonStyle(Qt::ToolButtonIconOnly);
     result->setIconSize(primary ? QSize(26, 26) : QSize(22, 22));
-    result->setMinimumSize(36, 32);
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+    result->setMinimumSize(tokens.controlHeight, tokens.rowHeight);
     result->setFocusPolicy(Qt::StrongFocus);
     const auto updateDescription = [result, action] {
         result->setAccessibleName(action->text());
@@ -233,8 +235,9 @@ QFrame *divider(QWidget *parent) {
     result->setFrameShape(QFrame::VLine);
     result->setFrameShadow(QFrame::Plain);
     result->setFixedWidth(1);
-    result->setMinimumHeight(18);
-    result->setMaximumHeight(22);
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+    result->setMinimumHeight(tokens.spaceUnit * 4);
+    result->setMaximumHeight(tokens.spaceUnit * 6);
     return result;
 }
 } // namespace
@@ -262,28 +265,30 @@ TransportBar::TransportBar(QAction *open, QAction *previous, QAction *pause, QAc
         timeShowsRemaining_ = !timeShowsRemaining_;
         updateTimeLabel();
     };
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     auto *layout = new QVBoxLayout(this);
     layout->setSizeConstraint(QLayout::SetNoConstraint);
-    layout->setContentsMargins(12, 4, 12, 8);
-    layout->setSpacing(4);
+    layout->setContentsMargins(tokens.spaceUnit * 3, tokens.spaceUnit * 2, tokens.spaceUnit * 3,
+                               tokens.spaceUnit * 2);
+    layout->setSpacing(tokens.spaceUnit * 2);
     layout->addWidget(timeline_);
     auto *row = new QHBoxLayout;
-    row->setSpacing(5);
+    row->setSpacing(tokens.spaceUnit);
     row->addWidget(button(previous, this));
     row->addWidget(button(pause, this, true));
     row->addWidget(button(next, this));
     row->addWidget(button(stop, this));
     row->addWidget(button(open, this));
-    row->addSpacing(10);
+    row->addSpacing(tokens.spaceUnit * 2);
     row->addWidget(timeDivider_);
-    row->addSpacing(2);
+    row->addSpacing(tokens.spaceUnit);
     row->addWidget(time_);
     row->addStretch();
     row->addWidget(audioDivider_);
-    row->addSpacing(2);
+    row->addSpacing(tokens.spaceUnit);
     row->addWidget(button(mute, this));
     row->addWidget(volume_);
-    row->addSpacing(8);
+    row->addSpacing(tokens.spaceUnit * 2);
     row->addWidget(button(fullscreen, this));
     layout->addLayout(row);
     setMinimumSize(0, 0);
@@ -349,9 +354,8 @@ void TransportBar::resizeEvent(QResizeEvent *event) {
 
 void TransportBar::applyResponsiveMetrics() {
     const auto metrics = TransportBarMetrics::forWidth(width());
-    const int buttonHeight = metrics.buttonExtent == 36 ? 32 : metrics.buttonExtent;
     for (auto *toolButton : findChildren<QToolButton *>(QString(), Qt::FindDirectChildrenOnly))
-        toolButton->setFixedSize(metrics.buttonExtent, buttonHeight);
+        toolButton->setFixedSize(metrics.buttonExtent, metrics.buttonExtent);
 
     volume_->setVisible(metrics.showVolume);
     volume_->setFixedWidth(metrics.showVolume ? metrics.volumeWidth : 0);

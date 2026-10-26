@@ -32,14 +32,6 @@ PlaybackOverlay::PlaybackOverlay(MpvController &controller, QWidget *parent)
     progress_->setRange(0, 10000);
     progress_->setTextVisible(false);
     progress_->setFixedHeight(8);
-    setStyleSheet(QStringLiteral(
-        "QLabel#playbackInformationOverlay { color: #f2f4f8; background: rgba(20,22,28,210);"
-        " border-radius: 6px; padding: 12px; font-family: monospace; font-size: 14px; }"
-        "QFrame#seekProgressOverlay { background: rgba(20,22,28,225); border-radius: 6px; }"
-        "QFrame#seekProgressOverlay QLabel { color: #f2f4f8; background: transparent;"
-        " font-size: 16px; }"
-        "QProgressBar { background: #454953; border: none; border-radius: 4px; }"
-        "QProgressBar::chunk { background: #8ba9ef; border-radius: 4px; }"));
     auto *layout = new QVBoxLayout(seekPanel_);
     layout->setContentsMargins(18, 12, 18, 14);
     layout->setSpacing(10);

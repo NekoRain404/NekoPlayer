@@ -9,6 +9,12 @@ target_link_libraries(preferences_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME preferences-dialog COMMAND preferences_dialog_test)
 set_tests_properties(preferences-dialog PROPERTIES TIMEOUT 20)
 
+add_executable(quick_actions_dialog_test quick_actions_dialog_test.cpp)
+target_link_libraries(quick_actions_dialog_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME quick-actions-dialog COMMAND quick_actions_dialog_test)
+set_tests_properties(quick-actions-dialog PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(preferences_appearance_test preferences_appearance_test.cpp)
 target_link_libraries(preferences_appearance_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME preferences-appearance COMMAND preferences_appearance_test)
@@ -27,6 +33,12 @@ qt_add_translations(appearance_preferences_test TS_FILES ../translations/NekoPla
 add_test(NAME appearance-preferences COMMAND appearance_preferences_test)
 set_tests_properties(appearance-preferences PROPERTIES TIMEOUT 20)
 
+add_executable(appearance_surface_contract_test appearance_surface_contract_test.cpp)
+target_link_libraries(appearance_surface_contract_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME appearance-surface-contract COMMAND appearance_surface_contract_test)
+set_tests_properties(appearance-surface-contract PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(window_title_test window_title_test.cpp ../src/ui/windowtitle.cpp)
 target_include_directories(window_title_test PRIVATE ../src)
 target_link_libraries(window_title_test PRIVATE neko_playback Qt6::Test)
@@ -34,7 +46,7 @@ add_test(NAME title-format COMMAND window_title_test)
 set_tests_properties(title-format PROPERTIES TIMEOUT 20)
 
 add_executable(interaction_policy_test interaction_policy_test.cpp
-    ../src/ui/interactionpolicy.cpp)
+    ../src/ui/interactionpolicy.cpp ../src/ui/uimotionduration.cpp)
 target_include_directories(interaction_policy_test PRIVATE ../src)
 target_link_libraries(interaction_policy_test PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME interaction-policy COMMAND interaction_policy_test)
@@ -52,6 +64,24 @@ qt_add_translations(ui_surface_test TS_FILES ../translations/NekoPlayer_en.ts
     RESOURCE_PREFIX "/i18n")
 add_test(NAME ui-surface COMMAND ui_surface_test)
 set_tests_properties(ui-surface PROPERTIES TIMEOUT 20 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(main_window_transport_material_test main_window_transport_material_test.cpp)
+target_link_libraries(main_window_transport_material_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME main-window-transport-material COMMAND main_window_transport_material_test)
+set_tests_properties(main-window-transport-material PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(fullscreen_transport_material_test fullscreen_transport_material_test.cpp)
+target_link_libraries(fullscreen_transport_material_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME fullscreen-transport-material COMMAND fullscreen_transport_material_test)
+set_tests_properties(fullscreen-transport-material PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(playback_overlay_style_test playback_overlay_style_test.cpp)
+target_link_libraries(playback_overlay_style_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME playback-overlay-style COMMAND playback_overlay_style_test)
+set_tests_properties(playback-overlay-style PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(languagemanager_test languagemanager_test.cpp ../src/ui/languagemanager.cpp)
 target_include_directories(languagemanager_test PRIVATE ../src)
@@ -73,6 +103,12 @@ target_include_directories(action_feedback_test PRIVATE ../src)
 target_link_libraries(action_feedback_test PRIVATE neko_options Qt6::Core Qt6::Test)
 add_test(NAME action-feedback COMMAND action_feedback_test)
 set_tests_properties(action-feedback PROPERTIES TIMEOUT 20)
+
+add_executable(action_feedback_overlay_test action_feedback_overlay_test.cpp)
+target_link_libraries(action_feedback_overlay_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME action-feedback-overlay COMMAND action_feedback_overlay_test)
+set_tests_properties(action-feedback-overlay PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(playback_overlay_text_test playback_overlay_text_test.cpp
     ../src/ui/playbackoverlaytext.cpp)

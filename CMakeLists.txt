@@ -79,7 +79,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp
     src/ui/windowactions.cpp src/ui/appearancemenu.cpp src/ui/windowsession.cpp
     src/ui/transportbar.cpp src/ui/foldermenu.cpp
-    src/ui/interactionpolicy.cpp
+    src/ui/interactionpolicy.cpp src/ui/uimotionduration.cpp
     src/ui/thumbnailpreview.cpp
     src/ui/thumbnailpreviewpolicy.cpp
     src/ui/recentmediamenu.cpp
@@ -93,12 +93,12 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/timeseekdialog.cpp src/ui/networkopendialog.cpp
     src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp src/ui/screenshotmenu.cpp
     src/ui/subtitledisplaymenu.cpp
-    src/ui/preferencesdialog.cpp src/ui/preferencescoordinator.cpp src/ui/preferencesappearancepage.cpp src/ui/videocolordialog.cpp
-    src/ui/shortcutsdialog.cpp src/ui/windowtitle.cpp)
+    src/ui/preferencesdialog.cpp src/ui/preferencesformlayout.cpp src/ui/preferencescoordinator.cpp src/ui/preferencesappearancepage.cpp src/ui/videocolordialog.cpp
+    src/ui/shortcutsdialog.cpp src/ui/quickactionsdialog.cpp src/ui/windowtitle.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
     Qt6::OpenGLWidgets)
 qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
-    FILES data/checkmark.png)
+    FILES data/checkmark.png data/chevron.png data/chevron-up.png data/chevron-down.png)
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)

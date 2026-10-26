@@ -1,4 +1,5 @@
 #include "ui/interactionpolicy.h"
+#include "ui/uimotionduration.h"
 
 #include <QTest>
 
@@ -38,6 +39,12 @@ class InteractionPolicyTest final : public QObject {
         QCOMPARE(volumeAfterWheel(2, -120, 5), 0.0);
         QCOMPARE(volumeAfterWheel(0, -120, 5), 0.0);
         QCOMPARE(volumeAfterWheel(0, 240, 20), 40.0);
+    }
+
+    void reducedMotionDisablesOptionalUiAnimation() {
+        QCOMPARE(uiMotionDuration(160, true), 0);
+        QCOMPARE(uiMotionDuration(160, false), 160);
+        QCOMPARE(uiMotionDuration(-5, false), 0);
     }
 };
 

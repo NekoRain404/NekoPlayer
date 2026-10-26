@@ -25,6 +25,7 @@ class FullscreenControls final : public QObject {
   private:
     void arrange();
     void animateTo(qreal opacity);
+    void finishFadeOut();
     QWidget &transport_;
     QWidget &video_;
     QWidget *normalParent_;

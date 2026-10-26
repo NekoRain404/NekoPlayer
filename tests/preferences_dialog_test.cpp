@@ -9,7 +9,9 @@
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFontComboBox>
+#include <QFormLayout>
 #include <QIcon>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPushButton>
@@ -95,6 +97,39 @@ class PreferencesDialogTest final : public QObject {
         auto *seekStep = dialog.findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
         QVERIFY(seekStep);
         QCOMPARE(seekStep->value(), 5);
+    }
+
+    void formFieldsKeepOneSharedLabelColumnAcrossCategories() {
+        MpvController player(true, true);
+        PreferencesDialog dialog(player);
+        dialog.show();
+        QCoreApplication::processEvents();
+
+        QList<int> fieldColumnPositions;
+        auto *tabs = dialog.findChild<QTabWidget *>(QStringLiteral("preferencesCategories"));
+        QVERIFY(tabs);
+        for (int page = 0; page < tabs->count(); ++page) {
+            tabs->setCurrentIndex(page);
+            QCoreApplication::processEvents();
+            for (auto *form : dialog.findChildren<QFormLayout *>()) {
+                if (form->parentWidget() != tabs->widget(page))
+                    continue;
+                for (int row = 0; row < form->rowCount(); ++row) {
+                    auto *labelItem = form->itemAt(row, QFormLayout::LabelRole);
+                    auto *fieldItem = form->itemAt(row, QFormLayout::FieldRole);
+                    auto *label = labelItem ? qobject_cast<QLabel *>(labelItem->widget()) : nullptr;
+                    if (!label || !fieldItem || !label->isVisible())
+                        continue;
+                    fieldColumnPositions.append(
+                        form->parentWidget()->mapTo(&dialog, fieldItem->geometry().topLeft()).x());
+                    break;
+                }
+            }
+        }
+
+        QVERIFY(fieldColumnPositions.size() >= 5);
+        for (const int position : fieldColumnPositions)
+            QCOMPARE(position, fieldColumnPositions.constFirst());
     }
 
     void opensRequestedCategory() {

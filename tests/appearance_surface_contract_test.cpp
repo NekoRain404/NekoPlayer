@@ -1,0 +1,340 @@
+#include "ui/appearancepreferences.h"
+#include "ui/appearancestylesheet.h"
+#include "ui/appearancetokens.h"
+
+#include <QApplication>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QImage>
+#include <QLineEdit>
+#include <QPainter>
+#include <QPushButton>
+#include <QSlider>
+#include <QSpinBox>
+#include <QTabBar>
+#include <QToolButton>
+#include <QtTest>
+
+#include <algorithm>
+#include <cmath>
+
+class AppearanceSurfaceContractTest final : public QObject {
+    Q_OBJECT
+  private slots:
+    void tokensExposeStableSurfaceHierarchy() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark,
+                                             AppearancePreferences::Accent::Violet);
+        QVERIFY(tokens.canvas.isValid());
+        QVERIFY(tokens.surface.isValid());
+        QVERIFY(tokens.raisedSurface.isValid());
+        QVERIFY(tokens.accentSurface.isValid());
+        QVERIFY(tokens.border.isValid());
+        QCOMPARE(tokens.focus, tokens.accent);
+        QVERIFY(tokens.controlHeight >= tokens.rowHeight);
+        QVERIFY(tokens.menuItemHeight >= tokens.rowHeight);
+        QCOMPARE(tokens.controlHeight % tokens.spaceUnit, 0);
+        QCOMPARE(tokens.rowHeight % tokens.spaceUnit, 0);
+        QVERIFY(tokens.motionDurationMs >= 140);
+        QVERIFY(tokens.motionDurationMs <= 180);
+    }
+
+    void elevatedPopupsUseRaisedSurfaceMaterial() {
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light,
+              AppearancePreferences::Theme::System}) {
+            const auto tokens = appearanceTokens(theme);
+            const auto glass =
+                appearanceStyleSheet(tokens, true, glassOpacityDefault, glassBlurDefault);
+            const auto opaque = appearanceStyleSheet(tokens, false);
+            const auto raisedCenter = QStringLiteral("rgba(%1,%2,%3,")
+                                          .arg(tokens.raisedSurface.red())
+                                          .arg(tokens.raisedSurface.green())
+                                          .arg(tokens.raisedSurface.blue());
+            const auto panel =
+                glass.mid(glass.indexOf(QStringLiteral("QWidget#transportBar"))).section('}', 0, 0);
+            const auto opaquePanel =
+                opaque.mid(opaque.indexOf(QStringLiteral("QWidget#transportBar")))
+                    .section('}', 0, 0);
+            QVERIFY(panel.contains(tokens.surface.name(QColor::HexRgb)));
+            QVERIFY(opaquePanel.contains(tokens.surface.name(QColor::HexRgb)));
+            QVERIFY(!panel.contains(QStringLiteral("qlineargradient")));
+
+            for (const auto &selector :
+                 {QStringLiteral("QMenu{"), QStringLiteral("QDialog{"),
+                  QStringLiteral("QComboBox QAbstractItemView{"), QStringLiteral("QToolTip{")}) {
+                const auto popup = glass.mid(glass.indexOf(selector)).section('}', 0, 0);
+                QVERIFY2(popup.contains(raisedCenter), qPrintable(selector));
+            }
+            const auto opaqueMenu =
+                opaque.mid(opaque.indexOf(QStringLiteral("QMenu{"))).section('}', 0, 0);
+            QVERIFY(opaqueMenu.contains(tokens.raisedSurface.name(QColor::HexRgb)));
+        }
+    }
+
+    void playbackOverlaysUseSharedSurfaceAndSpacingTokens() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(tokens, false);
+        const auto information =
+            style.mid(style.indexOf(QStringLiteral("QLabel#playbackInformationOverlay")))
+                .section('}', 0, 0);
+        const auto seek = style.mid(style.indexOf(QStringLiteral("QFrame#seekProgressOverlay")))
+                              .section('}', 0, 0);
+        QVERIFY(
+            information.contains(QStringLiteral("border-radius:%1px;").arg(tokens.surfaceRadius)));
+        QVERIFY(information.contains(QStringLiteral("padding:%1px;").arg(tokens.spaceUnit * 3)));
+        QVERIFY(seek.contains(QStringLiteral("border-radius:%1px;").arg(tokens.surfaceRadius)));
+    }
+
+    void statusAndPlaybackTextUseSharedTypeScaleTokens() {
+        const auto style =
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark), false);
+        const auto containsFontSize = [&style](const QString &selector, int pixels) {
+            const auto rule = style.mid(style.indexOf(selector)).section('}', 0, 0);
+            return rule.contains(QStringLiteral("font-size:%1px;").arg(pixels));
+        };
+        QVERIFY(style.contains(QStringLiteral("QStatusBar{font-size:11px;}")));
+        QVERIFY(containsFontSize(QStringLiteral("QLabel#timeLabel{"), 12));
+        QVERIFY(containsFontSize(QStringLiteral("QLabel#playbackInformationOverlay{"), 14));
+        QVERIFY(containsFontSize(QStringLiteral("QFrame#seekProgressOverlay QLabel{"), 16));
+    }
+
+    void quickActionsResultsSharePlaylistInteractionStates() {
+        const auto style =
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark), false);
+        QVERIFY(style.contains(
+            QStringLiteral("QListWidget#quickActionsResults{background:transparent;")));
+        QVERIFY(style.contains(QStringLiteral("QListWidget#quickActionsResults::item:hover")));
+        QVERIFY(style.contains(QStringLiteral("QListWidget#quickActionsResults::item:selected")));
+        QVERIFY(style.contains(QStringLiteral("QListWidget#quickActionsResults:focus")));
+    }
+
+    void keyboardFocusRingIsExplicitAndContrastsAcrossAccents() {
+        const auto style =
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark));
+        QVERIFY(style.contains(QStringLiteral("QCheckBox:focus::indicator")));
+
+        const auto luminance = [](const QColor &color) {
+            const auto linear = [](qreal channel) {
+                return channel <= 0.04045 ? channel / 12.92
+                                          : std::pow((channel + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) +
+                   0.0722 * linear(color.blueF());
+        };
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light}) {
+            for (const auto accent : AppearancePreferences::accents()) {
+                const auto tokens = appearanceTokens(theme, accent);
+                for (const auto &surface : {tokens.canvas, tokens.surface, tokens.raisedSurface}) {
+                    const auto high = std::max(luminance(tokens.focus), luminance(surface));
+                    const auto low = std::min(luminance(tokens.focus), luminance(surface));
+                    QVERIFY2((high + 0.05) / (low + 0.05) >= 3.0,
+                             "Focus boundary must meet UI contrast on core surfaces");
+                }
+            }
+        }
+    }
+
+    void focusedSliderHandleHasVisibleFeedback() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark,
+                                             AppearancePreferences::Accent::Ocean);
+        QWidget host;
+        auto *slider = new QSlider(Qt::Horizontal, &host);
+        slider->setRange(0, 100);
+        slider->setValue(50);
+        slider->setGeometry(0, 0, 240, 32);
+        slider->setStyleSheet(appearanceStyleSheet(tokens, false));
+        host.setFocusPolicy(Qt::StrongFocus);
+        host.resize(240, 32);
+        host.show();
+        host.activateWindow();
+        host.setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+
+        QImage unfocused(slider->size(), QImage::Format_ARGB32_Premultiplied);
+        unfocused.fill(Qt::transparent);
+        slider->render(&unfocused);
+
+        slider->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        QVERIFY(slider->hasFocus());
+        QImage focused(slider->size(), QImage::Format_ARGB32_Premultiplied);
+        focused.fill(Qt::transparent);
+        slider->render(&focused);
+
+        QVERIFY(focused != unfocused);
+    }
+
+    void focusedPreferenceTabsHaveVisibleFeedback() {
+        QWidget host;
+        auto *tabs = new QTabBar(&host);
+        tabs->addTab(QStringLiteral("播放"));
+        tabs->addTab(QStringLiteral("外观"));
+        tabs->setFocusPolicy(Qt::StrongFocus);
+        tabs->setStyleSheet(
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark,
+                                                  AppearancePreferences::Accent::Ocean),
+                                 false));
+        tabs->setGeometry(0, 0, 240, 44);
+        host.setFocusPolicy(Qt::StrongFocus);
+        host.resize(240, 44);
+        host.show();
+        host.activateWindow();
+        host.setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+
+        QImage unfocused(tabs->size(), QImage::Format_ARGB32_Premultiplied);
+        unfocused.fill(Qt::transparent);
+        tabs->render(&unfocused);
+
+        tabs->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        QVERIFY(tabs->hasFocus());
+        QImage focused(tabs->size(), QImage::Format_ARGB32_Premultiplied);
+        focused.fill(Qt::transparent);
+        tabs->render(&focused);
+
+        QVERIFY(focused != unfocused);
+    }
+
+    void disabledFormControlsHaveVisibleFeedback() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(tokens, false);
+        const auto render = [](QWidget &widget) {
+            QImage image(widget.size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            widget.render(&painter);
+            return image;
+        };
+
+        QLineEdit edit(QStringLiteral("Example"));
+        QComboBox combo;
+        combo.addItem(QStringLiteral("Example"));
+        QSpinBox spin;
+        QSlider slider(Qt::Horizontal);
+        slider.setRange(0, 100);
+        slider.setValue(50);
+        QCheckBox checkBox(QStringLiteral("Example"));
+        QPushButton button(QStringLiteral("Example"));
+        QToolButton toolButton;
+        QList<QWidget *> controls{&edit, &combo, &spin, &slider, &checkBox, &button, &toolButton};
+        for (auto *control : controls) {
+            control->setStyleSheet(style);
+            control->resize(180, 36);
+            control->show();
+            QCoreApplication::processEvents();
+            const auto enabled = render(*control);
+            control->setEnabled(false);
+            const auto disabled = render(*control);
+            QVERIFY2(disabled != enabled, control->metaObject()->className());
+        }
+    }
+
+    void disabledCheckBoxTextUsesDisabledAppearanceToken() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(tokens, false);
+        QWidget host;
+        auto *checkBox = new QCheckBox(QStringLiteral("Disabled option"), &host);
+        checkBox->setChecked(true);
+        checkBox->setGeometry(0, 0, 220, 36);
+        host.resize(220, 36);
+        host.setStyleSheet(style);
+        host.show();
+        QCoreApplication::processEvents();
+
+        QImage enabled(host.size(), QImage::Format_ARGB32_Premultiplied);
+        enabled.fill(Qt::transparent);
+        host.render(&enabled);
+        checkBox->setEnabled(false);
+        QCoreApplication::processEvents();
+        QImage disabled(host.size(), QImage::Format_ARGB32_Premultiplied);
+        disabled.fill(Qt::transparent);
+        host.render(&disabled);
+
+        const auto containsColor = [](const QImage &image, const QColor &color, const QRect &area) {
+            for (int y = area.top(); y <= area.bottom(); ++y) {
+                for (int x = area.left(); x <= area.right(); ++x) {
+                    if (image.pixelColor(x, y) == color)
+                        return true;
+                }
+            }
+            return false;
+        };
+
+        QVERIFY(enabled != disabled);
+        QVERIFY(!containsColor(enabled, tokens.disabledText, QRect(20, 0, 200, 36)));
+        QVERIFY(containsColor(disabled, tokens.disabledText, QRect(20, 0, 200, 36)));
+        QVERIFY(style.contains(QStringLiteral("QCheckBox:disabled{color:%1;}")
+                                   .arg(tokens.disabledText.name(QColor::HexRgb))));
+        QVERIFY(style.contains(QStringLiteral("QCheckBox::indicator:checked:disabled{")));
+    }
+
+    void focusedFormControlsHaveVisibleFeedback() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(tokens, false);
+        QWidget host;
+        auto *edit = new QLineEdit(QStringLiteral("Example"), &host);
+        auto *combo = new QComboBox(&host);
+        combo->addItem(QStringLiteral("Example"));
+        auto *spin = new QSpinBox(&host);
+        auto *button = new QPushButton(QStringLiteral("Example"), &host);
+        auto *toolButton = new QToolButton(&host);
+        QList<QWidget *> controls{edit, combo, spin, button, toolButton};
+        int top = 0;
+        for (auto *control : controls) {
+            control->setStyleSheet(style);
+            control->setGeometry(0, top, 180, 36);
+            top += 40;
+        }
+        host.resize(200, top);
+        host.setFocusPolicy(Qt::StrongFocus);
+        host.show();
+        host.activateWindow();
+        host.setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+
+        for (auto *control : controls) {
+            QImage unfocused(control->size(), QImage::Format_ARGB32_Premultiplied);
+            unfocused.fill(Qt::transparent);
+            control->render(&unfocused);
+            control->setFocus(Qt::OtherFocusReason);
+            QCoreApplication::processEvents();
+            QVERIFY2(control->hasFocus(), control->metaObject()->className());
+            QImage focused(control->size(), QImage::Format_ARGB32_Premultiplied);
+            focused.fill(Qt::transparent);
+            control->render(&focused);
+            QVERIFY2(focused != unfocused, control->metaObject()->className());
+        }
+    }
+
+    void textTokensMeetContrastOnEveryDarkAndLightSurface() {
+        const auto luminance = [](const QColor &color) {
+            const auto linear = [](qreal channel) {
+                return channel <= 0.04045 ? channel / 12.92
+                                          : std::pow((channel + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) +
+                   0.0722 * linear(color.blueF());
+        };
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light}) {
+            const auto tokens = appearanceTokens(theme);
+            const auto check = [&](const QColor &textColor, const QColor &surface,
+                                   const char *description) {
+                const auto high = std::max(luminance(textColor), luminance(surface));
+                const auto low = std::min(luminance(textColor), luminance(surface));
+                QVERIFY2((high + 0.05) / (low + 0.05) >= 4.5, description);
+            };
+            for (const auto &surface : {tokens.canvas, tokens.surface, tokens.raisedSurface,
+                                        tokens.hoverSurface, tokens.pressedSurface}) {
+                check(tokens.primaryText, surface, "Primary text must meet WCAG AA contrast");
+                check(tokens.secondaryText, surface, "Secondary text must meet WCAG AA contrast");
+                check(tokens.mutedText, surface, "Muted text must meet WCAG AA contrast");
+            }
+        }
+    }
+};
+
+QTEST_MAIN(AppearanceSurfaceContractTest)
+#include "appearance_surface_contract_test.moc"

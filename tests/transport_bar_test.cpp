@@ -22,6 +22,21 @@
 class TransportBarTest final : public QObject {
     Q_OBJECT
   private slots:
+    void layoutUsesUnifiedControlDensity() {
+        QAction open(QStringLiteral("打开文件"));
+        QAction previous(QStringLiteral("上一个"));
+        QAction pause(QStringLiteral("播放"));
+        QAction next(QStringLiteral("下一个"));
+        QAction stop(QStringLiteral("停止"));
+        QAction mute(QStringLiteral("静音"));
+        QAction fullscreen(QStringLiteral("全屏"));
+        TransportBar transport(&open, &previous, &pause, &next, &stop, &mute, &fullscreen);
+        const auto *layout = qobject_cast<QVBoxLayout *>(transport.layout());
+        QVERIFY(layout);
+        QCOMPARE(layout->contentsMargins(), QMargins(12, 8, 12, 8));
+        QCOMPARE(layout->spacing(), 8);
+    }
+
     void controlsAreKeyboardAndScreenReaderAccessible() {
         QAction open(QStringLiteral("打开文件"));
         QAction previous(QStringLiteral("上一个"));
@@ -408,7 +423,7 @@ class TransportBarTest final : public QObject {
         QCOMPARE(volume->width(), 76);
         for (auto *button : transport.findChildren<QToolButton *>()) {
             QCOMPARE(button->width(), 36);
-            QCOMPARE(button->height(), 32);
+            QCOMPARE(button->height(), 36);
         }
 
         host.setFixedSize(559, 100);
@@ -421,7 +436,7 @@ class TransportBarTest final : public QObject {
         QCOMPARE(volume->width(), 76);
         for (auto *button : transport.findChildren<QToolButton *>()) {
             QCOMPARE(button->width(), 36);
-            QCOMPARE(button->height(), 32);
+            QCOMPARE(button->height(), 36);
         }
 
         host.setFixedSize(560, 100);

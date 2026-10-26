@@ -1,15 +1,17 @@
 # 外观与 UI 半透明效果开发交接
 
-更新时间：2026-10-24
+更新时间：2026-10-26
 仓库：`/home/nekorain/Development/NekoPlayer`
 分支：`feat/first-playable`
-外观实现提交：`6aa897e`。交接文档提交：`a41468d`。System palette 强调色 role 修正已提交为 `332f08d`；发布准备轮次已完成最终非窗口验证（54/54），但原生 Wayland 视觉验收仍未进行。
+基础外观实现提交：`6aa897e`。本轮 Apple UI 收敛代码已提交至 `995a5b5`；原生 Wayland 视觉验收仍未进行。
 
 ## 1. 交接结论
 
 外观偏好阶段已实现并提交。用户可选择 Dark、Light、System 三种基础主题，Ocean、Emerald、Violet、Rose、Amber 五种强调色，以及 UI 玻璃式半透明样式开关。偏好页支持即时预览、Apply 持久化和 Cancel 回滚；Settings 菜单中的旧主题菜单继续可用，并与新偏好页共用状态。整体审查发现 System 主题原先没有把强调色写进原生 palette role；该修正已提交为 `332f08d`，并包含在最终验证中。
 
-“玻璃”在本实现里指 UI 控件的半透明渐变、边缘明暗和主题色表面，不是真正的背景模糊。视频帧、libmpv 渲染、硬件解码和 HDR 路径没有为了外观效果而改动。最终 Debug 构建通过，标准非窗口 CTest 集合通过 54/54；窗口行为测试只编译，未按项目要求运行。
+本轮进一步完成统一 AppearanceTokens/QSS 状态契约、偏好设置/播放列表/首页/Transport 的尺寸与密度，以及 fullscreen transport 使用统一 160 ms 动效 token；新增 Ctrl+K 快速操作面板，从实时 QAction 树过滤并触发现有命令，不复制第二份命令清单。面板支持上下键从搜索输入进入结果列表，新增界面文案已补齐英文翻译（325 条已完成、0 条未完成）。具体验证结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
+
+“玻璃”在本实现里指 UI 控件的半透明渐变、边缘明暗和主题色表面，不是真正的背景模糊。视频帧、libmpv 渲染、硬件解码和 HDR 路径没有为了外观效果而改动。最新 Debug 全量构建通过；非窗口 CTest 为 66/66，定向 sanitizer 子集为 7/7。窗口行为测试只编译，未按项目要求运行。
 
 ## 2. 已交付内容与提交
 
@@ -23,6 +25,12 @@
 | `6aa897e` | UI 表面覆盖和视频/全屏反馈隔离回归测试 |
 | `332f08d` | System 保留平台标准调色板，同时应用强调色选择/链接 role；补充回归测试 |
 | `4cd7108` | 统一偏好设置入口：F5/F6/设置菜单共用 `PreferencesCoordinator`，保留当前外观等值并统一 Apply/Cancel |
+| `eea57a7` | 四级材质 token、边框/尺寸 token 与统一 QSS 交互状态 |
+| `d7954ce` | 设置、播放列表、首页卡片和 Transport 布局密度统一 |
+| `48f1a23` | fullscreen transport 淡入淡出改用共享动效时长，并补状态样式断言 |
+| `010ced6` | 新增 Ctrl+K QAction 快速操作面板 |
+| `7c77d76` | 补齐设置外边距与欢迎卡片高度回归测试 |
+| `995a5b5` | 快速操作面板支持从搜索框用上下键切换结果 |
 
 主要实现位置：
 
@@ -34,7 +42,7 @@
 - [main.cpp](/home/nekorain/Development/NekoPlayer/src/main.cpp)：启动时读入并应用外观设置；`--no-config` 使用默认进程内值且不持久化。
 - 测试：`tests/appearance_preferences_test.cpp`、`tests/preferences_dialog_test.cpp`、`tests/ui_surface_test.cpp`。
 
-普通手写代码文件以 500 行为目标，自动检查允许少量超出至 550 行。少数明确列入 `cmake/CheckCodeSize.cmake` 的窗口协调/桌面集成文件可不超过 800 行，新增例外必须附带理由；不能把限制当作目标。本阶段 `windowactions.cpp` 当时为 462 行；外观测试文件后续有增长，添加测试前仍优先拆分。
+普通手写代码文件以 500 行为目标，自动检查允许少量超出至 550 行。少数明确列入 `cmake/CheckCodeSize.cmake` 的窗口协调/桌面集成文件可不超过 800 行，新增例外必须附带理由；不能把限制当作目标。本轮 `preferencesdialog.cpp` 为 527 行、`windowactions.cpp` 为 550 行、`ui_surface_test.cpp` 为 547 行，均在硬限制内；之后应优先将设置页协调逻辑与测试拆分，避免继续增长。
 
 ## 3. 设计和运行契约
 
@@ -58,7 +66,7 @@ QSettings 键固定为：
 
 ### UI 与视频边界
 
-玻璃样式覆盖欢迎页/历史操作行、播放列表、菜单、对话框和 transport 表面；关闭后这些表面由主题 token 输出不透明颜色。`VideoWidget` 不应被 QSS 透明化、安装 graphics effect 或变更渲染属性。`PlaybackOverlay` 与 `ActionFeedbackOverlay` 保留其原有局部透明背景语义，但外观切换不能给它们增加图形效果。全屏 transport 自己现有的 opacity/fade 动画必须继续独立工作。
+玻璃样式覆盖欢迎页/历史操作行、播放列表、菜单、对话框和其他非播放控制面板；普通与全屏 transport 固定使用相同的不透明 `surface` token，不受玻璃开关影响。`VideoWidget` 不应被 QSS 透明化、安装 graphics effect 或变更渲染属性。`PlaybackOverlay` 与 `ActionFeedbackOverlay` 保留其各自的 OSD 表面语义，但外观切换不能给它们增加图形效果。全屏 transport 自己现有的 opacity/fade 动画必须继续独立工作。
 
 Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有可移植 box-shadow。当前渐变下缘只是轻量阴影感模拟。Wayland 合成器的窗口外 blur 即使存在，也只影响顶层窗口背后的桌面区域，并不能模糊本窗口内部视频或相邻控件。因此 UI 开关和文案不得声称“背景模糊”。不要仅为此功能引入 Vulkan、GPU blur renderer、视频帧复制或新的渲染路径。
 
@@ -134,3 +142,36 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 ## 7. 本次交接文件自身状态
 
 本文件记录外观功能的实现边界、验证和可执行后续项。它不代表所有产品功能完成，也不代表原生 Wayland/HDR/硬解验收完成。交接时保留已有的 `docs/skills.md` 工作区修改；本文件不应把该文件内容重写或吸收到提交中。
+
+## 8. Apple UI 收敛后续
+
+- 操作反馈浮层现复用统一 160 ms `OutCubic` 动效淡入淡出，并在 Qt 6.12+ 尊重系统 Reduce Motion；重复反馈在淡出期间到达会更新文案并继续显示。实现只改变浮层自身绘制透明度，不安装 `QGraphicsOpacityEffect`，也不触碰视频/播放路径。定向 Debug 与 ASan/UBSan 结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)；Wayland 实际合成观感仍待映射稳定后验收。
+- 2026-10-26 又在 XWayland 下完成了单配置首页静态截图检查：欢迎入口与底部 transport 未相互覆盖，当前 1.75× 下可读；截图已删除。Qt Wayland 仍收到 configure 后进入 `suspended true`，niri 未枚举 NekoPlayer，generic platform theme 也不能改变结果；niri CLI 与正在运行的 compositor 版本不同。此次 XWayland 检查不是 Wayland 验收，Dark/Light、玻璃开关、100% 缩放、播放/设置/菜单、全屏、mini-player 和交互矩阵仍未完成。调查细节在 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
+- Ctrl+K 面板采用动作名称/快捷键的大小写无关包含与字符顺序模糊过滤：完整子串优先，其余按匹配间隔排序，仍直接消费实时 QAction，不维护镜像命令表；目前不按菜单层级分组，也不做拼写纠错。
+- `ThumbnailPreview` 保持立即显示/隐藏：它会随时间轴 hover 快速更换帧，不增加逐帧 opacity 合成动画；当前共享时长只用于 fullscreen transport。若之后要动画预览浮层，先在 Wayland 窗口和 GL 视频共存路径上测量合成成本与延迟。
+- 快速操作测试使用 offscreen Qt；需要在原生 Wayland 手工确认 Ctrl+K、方向键、Enter、Esc 与焦点回退。面板自身不实现背景模糊。
+- 2026-10-26 的 Quick Actions 交互复核补齐了共享 QAction 去重、菜单上下文/图标、空结果提示、双击触发和异步焦点回退；验证记录见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。原生 Wayland 输入与实际观感仍待人工验收。
+- 2026-10-26 后续补上字符顺序 fuzzy 搜索，子串优先、匹配间隔评分及稳定顺序回退；Debug、ASan/UBSan 定向回归通过，具体命令与范围见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
+- 全屏 transport 现在在 Qt 6.12+ 尊重系统减少动态效果偏好，偏好运行时切换为 Reduce Motion 时会即时完成当前淡出；旧 Qt 保留默认 160 ms。motion policy、UI surface 定向回归及完整非窗口 Debug 结果见验证记录。当前 niri 会话未能稳定映射 NekoPlayer 窗口，故没有截图或 Wayland 视觉通过结论。
+- 时间轴缩略图预览现在复用同一 160 ms 动效 token，以 paint opacity 淡入/淡出，不安装 graphics effect，也不在每次 hover 帧更新时重启动画；Qt 6.12+ Reduce Motion 下即时显示/隐藏。`thumbnail-preview` 覆盖此行为；见验证记录。
+- 当前可用环境没有完成 Dark/Light、玻璃开关、不同 accent、100%/175% 缩放、全屏视频几何与 mini-player 的原生组合验收。HDR、`hwdec-current`、音频设备与 compositor blur 仍是独立的硬件/桌面验收项；本轮不声称已通过。
+- 早期 niri 映射复查曾失败（Qt 收到 `xdg_toplevel.configure` 后标记 `suspended true`，窗口未出现在 `niri msg windows`；软件 GL 重试相同），但 2026-10-26 显式以 `QT_QPA_PLATFORM=wayland` 启动 Debug 构建时，窗口已成功映射，旧的“当前无法映射”结论已过时。当前仅完成一次 Dark/Ocean 默认主题、玻璃开启、无媒体欢迎页的静态检查：eDP-1 2880×1800@120 Hz，Qt Wayland，niri，1.75×（1645×1028 逻辑像素）；应用当时在 805×1005 逻辑像素的平铺区域。没有与应用交互，未运行窗口行为测试。首页主入口、居中内容和底部 transport 在该画面中没有明显重叠/位置跳动。截图包含桌面其他窗口，因此没有保留或提交。该局部检查不代表 Dark/Light、accent、玻璃开关、100% 缩放、播放/播放列表、菜单/设置、全屏、mini-player 与焦点状态的完整验收。
+- 四级 surface 后续复核发现弹出控件之前复用了普通 panel fill。现已将菜单、对话框、组合框弹出列表和 tooltip 映射到 `raisedSurface`，普通 transport/内容面板保留 `surface`；统一由 `panelFill()` 处理玻璃与不透明 fallback，不触碰视频渲染区域。定向 Debug 与 ASan/UBSan 结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
+- 对比度复核新增 Dark/Light 全表面 WCAG AA 测试，覆盖正文、次级和辅助文字在 canvas/surface/raised/hover/pressed 上的组合；发现并修正了浅色 muted 文字偏淡、深色 muted 文字偏暗的问题。合同测试单独位于 `appearance_surface_contract_test.cpp`，设置测试主体保持在 500 行以内。自动化结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)；原生合成后的对比度仍需 Wayland 屏幕检查。
+- 键盘焦点复核给复选框 indicator 增加了基于 `focus` token 的 2px 边界，并由 surface contract 验证五种 accent 与 Dark/Light 核心表面至少 3:1；实际合成可见性仍需原生 Wayland 检查。
+- 后续检查发现滑块焦点规则使用了 Qt QSS 不支持的 CSS `outline`。现改为 `QSlider::handle:horizontal:focus`：获得键盘焦点时增大手柄并显示 token 焦点边界，时间轴和音量滑块共用。一个真实 QSlider 的离屏聚焦前后像素回归曾按预期失败，修复后相关 Debug 3/3、ASan/UBSan 1/1 通过；CTest 固定使用 offscreen 平台以保证焦点测试可复现。该自动化结果不能替代原生 Wayland 的焦点显示检查，窗口行为测试仍按要求跳过。详细命令见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
+- 原生桌面静态复查：本次启动中曾观察到扫描进度浮窗，但第二次相同的无配置/无媒体启动未复现；静态调用路径中未发现启动自动扫描来源，未据此改代码或将其定性为产品缺陷。两次临时全屏截图含宿主桌面隐私内容，检查后均已删除。
+- A3 状态复核发现输入控件缺少显式禁用样式，Qt 6.12 offscreen 上禁用 QLineEdit 前后绘制完全相同。现为组合框、字体组合框、行编辑和数值框增加基于语义 token 的禁用文字、背景和边框；真实控件回归同时覆盖滑块。测试先失败后通过，Debug 4/4、ASan/UBSan 1/1、格式与 code-size 检查通过，提交为 `60d4003`。半透明合成下的禁用态仍需 Wayland 检查。
+- 后续状态覆盖发现 QCheckBox 禁用文字仍依赖 Qt palette，没有显式消费 `disabledText` token；勾选且禁用时的 indicator 也没有独立规则。现已在应用级 QSS 补上 token 化禁用文字，并保持 disabled checked indicator 的勾选符号。新增真实控件合同先按预期失败，修复后外观/UI 定向 5/5、ASan/UBSan surface contract 10/10、格式与 code-size 检查通过，详见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。有效对比度仍需在原生 Wayland 半透明合成下确认。
+- 另增加真实 QLineEdit/QComboBox/QSpinBox/QPushButton/QToolButton 键盘聚焦前后的像素变化契约，防止仅凭焦点 QSS 字符串断言可见。offscreen 测试容器最初自动将焦点给 line edit，导致基准帧已带焦点；调整为父容器持有基准焦点后通过五次重复运行。Debug 4/4 与 ASan/UBSan 1/1 均通过，测试单独提交 `01f560b`；它验证 Qt offscreen 样式行为，不替代 Wayland 实际焦点/键盘路径验收。
+- 提交 `7e10ff1` 将播放信息与定位进度 OSD 的前景、raised 表面、分隔色和进度 accent 接入应用级 AppearanceTokens；玻璃关闭时 OSD 使用不透明 token fallback。未给 `PlaybackOverlay` 或 `VideoWidget` 设置局部 stylesheet/graphics effect，播放与 OpenGL 路径不变。离屏真实控件颜色回归与 appearance/UI 聚焦 Debug 5/5 通过；Wayland + libmpv 实帧合成效果仍未检查。
+- 后续像素审计发现 OSD 透明度还未跟随设置页里的玻璃强度/柔化值；已将两个 OSD surface 统一接到应用 QSS 唯一 `panelFill()`，并新增不同 opacity 渲染结果必须变化的真实 QWidget 回归。离屏 Debug 聚焦套件通过，Wayland 视频帧合成仍未验收。
+- 另一个独立的自绘操作反馈浮层（定位/音量/播放状态）现在从当前 palette 读取 raised 背景和文字色，解决浅色主题仍显示固定深色卡片的问题；它保持原有透明度与动效，不套用 UI 玻璃设置。真实 QWidget 像素测试在修复前失败、修复后通过。真实播放帧上的可读性仍待 Wayland 检查。
+- 两项 OSD 收敛修复后的 fresh Debug 非窗口套件为 69/69；外观/两类 OSD 的 ASan/UBSan 定向测试为 4/4（`detect_leaks=0`）。本次环境中的 Qt Wayland 窗口仍未被 niri 枚举，因此设计要求的原生屏幕矩阵没有完成。
+- 首页最近播放卡片的标题与位置文字间距经真实布局测量曾为 3 px；现改为共享的 4 px `spaceUnit`，对应真实 QWidget 几何回归先失败后通过。没有改动卡片总体层级或尺寸。
+- 偏好设置各分类的表单标签现共用由 4 px spacing token 推导的 128 px 标签列，避免切换分类时输入列横向跳动；新布局回归曾测得 22 px 偏差并先失败后通过。Transport 在中等宽度下的控件改为严格遵循 36 px 正方形热区，紧凑态仍为 32 px。定向测试与自动化验证见 `docs/verification.md`；离屏几何不替代原生 Wayland 屏幕验收。
+- 2026-10-26 新一轮原生启动诊断中，Qt Wayland `--smoke-test --silent-audio --no-config` 可成功退出，但持久窗口收到 `xdg_toplevel.configure` 后仍标记 `suspended true`，随后又收到 0×0 configure，niri 未枚举它。相同 session 下的 XWayland 应用窗口可以直接捕获并检查；具体结果与限制见 `docs/verification.md`。没有重启 compositor 或改桌面配置，Wayland 全矩阵仍待完成。
+- 外观回归补查发现偏好设置 tab 可被键盘聚焦但没有焦点反馈：实际 QTabBar 焦点前后图像相同。应用级 QSS 已加入 token 焦点边框，新的真实控件像素测试先失败后通过；Debug 外观/UI 4/4、ASan/UBSan surface contract 1/1 通过。原生 Wayland 的焦点可见性仍需验收，细节见验证记录。
+- 旧记录：全屏曾使用至少 90% 玻璃不透明度、普通播放栏跟随用户透明度；该行为已由后续收敛取代。当前普通/全屏 transport 均固定使用不透明 `surface` token，玻璃开关只影响其他 UI 面板；淡入淡出仍只改变可见度。
+- 2026-10-26 transport 材质修正：真实 QWidget 像素测试复现玻璃开启时 transport alpha 为 185；QSS 原因是 transport 误用了共享的玻璃 `%27` 面板填充。现改为不透明 `surface` token，普通/全屏背景在玻璃开关两种状态下相同，且 alpha 为 255。`fullscreen-transport-material`、`appearance-surface-contract`、`ui-surface` 和 `code-size` 通过；不涉及视频帧、libmpv、HDR 或硬件解码路径。原生 Wayland 播放画面仍未完成全矩阵验收。
+- 播放列表面板的玻璃开关现有独立真实 QWidget 像素契约：启用时 alpha 小于 255，关闭时 alpha 为 255 且填充改变；该断言确认玻璃设置仍作用于 UI，而不是简单全局关闭透明度。

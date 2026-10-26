@@ -1,6 +1,8 @@
 #include "preferencesdialog.h"
+#include "appearancetokens.h"
 #include "playback/mpvcontroller.h"
 #include "preferencesappearancepage.h"
+#include "preferencesformlayout.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -14,6 +16,7 @@
 #include <QPushButton>
 #include <QSignalBlocker>
 #include <QSpinBox>
+#include <QStackedWidget>
 #include <QStyle>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -37,11 +40,14 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       resumePlaybackPositionDefault_(resumePlaybackPosition),
       seekStepSecondsDefault_(normalizedSeekStepSeconds(seekStepSeconds)),
       languagePreferences_(languages.normalized()), lastApplyActive_(player.state().active) {
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
+    setAttribute(Qt::WA_TranslucentBackground, true);
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
     auto *playback = new QWidget(tabs_);
     auto *playbackForm = new QFormLayout(playback);
+    configurePreferenceForm(playbackForm, tokens);
     hardwareDecoding_->setObjectName(QStringLiteral("hardwareDecodingChoice"));
     hardwareDecoding_->setAccessibleName(tr("视频解码方式"));
     hardwareDecoding_->addItem(tr("自动（安全）"), true);
@@ -71,6 +77,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
 
     auto *audio = new QWidget(tabs_);
     auto *audioForm = new QFormLayout(audio);
+    configurePreferenceForm(audioForm, tokens);
     audioDevice_->setObjectName(QStringLiteral("audioOutputDeviceChoice"));
     audioDevice_->setAccessibleName(tr("音频输出设备"));
     audioForm->addRow(tr("输出设备："), audioDevice_);
@@ -89,6 +96,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
 
     auto *subtitles = new QWidget(tabs_);
     auto *subtitleForm = new QFormLayout(subtitles);
+    configurePreferenceForm(subtitleForm, tokens);
     subtitleVisible_->setObjectName(QStringLiteral("subtitleVisibleChoice"));
     subtitleVisible_->setAccessibleName(tr("显示字幕"));
     subtitleScale_->setObjectName(QStringLiteral("subtitleScaleChoice"));
@@ -132,6 +140,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
 
     auto *mediaLibraryPage = new QWidget(tabs_);
     auto *mediaLibraryForm = new QFormLayout(mediaLibraryPage);
+    configurePreferenceForm(mediaLibraryForm, tokens);
     mediaScanningEnabled_->setObjectName(QStringLiteral("mediaScanningEnabledChoice"));
     mediaScanningEnabled_->setAccessibleName(tr("允许扫描文件夹中的媒体文件"));
     mediaScanningEnabled_->setChecked(initialMediaLibrary.scanningEnabled);
@@ -148,8 +157,25 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     tabs_->addTab(mediaLibraryPage, style()->standardIcon(QStyle::SP_DirOpenIcon), tr("媒体库"));
     createAppearancePage();
     createInteractionPage(interaction);
+    // Let the shared glass pane show through every settings page instead of an
+    // opaque page backing store.
+    tabs_->setAttribute(Qt::WA_TranslucentBackground, true);
+    for (int index = 0; index < tabs_->count(); ++index) {
+        auto *page = tabs_->widget(index);
+        if (!page)
+            continue;
+        page->setAttribute(Qt::WA_TranslucentBackground, true);
+        page->setAutoFillBackground(false);
+    }
+    for (auto *stack : tabs_->findChildren<QStackedWidget *>()) {
+        stack->setAttribute(Qt::WA_TranslucentBackground, true);
+        stack->setAutoFillBackground(false);
+    }
 
     auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(tokens.spaceUnit * 4, tokens.spaceUnit * 4, tokens.spaceUnit * 4,
+                               tokens.spaceUnit * 4);
+    layout->setSpacing(tokens.spaceUnit * 3);
     layout->addWidget(tabs_);
     auto *buttons =
         new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel |
@@ -263,6 +289,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     });
     updateApplyButton();
     updateActualDecoder();
+    alignPreferenceFormLabels(this, tokens);
     resize(560, sizeHint().height());
 }
 
@@ -399,6 +426,7 @@ void PreferencesDialog::displaySubtitlePreferences() {
 void PreferencesDialog::createInteractionPage(InteractionPreferences interaction) {
     auto *page = new QWidget(tabs_);
     auto *form = new QFormLayout(page);
+    configurePreferenceForm(form, appearanceTokens(AppearancePreferences::Theme::Dark));
     interactionSingleClick_ = new QCheckBox(tr("单击视频时播放或暂停"), page);
     interactionSingleClick_->setObjectName(QStringLiteral("interactionSingleClickChoice"));
     interactionSingleClick_->setAccessibleName(tr("单击视频时播放或暂停"));

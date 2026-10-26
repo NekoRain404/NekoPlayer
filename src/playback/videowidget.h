@@ -35,6 +35,7 @@ class VideoWidget final : public QOpenGLWidget {
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void showEvent(QShowEvent *event) override;
+    void changeEvent(QEvent *event) override;
 
   private:
     static void onUpdate(void *userdata);

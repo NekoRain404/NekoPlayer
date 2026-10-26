@@ -34,7 +34,7 @@ AppearanceTokens darkTokens() {
     tokens.raisedSurface = QColor(58, 58, 60);
     tokens.primaryText = QColor(245, 245, 247);
     tokens.secondaryText = QColor(209, 209, 214);
-    tokens.mutedText = QColor(161, 161, 166);
+    tokens.mutedText = QColor(183, 183, 188);
     tokens.separator = QColor(72, 72, 74);
     tokens.disabledText = QColor(99, 99, 102);
     tokens.hoverSurface = QColor(58, 58, 60);
@@ -49,7 +49,7 @@ AppearanceTokens lightTokens() {
     tokens.raisedSurface = QColor(236, 236, 239);
     tokens.primaryText = QColor(29, 29, 31);
     tokens.secondaryText = QColor(66, 66, 69);
-    tokens.mutedText = QColor(110, 110, 115);
+    tokens.mutedText = QColor(94, 94, 99);
     tokens.separator = QColor(210, 210, 215);
     tokens.disabledText = QColor(174, 174, 178);
     tokens.hoverSurface = QColor(232, 232, 237);
@@ -81,8 +81,10 @@ AppearanceTokens appearanceTokens(AppearancePreferences::Theme theme,
     tokens.accentHover = dark ? tokens.accent.lighter(110) : tokens.accent.darker(110);
     tokens.accentPressed = dark ? tokens.accent.darker(110) : tokens.accent.darker(120);
     tokens.focus = tokens.accent;
-    tokens.selection = mix(tokens.canvas, tokens.accent, dark ? 0.24 : 0.16);
+    tokens.accentSurface = mix(tokens.canvas, tokens.accent, dark ? 0.24 : 0.16);
+    tokens.selection = tokens.accentSurface;
     tokens.selectedText = tokens.primaryText;
+    tokens.border = tokens.separator;
     return tokens;
 }
 

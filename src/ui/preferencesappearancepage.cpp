@@ -1,4 +1,5 @@
 #include "preferencesappearancepage.h"
+#include "appearancetokens.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -13,7 +14,7 @@ QWidget *sliderRow(QSlider *slider, QLabel *value) {
     auto *row = new QWidget(slider->parentWidget());
     auto *layout = new QHBoxLayout(row);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(10);
+    layout->setSpacing(8);
     layout->addWidget(slider, 1);
     value->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     layout->addWidget(value);
@@ -27,6 +28,7 @@ PreferencesAppearancePage::PreferencesAppearancePage(
       glass_(new QCheckBox(tr("启用玻璃质感"), this)), opacity_(new QSlider(Qt::Horizontal, this)),
       blur_(new QSlider(Qt::Horizontal, this)), opacityValue_(new QLabel(this)),
       blurValue_(new QLabel(this)), baseline_(baseline.normalized()) {
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     theme_->setObjectName(QStringLiteral("appearanceThemeChoice"));
     theme_->setAccessibleName(tr("基础主题"));
     accent_->setObjectName(QStringLiteral("appearanceAccentChoice"));
@@ -37,12 +39,12 @@ PreferencesAppearancePage::PreferencesAppearancePage(
     opacity_->setAccessibleName(tr("玻璃不透明度"));
     opacity_->setRange(glassOpacityMinimum, glassOpacityMaximum);
     opacityValue_->setObjectName(QStringLiteral("appearanceGlassOpacityValue"));
-    opacityValue_->setMinimumWidth(38);
+    opacityValue_->setMinimumWidth(tokens.controlHeight);
     blur_->setObjectName(QStringLiteral("appearanceGlassBlurChoice"));
     blur_->setAccessibleName(tr("玻璃模糊程度"));
     blur_->setRange(glassBlurMinimum, glassBlurMaximum);
     blurValue_->setObjectName(QStringLiteral("appearanceGlassBlurValue"));
-    blurValue_->setMinimumWidth(38);
+    blurValue_->setMinimumWidth(tokens.controlHeight);
     for (const auto theme : AppearancePreferences::themes())
         theme_->addItem(AppearancePreferences::themeName(theme), static_cast<int>(theme));
     for (const auto accent : AppearancePreferences::accents())
@@ -58,6 +60,10 @@ PreferencesAppearancePage::PreferencesAppearancePage(
     blurValue_->setEnabled(glass_->isChecked());
 
     auto *form = new QFormLayout(this);
+    form->setContentsMargins(tokens.spaceUnit * 3, tokens.spaceUnit * 3, tokens.spaceUnit * 3,
+                             tokens.spaceUnit * 3);
+    form->setHorizontalSpacing(tokens.spaceUnit * 4);
+    form->setVerticalSpacing(tokens.spaceUnit * 3);
     form->addRow(tr("基础主题："), theme_);
     form->addRow(tr("强调色："), accent_);
     form->addRow(glass_);
@@ -65,8 +71,8 @@ PreferencesAppearancePage::PreferencesAppearancePage(
     form->addRow(tr("玻璃模糊程度："), sliderRow(blur_, blurValue_));
     auto *help =
         new QLabel(tr("更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；"
-                      "不透明度控制面板半透明程度，模糊程度调节渐变的柔化层次，"
-                      "不是对窗口后方内容的真实高斯模糊。"),
+                      "不透明度控制面板半透明程度，模糊程度调节面板渐变的柔化层次。"
+                      "窗口外框的背景模糊由支持该能力的 Wayland 合成器提供。"),
                    this);
     help->setWordWrap(true);
     form->addRow(help);

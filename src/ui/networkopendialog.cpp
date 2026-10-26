@@ -10,6 +10,7 @@
 NetworkOpenDialog::NetworkOpenDialog(QWidget *parent) : QDialog(parent) {
     setObjectName(QStringLiteral("networkOpenDialog"));
     setWindowTitle(tr("打开网络地址"));
+    setAttribute(Qt::WA_TranslucentBackground, true);
     resize(620, 180);
     auto *layout = new QVBoxLayout(this);
     auto *label = new QLabel(tr("媒体地址："), this);

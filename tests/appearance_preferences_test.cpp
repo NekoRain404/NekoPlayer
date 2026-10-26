@@ -8,6 +8,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPalette>
+#include <QPushButton>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QStyle>
@@ -174,6 +175,20 @@ class AppearancePreferencesTest final : public QObject {
         QCOMPARE(normalized.glassBlur, glassBlurMaximum);
     }
 
+    void appliesGlassPropertiesForTheIdleVideoSurface() {
+        AppearancePreferences::applySettings(*qApp,
+                                             {AppearancePreferences::Theme::Dark,
+                                              AppearancePreferences::Accent::Ocean, true, 63, 47});
+        QCOMPARE(qApp->property("glassEnabled").toBool(), true);
+        QCOMPARE(qApp->property("glassOpacity").toInt(), 63);
+        QCOMPARE(qApp->property("glassBlur").toInt(), 47);
+        AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Dark,
+                                                     AppearancePreferences::Accent::Ocean, false});
+        QCOMPARE(qApp->property("glassEnabled").toBool(), false);
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+        QCOMPARE(qApp->property("glassEnabled").toBool(), false);
+    }
+
     void glassOpacityAndBlurChangeThePanelMaterial() {
         const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
         const auto clear = appearanceStyleSheet(tokens, true, glassOpacityMinimum, 0);
@@ -185,7 +200,7 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(!opaque.contains(QStringLiteral("rgba(")));
     }
 
-    void welcomePanelPaintsItsThemeSurface() {
+    void welcomePanelLeavesTheGlassBackdropVisible() {
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);
         QAction open(QStringLiteral("打开文件…"));
         QAction network(QStringLiteral("打开网络地址…"));
@@ -203,9 +218,20 @@ class AppearancePreferencesTest final : public QObject {
         panel.render(&painter, {}, {}, QWidget::DrawWindowBackground);
         painter.end();
 
-        const auto surface = appearanceTokens(AppearancePreferences::Theme::Dark).surface;
-        QCOMPARE(image.pixelColor(10, panel.height() / 2), surface);
+        QCOMPARE(image.pixelColor(10, panel.height() / 2), QColor(0, 0, 0, 0));
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+    }
+
+    void welcomePanelUsesUnifiedActionCardHeights() {
+        QAction open(QStringLiteral("打开文件…")), network(QStringLiteral("打开网络地址…"));
+        WelcomePanel panel(&open, &network);
+        auto *openButton = panel.findChild<QPushButton *>(QStringLiteral("welcomeOpenButton"));
+        QVERIFY(openButton);
+        QCOMPARE(openButton->minimumHeight(), 48);
+        panel.setRecentSources({QStringLiteral("/media/Film.mkv")});
+        auto *recent = panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1"));
+        QVERIFY(recent);
+        QCOMPARE(recent->minimumHeight(), 64);
     }
 
     void accentKeysRoundTripAndUnknownKeysFallBackToOcean() {
@@ -272,8 +298,7 @@ class AppearancePreferencesTest final : public QObject {
             const auto glass = appearanceStyleSheet(tokens, true);
             const auto opaque = appearanceStyleSheet(tokens, false);
             for (const auto &selector :
-                 {QStringLiteral("QWidget#playlistPane"), QStringLiteral("QWidget#transportBar"),
-                  QStringLiteral("QWidget#welcomePanel"), QStringLiteral("QWidget#playlistHeader"),
+                 {QStringLiteral("QWidget#playlistPane"), QStringLiteral("QWidget#playlistHeader"),
                   QStringLiteral("QPushButton[welcomeRecentAction]"),
                   QStringLiteral("QPushButton[welcomeContinueAction]"), QStringLiteral("QMenu{"),
                   QStringLiteral("QDialog{")}) {
@@ -285,6 +310,11 @@ class AppearancePreferencesTest final : public QObject {
                 QVERIFY(match.captured(1).toInt() > 0);
                 QVERIFY(match.captured(1).toInt() < 255);
             }
+            const auto transport =
+                glass.mid(glass.indexOf(QStringLiteral("QWidget#transportBar"))).section('}', 0, 0);
+            QVERIFY(transport.contains(tokens.surface.name(QColor::HexRgb)));
+            QVERIFY(!transport.contains(QStringLiteral("rgba(")));
+            QVERIFY(!transport.contains(QStringLiteral("qlineargradient(")));
             QVERIFY(glass.contains(QStringLiteral("qlineargradient(")));
             QVERIFY(!opaque.contains(QStringLiteral("rgba(")));
             QVERIFY(!opaque.contains(QStringLiteral("qlineargradient(")));
@@ -391,7 +421,7 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(style.contains(QStringLiteral("QListView#playlistView::item:selected")));
         QVERIFY(style.contains(QStringLiteral("QPushButton:focus")));
         QVERIFY(style.contains(QStringLiteral("QPushButton:pressed")));
-        QVERIFY(style.contains(QStringLiteral("QSlider:focus")));
+        QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:focus")));
         QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:pressed")));
         QVERIFY(style.contains(QStringLiteral("QSlider::handle:horizontal:disabled")));
         QVERIFY(style.contains(QStringLiteral("QMenu::item:disabled")));

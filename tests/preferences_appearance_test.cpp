@@ -5,6 +5,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QLayout>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QSlider>
@@ -13,6 +14,15 @@
 class PreferencesAppearanceTest final : public QObject {
     Q_OBJECT
   private slots:
+    void preferencesDialogUsesUnifiedOuterSpacing() {
+        MpvController player(true, true);
+        PreferencesDialog dialog(player);
+        const auto *layout = dialog.layout();
+        QVERIFY(layout);
+        QCOMPARE(layout->contentsMargins(), QMargins(16, 16, 16, 16));
+        QCOMPARE(layout->spacing(), 12);
+    }
+
     void appearanceApplyCommitsBaselineAndDefaultsStayOnAppearance() {
         using Appearance = AppearancePreferences;
         MpvController player(true, true);

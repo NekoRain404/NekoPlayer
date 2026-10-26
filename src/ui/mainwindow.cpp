@@ -18,6 +18,7 @@
 #include "playlistmaintenancemenu.h"
 #include "playlistpane.h"
 #include "preview/thumbnailservice.h"
+#include "quickactionsdialog.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 #include "thumbnailpreview.h"
@@ -66,6 +67,9 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
       playlist_(std::make_unique<PlaylistController>(*controller_)),
       recentMedia_(std::make_unique<RecentMediaHistory>()) {
     setWindowTitle(QStringLiteral("NekoPlayer"));
+    // Keep the toplevel alpha-capable; the QSS switches between transparent
+    // glass chrome and the opaque canvas when glass is disabled.
+    setAttribute(Qt::WA_TranslucentBackground, true);
     resize(1100, 680);
     setMinimumSize(560, 360);
     setAcceptDrops(true);
@@ -73,6 +77,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(fileDrop_, &LocalFileDrop::mediaFilesDropped, this, &MainWindow::appendFiles);
     connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
     createActions();
+    new QuickActionsDialog(this, this);
     connect(folderMenu_, &FolderMenu::mediaLibraryPreferencesChanged, this,
             [this](bool scanningEnabled, bool recursiveByDefault) {
                 if (session_)
@@ -82,11 +87,15 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         folderMenu_->start(paths, true, folderMenu_->recursiveEnabled());
     });
     auto *content = new QWidget(this);
+    content->setAttribute(Qt::WA_TranslucentBackground, true);
     auto *layout = new QVBoxLayout(content);
     centralLayout_ = layout;
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     video_ = new VideoWidget(*controller_, content);
+    // The idle video area shares the window's alpha surface so the whole
+    // non-video chrome can show the compositor-blurred backdrop.
+    video_->setAttribute(Qt::WA_TranslucentBackground, true);
     feedbackOverlay_ = new ActionFeedbackOverlay(video_);
     feedbackOverlay_->setGeometry(video_->rect());
     playbackOverlay_ = new PlaybackOverlay(*controller_, video_);
@@ -132,6 +141,10 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     layout->addWidget(transport_);
     setCentralWidget(content);
     statusBar()->setSizeGripEnabled(false);
+    statusBar()->setAttribute(Qt::WA_TranslucentBackground, true);
+    statusBar()->setAttribute(Qt::WA_NoSystemBackground, true);
+    statusBar()->setAutoFillBackground(false);
+    statusBar()->setObjectName(QStringLiteral("statusBar"));
     statusBar()->showMessage(tr("就绪 · Qt 6 + libmpv"));
     connect(controller_.get(), &MpvController::stateChanged, this, &MainWindow::updateState);
     connect(controller_.get(), &MpvController::errorOccurred, this, &MainWindow::showError);

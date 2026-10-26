@@ -1,5 +1,6 @@
 #include "playlistpane.h"
 #include "appearanceicons.h"
+#include "appearancetokens.h"
 #include "playlistitemdelegate.h"
 
 #include "playback/playlistcontroller.h"
@@ -29,6 +30,8 @@ QToolButton *actionButton(QAction *action, QWidget *parent) {
     button->setToolButtonStyle(Qt::ToolButtonIconOnly);
     button->setAutoRaise(true);
     button->setIconSize(QSize(18, 18));
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+    button->setMinimumSize(tokens.transportHitTarget, tokens.rowHeight);
     button->setFocusPolicy(Qt::StrongFocus);
     const auto updateDescription = [button, action] {
         button->setAccessibleName(action->text());
@@ -140,13 +143,17 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     view_->setUniformItemSizes(true);
     view_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(8, 8, 8, 8);
-    layout->setSpacing(6);
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+    layout->setContentsMargins(tokens.spaceUnit * 3, tokens.spaceUnit * 3, tokens.spaceUnit * 3,
+                               tokens.spaceUnit * 3);
+    layout->setSpacing(tokens.spaceUnit * 2);
+    search_->setMinimumHeight(tokens.controlHeight);
     auto *header = new QWidget(this);
     header->setObjectName(QStringLiteral("playlistHeader"));
     auto *headerLayout = new QHBoxLayout(header);
-    headerLayout->setContentsMargins(4, 2, 4, 2);
-    headerLayout->setSpacing(6);
+    headerLayout->setContentsMargins(tokens.spaceUnit * 2, tokens.spaceUnit, tokens.spaceUnit * 2,
+                                     tokens.spaceUnit);
+    headerLayout->setSpacing(tokens.spaceUnit * 2);
     auto *title = new QLabel(header);
     title->setObjectName(QStringLiteral("playlistTitle"));
     title->setText(tr("播放列表"));
@@ -162,6 +169,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     layout->addWidget(view_, 1);
     auto *buttons = new QHBoxLayout;
     buttons->setContentsMargins(0, 0, 0, 0);
+    buttons->setSpacing(tokens.spaceUnit * 2);
     buttons->addWidget(actionButton(previous, this));
     buttons->addWidget(actionButton(next, this));
     buttons->addStretch();

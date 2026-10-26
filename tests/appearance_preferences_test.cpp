@@ -8,6 +8,7 @@
 #include <QImage>
 #include <QPainter>
 #include <QPalette>
+#include <QPushButton>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QStyle>

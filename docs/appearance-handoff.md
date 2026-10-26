@@ -181,3 +181,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 四类可选 UI 动效现在还共享唯一 `uiMotionEasingCurve()`（`OutCubic`），避免全屏 transport、缩略图、操作反馈和 mini-player 的曲线漂移；Debug 70/70、Sanitizer 定向 1/1。原生 Wayland 的实际动效观感仍需人工验收。
 - 最新原生 Wayland 诊断实例观察 5 秒仍未出现在 niri 窗口列表，日志没有应用崩溃，仅有 AT-SPI 总线警告；诊断进程已结束，未修改桌面配置。该会话仍不能提供可信的原生 UI/mini-player 视觉证据。
 - 另外修正了 mini-player 淡出期间立即进入全屏的状态竞态：全屏路径现在同步取消 pending opacity 转场并退出 mini-player，再进入全屏；普通 mini-player 切换仍使用统一淡入淡出。新增转场取消回归，Debug 非窗口 70/70、Sanitizer 1/1；真实 Wayland 合成序列仍未验收。
+- 2026-10-26 安装版运行复查：`/usr/local/bin/NekoPlayer` 在显式 `QT_QPA_PLATFORM=wayland` 下成功映射到 niri；eDP-1 为 2880×1800@120 Hz、1.75×。全屏空状态截图中内容保持居中，transport 固定在底部且未观察到画面区域跳动；这只覆盖 Dark/Ocean、玻璃开启、无媒体的一种配置。随后桌面锁屏，Light/玻璃关闭/其他 accent/设置菜单/播放列表/mini-player/焦点态和 100% 缩放仍未完成人工验收。完整非窗口 Debug 回归在本次复查中通过 70/70，窗口行为测试仍按要求跳过。

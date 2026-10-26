@@ -1,7 +1,7 @@
 # Apple 风格 UI 收敛与快速操作设计
 
 日期：2026-10-26  
-分支：`feat/first-playable`  
+分支：`main`
 基线：`4a8b614`（当前 HEAD）
 
 ## 目标

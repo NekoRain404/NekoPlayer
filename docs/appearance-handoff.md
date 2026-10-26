@@ -182,3 +182,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 最新原生 Wayland 诊断实例观察 5 秒仍未出现在 niri 窗口列表，日志没有应用崩溃，仅有 AT-SPI 总线警告；诊断进程已结束，未修改桌面配置。该会话仍不能提供可信的原生 UI/mini-player 视觉证据。
 - 另外修正了 mini-player 淡出期间立即进入全屏的状态竞态：全屏路径现在同步取消 pending opacity 转场并退出 mini-player，再进入全屏；普通 mini-player 切换仍使用统一淡入淡出。新增转场取消回归，Debug 非窗口 70/70、Sanitizer 1/1；真实 Wayland 合成序列仍未验收。
 - 2026-10-26 安装版运行复查：`/usr/local/bin/NekoPlayer` 在显式 `QT_QPA_PLATFORM=wayland` 下成功映射到 niri；eDP-1 为 2880×1800@120 Hz、1.75×。全屏空状态截图中内容保持居中，transport 固定在底部且未观察到画面区域跳动；这只覆盖 Dark/Ocean、玻璃开启、无媒体的一种配置。随后桌面锁屏，Light/玻璃关闭/其他 accent/设置菜单/播放列表/mini-player/焦点态和 100% 缩放仍未完成人工验收。完整非窗口 Debug 回归在本次复查中通过 70/70，窗口行为测试仍按要求跳过。
+- 2026-10-26 发现空/失败媒体状态的 `VideoWidget::paintGL()` 曾把玻璃透明度应用到 OpenGL 清屏 alpha，让 UI 玻璃设置穿透到视频 surface。已改为玻璃开启时仅取 palette 色并强制 alpha 255，玻璃关闭仍清为不透明黑色；活动视频帧仍由原有 libmpv GPU 路径渲染。回归先在原 alpha=24 时失败，修复后定向测试与完整非窗口 Debug 70/70 通过。真实 Wayland 的媒体播放像素/OSD、100% DPI 与其余外观组合依旧未完成验收。

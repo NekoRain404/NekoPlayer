@@ -1,6 +1,8 @@
 #pragma once
 
+#include <QColor>
 #include <QOpenGLWidget>
+#include <QPalette>
 #include <QTimer>
 #include <atomic>
 
@@ -17,6 +19,7 @@ class VideoWidget final : public QOpenGLWidget {
     ~VideoWidget() override;
     [[nodiscard]] bool isReady() const;
     [[nodiscard]] bool hasFailed() const;
+    [[nodiscard]] static QColor emptySurfaceClearColor(const QPalette &palette, bool glassEnabled);
 
   signals:
     void ready();

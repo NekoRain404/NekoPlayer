@@ -298,8 +298,7 @@ class AppearancePreferencesTest final : public QObject {
             const auto glass = appearanceStyleSheet(tokens, true);
             const auto opaque = appearanceStyleSheet(tokens, false);
             for (const auto &selector :
-                 {QStringLiteral("QWidget#playlistPane"), QStringLiteral("QWidget#transportBar"),
-                  QStringLiteral("QWidget#playlistHeader"),
+                 {QStringLiteral("QWidget#playlistPane"), QStringLiteral("QWidget#playlistHeader"),
                   QStringLiteral("QPushButton[welcomeRecentAction]"),
                   QStringLiteral("QPushButton[welcomeContinueAction]"), QStringLiteral("QMenu{"),
                   QStringLiteral("QDialog{")}) {
@@ -311,6 +310,11 @@ class AppearancePreferencesTest final : public QObject {
                 QVERIFY(match.captured(1).toInt() > 0);
                 QVERIFY(match.captured(1).toInt() < 255);
             }
+            const auto transport =
+                glass.mid(glass.indexOf(QStringLiteral("QWidget#transportBar"))).section('}', 0, 0);
+            QVERIFY(transport.contains(tokens.surface.name(QColor::HexRgb)));
+            QVERIFY(!transport.contains(QStringLiteral("rgba(")));
+            QVERIFY(!transport.contains(QStringLiteral("qlineargradient(")));
             QVERIFY(glass.contains(QStringLiteral("qlineargradient(")));
             QVERIFY(!opaque.contains(QStringLiteral("rgba(")));
             QVERIFY(!opaque.contains(QStringLiteral("qlineargradient(")));

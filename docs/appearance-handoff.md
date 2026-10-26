@@ -174,3 +174,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 外观回归补查发现偏好设置 tab 可被键盘聚焦但没有焦点反馈：实际 QTabBar 焦点前后图像相同。应用级 QSS 已加入 token 焦点边框，新的真实控件像素测试先失败后通过；Debug 外观/UI 4/4、ASan/UBSan surface contract 1/1 通过。原生 Wayland 的焦点可见性仍需验收，细节见验证记录。
 - 旧记录：全屏曾使用至少 90% 玻璃不透明度、普通播放栏跟随用户透明度；该行为已由后续收敛取代。当前普通/全屏 transport 均固定使用不透明 `surface` token，玻璃开关只影响其他 UI 面板；淡入淡出仍只改变可见度。
 - 2026-10-26 transport 材质修正：真实 QWidget 像素测试复现玻璃开启时 transport alpha 为 185；QSS 原因是 transport 误用了共享的玻璃 `%27` 面板填充。现改为不透明 `surface` token，普通/全屏背景在玻璃开关两种状态下相同，且 alpha 为 255。`fullscreen-transport-material`、`appearance-surface-contract`、`ui-surface` 和 `code-size` 通过；不涉及视频帧、libmpv、HDR 或硬件解码路径。原生 Wayland 播放画面仍未完成全矩阵验收。
+- 播放列表面板的玻璃开关现有独立真实 QWidget 像素契约：启用时 alpha 小于 255，关闭时 alpha 为 255 且填充改变；该断言确认玻璃设置仍作用于 UI，而不是简单全局关闭透明度。

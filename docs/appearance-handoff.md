@@ -9,7 +9,7 @@
 
 外观偏好阶段已实现并提交。用户可选择 Dark、Light、System 三种基础主题，Ocean、Emerald、Violet、Rose、Amber 五种强调色，以及 UI 玻璃式半透明样式开关。偏好页支持即时预览、Apply 持久化和 Cancel 回滚；Settings 菜单中的旧主题菜单继续可用，并与新偏好页共用状态。整体审查发现 System 主题原先没有把强调色写进原生 palette role；该修正已提交为 `332f08d`，并包含在最终验证中。
 
-本轮进一步完成统一 AppearanceTokens/QSS 状态契约、偏好设置/播放列表/首页/Transport 的尺寸与密度，以及 fullscreen transport 使用统一 160 ms 动效 token；新增 Ctrl+K 快速操作面板，从实时 QAction 树过滤并触发现有命令，不复制第二份命令清单。面板支持上下键从搜索输入进入结果列表。具体验证结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
+本轮进一步完成统一 AppearanceTokens/QSS 状态契约、偏好设置/播放列表/首页/Transport 的尺寸与密度，以及 fullscreen transport 使用统一 160 ms 动效 token；新增 Ctrl+K 快速操作面板，从实时 QAction 树过滤并触发现有命令，不复制第二份命令清单。面板支持上下键从搜索输入进入结果列表，新增界面文案已补齐英文翻译（325 条已完成、0 条未完成）。具体验证结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
 
 “玻璃”在本实现里指 UI 控件的半透明渐变、边缘明暗和主题色表面，不是真正的背景模糊。视频帧、libmpv 渲染、硬件解码和 HDR 路径没有为了外观效果而改动。最新 Debug 全量构建通过；非窗口 CTest 为 66/66，定向 sanitizer 子集为 7/7。窗口行为测试只编译，未按项目要求运行。
 

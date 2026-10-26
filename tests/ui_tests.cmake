@@ -67,6 +67,12 @@ qt_add_translations(ui_surface_test TS_FILES ../translations/NekoPlayer_en.ts
 add_test(NAME ui-surface COMMAND ui_surface_test)
 set_tests_properties(ui-surface PROPERTIES TIMEOUT 20 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(fullscreen_transport_material_test fullscreen_transport_material_test.cpp)
+target_link_libraries(fullscreen_transport_material_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME fullscreen-transport-material COMMAND fullscreen_transport_material_test)
+set_tests_properties(fullscreen-transport-material PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(playback_overlay_style_test playback_overlay_style_test.cpp)
 target_link_libraries(playback_overlay_style_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME playback-overlay-style COMMAND playback_overlay_style_test)

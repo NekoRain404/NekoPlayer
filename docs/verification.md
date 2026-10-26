@@ -1,5 +1,10 @@
 # Verification Record
 
+Fullscreen transport material follow-up (2026-10-26):
+
+- Fullscreen transport now exposes a semantic `fullscreenOverlay` property consumed by the application-level QSS. With glass enabled, only this video-overlaid control surface uses the same neutral surface token at a stronger opacity (at least 90%); windowed transport remains at the user's configured opacity. With glass disabled, both retain the opaque token fallback. No video, libmpv, HDR, or hardware-decoding path changed.
+- A dedicated rendered-QWidget regression compares the real transport surface before/after `FullscreenControls` enters and reveals. It asserts the fullscreen fill is more opaque and validates the opaque fallback. The test passed after initially detecting the missing fullscreen-specific material; focused Debug CTest (`code-size`, `appearance-surface-contract`, `transport-bar`, `ui-surface`, `fullscreen-transport-material`) passed **5/5**. Re-run after formatting (`code-size`, `ui-surface`, `fullscreen-transport-material`) passed **3/3**. Changed C++ passes clang-format and scoped diff checks. This is offscreen style evidence only; the native Wayland video-overlay matrix remains open. Window behavior tests were not run.
+
 Action feedback fade follow-up (2026-10-26):
 
 - `ActionFeedbackOverlay` now fades its painted content using the shared 160 ms `OutCubic` motion token and applies Qt 6.12+ ReducedMotion changes to in-flight transitions. The widget does not install `QGraphicsOpacityEffect`; playback, video, mpv/OpenGL, HDR and hardware-decoding paths are unchanged.

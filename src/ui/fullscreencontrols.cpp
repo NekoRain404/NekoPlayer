@@ -9,6 +9,7 @@
 #include <QGraphicsOpacityEffect>
 #include <QGuiApplication>
 #include <QPropertyAnimation>
+#include <QStyle>
 #include <QStyleHints>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -74,6 +75,9 @@ void FullscreenControls::enter() {
     normalLayout_.removeWidget(&transport_);
     transport_.hide();
     transport_.setParent(&video_);
+    transport_.setProperty("fullscreenOverlay", true);
+    transport_.style()->unpolish(&transport_);
+    transport_.style()->polish(&transport_);
     transport_.setAttribute(Qt::WA_TransparentForMouseEvents);
     opacity_->setEnabled(true);
     opacity_->setOpacity(0);
@@ -89,6 +93,9 @@ void FullscreenControls::leave() {
     animation_->stop();
     transport_.hide();
     transport_.setParent(normalParent_);
+    transport_.setProperty("fullscreenOverlay", false);
+    transport_.style()->unpolish(&transport_);
+    transport_.style()->polish(&transport_);
     normalLayout_.insertWidget(normalIndex_, &transport_);
     opacity_->setOpacity(1);
     opacity_->setEnabled(false);

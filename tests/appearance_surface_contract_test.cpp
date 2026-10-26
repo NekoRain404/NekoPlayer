@@ -3,9 +3,12 @@
 #include "ui/appearancetokens.h"
 
 #include <QApplication>
+#include <QComboBox>
 #include <QImage>
+#include <QLineEdit>
 #include <QPainter>
 #include <QSlider>
+#include <QSpinBox>
 #include <QtTest>
 
 #include <algorithm>
@@ -113,6 +116,37 @@ class AppearanceSurfaceContractTest final : public QObject {
         slider.render(&focused);
 
         QVERIFY(focused != unfocused);
+    }
+
+    void disabledFormControlsHaveVisibleFeedback() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(tokens, false);
+        const auto render = [](QWidget &widget) {
+            QImage image(widget.size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            widget.render(&painter);
+            return image;
+        };
+
+        QLineEdit edit(QStringLiteral("Example"));
+        QComboBox combo;
+        combo.addItem(QStringLiteral("Example"));
+        QSpinBox spin;
+        QSlider slider(Qt::Horizontal);
+        slider.setRange(0, 100);
+        slider.setValue(50);
+        QList<QWidget *> controls{&edit, &combo, &spin, &slider};
+        for (auto *control : controls) {
+            control->setStyleSheet(style);
+            control->resize(180, 36);
+            control->show();
+            QCoreApplication::processEvents();
+            const auto enabled = render(*control);
+            control->setEnabled(false);
+            const auto disabled = render(*control);
+            QVERIFY2(disabled != enabled, control->metaObject()->className());
+        }
     }
 
     void textTokensMeetContrastOnEveryDarkAndLightSurface() {

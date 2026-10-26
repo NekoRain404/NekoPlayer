@@ -148,6 +148,8 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "selection-background-color:%11;selection-color:%19;}"
                "QComboBox:hover,QFontComboBox:hover,QLineEdit:hover,QSpinBox:hover,QDoubleSpinBox:"
                "hover{border-color:%7;}"
+               "QComboBox:disabled,QFontComboBox:disabled,QLineEdit:disabled,QSpinBox:disabled,"
+               "QDoubleSpinBox:disabled{color:%17;background:%4;border-color:%3;}"
                "QComboBox:focus,QFontComboBox:focus,QLineEdit:focus,QSpinBox:focus,QDoubleSpinBox:"
                "focus{border:1px solid %18;}"
                "QComboBox::drop-down{border:none;width:24px;}"

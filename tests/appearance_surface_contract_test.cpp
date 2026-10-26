@@ -176,7 +176,19 @@ class AppearanceSurfaceContractTest final : public QObject {
         disabled.fill(Qt::transparent);
         host.render(&disabled);
 
+        const auto containsColor = [](const QImage &image, const QColor &color, const QRect &area) {
+            for (int y = area.top(); y <= area.bottom(); ++y) {
+                for (int x = area.left(); x <= area.right(); ++x) {
+                    if (image.pixelColor(x, y) == color)
+                        return true;
+                }
+            }
+            return false;
+        };
+
         QVERIFY(enabled != disabled);
+        QVERIFY(!containsColor(enabled, tokens.disabledText, QRect(20, 0, 200, 36)));
+        QVERIFY(containsColor(disabled, tokens.disabledText, QRect(20, 0, 200, 36)));
         QVERIFY(style.contains(QStringLiteral("QCheckBox:disabled{color:%1;}")
                                    .arg(tokens.disabledText.name(QColor::HexRgb))));
         QVERIFY(style.contains(QStringLiteral("QCheckBox::indicator:checked:disabled{")));

@@ -1,5 +1,11 @@
 # Verification Record
 
+Disabled checkbox rendering regression follow-up (2026-10-26):
+
+- The appearance surface contract now checks both the generated QSS disabled-text token and the actual offscreen-rendered `QCheckBox` text pixels, ensuring the disabled label uses `AppearanceTokens::disabledText` rather than merely having a matching selector in the stylesheet.
+- The focused Debug selection (`code-size`, `preferences-appearance`, `appearance-preferences`, `appearance-surface-contract`, `ui-surface`) passed **5/5**. The focused ASan/UBSan appearance test also passed with `ASAN_OPTIONS=detect_leaks=0`; the earlier full non-window Debug suite remains **67/67** from this development phase. Window behavior tests were not run.
+- `clang-format --dry-run --Werror tests/appearance_surface_contract_test.cpp` and `git diff --check -- docs/verification.md tests/appearance_surface_contract_test.cpp` passed. No production playback, video rendering, HDR, or hardware-decoding code changed. Native Wayland visual acceptance remains outstanding because a stable mapped application window has not yet been obtained.
+
 Apple UI convergence verification (2026-10-26, code at `995a5b5`):
 
 - Scope: `AppearanceTokens`/QSS surface, border, metrics and focus/disabled contracts; shared density across preferences, playlist, welcome cards and transport; fullscreen transport fade now uses the shared 160 ms motion token; Ctrl+K `QuickActionsDialog` searches the live `QAction` tree, retains disabled actions as disabled, triggers enabled actions and restores focus when closed. No player/render/HDR/hardware-decoding path changed.

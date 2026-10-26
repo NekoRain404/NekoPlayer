@@ -9,7 +9,7 @@ Action feedback fade follow-up (2026-10-26):
 Offscreen slider-focus test stabilization (2026-10-26):
 
 - The first full non-window Debug run after the feedback-overlay commit had one failure in the pre-existing slider-focus pixel contract. Reproduction isolated it to `focusedSliderHandleHasVisibleFeedback`: it focused a top-level slider without activating its window. Under this session's Qt 6.12 offscreen platform `hasFocus()` was true, but the style did not render the `:focus` state until an active host window established a baseline focus. The test now mirrors the other form-control focus contract by activating a host and moving focus from host to slider. This changes test setup only, not application styling.
-- The corrected `appearance-surface-contract` passed **5/5** repeated Debug runs. A fresh full non-window suite is pending; window behavior tests remain unrun.
+- The corrected `appearance-surface-contract` passed **5/5** repeated Debug runs and **1/1** ASan/UBSan run (`ASAN_OPTIONS=detect_leaks=0`). Fresh full Debug CTest excluding `window`, `startup` and `backend-startup` passed **67/67** in **86.47 s**. Window behavior tests remain unrun.
 
 Quick Actions fuzzy-search follow-up (2026-10-26):
 

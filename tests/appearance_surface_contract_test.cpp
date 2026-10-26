@@ -155,6 +155,33 @@ class AppearanceSurfaceContractTest final : public QObject {
         }
     }
 
+    void disabledCheckBoxTextUsesDisabledAppearanceToken() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(tokens, false);
+        QWidget host;
+        auto *checkBox = new QCheckBox(QStringLiteral("Disabled option"), &host);
+        checkBox->setChecked(true);
+        checkBox->setGeometry(0, 0, 220, 36);
+        host.resize(220, 36);
+        host.setStyleSheet(style);
+        host.show();
+        QCoreApplication::processEvents();
+
+        QImage enabled(host.size(), QImage::Format_ARGB32_Premultiplied);
+        enabled.fill(Qt::transparent);
+        host.render(&enabled);
+        checkBox->setEnabled(false);
+        QCoreApplication::processEvents();
+        QImage disabled(host.size(), QImage::Format_ARGB32_Premultiplied);
+        disabled.fill(Qt::transparent);
+        host.render(&disabled);
+
+        QVERIFY(enabled != disabled);
+        QVERIFY(style.contains(QStringLiteral("QCheckBox:disabled{color:%1;}")
+                                   .arg(tokens.disabledText.name(QColor::HexRgb))));
+        QVERIFY(style.contains(QStringLiteral("QCheckBox::indicator:checked:disabled{")));
+    }
+
     void focusedFormControlsHaveVisibleFeedback() {
         const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
         const auto style = appearanceStyleSheet(tokens, false);

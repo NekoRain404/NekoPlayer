@@ -35,6 +35,11 @@ qt_add_translations(appearance_preferences_test TS_FILES ../translations/NekoPla
 add_test(NAME appearance-preferences COMMAND appearance_preferences_test)
 set_tests_properties(appearance-preferences PROPERTIES TIMEOUT 20)
 
+add_executable(appearance_surface_contract_test appearance_surface_contract_test.cpp)
+target_link_libraries(appearance_surface_contract_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME appearance-surface-contract COMMAND appearance_surface_contract_test)
+set_tests_properties(appearance-surface-contract PROPERTIES TIMEOUT 20)
+
 add_executable(window_title_test window_title_test.cpp ../src/ui/windowtitle.cpp)
 target_include_directories(window_title_test PRIVATE ../src)
 target_link_libraries(window_title_test PRIVATE neko_playback Qt6::Test)

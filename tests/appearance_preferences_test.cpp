@@ -221,6 +221,18 @@ class AppearancePreferencesTest final : public QObject {
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
     }
 
+    void welcomePanelUsesUnifiedActionCardHeights() {
+        QAction open(QStringLiteral("打开文件…")), network(QStringLiteral("打开网络地址…"));
+        WelcomePanel panel(&open, &network);
+        auto *openButton = panel.findChild<QPushButton *>(QStringLiteral("welcomeOpenButton"));
+        QVERIFY(openButton);
+        QCOMPARE(openButton->minimumHeight(), 48);
+        panel.setRecentSources({QStringLiteral("/media/Film.mkv")});
+        auto *recent = panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1"));
+        QVERIFY(recent);
+        QCOMPARE(recent->minimumHeight(), 64);
+    }
+
     void accentKeysRoundTripAndUnknownKeysFallBackToOcean() {
         using Accent = AppearancePreferences::Accent;
         QCOMPARE(AppearancePreferences::accents().size(), 5);

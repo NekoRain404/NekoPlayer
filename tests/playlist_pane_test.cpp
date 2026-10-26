@@ -58,6 +58,15 @@ struct PaneFixture {
 class PlaylistPaneTest final : public QObject {
     Q_OBJECT
   private slots:
+    void layoutUsesUnifiedPanelDensity() {
+        PaneFixture fixture;
+        const auto *layout = qobject_cast<QVBoxLayout *>(fixture.pane.layout());
+        QVERIFY(layout);
+        QCOMPARE(layout->contentsMargins(), QMargins(12, 12, 12, 12));
+        QCOMPARE(layout->spacing(), 8);
+        QVERIFY(fixture.search()->minimumHeight() >= 32);
+    }
+
     void searchNarrowsRowsAndShowsFilteredCount() {
         PaneFixture fixture;
         auto *search = fixture.search();

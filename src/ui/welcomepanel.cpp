@@ -1,5 +1,6 @@
 #include "welcomepanel.h"
 #include "appearanceicons.h"
+#include "appearancetokens.h"
 
 #include "playback/mediasource.h"
 #include "playback/playbacktime.h"
@@ -46,6 +47,7 @@ void bindButton(QPushButton *button, QAction *action) {
 } // namespace
 
 WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : QWidget(parent) {
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     setObjectName(QStringLiteral("welcomePanel"));
     setAttribute(Qt::WA_StyledBackground, true);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
@@ -54,8 +56,9 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
 
     auto *layout = new QVBoxLayout(this);
     layout->setSizeConstraint(QLayout::SetNoConstraint);
-    layout->setContentsMargins(30, 24, 30, 22);
-    layout->setSpacing(7);
+    layout->setContentsMargins(tokens.spaceUnit * 6, tokens.spaceUnit * 6, tokens.spaceUnit * 6,
+                               tokens.spaceUnit * 6);
+    layout->setSpacing(tokens.spaceUnit * 2);
 
     auto *brand = new QLabel(QStringLiteral("NEKOPLAYER"), this);
     brand->setObjectName(QStringLiteral("welcomeBrand"));
@@ -77,17 +80,17 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     layout->addWidget(subtitle);
 
     buttonsLayout_ = new QHBoxLayout;
-    buttonsLayout_->setContentsMargins(0, 14, 0, 10);
-    buttonsLayout_->setSpacing(10);
+    buttonsLayout_->setContentsMargins(0, tokens.spaceUnit * 4, 0, tokens.spaceUnit * 2);
+    buttonsLayout_->setSpacing(tokens.spaceUnit * 2);
     auto *openButton = new QPushButton(this);
     openButton->setObjectName(QStringLiteral("welcomeOpenButton"));
     bindButton(openButton, open);
-    openButton->setMinimumHeight(44);
+    openButton->setMinimumHeight(tokens.controlHeight + tokens.spaceUnit * 3);
     openButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     auto *networkButton = new QPushButton(this);
     networkButton->setObjectName(QStringLiteral("welcomeNetworkButton"));
     bindButton(networkButton, network);
-    networkButton->setMinimumHeight(44);
+    networkButton->setMinimumHeight(tokens.controlHeight + tokens.spaceUnit * 3);
     networkButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     buttonsLayout_->addWidget(openButton);
     buttonsLayout_->addWidget(networkButton);
@@ -101,7 +104,7 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     layout->addWidget(continueHeading);
     continueLayout_ = new QVBoxLayout;
     continueLayout_->setContentsMargins(0, 0, 0, 0);
-    continueLayout_->setSpacing(6);
+    continueLayout_->setSpacing(tokens.spaceUnit);
     layout->addLayout(continueLayout_);
 
     auto *recentHeading = new QLabel(this);
@@ -112,7 +115,7 @@ WelcomePanel::WelcomePanel(QAction *open, QAction *network, QWidget *parent) : Q
     layout->addWidget(recentHeading);
     recentLayout_ = new QVBoxLayout;
     recentLayout_->setContentsMargins(0, 0, 0, 0);
-    recentLayout_->setSpacing(7);
+    recentLayout_->setSpacing(tokens.spaceUnit * 2);
     layout->addLayout(recentLayout_);
 
     auto *hint = new QLabel(this);
@@ -169,6 +172,7 @@ void WelcomePanel::updateButtonDirection() {
 }
 
 void WelcomePanel::setRecentSources(const QStringList &sources) {
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     recentSources_ = sources.mid(0, 3);
     while (auto *item = recentLayout_->takeAt(0)) {
         if (item->widget())
@@ -183,13 +187,13 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
         auto *button = new QPushButton(this);
         button->setObjectName(QStringLiteral("welcomeRecentAction%1").arg(index + 1));
         button->setProperty("welcomeRecentAction", true);
-        button->setMinimumHeight(60);
+        button->setMinimumHeight(tokens.controlHeight + tokens.spaceUnit * 7);
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         const auto networkSource = MediaSource::isNetwork(source);
         const auto location = safeLocation(source, networkSource);
         auto *rowLayout = new QHBoxLayout(button);
         rowLayout->setContentsMargins(12, 8, 12, 8);
-        rowLayout->setSpacing(12);
+        rowLayout->setSpacing(tokens.spaceUnit * 3);
 
         auto *icon = new QLabel(button);
         icon->setObjectName(QStringLiteral("welcomeRecentMediaIcon%1").arg(index + 1));
@@ -241,6 +245,7 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
 }
 
 void WelcomePanel::setResumeEntries(const QList<PlaybackHistoryEntry> &entries) {
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     resumeEntries_.clear();
     for (const auto &entry : entries) {
         if (PlaybackHistoryStore::normalizedPath(entry.path).isEmpty() ||
@@ -264,11 +269,11 @@ void WelcomePanel::setResumeEntries(const QList<PlaybackHistoryEntry> &entries) 
         auto *button = new QPushButton(this);
         button->setObjectName(QStringLiteral("welcomeContinueAction%1").arg(index + 1));
         button->setProperty("welcomeContinueAction", true);
-        button->setMinimumHeight(48);
+        button->setMinimumHeight(tokens.controlHeight + tokens.spaceUnit * 5);
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         auto *row = new QVBoxLayout(button);
         row->setContentsMargins(12, 6, 12, 6);
-        row->setSpacing(3);
+        row->setSpacing(tokens.spaceUnit);
         auto *title = new QLabel(MediaSource::displayName(entry.path), button);
         title->setObjectName(QStringLiteral("welcomeContinueTitle%1").arg(index + 1));
         title->setAttribute(Qt::WA_TransparentForMouseEvents);

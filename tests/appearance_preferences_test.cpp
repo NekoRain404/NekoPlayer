@@ -200,7 +200,7 @@ class AppearancePreferencesTest final : public QObject {
         QVERIFY(!opaque.contains(QStringLiteral("rgba(")));
     }
 
-    void welcomePanelPaintsItsThemeSurface() {
+    void welcomePanelLeavesTheGlassBackdropVisible() {
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::Dark);
         QAction open(QStringLiteral("打开文件…"));
         QAction network(QStringLiteral("打开网络地址…"));
@@ -218,8 +218,7 @@ class AppearancePreferencesTest final : public QObject {
         panel.render(&painter, {}, {}, QWidget::DrawWindowBackground);
         painter.end();
 
-        const auto surface = appearanceTokens(AppearancePreferences::Theme::Dark).surface;
-        QCOMPARE(image.pixelColor(10, panel.height() / 2), surface);
+        QCOMPARE(image.pixelColor(10, panel.height() / 2), QColor(0, 0, 0, 0));
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
     }
 
@@ -288,7 +287,7 @@ class AppearancePreferencesTest final : public QObject {
             const auto opaque = appearanceStyleSheet(tokens, false);
             for (const auto &selector :
                  {QStringLiteral("QWidget#playlistPane"), QStringLiteral("QWidget#transportBar"),
-                  QStringLiteral("QWidget#welcomePanel"), QStringLiteral("QWidget#playlistHeader"),
+                  QStringLiteral("QWidget#playlistHeader"),
                   QStringLiteral("QPushButton[welcomeRecentAction]"),
                   QStringLiteral("QPushButton[welcomeContinueAction]"), QStringLiteral("QMenu{"),
                   QStringLiteral("QDialog{")}) {

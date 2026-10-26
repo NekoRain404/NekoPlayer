@@ -15,6 +15,7 @@
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStyle>
+#include <QStackedWidget>
 #include <QTabWidget>
 #include <QVBoxLayout>
 
@@ -149,6 +150,20 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     tabs_->addTab(mediaLibraryPage, style()->standardIcon(QStyle::SP_DirOpenIcon), tr("媒体库"));
     createAppearancePage();
     createInteractionPage(interaction);
+    // Let the shared glass pane show through every settings page instead of an
+    // opaque page backing store.
+    tabs_->setAttribute(Qt::WA_TranslucentBackground, true);
+    for (int index = 0; index < tabs_->count(); ++index) {
+        auto *page = tabs_->widget(index);
+        if (!page)
+            continue;
+        page->setAttribute(Qt::WA_TranslucentBackground, true);
+        page->setAutoFillBackground(false);
+    }
+    for (auto *stack : tabs_->findChildren<QStackedWidget *>()) {
+        stack->setAttribute(Qt::WA_TranslucentBackground, true);
+        stack->setAutoFillBackground(false);
+    }
 
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(tabs_);

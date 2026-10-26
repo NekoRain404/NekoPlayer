@@ -342,29 +342,35 @@ class AppearancePreferencesTest final : public QObject {
     }
 
     void elevatedPopupsUseRaisedSurfaceMaterial() {
-        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
-        const auto glass =
-            appearanceStyleSheet(tokens, true, glassOpacityDefault, glassBlurDefault);
-        const auto opaque = appearanceStyleSheet(tokens, false);
-        const auto raisedCenter = QStringLiteral("rgba(%1,%2,%3,")
-                                      .arg(tokens.raisedSurface.red())
-                                      .arg(tokens.raisedSurface.green())
-                                      .arg(tokens.raisedSurface.blue());
-        const auto surfaceCenter = QStringLiteral("rgba(%1,%2,%3,")
-                                       .arg(tokens.surface.red())
-                                       .arg(tokens.surface.green())
-                                       .arg(tokens.surface.blue());
-        const auto glassMenu =
-            glass.mid(glass.indexOf(QStringLiteral("QMenu{"))).section('}', 0, 0);
-        const auto glassTransport =
-            glass.mid(glass.indexOf(QStringLiteral("QWidget#transportBar"))).section('}', 0, 0);
-        QVERIFY(glassMenu.contains(raisedCenter));
-        QVERIFY(glassTransport.contains(surfaceCenter));
-        QVERIFY(!glassMenu.contains(surfaceCenter));
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light,
+              AppearancePreferences::Theme::System}) {
+            const auto tokens = appearanceTokens(theme);
+            const auto glass =
+                appearanceStyleSheet(tokens, true, glassOpacityDefault, glassBlurDefault);
+            const auto opaque = appearanceStyleSheet(tokens, false);
+            const auto raisedCenter = QStringLiteral("rgba(%1,%2,%3,")
+                                          .arg(tokens.raisedSurface.red())
+                                          .arg(tokens.raisedSurface.green())
+                                          .arg(tokens.raisedSurface.blue());
+            const auto surfaceCenter = QStringLiteral("rgba(%1,%2,%3,")
+                                           .arg(tokens.surface.red())
+                                           .arg(tokens.surface.green())
+                                           .arg(tokens.surface.blue());
+            const auto panel =
+                glass.mid(glass.indexOf(QStringLiteral("QWidget#transportBar"))).section('}', 0, 0);
+            QVERIFY(panel.contains(surfaceCenter));
 
-        const auto opaqueMenu =
-            opaque.mid(opaque.indexOf(QStringLiteral("QMenu{"))).section('}', 0, 0);
-        QVERIFY(opaqueMenu.contains(tokens.raisedSurface.name(QColor::HexRgb)));
+            for (const auto &selector :
+                 {QStringLiteral("QMenu{"), QStringLiteral("QDialog{"),
+                  QStringLiteral("QComboBox QAbstractItemView{"), QStringLiteral("QToolTip{")}) {
+                const auto popup = glass.mid(glass.indexOf(selector)).section('}', 0, 0);
+                QVERIFY2(popup.contains(raisedCenter), qPrintable(selector));
+            }
+            const auto opaqueMenu =
+                opaque.mid(opaque.indexOf(QStringLiteral("QMenu{"))).section('}', 0, 0);
+            QVERIFY(opaqueMenu.contains(tokens.raisedSurface.name(QColor::HexRgb)));
+        }
     }
 
     void darkAndLightTokensKeepSemanticContrastAndSharedMetrics() {

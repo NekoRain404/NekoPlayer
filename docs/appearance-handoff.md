@@ -168,3 +168,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 后续像素审计发现 OSD 透明度还未跟随设置页里的玻璃强度/柔化值；已将两个 OSD surface 统一接到应用 QSS 唯一 `panelFill()`，并新增不同 opacity 渲染结果必须变化的真实 QWidget 回归。离屏 Debug 聚焦套件通过，Wayland 视频帧合成仍未验收。
 - 另一个独立的自绘操作反馈浮层（定位/音量/播放状态）现在从当前 palette 读取 raised 背景和文字色，解决浅色主题仍显示固定深色卡片的问题；它保持原有透明度与动效，不套用 UI 玻璃设置。真实 QWidget 像素测试在修复前失败、修复后通过。真实播放帧上的可读性仍待 Wayland 检查。
 - 两项 OSD 收敛修复后的 fresh Debug 非窗口套件为 69/69；外观/两类 OSD 的 ASan/UBSan 定向测试为 4/4（`detect_leaks=0`）。本次环境中的 Qt Wayland 窗口仍未被 niri 枚举，因此设计要求的原生屏幕矩阵没有完成。
+- 首页最近播放卡片的标题与位置文字间距经真实布局测量曾为 3 px；现改为共享的 4 px `spaceUnit`，对应真实 QWidget 几何回归先失败后通过。没有改动卡片总体层级或尺寸。

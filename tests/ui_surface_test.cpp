@@ -285,6 +285,25 @@ class UiSurfaceTest final : public QObject {
         QVERIFY(!location->text().contains(QStringLiteral("token")));
     }
 
+    void welcomeRecentTextUsesTheSharedSpacingUnit() {
+        QAction open(QStringLiteral("打开文件…"));
+        QAction network(QStringLiteral("打开网络地址…"));
+        WelcomePanel panel(&open, &network);
+        panel.resize(640, 520);
+        panel.setRecentSources({QStringLiteral("/media/Episode.mkv")});
+        panel.show();
+        QCoreApplication::processEvents();
+
+        auto *button = panel.findChild<QPushButton *>(QStringLiteral("welcomeRecentAction1"));
+        auto *title = panel.findChild<QLabel *>(QStringLiteral("welcomeRecentTitle1"));
+        auto *location = panel.findChild<QLabel *>(QStringLiteral("welcomeRecentLocation1"));
+        QVERIFY(button && title && location);
+        const int titleBottom = title->mapTo(button, QPoint(0, title->height())).y();
+        const int locationTop = location->mapTo(button, QPoint(0, 0)).y();
+        QCOMPARE(locationTop - titleBottom,
+                 appearanceTokens(AppearancePreferences::Theme::Dark).spaceUnit);
+    }
+
     void welcomePanelShowsResumablePlaybackHistory() {
         QAction open(QStringLiteral("打开文件…"));
         QAction network(QStringLiteral("打开网络地址…"));

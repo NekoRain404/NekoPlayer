@@ -209,7 +209,7 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
 
         auto *textLayout = new QVBoxLayout;
         textLayout->setContentsMargins(0, 0, 0, 0);
-        textLayout->setSpacing(3);
+        textLayout->setSpacing(tokens.spaceUnit);
         auto *title = new QLabel(button);
         title->setObjectName(QStringLiteral("welcomeRecentTitle%1").arg(index + 1));
         title->setProperty("welcomeRecentTitle", true);

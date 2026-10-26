@@ -81,8 +81,10 @@ AppearanceTokens appearanceTokens(AppearancePreferences::Theme theme,
     tokens.accentHover = dark ? tokens.accent.lighter(110) : tokens.accent.darker(110);
     tokens.accentPressed = dark ? tokens.accent.darker(110) : tokens.accent.darker(120);
     tokens.focus = tokens.accent;
-    tokens.selection = mix(tokens.canvas, tokens.accent, dark ? 0.24 : 0.16);
+    tokens.accentSurface = mix(tokens.canvas, tokens.accent, dark ? 0.24 : 0.16);
+    tokens.selection = tokens.accentSurface;
     tokens.selectedText = tokens.primaryText;
+    tokens.border = tokens.separator;
     return tokens;
 }
 

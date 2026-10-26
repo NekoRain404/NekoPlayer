@@ -175,15 +175,14 @@ class AppearancePreferencesTest final : public QObject {
     }
 
     void appliesGlassPropertiesForTheIdleVideoSurface() {
-        AppearancePreferences::applySettings(
-            *qApp, {AppearancePreferences::Theme::Dark,
-                    AppearancePreferences::Accent::Ocean, true, 63, 47});
+        AppearancePreferences::applySettings(*qApp,
+                                             {AppearancePreferences::Theme::Dark,
+                                              AppearancePreferences::Accent::Ocean, true, 63, 47});
         QCOMPARE(qApp->property("glassEnabled").toBool(), true);
         QCOMPARE(qApp->property("glassOpacity").toInt(), 63);
         QCOMPARE(qApp->property("glassBlur").toInt(), 47);
-        AppearancePreferences::applySettings(
-            *qApp, {AppearancePreferences::Theme::Dark,
-                    AppearancePreferences::Accent::Ocean, false});
+        AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Dark,
+                                                     AppearancePreferences::Accent::Ocean, false});
         QCOMPARE(qApp->property("glassEnabled").toBool(), false);
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
         QCOMPARE(qApp->property("glassEnabled").toBool(), false);
@@ -259,6 +258,23 @@ class AppearancePreferencesTest final : public QObject {
                 QVERIFY(tokens.accentPressed != tokens.accent);
             }
         }
+    }
+
+    void appearanceTokensExposeStableSurfaceHierarchy() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark,
+                                             AppearancePreferences::Accent::Violet);
+        QVERIFY(tokens.canvas.isValid());
+        QVERIFY(tokens.surface.isValid());
+        QVERIFY(tokens.raisedSurface.isValid());
+        QVERIFY(tokens.accentSurface.isValid());
+        QVERIFY(tokens.border.isValid());
+        QCOMPARE(tokens.focus, tokens.accent);
+        QVERIFY(tokens.controlHeight >= tokens.rowHeight);
+        QVERIFY(tokens.menuItemHeight >= tokens.rowHeight);
+        QCOMPARE(tokens.controlHeight % tokens.spaceUnit, 0);
+        QCOMPARE(tokens.rowHeight % tokens.spaceUnit, 0);
+        QVERIFY(tokens.motionDurationMs >= 140);
+        QVERIFY(tokens.motionDurationMs <= 180);
     }
 
     void systemTokensUseStandardPaletteAndSelectedAccent() {

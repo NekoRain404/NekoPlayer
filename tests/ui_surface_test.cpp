@@ -6,6 +6,8 @@
 #include "ui/actionfeedbackoverlay.h"
 #include "ui/appearanceicons.h"
 #include "ui/appearancepreferences.h"
+#include "ui/appearancestylesheet.h"
+#include "ui/appearancetokens.h"
 #include "ui/fullscreencontrols.h"
 #include "ui/playbackoverlay.h"
 #include "ui/playlistpane.h"
@@ -34,6 +36,19 @@
 class UiSurfaceTest final : public QObject {
     Q_OBJECT
   private slots:
+    void stylesheetUsesTheUnifiedSurfaceContract() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark,
+                                             AppearancePreferences::Accent::Rose);
+        const auto style =
+            appearanceStyleSheet(tokens, true, glassOpacityDefault, glassBlurDefault);
+        QVERIFY(style.contains(tokens.accentSurface.name(QColor::HexRgb)));
+        QVERIFY(style.contains(tokens.focus.name(QColor::HexRgb)));
+        QVERIFY(style.contains(tokens.disabledText.name(QColor::HexRgb)));
+        QVERIFY(style.contains(QStringLiteral("QPushButton:focus")));
+        QVERIFY(style.contains(QStringLiteral("QPushButton:disabled")));
+        QVERIFY(style.contains(QStringLiteral("QMenu::item:disabled")));
+    }
+
     void glassChangesTransportMenuAndDialogMaterial() {
         QAction action;
         TransportBar transport(&action, &action, &action, &action, &action, &action, &action);

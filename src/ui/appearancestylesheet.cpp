@@ -56,13 +56,14 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QWidget#playlistPane{background:%27;border-left:1px solid %3;}"
                "QWidget#playlistHeader{background:%27;border-bottom:1px solid %3;}"
                "QLineEdit#playlistSearchEdit{color:%2;background:%27;border:1px solid "
-               "%3;border-radius:%13px;padding:%8px %14px;}"
+               "%3;border-radius:%13px;padding:%8px %14px;min-height:%29px;}"
                "QLineEdit#playlistSearchEdit:focus{border:1px solid %18;}"
                "QWidget#welcomePanel{background:transparent;border:none;border-radius:%6px;}"
                "QLabel{color:%7;} "
                "QLabel#timeLabel{color:%7;font-family:monospace;font-size:12px;padding:0 %8px;}"
                "QLabel#playlistTitle,QLabel#welcomeTitle{color:%2;font-weight:600;}"
-               "QLabel#playlistCount{color:%7;background:%27;border-radius:%9px;padding:%10px %8px;}"
+               "QLabel#playlistCount{color:%7;background:%27;border-radius:%9px;padding:%10px "
+               "%8px;}"
                "QLabel#welcomeBrand{color:%11;font-weight:700;} QLabel#welcomeSubtitle{color:%7;}"
                "QLabel#welcomeDropHint{color:%12;} QLabel#welcomeRecentHeading{color:%7;}"
                "QLabel#welcomeRecentChevron{color:%12;} "
@@ -92,16 +93,19 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "%3;border-radius:%6px;}"
                "QPushButton[welcomeContinueAction]:hover{background:%15;} "
                "QPushButton[welcomeContinueAction]:pressed{background:%16;}"
-               "QMenuBar,QStatusBar{background:%27;color:%2;border-bottom:1px solid %3;}"
-               "QStatusBar{border-top:1px solid %3;border-bottom:none;}"
+               "QMenuBar{background:%27;color:%2;border-bottom:1px solid %3;}"
+               "QStatusBar{background:%27;color:%2;border-top:1px solid %3;border-bottom:none;}"
+               "QStatusBar QLabel{background:transparent;color:%7;}"
+               "QStatusBar::item{border:none;}"
                "QMenu{background:%27;color:%2;border:1px solid %3;border-radius:%13px;padding:6px;}"
                "QDialog{background:%27;color:%2;}"
                "QMenuBar{padding:2px 6px;} QMenuBar::item{padding:6px 10px;border-radius:%13px;}"
                "QMenuBar::item:selected,QMenu::item:selected{background:%24;}"
-               "QMenu::item{padding:7px %25px 7px 12px;margin:1px 4px;border-radius:%13px;}"
+               "QMenu::item{padding:7px %25px 7px 12px;margin:1px 4px;border-radius:%13px;"
+               "min-height:%31px;}"
                "QMenu::item:disabled{color:%17;}"
                "QToolButton{color:%2;background:transparent;border:1px solid "
-               "transparent;border-radius:%13px;padding:%8px;}"
+               "transparent;border-radius:%13px;padding:%8px;min-height:%29px;}"
                "QToolButton:hover{background:%15;border-color:%3;} "
                "QToolButton:pressed{background:%16;border-color:%3;}"
                "QToolButton:checked{color:%11;background:%24;} QToolButton:disabled{color:%17;}"
@@ -131,7 +135,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QSlider:disabled{opacity:0.55;}"
                "QListView#playlistView{background:transparent;border:none;outline:none;padding:%"
                "8px;}"
-               "QListView#playlistView::item{min-height:28px;padding:%8px "
+               "QListView#playlistView::item{min-height:%30px;padding:%8px "
                "%14px;border-radius:%13px;}"
                "QListView#playlistView::item:hover{background:%15;}"
                "QListView#playlistView::item:selected{color:%26;background:%24;}"
@@ -141,15 +145,20 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QComboBox,QFontComboBox,QLineEdit,QSpinBox,QDoubleSpinBox{background:%27;color:%2;"
                "border:1px solid %3;border-radius:%13px;padding:%23px %14px;"
                "selection-background-color:%11;selection-color:%19;}"
-               "QComboBox:hover,QFontComboBox:hover,QLineEdit:hover,QSpinBox:hover,QDoubleSpinBox:hover{border-color:%7;}"
-               "QComboBox:focus,QFontComboBox:focus,QLineEdit:focus,QSpinBox:focus,QDoubleSpinBox:focus{border:1px solid %18;}"
+               "QComboBox:hover,QFontComboBox:hover,QLineEdit:hover,QSpinBox:hover,QDoubleSpinBox:"
+               "hover{border-color:%7;}"
+               "QComboBox:focus,QFontComboBox:focus,QLineEdit:focus,QSpinBox:focus,QDoubleSpinBox:"
+               "focus{border:1px solid %18;}"
                "QComboBox::drop-down{border:none;width:24px;}"
-               "QComboBox::down-arrow{image:url(:/appearance/data/chevron.png);width:10px;height:10px;}"
+               "QComboBox::down-arrow{image:url(:/appearance/data/"
+               "chevron.png);width:10px;height:10px;}"
                "QSpinBox,QDoubleSpinBox{padding-right:24px;}"
-               "QSpinBox::up-button,QDoubleSpinBox::up-button{image:url(:/appearance/data/chevron-up.png);"
+               "QSpinBox::up-button,QDoubleSpinBox::up-button{image:url(:/appearance/data/"
+               "chevron-up.png);"
                "subcontrol-origin:border;subcontrol-position:top right;width:20px;height:50%;"
                "background:transparent;border:none;}"
-               "QSpinBox::down-button,QDoubleSpinBox::down-button{image:url(:/appearance/data/chevron-down.png);"
+               "QSpinBox::down-button,QDoubleSpinBox::down-button{image:url(:/appearance/data/"
+               "chevron-down.png);"
                "subcontrol-origin:border;subcontrol-position:bottom right;width:20px;height:50%;"
                "background:transparent;border:none;}"
                "QComboBox QAbstractItemView{background:%27;color:%2;border:1px solid %3;"
@@ -158,6 +167,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QTabWidget::pane{border:1px solid %3;border-radius:%6px;background:%27;"
                "top:-1px;}"
                "QTabBar::tab{background:transparent;color:%7;padding:%23px %14px;margin:2px;"
+               "min-height:%29px;"
                "border:none;border-radius:%13px;}"
                "QTabBar::tab:selected{background:%27;color:%2;font-weight:600;border:1px solid %3;}"
                "QTabBar::tab:hover:!selected{background:%15;}"
@@ -183,7 +193,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QLabel#appearanceGlassOpacityValue,QLabel#appearanceGlassBlurValue{color:%7;}"
                "QToolTip{color:%2;background:%27;border:1px solid %3;border-radius:%13px;"
                "padding:%23px %14px;}")
-        .arg(color(t.canvas), color(t.primaryText), color(t.separator), color(t.raisedSurface),
+        .arg(color(t.canvas), color(t.primaryText), color(t.border), color(t.raisedSurface),
              color(t.surface), QString::number(t.surfaceRadius), color(t.secondaryText),
              QString::number(unit), QString::number(t.controlRadius), QString::number(unit / 2),
              color(t.accent), color(t.mutedText), QString::number(t.controlRadius),
@@ -192,5 +202,6 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
              color(t.accentHover), color(t.accentPressed), QString::number(unit + 1),
              color(t.selection), QString::number(unit * 7), color(t.selectedText),
              panelFill(t.surface, glassEnabled, glassOpacity, glassBlur),
-             windowBackdrop(t, glassEnabled));
+             windowBackdrop(t, glassEnabled), QString::number(t.controlHeight),
+             QString::number(t.rowHeight), QString::number(t.menuItemHeight));
 }

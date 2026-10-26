@@ -2,6 +2,14 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>QuickActionsDialog</name>
+    <message><source>快速操作…</source><translation>Quick Actions…</translation></message>
+    <message><source>快速操作</source><translation>Quick Actions</translation></message>
+    <message><source>搜索命令或快捷键</source><translation>Search commands or shortcuts</translation></message>
+    <message><source>搜索快速操作</source><translation>Search quick actions</translation></message>
+    <message><source>操作结果</source><translation>Action results</translation></message>
+</context>
+<context>
     <name>PreferencesDialog</name>
     <message><source>外观</source><translation>Appearance</translation></message>
     <message><source>基础主题</source><translation>Base theme</translation></message>

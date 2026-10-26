@@ -11,6 +11,7 @@
 #include <QPushButton>
 #include <QSlider>
 #include <QSpinBox>
+#include <QTabBar>
 #include <QToolButton>
 #include <QtTest>
 
@@ -122,6 +123,38 @@ class AppearanceSurfaceContractTest final : public QObject {
         QImage focused(slider->size(), QImage::Format_ARGB32_Premultiplied);
         focused.fill(Qt::transparent);
         slider->render(&focused);
+
+        QVERIFY(focused != unfocused);
+    }
+
+    void focusedPreferenceTabsHaveVisibleFeedback() {
+        QWidget host;
+        auto *tabs = new QTabBar(&host);
+        tabs->addTab(QStringLiteral("播放"));
+        tabs->addTab(QStringLiteral("外观"));
+        tabs->setFocusPolicy(Qt::StrongFocus);
+        tabs->setStyleSheet(
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark,
+                                                  AppearancePreferences::Accent::Ocean),
+                                 false));
+        tabs->setGeometry(0, 0, 240, 44);
+        host.setFocusPolicy(Qt::StrongFocus);
+        host.resize(240, 44);
+        host.show();
+        host.activateWindow();
+        host.setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+
+        QImage unfocused(tabs->size(), QImage::Format_ARGB32_Premultiplied);
+        unfocused.fill(Qt::transparent);
+        tabs->render(&unfocused);
+
+        tabs->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        QVERIFY(tabs->hasFocus());
+        QImage focused(tabs->size(), QImage::Format_ARGB32_Premultiplied);
+        focused.fill(Qt::transparent);
+        tabs->render(&focused);
 
         QVERIFY(focused != unfocused);
     }

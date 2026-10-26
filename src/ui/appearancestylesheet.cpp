@@ -175,6 +175,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
             "border:none;border-radius:%13px;}"
             "QTabBar::tab:selected{background:%27;color:%2;font-weight:600;border:1px solid %3;}"
             "QTabBar::tab:hover:!selected{background:%15;}"
+            "QTabBar::tab:focus{border:2px solid %18;}"
             "QScrollBar:vertical{background:transparent;width:10px;margin:2px;}"
             "QScrollBar::handle:vertical{background:%3;min-height:32px;border-radius:5px;}"
             "QScrollBar::handle:vertical:hover{background:%7;}"

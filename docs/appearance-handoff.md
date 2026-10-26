@@ -150,4 +150,5 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 快速操作测试使用 offscreen Qt；需要在原生 Wayland 手工确认 Ctrl+K、方向键、Enter、Esc 与焦点回退。面板自身不实现背景模糊。
 - 2026-10-26 的 Quick Actions 交互复核补齐了共享 QAction 去重、菜单上下文/图标、空结果提示、双击触发和异步焦点回退；验证记录见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。原生 Wayland 输入与实际观感仍待人工验收。
 - 全屏 transport 现在在 Qt 6.12+ 尊重系统减少动态效果偏好，偏好运行时切换为 Reduce Motion 时会即时完成当前淡出；旧 Qt 保留默认 160 ms。motion policy、UI surface 定向回归及完整非窗口 Debug 结果见验证记录。当前 niri 会话未能稳定映射 NekoPlayer 窗口，故没有截图或 Wayland 视觉通过结论。
+- 时间轴缩略图预览现在复用同一 160 ms 动效 token，以 paint opacity 淡入/淡出，不安装 graphics effect，也不在每次 hover 帧更新时重启动画；Qt 6.12+ Reduce Motion 下即时显示/隐藏。`thumbnail-preview` 覆盖此行为；见验证记录。
 - 当前可用环境没有完成 Dark/Light、玻璃开关、不同 accent、100%/175% 缩放、全屏视频几何与 mini-player 的原生组合验收。HDR、`hwdec-current`、音频设备与 compositor blur 仍是独立的硬件/桌面验收项；本轮不声称已通过。

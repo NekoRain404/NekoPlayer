@@ -88,6 +88,12 @@ target_link_libraries(action_feedback_test PRIVATE neko_options Qt6::Core Qt6::T
 add_test(NAME action-feedback COMMAND action_feedback_test)
 set_tests_properties(action-feedback PROPERTIES TIMEOUT 20)
 
+add_executable(action_feedback_overlay_test action_feedback_overlay_test.cpp)
+target_link_libraries(action_feedback_overlay_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME action-feedback-overlay COMMAND action_feedback_overlay_test)
+set_tests_properties(action-feedback-overlay PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(playback_overlay_text_test playback_overlay_text_test.cpp
     ../src/ui/playbackoverlaytext.cpp)
 target_include_directories(playback_overlay_text_test PRIVATE ../src)

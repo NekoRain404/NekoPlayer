@@ -145,6 +145,7 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 
 ## 8. Apple UI 收敛后续
 
+- 操作反馈浮层现复用统一 160 ms `OutCubic` 动效淡入淡出，并在 Qt 6.12+ 尊重系统 Reduce Motion；重复反馈在淡出期间到达会更新文案并继续显示。实现只改变浮层自身绘制透明度，不安装 `QGraphicsOpacityEffect`，也不触碰视频/播放路径。定向 Debug 与 ASan/UBSan 结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)；Wayland 实际合成观感仍待映射稳定后验收。
 - Ctrl+K 面板采用动作名称/快捷键的大小写无关包含与字符顺序模糊过滤：完整子串优先，其余按匹配间隔排序，仍直接消费实时 QAction，不维护镜像命令表；目前不按菜单层级分组，也不做拼写纠错。
 - `ThumbnailPreview` 保持立即显示/隐藏：它会随时间轴 hover 快速更换帧，不增加逐帧 opacity 合成动画；当前共享时长只用于 fullscreen transport。若之后要动画预览浮层，先在 Wayland 窗口和 GL 视频共存路径上测量合成成本与延迟。
 - 快速操作测试使用 offscreen Qt；需要在原生 Wayland 手工确认 Ctrl+K、方向键、Enter、Esc 与焦点回退。面板自身不实现背景模糊。

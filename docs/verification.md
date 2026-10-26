@@ -1,5 +1,11 @@
 # Verification Record
 
+Action feedback fade follow-up (2026-10-26):
+
+- `ActionFeedbackOverlay` now fades its painted content using the shared 160 ms `OutCubic` motion token and applies Qt 6.12+ ReducedMotion changes to in-flight transitions. The widget does not install `QGraphicsOpacityEffect`; playback, video, mpv/OpenGL, HDR and hardware-decoding paths are unchanged.
+- `action-feedback-overlay` checks shared duration/easing, no graphics effect, reveal/clear completion and replacing a message during fade-out. Debug focused selection (`action-feedback-overlay`, `action-feedback`, `thumbnail-preview`, `ui-surface`, `interaction-policy`, `transport-bar`, `quick-actions-dialog`, `code-size`) passed **8/8**; the same ASan/UBSan selection passed **8/8** with `ASAN_OPTIONS=detect_leaks=0` (not leak-check evidence). The updated overlay replacement regression was rerun in Debug and ASan/UBSan and passed **1/1** in each.
+- Changed C++ files pass `clang-format --dry-run --Werror`; scoped `git diff --check` and `code-size` passed. Window behavior tests were not run. This is an offscreen logic/paint regression, not Wayland visual acceptance.
+
 Quick Actions fuzzy-search follow-up (2026-10-26):
 
 - Search now keeps case-insensitive substring matches first, then includes ordered-character fuzzy matches ranked by skipped-character count, with original QAction traversal order as a stable tie-breaker. Queries with characters only in reverse order remain excluded. The regression test first failed against substring-only behavior (0 matches instead of 2), then passed after implementation.

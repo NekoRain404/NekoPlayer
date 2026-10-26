@@ -1,5 +1,11 @@
 # Verification Record
 
+Fresh main-branch regression verification (2026-10-26, code at `7cfa700`):
+
+- `cmake --build --preset debug -j4` reported no pending build work; all Debug targets were already current.
+- `QT_QPA_PLATFORM=offscreen LC_ALL=C LANG=C ctest --test-dir build/debug --exclude-regex 'window|backend-startup' --output-on-failure` passed **70/70** in **65.01 seconds**. This includes the preferences, transport, surface-contract, playlist, Quick Actions and media-path regressions; native window behavior tests were not run.
+- This run is fresh automated evidence only. It does not expand the existing native Wayland evidence: the full theme/glass/accent/DPI, active-video, menu/settings, fullscreen, mini-player and focus/keyboard matrix remains open.
+
 Opaque video-surface fallback follow-up (2026-10-26):
 
 - A contract review found that the empty/error `VideoWidget` clear path used the configured glass opacity as its OpenGL alpha. This could reveal the desktop through the video region even though glass is limited to UI chrome. An initial framebuffer assertion could not provide reliable evidence because the offscreen platform does not support `QOpenGLWidget`; the test was therefore reduced to the deterministic `emptySurfaceClearColor()` contract. Glass-enabled empty surfaces now use the palette tint at alpha 255, while glass-disabled empty surfaces remain black and opaque. Active libmpv frames are untouched; final composited pixels still require native Wayland inspection.

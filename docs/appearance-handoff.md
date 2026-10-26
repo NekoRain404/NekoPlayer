@@ -2,8 +2,8 @@
 
 更新时间：2026-10-26
 仓库：`/home/nekorain/Development/NekoPlayer`
-分支：`feat/first-playable`
-基础外观实现提交：`6aa897e`。本轮 Apple UI 收敛代码已提交至 `995a5b5`；原生 Wayland 视觉验收仍未进行。
+分支：`main`
+基础外观实现提交：`6aa897e`。本轮 Apple UI 收敛代码已推进至 `7cfa700`；原生 Wayland 视觉验收仍未完成完整矩阵。
 
 ## 1. 交接结论
 
@@ -134,7 +134,7 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 ## 6. 接手建议
 
 1. 先运行 `git status --short --branch`。当前共享工作区有一个用户已有的 `docs/skills.md` 修改，必须保留，不要重置、覆盖或顺手纳入外观提交。
-2. 确认 `feat/first-playable` 上已经包含上述外观提交、统一入口（`4cd7108`）和发布准备提交。不要自行 merge 或 push。
+2. 确认 `main` 已包含上述外观提交、统一入口（`4cd7108`）和发布准备提交；本项目不创建额外开发分支或 worktree。
 3. 统一 Preferences 入口已由 `4cd7108` 完成。下一步优先安排在目标 Wayland 桌面做视觉与输入验收；若发现问题，再按窄范围补测试和修正。
 4. 验收后按 `docs/verification.md` 的发布准备记录复核构建、非窗口套件、聚焦 sanitizer、格式和 diff 检查；分别报告自动化与人工证据。
 5. 除非用户另行要求，不要改动 mpv、HDR、硬解或 OpenGL 呈现实现来追求 UI blur。

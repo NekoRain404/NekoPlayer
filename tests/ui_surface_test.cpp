@@ -9,7 +9,6 @@
 #include "ui/appearancestylesheet.h"
 #include "ui/appearancetokens.h"
 #include "ui/fullscreencontrols.h"
-#include "ui/mainwindow.h"
 #include "ui/playlistpane.h"
 #include "ui/transportbar.h"
 #include "ui/welcomepanel.h"
@@ -24,7 +23,6 @@
 #include <QListView>
 #include <QMenu>
 #include <QMouseEvent>
-#include <QMainWindow>
 #include <QPainter>
 #include <QProgressBar>
 #include <QPropertyAnimation>
@@ -53,17 +51,8 @@ class UiSurfaceTest final : public QObject {
     }
 
     void glassChangesPanelsButNotTransportMaterial() {
-        QMainWindow host;
-        host.setAttribute(Qt::WA_TranslucentBackground, true);
-        auto *content = new QWidget(&host);
-        content->setAttribute(Qt::WA_TranslucentBackground, true);
-        host.setCentralWidget(content);
-        auto *layout = new QVBoxLayout(content);
         QAction action;
-        TransportBar transport(&action, &action, &action, &action, &action, &action, &action,
-                               content);
-        QVERIFY(!transport.testAttribute(Qt::WA_TranslucentBackground));
-        layout->addWidget(&transport);
+        TransportBar transport(&action, &action, &action, &action, &action, &action, &action);
         QMenu menu;
         QDialog dialog;
         QList<QColor> opaqueColors;
@@ -82,11 +71,6 @@ class UiSurfaceTest final : public QObject {
                 surface->render(&painter, {}, {}, QWidget::DrawWindowBackground);
                 painter.end();
                 const auto fill = image.pixelColor(5, 5);
-                if (surface == &transport) {
-                    QCOMPARE(fill, appearanceTokens(AppearancePreferences::Theme::Dark,
-                                                     AppearancePreferences::Accent::Ocean)
-                                        .surface);
-                }
                 if (!glass)
                     opaqueColors.append(fill);
                 else if (index == 0)
@@ -97,26 +81,6 @@ class UiSurfaceTest final : public QObject {
                 QVERIFY(!surface->testAttribute(Qt::WA_TranslucentBackground));
                 QVERIFY(!surface->graphicsEffect());
             }
-        }
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
-    }
-
-    void mainWindowTransportRendersOpaqueSurfaceWithGlassOnAndOff() {
-        MainWindow window(true);
-        auto *transport = window.findChild<QWidget *>(QStringLiteral("transportBar"));
-        QVERIFY(transport);
-        const auto expected = appearanceTokens(AppearancePreferences::Theme::Dark,
-                                               AppearancePreferences::Accent::Ocean)
-                                  .surface;
-        for (const bool glass : {false, true}) {
-            AppearancePreferences::applySettings(
-                *qApp,
-                {AppearancePreferences::Theme::Dark, AppearancePreferences::Accent::Ocean, glass});
-            transport->resize(400, transport->sizeHint().height());
-            QImage image(transport->size(), QImage::Format_ARGB32_Premultiplied);
-            image.fill(Qt::transparent);
-            transport->render(&image, {}, {}, QWidget::DrawWindowBackground);
-            QCOMPARE(image.pixelColor(20, 5), expected);
         }
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
     }

@@ -118,6 +118,19 @@ class QuickActionsDialogTest final : public QObject {
         QVERIFY(dialog.resultsView()->isVisible());
     }
 
+    void substringMatchesPrecedeOrderedFuzzyMatches() {
+        QWidget root;
+        QAction fuzzy(QStringLiteral("打开网络地址"), &root);
+        QAction substring(QStringLiteral("最近网地地址"), &root);
+        QAction outOfOrder(QStringLiteral("地址网络"), &root);
+        QuickActionsDialog dialog(&root);
+        dialog.show();
+        dialog.searchEdit()->setText(QStringLiteral("网地"));
+        QCOMPARE(dialog.visibleActionCount(), 2);
+        QCOMPARE(dialog.resultsView()->item(0)->data(Qt::UserRole).value<QObject *>(), &substring);
+        QCOMPARE(dialog.resultsView()->item(1)->data(Qt::UserRole).value<QObject *>(), &fuzzy);
+    }
+
     void closingRestoresPreviouslyFocusedControl() {
         QWidget root;
         QLineEdit originalFocus(&root);

@@ -1,5 +1,11 @@
 # Verification Record
 
+Quick Actions fuzzy-search follow-up (2026-10-26):
+
+- Search now keeps case-insensitive substring matches first, then includes ordered-character fuzzy matches ranked by skipped-character count, with original QAction traversal order as a stable tie-breaker. Queries with characters only in reverse order remain excluded. The regression test first failed against substring-only behavior (0 matches instead of 2), then passed after implementation.
+- Debug `NekoPlayer`, `quick_actions_dialog_test`, `shortcuts_dialog_test`, and `ui_surface_test` targets built successfully. Focused Debug CTest (`quick-actions-dialog`, `shortcuts-dialog`, `ui-surface`, `code-size`) passed **4/4**; focused ASan/UBSan `quick-actions-dialog` passed **1/1** with `ASAN_OPTIONS=detect_leaks=0`. `clang-format --dry-run --Werror` and scoped `git diff --check` passed. Tests use Qt offscreen and do not prove native Wayland input behavior.
+- The same-session Qt Wayland mapping issue remains open; this change affects only QAction search ranking/filtering and does not alter playback, video rendering, window or compositor behavior. Window behavior tests were not run.
+
 Disabled checkbox rendering regression follow-up (2026-10-26):
 
 - The appearance surface contract now checks both the generated QSS disabled-text token and the actual offscreen-rendered `QCheckBox` text pixels, ensuring the disabled label uses `AppearanceTokens::disabledText` rather than merely having a matching selector in the stylesheet.

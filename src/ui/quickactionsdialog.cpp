@@ -9,6 +9,7 @@
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
+#include <QList>
 #include <QListWidget>
 #include <QMenu>
 #include <QSet>
@@ -17,6 +18,29 @@
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <algorithm>
+
+namespace {
+int fuzzyGapScore(const QString &text, const QString &query) {
+    qsizetype next = 0;
+    int gaps = 0;
+    for (const auto character : query) {
+        const auto found = text.indexOf(character, next, Qt::CaseInsensitive);
+        if (found < 0)
+            return -1;
+        gaps += static_cast<int>(found - next);
+        next = found + 1;
+    }
+    return gaps;
+}
+
+struct ActionMatch {
+    QAction *action;
+    int matchType;
+    int gapScore;
+    int sourceOrder;
+};
+} // namespace
 
 QuickActionsDialog::QuickActionsDialog(QWidget *actionRoot, QWidget *parent)
     : QDialog(parent ? parent : actionRoot), actionRoot_(actionRoot),
@@ -110,7 +134,9 @@ void QuickActionsDialog::filterActions() {
     const auto query = search_->text().trimmed();
     results_->clear();
     QSet<QAction *> seen;
+    QList<ActionMatch> matches;
     const auto actions = actionRoot_->findChildren<QAction *>();
+    int sourceOrder = 0;
     for (auto *action : actions) {
         if (!action || action == openAction_ || action->isSeparator() || seen.contains(action))
             continue;
@@ -119,9 +145,33 @@ void QuickActionsDialog::filterActions() {
         seen.insert(action);
         const auto text = action->text().remove(QLatin1Char('&'));
         const auto shortcut = action->shortcut().toString(QKeySequence::NativeText);
+        int matchType = 0;
+        int gapScore = 0;
         if (!query.isEmpty() && !text.contains(query, Qt::CaseInsensitive) &&
-            !shortcut.contains(query, Qt::CaseInsensitive))
+            !shortcut.contains(query, Qt::CaseInsensitive)) {
+            gapScore = fuzzyGapScore(text, query);
+            if (gapScore < 0)
+                gapScore = fuzzyGapScore(shortcut, query);
+            if (gapScore < 0)
+                continue;
+            matchType = 1;
+        }
+        matches.push_back({action, matchType, gapScore, sourceOrder++});
+    }
+    std::stable_sort(matches.begin(), matches.end(),
+                     [](const ActionMatch &left, const ActionMatch &right) {
+                         if (left.matchType != right.matchType)
+                             return left.matchType < right.matchType;
+                         if (left.gapScore != right.gapScore)
+                             return left.gapScore < right.gapScore;
+                         return left.sourceOrder < right.sourceOrder;
+                     });
+    for (const auto &match : matches) {
+        auto *action = match.action;
+        if (!action)
             continue;
+        const auto text = action->text().remove(QLatin1Char('&'));
+        const auto shortcut = action->shortcut().toString(QKeySequence::NativeText);
         auto *item = new QListWidgetItem(text, results_);
         item->setIcon(action->icon());
         item->setData(Qt::UserRole, QVariant::fromValue(static_cast<QObject *>(action)));

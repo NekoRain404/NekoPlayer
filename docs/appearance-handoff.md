@@ -145,10 +145,11 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 
 ## 8. Apple UI 收敛后续
 
-- Ctrl+K 面板采用动作名称/快捷键的大小写无关包含过滤；现阶段没有按菜单层级分组，也不做拼写容错模糊匹配。后续可根据实际动作数量和用户反馈评估分组/评分，不应重新维护一套 QAction 镜像。
+- Ctrl+K 面板采用动作名称/快捷键的大小写无关包含与字符顺序模糊过滤：完整子串优先，其余按匹配间隔排序，仍直接消费实时 QAction，不维护镜像命令表；目前不按菜单层级分组，也不做拼写纠错。
 - `ThumbnailPreview` 保持立即显示/隐藏：它会随时间轴 hover 快速更换帧，不增加逐帧 opacity 合成动画；当前共享时长只用于 fullscreen transport。若之后要动画预览浮层，先在 Wayland 窗口和 GL 视频共存路径上测量合成成本与延迟。
 - 快速操作测试使用 offscreen Qt；需要在原生 Wayland 手工确认 Ctrl+K、方向键、Enter、Esc 与焦点回退。面板自身不实现背景模糊。
 - 2026-10-26 的 Quick Actions 交互复核补齐了共享 QAction 去重、菜单上下文/图标、空结果提示、双击触发和异步焦点回退；验证记录见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。原生 Wayland 输入与实际观感仍待人工验收。
+- 2026-10-26 后续补上字符顺序 fuzzy 搜索，子串优先、匹配间隔评分及稳定顺序回退；Debug、ASan/UBSan 定向回归通过，具体命令与范围见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
 - 全屏 transport 现在在 Qt 6.12+ 尊重系统减少动态效果偏好，偏好运行时切换为 Reduce Motion 时会即时完成当前淡出；旧 Qt 保留默认 160 ms。motion policy、UI surface 定向回归及完整非窗口 Debug 结果见验证记录。当前 niri 会话未能稳定映射 NekoPlayer 窗口，故没有截图或 Wayland 视觉通过结论。
 - 时间轴缩略图预览现在复用同一 160 ms 动效 token，以 paint opacity 淡入/淡出，不安装 graphics effect，也不在每次 hover 帧更新时重启动画；Qt 6.12+ Reduce Motion 下即时显示/隐藏。`thumbnail-preview` 覆盖此行为；见验证记录。
 - 当前可用环境没有完成 Dark/Light、玻璃开关、不同 accent、100%/175% 缩放、全屏视频几何与 mini-player 的原生组合验收。HDR、`hwdec-current`、音频设备与 compositor blur 仍是独立的硬件/桌面验收项；本轮不声称已通过。

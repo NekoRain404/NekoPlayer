@@ -1,15 +1,33 @@
 #include "fullscreencontrols.h"
 #include "appearancetokens.h"
+#include "uimotionduration.h"
 
 #include <QAbstractSlider>
 #include <QApplication>
 #include <QEvent>
 #include <QFocusEvent>
 #include <QGraphicsOpacityEffect>
+#include <QGuiApplication>
 #include <QPropertyAnimation>
+#include <QStyleHints>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
+#include <QAccessibilityHints>
+#endif
+
+namespace {
+int currentMotionDuration(int requestedDurationMs) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
+    const auto preference = QGuiApplication::styleHints()->accessibility()->motionPreference();
+    return uiMotionDuration(requestedDurationMs, preference == Qt::MotionPreference::ReducedMotion);
+#else
+    return uiMotionDuration(requestedDurationMs, false);
+#endif
+}
+} // namespace
 
 FullscreenControls::FullscreenControls(QWidget &transport, QWidget &video,
                                        QVBoxLayout &normalLayout, QObject *parent)
@@ -21,14 +39,22 @@ FullscreenControls::FullscreenControls(QWidget &transport, QWidget &video,
     opacity_->setOpacity(1);
     opacity_->setEnabled(false);
     transport_.setGraphicsEffect(opacity_);
-    animation_->setDuration(appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs);
+    animation_->setDuration(currentMotionDuration(
+        appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs));
     animation_->setEasingCurve(QEasingCurve::OutCubic);
-    connect(animation_, &QPropertyAnimation::finished, this, [this] {
-        if (active_ && opacity_->opacity() == 0) {
-            transport_.setAttribute(Qt::WA_TransparentForMouseEvents);
-            transport_.hide();
-        }
-    });
+    connect(animation_, &QPropertyAnimation::finished, this, &FullscreenControls::finishFadeOut);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
+    connect(QGuiApplication::styleHints()->accessibility(),
+            &QAccessibilityHints::motionPreferenceChanged, this,
+            [this](Qt::MotionPreference preference) {
+                if (preference != Qt::MotionPreference::ReducedMotion ||
+                    animation_->state() != QAbstractAnimation::Running)
+                    return;
+                const qreal target = animation_->endValue().toReal();
+                animation_->stop();
+                animateTo(target);
+            });
+#endif
     video_.installEventFilter(this);
     // Other overlays can raise themselves after a seek or Tab toggle.
     for (auto *child : video_.findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly))
@@ -115,9 +141,23 @@ void FullscreenControls::animateTo(qreal opacity) {
     animation_->stop();
     if (opacity_->opacity() == opacity)
         return;
+    animation_->setDuration(currentMotionDuration(
+        appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs));
+    if (animation_->duration() == 0) {
+        opacity_->setOpacity(opacity);
+        finishFadeOut();
+        return;
+    }
     animation_->setStartValue(opacity_->opacity());
     animation_->setEndValue(opacity);
     animation_->start();
+}
+
+void FullscreenControls::finishFadeOut() {
+    if (active_ && opacity_->opacity() == 0) {
+        transport_.setAttribute(Qt::WA_TransparentForMouseEvents);
+        transport_.hide();
+    }
 }
 
 bool FullscreenControls::eventFilter(QObject *watched, QEvent *event) {

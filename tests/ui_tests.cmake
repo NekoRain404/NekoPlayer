@@ -42,7 +42,7 @@ add_test(NAME title-format COMMAND window_title_test)
 set_tests_properties(title-format PROPERTIES TIMEOUT 20)
 
 add_executable(interaction_policy_test interaction_policy_test.cpp
-    ../src/ui/interactionpolicy.cpp)
+    ../src/ui/interactionpolicy.cpp ../src/ui/uimotionduration.cpp)
 target_include_directories(interaction_policy_test PRIVATE ../src)
 target_link_libraries(interaction_policy_test PRIVATE Qt6::Core Qt6::Test)
 add_test(NAME interaction-policy COMMAND interaction_policy_test)

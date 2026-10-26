@@ -127,8 +127,10 @@ void ActionFeedbackOverlay::paintEvent(QPaintEvent *event) {
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setFont(font);
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(24, 26, 31, 218));
+    auto panelColor = palette().color(QPalette::AlternateBase);
+    panelColor.setAlpha(218);
+    painter.setBrush(panelColor);
     painter.drawRoundedRect(layout.panel, 6, 6);
-    painter.setPen(QColor(245, 246, 249));
+    painter.setPen(palette().color(QPalette::Text));
     painter.drawText(layout.text, Qt::AlignCenter | Qt::TextWordWrap, message_);
 }

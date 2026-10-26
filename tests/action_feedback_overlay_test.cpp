@@ -4,6 +4,8 @@
 
 #include <QGraphicsOpacityEffect>
 #include <QGuiApplication>
+#include <QImage>
+#include <QPainter>
 #include <QPropertyAnimation>
 #include <QStyleHints>
 #include <QtTest>
@@ -27,6 +29,31 @@ int expectedMotionDuration() {
 class ActionFeedbackOverlayTest final : public QObject {
     Q_OBJECT
   private slots:
+    void feedbackColorsFollowApplicationPalette() {
+        QWidget video;
+        video.resize(640, 360);
+        ActionFeedbackOverlay overlay(&video);
+        overlay.resize(video.size());
+        video.show();
+        overlay.showMessage(QStringLiteral("前进 5 秒"), 5000);
+        overlay.setProperty("contentOpacity", 1.0);
+
+        QList<QColor> panelColors;
+        for (const auto theme :
+             {AppearancePreferences::Theme::Dark, AppearancePreferences::Theme::Light}) {
+            AppearancePreferences::applySettings(*qApp,
+                                                 {theme, AppearancePreferences::Accent::Ocean});
+            QImage image(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            overlay.render(&painter);
+            painter.end();
+            panelColors.push_back(image.pixelColor(320, 228));
+        }
+        QVERIFY(panelColors.at(0) != panelColors.at(1));
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+    }
+
     void feedbackUsesSharedMotionWithoutGraphicsEffect() {
         QWidget video;
         ActionFeedbackOverlay overlay(&video);

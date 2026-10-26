@@ -166,3 +166,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 另增加真实 QLineEdit/QComboBox/QSpinBox/QPushButton/QToolButton 键盘聚焦前后的像素变化契约，防止仅凭焦点 QSS 字符串断言可见。offscreen 测试容器最初自动将焦点给 line edit，导致基准帧已带焦点；调整为父容器持有基准焦点后通过五次重复运行。Debug 4/4 与 ASan/UBSan 1/1 均通过，测试单独提交 `01f560b`；它验证 Qt offscreen 样式行为，不替代 Wayland 实际焦点/键盘路径验收。
 - 提交 `7e10ff1` 将播放信息与定位进度 OSD 的前景、raised 表面、分隔色和进度 accent 接入应用级 AppearanceTokens；玻璃关闭时 OSD 使用不透明 token fallback。未给 `PlaybackOverlay` 或 `VideoWidget` 设置局部 stylesheet/graphics effect，播放与 OpenGL 路径不变。离屏真实控件颜色回归与 appearance/UI 聚焦 Debug 5/5 通过；Wayland + libmpv 实帧合成效果仍未检查。
 - 后续像素审计发现 OSD 透明度还未跟随设置页里的玻璃强度/柔化值；已将两个 OSD surface 统一接到应用 QSS 唯一 `panelFill()`，并新增不同 opacity 渲染结果必须变化的真实 QWidget 回归。离屏 Debug 聚焦套件通过，Wayland 视频帧合成仍未验收。
+- 另一个独立的自绘操作反馈浮层（定位/音量/播放状态）现在从当前 palette 读取 raised 背景和文字色，解决浅色主题仍显示固定深色卡片的问题；它保持原有透明度与动效，不套用 UI 玻璃设置。真实 QWidget 像素测试在修复前失败、修复后通过。真实播放帧上的可读性仍待 Wayland 检查。

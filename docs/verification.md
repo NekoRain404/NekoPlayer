@@ -899,3 +899,8 @@ Shared motion easing follow-up (2026-10-26):
 
 - The four optional UI transitions (fullscreen transport, thumbnail preview, action feedback and mini-player toplevel opacity) now consume one `uiMotionEasingCurve()` policy (`OutCubic`) in addition to the shared 160 ms token. A focused interaction regression failed to compile before the policy existed and passes afterward, preventing future curve drift between overlays.
 - Debug non-window CTest passed **70/70**; the focused Sanitizer interaction test passed **1/1** with `ASAN_OPTIONS=detect_leaks=0` and `UBSAN_OPTIONS=halt_on_error=1`. Changed C++ passed clang-format and code-size checks. Window behavior tests and native Wayland motion inspection remain skipped.
+
+Native Wayland mapping recheck (2026-10-26):
+
+- A fresh `QT_QPA_PLATFORM=wayland QT_LOGGING_RULES='qt.qpa.wayland.*=true' ./build/debug/NekoPlayer --no-config --silent-audio` instance was observed for five seconds in the active niri session. It remained alive but never appeared in `niri msg windows`; its log contained only an unrelated AT-SPI bus warning and no application crash. The diagnostic process was terminated after observation, while the pre-existing user process was left untouched.
+- This is another environment/mapping failure, not evidence about the new mini-player or motion rendering. No compositor or desktop configuration was changed; the required native Wayland theme/DPI/fullscreen/mini-player visual matrix remains open.

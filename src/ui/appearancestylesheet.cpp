@@ -61,7 +61,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
             "QLineEdit#playlistSearchEdit:focus{border:1px solid %18;}"
             "QWidget#welcomePanel{background:transparent;border:none;border-radius:%6px;}"
             "QLabel{color:%7;} "
-            "QLabel#timeLabel{color:%7;font-family:monospace;font-size:12px;padding:0 %8px;}"
+            "QLabel#timeLabel{color:%7;font-family:monospace;font-size:%33px;padding:0 %8px;}"
             "QLabel#playlistTitle,QLabel#welcomeTitle{color:%2;font-weight:600;}"
             "QLabel#playlistCount{color:%7;background:%27;border-radius:%9px;padding:%10px "
             "%8px;}"
@@ -198,7 +198,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
             "QCheckBox::indicator:checked:disabled{background:%4;border-color:%3;image:url(:/"
             "appearance/data/checkmark.png);}"
             "QDialogButtonBox QPushButton{min-width:76px;}"
-            "QStatusBar{font-size:11px;}"
+            "QStatusBar{font-size:%34px;}"
             "QLabel#appearanceGlassOpacityValue,QLabel#appearanceGlassBlurValue{color:%7;}"
             "QToolTip{color:%2;background:%32;border:1px solid %3;border-radius:%13px;"
             "padding:%23px %14px;}")
@@ -213,19 +213,21 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                  panelFill(t.surface, glassEnabled, glassOpacity, glassBlur),
                  windowBackdrop(t, glassEnabled), QString::number(t.controlHeight),
                  QString::number(t.rowHeight), QString::number(t.menuItemHeight),
-                 panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur));
+                 panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur))
+            .arg(QString::number(t.compactFontPixels), QString::number(t.captionFontPixels));
     style +=
         QStringLiteral(
             "QLabel#playbackInformationOverlay{color:%1;background:%2;border-radius:%6px;"
-            "padding:%7px;font-family:monospace;font-size:14px;}"
+            "padding:%7px;font-family:monospace;font-size:%9px;}"
             "QFrame#seekProgressOverlay{background:%3;border-radius:%6px;}"
-            "QFrame#seekProgressOverlay QLabel{color:%1;background:transparent;font-size:16px;}"
+            "QFrame#seekProgressOverlay QLabel{color:%1;background:transparent;font-size:%10px;}"
             "QProgressBar#seekProgressBar{background:%4;border:none;border-radius:%8px;}"
             "QProgressBar#seekProgressBar::chunk{background:%5;border-radius:%8px;}")
             .arg(color(t.primaryText),
                  panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
                  panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
                  color(t.separator), color(t.accent), QString::number(t.surfaceRadius),
-                 QString::number(t.spaceUnit * 3), QString::number(t.spaceUnit));
+                 QString::number(t.spaceUnit * 3), QString::number(t.spaceUnit),
+                 QString::number(t.bodyFontPixels), QString::number(t.largeFontPixels));
     return style;
 }

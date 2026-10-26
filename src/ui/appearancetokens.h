@@ -31,6 +31,10 @@ struct AppearanceTokens {
     int controlHeight = 36;
     int rowHeight = 32;
     int menuItemHeight = 32;
+    int captionFontPixels = 11;
+    int compactFontPixels = 12;
+    int bodyFontPixels = 14;
+    int largeFontPixels = 16;
     int motionDurationMs = 160;
     int transportHitTarget = 32;
 };

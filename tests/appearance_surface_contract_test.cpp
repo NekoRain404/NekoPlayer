@@ -84,6 +84,19 @@ class AppearanceSurfaceContractTest final : public QObject {
         QVERIFY(seek.contains(QStringLiteral("border-radius:%1px;").arg(tokens.surfaceRadius)));
     }
 
+    void statusAndPlaybackTextUseSharedTypeScaleTokens() {
+        const auto style =
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark), false);
+        const auto containsFontSize = [&style](const QString &selector, int pixels) {
+            const auto rule = style.mid(style.indexOf(selector)).section('}', 0, 0);
+            return rule.contains(QStringLiteral("font-size:%1px;").arg(pixels));
+        };
+        QVERIFY(style.contains(QStringLiteral("QStatusBar{font-size:11px;}")));
+        QVERIFY(containsFontSize(QStringLiteral("QLabel#timeLabel{"), 12));
+        QVERIFY(containsFontSize(QStringLiteral("QLabel#playbackInformationOverlay{"), 14));
+        QVERIFY(containsFontSize(QStringLiteral("QFrame#seekProgressOverlay QLabel{"), 16));
+    }
+
     void keyboardFocusRingIsExplicitAndContrastsAcrossAccents() {
         const auto style =
             appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark));

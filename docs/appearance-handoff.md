@@ -1,15 +1,17 @@
 # 外观与 UI 半透明效果开发交接
 
-更新时间：2026-10-24
+更新时间：2026-10-26
 仓库：`/home/nekorain/Development/NekoPlayer`
 分支：`feat/first-playable`
-外观实现提交：`6aa897e`。交接文档提交：`a41468d`。System palette 强调色 role 修正已提交为 `332f08d`；发布准备轮次已完成最终非窗口验证（54/54），但原生 Wayland 视觉验收仍未进行。
+基础外观实现提交：`6aa897e`。本轮 Apple UI 收敛代码已提交至 `995a5b5`；原生 Wayland 视觉验收仍未进行。
 
 ## 1. 交接结论
 
 外观偏好阶段已实现并提交。用户可选择 Dark、Light、System 三种基础主题，Ocean、Emerald、Violet、Rose、Amber 五种强调色，以及 UI 玻璃式半透明样式开关。偏好页支持即时预览、Apply 持久化和 Cancel 回滚；Settings 菜单中的旧主题菜单继续可用，并与新偏好页共用状态。整体审查发现 System 主题原先没有把强调色写进原生 palette role；该修正已提交为 `332f08d`，并包含在最终验证中。
 
-“玻璃”在本实现里指 UI 控件的半透明渐变、边缘明暗和主题色表面，不是真正的背景模糊。视频帧、libmpv 渲染、硬件解码和 HDR 路径没有为了外观效果而改动。最终 Debug 构建通过，标准非窗口 CTest 集合通过 54/54；窗口行为测试只编译，未按项目要求运行。
+本轮进一步完成统一 AppearanceTokens/QSS 状态契约、偏好设置/播放列表/首页/Transport 的尺寸与密度，以及 fullscreen transport 使用统一 160 ms 动效 token；新增 Ctrl+K 快速操作面板，从实时 QAction 树过滤并触发现有命令，不复制第二份命令清单。面板支持上下键从搜索输入进入结果列表。具体验证结果见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
+
+“玻璃”在本实现里指 UI 控件的半透明渐变、边缘明暗和主题色表面，不是真正的背景模糊。视频帧、libmpv 渲染、硬件解码和 HDR 路径没有为了外观效果而改动。最新 Debug 全量构建通过；非窗口 CTest 为 66/66，定向 sanitizer 子集为 7/7。窗口行为测试只编译，未按项目要求运行。
 
 ## 2. 已交付内容与提交
 
@@ -23,6 +25,12 @@
 | `6aa897e` | UI 表面覆盖和视频/全屏反馈隔离回归测试 |
 | `332f08d` | System 保留平台标准调色板，同时应用强调色选择/链接 role；补充回归测试 |
 | `4cd7108` | 统一偏好设置入口：F5/F6/设置菜单共用 `PreferencesCoordinator`，保留当前外观等值并统一 Apply/Cancel |
+| `eea57a7` | 四级材质 token、边框/尺寸 token 与统一 QSS 交互状态 |
+| `d7954ce` | 设置、播放列表、首页卡片和 Transport 布局密度统一 |
+| `48f1a23` | fullscreen transport 淡入淡出改用共享动效时长，并补状态样式断言 |
+| `010ced6` | 新增 Ctrl+K QAction 快速操作面板 |
+| `7c77d76` | 补齐设置外边距与欢迎卡片高度回归测试 |
+| `995a5b5` | 快速操作面板支持从搜索框用上下键切换结果 |
 
 主要实现位置：
 
@@ -34,7 +42,7 @@
 - [main.cpp](/home/nekorain/Development/NekoPlayer/src/main.cpp)：启动时读入并应用外观设置；`--no-config` 使用默认进程内值且不持久化。
 - 测试：`tests/appearance_preferences_test.cpp`、`tests/preferences_dialog_test.cpp`、`tests/ui_surface_test.cpp`。
 
-普通手写代码文件以 500 行为目标，自动检查允许少量超出至 550 行。少数明确列入 `cmake/CheckCodeSize.cmake` 的窗口协调/桌面集成文件可不超过 800 行，新增例外必须附带理由；不能把限制当作目标。本阶段 `windowactions.cpp` 当时为 462 行；外观测试文件后续有增长，添加测试前仍优先拆分。
+普通手写代码文件以 500 行为目标，自动检查允许少量超出至 550 行。少数明确列入 `cmake/CheckCodeSize.cmake` 的窗口协调/桌面集成文件可不超过 800 行，新增例外必须附带理由；不能把限制当作目标。本轮 `preferencesdialog.cpp` 为 527 行、`windowactions.cpp` 为 550 行、`ui_surface_test.cpp` 为 547 行，均在硬限制内；之后应优先将设置页协调逻辑与测试拆分，避免继续增长。
 
 ## 3. 设计和运行契约
 
@@ -134,3 +142,10 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 ## 7. 本次交接文件自身状态
 
 本文件记录外观功能的实现边界、验证和可执行后续项。它不代表所有产品功能完成，也不代表原生 Wayland/HDR/硬解验收完成。交接时保留已有的 `docs/skills.md` 工作区修改；本文件不应把该文件内容重写或吸收到提交中。
+
+## 8. Apple UI 收敛后续
+
+- Ctrl+K 面板采用动作名称/快捷键的大小写无关包含过滤；现阶段没有按菜单层级分组，也不做拼写容错模糊匹配。后续可根据实际动作数量和用户反馈评估分组/评分，不应重新维护一套 QAction 镜像。
+- `ThumbnailPreview` 保持立即显示/隐藏：它会随时间轴 hover 快速更换帧，不增加逐帧 opacity 合成动画；当前共享时长只用于 fullscreen transport。若之后要动画预览浮层，先在 Wayland 窗口和 GL 视频共存路径上测量合成成本与延迟。
+- 快速操作测试使用 offscreen Qt；需要在原生 Wayland 手工确认 Ctrl+K、方向键、Enter、Esc 与焦点回退。面板自身不实现背景模糊。
+- 当前可用环境没有完成 Dark/Light、玻璃开关、不同 accent、100%/175% 缩放、全屏视频几何与 mini-player 的原生组合验收。HDR、`hwdec-current`、音频设备与 compositor blur 仍是独立的硬件/桌面验收项；本轮不声称已通过。

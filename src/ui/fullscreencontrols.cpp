@@ -42,7 +42,7 @@ FullscreenControls::FullscreenControls(QWidget &transport, QWidget &video,
     transport_.setGraphicsEffect(opacity_);
     animation_->setDuration(currentMotionDuration(
         appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs));
-    animation_->setEasingCurve(QEasingCurve::OutCubic);
+    animation_->setEasingCurve(uiMotionEasingCurve());
     connect(animation_, &QPropertyAnimation::finished, this, &FullscreenControls::finishFadeOut);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
     connect(QGuiApplication::styleHints()->accessibility(),

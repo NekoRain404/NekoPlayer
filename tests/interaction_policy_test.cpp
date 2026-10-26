@@ -1,6 +1,7 @@
 #include "ui/interactionpolicy.h"
 #include "ui/uimotionduration.h"
 
+#include <QEasingCurve>
 #include <QTest>
 
 class InteractionPolicyTest final : public QObject {
@@ -45,6 +46,10 @@ class InteractionPolicyTest final : public QObject {
         QCOMPARE(uiMotionDuration(160, true), 0);
         QCOMPARE(uiMotionDuration(160, false), 160);
         QCOMPARE(uiMotionDuration(-5, false), 0);
+    }
+
+    void optionalUiAnimationsShareAnEaseOutCurve() {
+        QCOMPARE(uiMotionEasingCurve().type(), QEasingCurve::OutCubic);
     }
 };
 

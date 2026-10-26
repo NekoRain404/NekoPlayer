@@ -37,7 +37,7 @@ ActionFeedbackOverlay::ActionFeedbackOverlay(QWidget *parent)
     setFocusPolicy(Qt::NoFocus);
     timer_.setSingleShot(true);
     animation_->setDuration(currentMotionDuration());
-    animation_->setEasingCurve(QEasingCurve::OutCubic);
+    animation_->setEasingCurve(uiMotionEasingCurve());
     connect(&timer_, &QTimer::timeout, this, &ActionFeedbackOverlay::clearMessage);
     connect(animation_, &QPropertyAnimation::finished, this, [this] {
         if (qFuzzyIsNull(contentOpacity_)) {

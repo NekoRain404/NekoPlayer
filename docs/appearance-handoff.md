@@ -178,3 +178,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - transport 另外有一条经过真实 Appearance 设置页的集成像素契约：切换 `appearanceGlassChoice` 会即时重建应用 QSS，而普通/全屏共用的 transport 始终不透明地绘制 `surface`。将样式映射故意改回玻璃 `panelFill()` 后，回归以 alpha 185 失败；恢复后实际设置链路通过。此测试验证 QWidget 样式，不验证合成器最终输出。最近非窗口 Debug CTest 69/69；人工 Wayland 外观矩阵仍未完成。
 - 上述设置链路测试也已在 Sanitizers 构建通过 1/1（`ASAN_OPTIONS=detect_leaks=0`，不宣称 leak 检查）；格式与 code-size 门禁通过。人工 Wayland 合成观感仍待复核。
 - Mini-player 转场现抽为 `WindowOpacityTransition`，复用全屏 transport/缩略图一致的 160ms `OutCubic` 和 Reduce Motion 策略；窗口 flags 与尺寸只在淡出完成后切换一次，再淡入恢复。没有逐帧缩放 OpenGL 视频面，也没有添加 graphics opacity effect。fresh Debug 非窗口 CTest 70/70，窗口行为测试未运行；原生 Wayland mini-player 连续性和完整外观矩阵仍需人工验收。
+- 四类可选 UI 动效现在还共享唯一 `uiMotionEasingCurve()`（`OutCubic`），避免全屏 transport、缩略图、操作反馈和 mini-player 的曲线漂移；Debug 70/70、Sanitizer 定向 1/1。原生 Wayland 的实际动效观感仍需人工验收。

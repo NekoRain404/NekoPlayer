@@ -29,7 +29,7 @@ int motionDuration() {
 WindowOpacityTransition::WindowOpacityTransition(QWidget &window, QObject *parent)
     : QObject(parent), window_(window),
       animation_(new QPropertyAnimation(&window, QByteArrayLiteral("windowOpacity"), this)) {
-    animation_->setEasingCurve(QEasingCurve::OutCubic);
+    animation_->setEasingCurve(uiMotionEasingCurve());
     connect(animation_, &QPropertyAnimation::finished, this,
             [this] { emit reached(window_.windowOpacity()); });
 #if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)

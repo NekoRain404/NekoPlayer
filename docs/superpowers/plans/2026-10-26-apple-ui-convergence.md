@@ -44,7 +44,7 @@
 - Produces `AppearanceTokens::accentSurface`, `border`, `focusRing`, `controlHeight`, `rowHeight`, `menuItemHeight`, `panelRadius`, `motionDurationMs` and their dark/light/system values.
 - Keeps `appearanceStyleSheet(const AppearanceTokens &, bool, int, int)` as the single QSS entry point; `panelFill()` remains the only function that consumes glass opacity/blur.
 
-- [ ] **Step 1: Write the failing token contract tests**
+- [x] **Step 1: Write the failing token contract tests**
 
 Add tests that assert all themes expose non-null canvas/surface/raised/accent surfaces, that accentSurface changes with each accent while canvas/surface remain stable, and that control/row/menu metrics are multiples of four with positive values. Add a UI-surface test that renders a normal panel and verifies its stylesheet contains the token-derived focus and disabled rules while VideoWidget remains unstyled.
 
@@ -62,23 +62,23 @@ void appearanceTokensExposeStableSurfaceHierarchy() {
 }
 ```
 
-- [ ] **Step 2: Run the focused tests and verify they fail**
+- [x] **Step 2: Run the focused tests and verify they fail**
 
 Run: `cmake --build build --target appearance_preferences_test ui_surface_test -j2 && ctest --test-dir build -R 'appearance-preferences|ui-surface' --output-on-failure`
 
 Expected: compilation fails because the new token fields and hierarchy assertions are not present.
 
-- [ ] **Step 3: Implement the token contract**
+- [x] **Step 3: Implement the token contract**
 
 Add the fields with defaults in the header; populate them in `darkTokens()`, `lightTokens()`, and the System palette branch. Derive `accentSurface` from the canvas/accent mix, derive `border` from separator, and use one metric set (`4/8/12/16/24`) for all themes. Update QSS to map canvas/surface/raised/accent explicitly, use `border` for separators, `focusRing` for every focus selector, and `disabledText` for disabled controls. Remove newly duplicated hard-coded surface colors from selectors; keep video and playback overlays untouched.
 
-- [ ] **Step 4: Run focused tests and style checks**
+- [x] **Step 4: Run focused tests and style checks**
 
 Run: `cmake --build build --target appearance_preferences_test ui_surface_test -j2 && ctest --test-dir build -R 'appearance-preferences|ui-surface' --output-on-failure`; then `clang-format --dry-run --Werror src/ui/appearancetokens.h src/ui/appearancetokens.cpp src/ui/appearancestylesheet.cpp tests/appearance_preferences_test.cpp tests/ui_surface_test.cpp`.
 
 Expected: PASS; rendered glass and opaque branches differ, and no VideoWidget stylesheet/effect changes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/ui/appearancetokens.h src/ui/appearancetokens.cpp src/ui/appearancestylesheet.cpp tests/appearance_preferences_test.cpp tests/ui_surface_test.cpp
@@ -102,7 +102,7 @@ git commit -m "feat: unify apple surface tokens and qss"
 - Preserves `TransportBar::timelineGlobalGeometry()`, `PlaylistPane::setSingleClickActivation(bool)`, and all existing QAction wiring.
 - Produces stable object names and minimum sizes for settings rows, playlist search/header, welcome cards, transport controls, and narrow layouts.
 
-- [ ] **Step 1: Add failing geometry assertions**
+- [x] **Step 1: Add failing geometry assertions**
 
 Extend `transport_bar_test.cpp` to assert the timeline, primary button and time label use the shared minimum height. Extend `playlist_pane_test.cpp` to assert the search field has an accessible name and the view keeps a usable minimum row height. Add a narrow-width test that resizes the pane to 280 px and verifies the search field remains visible without a negative width.
 
@@ -122,21 +122,21 @@ void narrowPlaylistKeepsSearchAndRowsUsable() {
 }
 ```
 
-- [ ] **Step 2: Run the focused tests and verify the new assertions fail**
+- [x] **Step 2: Run the focused tests and verify the new assertions fail**
 
 Run: `cmake --build build --target playlist_pane_test transport_bar_test ui_surface_test -j2 && ctest --test-dir build -R 'playlist-pane|transport-bar|ui-surface' --output-on-failure`.
 
 Expected: at least one new metric/accessibility assertion fails against the current per-widget spacing.
 
-- [ ] **Step 3: Apply shared spacing and density**
+- [x] **Step 3: Apply shared spacing and density**
 
 Use the 4/8/12/16/24 scale for page margins, form row spacing, tab height, button groups, playlist header/search padding, welcome recent/continue card gaps, and transport groups. Set explicit object names and accessible names for icon-only transport controls. Keep the video area as the expanding stretch; do not insert a layout row below the video in fullscreen. Ensure narrow playlist content uses elision and keeps search/clear actions reachable.
 
-- [ ] **Step 4: Verify geometry, keyboard traversal, and formatting**
+- [x] **Step 4: Verify geometry, keyboard traversal, and formatting**
 
 Run the focused CTests again, `ctest --test-dir build -R 'playlist-pane|transport-bar|ui-surface' --output-on-failure`, and clang-format on all modified files. Do not run `window-*` tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/ui/preferencesdialog.cpp src/ui/preferencesappearancepage.cpp src/ui/playlistpane.cpp src/ui/welcomepanel.cpp src/ui/transportbar.cpp tests/playlist_pane_test.cpp tests/transport_bar_test.cpp tests/ui_surface_test.cpp
@@ -159,7 +159,7 @@ git commit -m "feat: align ui layout density across surfaces"
 - Reuses existing `FullscreenControls`, `ThumbnailPreview`, and `ActionFeedbackOverlay` semantics; only timing, focus visibility, tooltips, and accessible names change.
 - Produces consistent default/hover/pressed/focus/checked/disabled QSS states and a single 140–180 ms reveal/fade duration for UI overlays.
 
-- [ ] **Step 1: Add failing state and accessibility tests**
+- [x] **Step 1: Add failing state and accessibility tests**
 
 Add assertions for focus selectors, disabled selectors, and tooltip padding in the generated stylesheet. Add tests that icon-only controls have non-empty accessible names/tooltips and that fullscreen controls and thumbnail preview use the same duration constant.
 
@@ -174,21 +174,21 @@ void stylesheetContainsCompleteInteractiveStates() {
 }
 ```
 
-- [ ] **Step 2: Run focused tests and verify the new tests fail**
+- [x] **Step 2: Run focused tests and verify the new tests fail**
 
 Run: `cmake --build build --target ui_surface_test interaction_policy_test -j2 && ctest --test-dir build -R 'ui-surface|interaction-policy' --output-on-failure`.
 
 Expected: the new duration/accessibility checks fail before implementation.
 
-- [ ] **Step 3: Implement the shared interaction contract**
+- [x] **Step 3: Implement the shared interaction contract**
 
 Add one token duration and use it for fullscreen/thumbnail reveal animations; preserve reduced-motion-safe instant transitions when the platform reports reduced motion. Add tooltips and accessible names to icon-only controls, ensure keyboard focus is visible over light and dark surfaces, and keep menu/combobox/search keyboard navigation intact. Do not install opacity effects or stylesheets on VideoWidget or playback OSD widgets.
 
-- [ ] **Step 4: Verify state transitions and formatting**
+- [x] **Step 4: Verify state transitions and formatting**
 
 Run the focused tests, `ctest --test-dir build -R 'ui-surface|interaction-policy' --output-on-failure`, and clang-format on modified files. Check that no new per-frame polling or repaint loop is introduced.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/ui/appearancestylesheet.cpp src/ui/playlistpane.cpp src/ui/transportbar.cpp src/ui/welcomepanel.cpp src/ui/fullscreencontrols.cpp src/ui/thumbnailpreview.cpp tests/ui_surface_test.cpp tests/interaction_policy_test.cpp
@@ -212,7 +212,7 @@ git commit -m "feat: unify ui interaction states and motion"
 - `QLineEdit *searchEdit() const`, `QListWidget *resultsView() const`, and `int visibleActionCount() const` expose testable state without exposing internal storage.
 - Enter/double-click emits `QAction::trigger()` only for enabled actions; Escape closes; closing restores the widget that had focus before opening.
 
-- [ ] **Step 1: Write the failing dialog tests**
+- [x] **Step 1: Write the failing dialog tests**
 
 Create a root `QWidget` with actions named Open, Seek, Disabled, and a duplicate menu reference. Assert case-insensitive filtering, duplicate removal, enabled state presentation, Enter/double-click triggering, Escape closing, Ctrl+K shortcut registration, and focus restoration.
 
@@ -233,21 +233,21 @@ void filtersLiveActionsAndTriggersEnabledOnly() {
 }
 ```
 
-- [ ] **Step 2: Run the new test and verify it fails**
+- [x] **Step 2: Run the new test and verify it fails**
 
 Run: `cmake --build build --target quick_actions_dialog_test -j2 && ctest --test-dir build -R quick-actions-dialog --output-on-failure`.
 
 Expected: CMake cannot build the target because the dialog and registration do not exist yet.
 
-- [ ] **Step 3: Implement the dialog and MainWindow integration**
+- [x] **Step 3: Implement the dialog and MainWindow integration**
 
 Use a compact non-modal `QDialog` with a search line edit and list widget, raisedSurface styling from the application stylesheet, no blur renderer, and no video overlap beyond the dialog geometry. Add `quickActionsAction_` to MainWindow with `Ctrl+K`, create it after the other actions, and open/reuse one dialog instance. Pass MainWindow as the action root, refresh immediately before showing, remember the previous focus widget, and restore it on close. Keep disabled actions visible but non-triggerable. Add object names, accessible names, arrow-key navigation, Enter, double-click, Escape, and a clear empty-state label.
 
-- [ ] **Step 4: Verify action-tree behavior and formatting**
+- [x] **Step 4: Verify action-tree behavior and formatting**
 
 Run: `cmake --build build --target quick_actions_dialog_test NekoPlayer -j2 && ctest --test-dir build -R 'quick-actions-dialog' --output-on-failure`; run the existing shortcuts and UI surface tests; run clang-format and code-size checks. Do not run window behavior tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/ui/quickactionsdialog.h src/ui/quickactionsdialog.cpp src/ui/mainwindow.h src/ui/windowactions.cpp CMakeLists.txt tests/quick_actions_dialog_test.cpp tests/ui_tests.cmake
@@ -265,7 +265,7 @@ git commit -m "feat: add keyboard first quick actions dialog"
 - Consumes the four completed UI tasks and records exact commands/results, not inferred success.
 - Produces a clear list of remaining Wayland display, mixed-DPI, HDR-output, hardware-decoder and compositor-blur checks.
 
-- [ ] **Step 1: Run fresh configure/build and non-window tests**
+- [x] **Step 1: Run fresh configure/build and non-window tests**
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=ON
@@ -277,15 +277,15 @@ git diff --check HEAD~5..HEAD
 
 Expected: all selected non-window tests pass; window behavior tests remain intentionally excluded.
 
-- [ ] **Step 2: Run sanitizer-focused non-window tests**
+- [x] **Step 2: Run sanitizer-focused non-window tests**
 
 Configure a separate sanitizer build with `-DNEKOPLAYER_SANITIZERS=ON`, build the affected test targets, and run the appearance, playlist, transport, interaction, and quick-actions tests. Record compiler, Qt version, and exact CTest result in `docs/verification.md`.
 
-- [ ] **Step 3: Update handoff and explicitly list manual gaps**
+- [x] **Step 3: Update handoff and explicitly list manual gaps**
 
 Record the commits, token/QSS contract, QuickActions shortcut, and known gaps: real Wayland visual inspection at 100%/175% DPI, fullscreen/video pixel stability, compositor-only desktop blur, HDR output, hardware decode, and mini-player behavior. State that offscreen tests do not prove those paths.
 
-- [ ] **Step 4: Commit documentation**
+- [x] **Step 4: Commit documentation**
 
 ```bash
 git add docs/verification.md docs/appearance-handoff.md

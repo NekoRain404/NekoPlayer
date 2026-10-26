@@ -1,4 +1,5 @@
 #include "quickactionsdialog.h"
+#include "appearancetokens.h"
 
 #include <QAction>
 #include <QApplication>
@@ -46,6 +47,7 @@ QuickActionsDialog::QuickActionsDialog(QWidget *actionRoot, QWidget *parent)
     : QDialog(parent ? parent : actionRoot), actionRoot_(actionRoot),
       openAction_(new QAction(tr("快速操作…"), actionRoot)), search_(new QLineEdit(this)),
       results_(new QListWidget(this)), emptyState_(new QLabel(tr("没有匹配的操作"), this)) {
+    const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     setObjectName(QStringLiteral("quickActionsDialog"));
     setWindowTitle(tr("快速操作"));
     setModal(false);
@@ -59,16 +61,19 @@ QuickActionsDialog::QuickActionsDialog(QWidget *actionRoot, QWidget *parent)
     search_->setObjectName(QStringLiteral("quickActionsSearch"));
     search_->setPlaceholderText(tr("搜索命令或快捷键"));
     search_->setAccessibleName(tr("搜索快速操作"));
+    search_->setMinimumHeight(tokens.controlHeight);
     search_->installEventFilter(this);
     results_->setObjectName(QStringLiteral("quickActionsResults"));
     results_->setAccessibleName(tr("操作结果"));
     results_->setUniformItemSizes(true);
+    results_->setSpacing(tokens.spaceUnit);
     emptyState_->setObjectName(QStringLiteral("quickActionsEmptyState"));
     emptyState_->setAlignment(Qt::AlignCenter);
     emptyState_->setAccessibleName(tr("没有匹配的操作"));
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
-    layout->setSpacing(12);
+    layout->setContentsMargins(tokens.spaceUnit * 4, tokens.spaceUnit * 4, tokens.spaceUnit * 4,
+                               tokens.spaceUnit * 4);
+    layout->setSpacing(tokens.spaceUnit * 3);
     layout->addWidget(search_);
     layout->addWidget(results_, 1);
     layout->addWidget(emptyState_, 1);
@@ -136,6 +141,14 @@ void QuickActionsDialog::filterActions() {
     QSet<QAction *> seen;
     QList<ActionMatch> matches;
     const auto actions = actionRoot_->findChildren<QAction *>();
+    for (auto it = actionChangeConnections_.begin(); it != actionChangeConnections_.end();) {
+        if (!actions.contains(it.key())) {
+            QObject::disconnect(it.value());
+            it = actionChangeConnections_.erase(it);
+        } else {
+            ++it;
+        }
+    }
     int sourceOrder = 0;
     for (auto *action : actions) {
         if (!action || action == openAction_ || action->isSeparator() || seen.contains(action))
@@ -143,6 +156,10 @@ void QuickActionsDialog::filterActions() {
         if (action->menu())
             continue;
         seen.insert(action);
+        if (!actionChangeConnections_.contains(action)) {
+            actionChangeConnections_.insert(action, connect(action, &QAction::changed, this,
+                                                            &QuickActionsDialog::filterActions));
+        }
         const auto text = action->text().remove(QLatin1Char('&'));
         const auto shortcut = action->shortcut().toString(QKeySequence::NativeText);
         int matchType = 0;

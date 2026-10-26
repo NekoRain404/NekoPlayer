@@ -97,6 +97,16 @@ class AppearanceSurfaceContractTest final : public QObject {
         QVERIFY(containsFontSize(QStringLiteral("QFrame#seekProgressOverlay QLabel{"), 16));
     }
 
+    void quickActionsResultsSharePlaylistInteractionStates() {
+        const auto style =
+            appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark), false);
+        QVERIFY(style.contains(
+            QStringLiteral("QListWidget#quickActionsResults{background:transparent;")));
+        QVERIFY(style.contains(QStringLiteral("QListWidget#quickActionsResults::item:hover")));
+        QVERIFY(style.contains(QStringLiteral("QListWidget#quickActionsResults::item:selected")));
+        QVERIFY(style.contains(QStringLiteral("QListWidget#quickActionsResults:focus")));
+    }
+
     void keyboardFocusRingIsExplicitAndContrastsAcrossAccents() {
         const auto style =
             appearanceStyleSheet(appearanceTokens(AppearancePreferences::Theme::Dark));

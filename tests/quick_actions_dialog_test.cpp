@@ -10,6 +10,7 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QSignalSpy>
+#include <QVBoxLayout>
 #include <QtTest>
 
 class QuickActionsDialogTest final : public QObject {
@@ -50,6 +51,25 @@ class QuickActionsDialogTest final : public QObject {
         QVERIFY(dialog.isVisible());
     }
 
+    void actionStateChangesRefreshVisibleResultsImmediately() {
+        QWidget root;
+        QAction action(QStringLiteral("播放/暂停"), &root);
+        QSignalSpy triggered(&action, &QAction::triggered);
+        QuickActionsDialog dialog(&root);
+        dialog.show();
+        QCOMPARE(dialog.visibleActionCount(), 1);
+
+        action.setEnabled(false);
+        QCOMPARE(dialog.visibleActionCount(), 1);
+        QVERIFY(!dialog.resultsView()->item(0)->flags().testFlag(Qt::ItemIsEnabled));
+        QTest::keyClick(dialog.searchEdit(), Qt::Key_Return);
+        QCOMPARE(triggered.size(), 0);
+        QVERIFY(dialog.isVisible());
+
+        action.setText(QStringLiteral("继续播放"));
+        QCOMPARE(dialog.resultsView()->item(0)->text(), QStringLiteral("继续播放"));
+    }
+
     void escapeClosesAndActionUsesCtrlK() {
         QWidget root;
         QuickActionsDialog dialog(&root);
@@ -59,6 +79,17 @@ class QuickActionsDialogTest final : public QObject {
         dialog.show();
         QTest::keyClick(dialog.searchEdit(), Qt::Key_Escape);
         QVERIFY(dialog.isHidden());
+    }
+
+    void panelUsesSharedCompactControlAndSpacingMetrics() {
+        QWidget root;
+        QuickActionsDialog dialog(&root);
+        const auto *layout = qobject_cast<QVBoxLayout *>(dialog.layout());
+        QVERIFY(layout);
+        QCOMPARE(layout->contentsMargins(), QMargins(16, 16, 16, 16));
+        QCOMPARE(layout->spacing(), 12);
+        QCOMPARE(dialog.searchEdit()->minimumHeight(), 36);
+        QCOMPARE(dialog.resultsView()->spacing(), 4);
     }
 
     void arrowDownMovesFromSearchIntoResults() {

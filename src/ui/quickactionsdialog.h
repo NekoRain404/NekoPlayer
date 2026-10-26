@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QDialog>
+#include <QHash>
+#include <QMetaObject>
 #include <QPointer>
 
 class QAction;
@@ -31,6 +33,7 @@ class QuickActionsDialog final : public QDialog {
 
     QPointer<QWidget> actionRoot_;
     QPointer<QWidget> previousFocus_;
+    QHash<QAction *, QMetaObject::Connection> actionChangeConnections_;
     QAction *openAction_;
     QLineEdit *search_;
     QListWidget *results_;

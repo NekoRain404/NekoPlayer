@@ -354,9 +354,8 @@ void TransportBar::resizeEvent(QResizeEvent *event) {
 
 void TransportBar::applyResponsiveMetrics() {
     const auto metrics = TransportBarMetrics::forWidth(width());
-    const int buttonHeight = metrics.buttonExtent == 36 ? 32 : metrics.buttonExtent;
     for (auto *toolButton : findChildren<QToolButton *>(QString(), Qt::FindDirectChildrenOnly))
-        toolButton->setFixedSize(metrics.buttonExtent, buttonHeight);
+        toolButton->setFixedSize(metrics.buttonExtent, metrics.buttonExtent);
 
     volume_->setVisible(metrics.showVolume);
     volume_->setFixedWidth(metrics.showVolume ? metrics.volumeWidth : 0);

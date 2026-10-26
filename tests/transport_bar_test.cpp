@@ -423,7 +423,7 @@ class TransportBarTest final : public QObject {
         QCOMPARE(volume->width(), 76);
         for (auto *button : transport.findChildren<QToolButton *>()) {
             QCOMPARE(button->width(), 36);
-            QCOMPARE(button->height(), 32);
+            QCOMPARE(button->height(), 36);
         }
 
         host.setFixedSize(559, 100);
@@ -436,7 +436,7 @@ class TransportBarTest final : public QObject {
         QCOMPARE(volume->width(), 76);
         for (auto *button : transport.findChildren<QToolButton *>()) {
             QCOMPARE(button->width(), 36);
-            QCOMPARE(button->height(), 32);
+            QCOMPARE(button->height(), 36);
         }
 
         host.setFixedSize(560, 100);

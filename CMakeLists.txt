@@ -93,7 +93,7 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/ui/timeseekdialog.cpp src/ui/networkopendialog.cpp
     src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp src/ui/screenshotmenu.cpp
     src/ui/subtitledisplaymenu.cpp
-    src/ui/preferencesdialog.cpp src/ui/preferencescoordinator.cpp src/ui/preferencesappearancepage.cpp src/ui/videocolordialog.cpp
+    src/ui/preferencesdialog.cpp src/ui/preferencesformlayout.cpp src/ui/preferencescoordinator.cpp src/ui/preferencesappearancepage.cpp src/ui/videocolordialog.cpp
     src/ui/shortcutsdialog.cpp src/ui/quickactionsdialog.cpp src/ui/windowtitle.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
     Qt6::OpenGLWidgets)

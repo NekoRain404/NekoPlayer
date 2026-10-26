@@ -176,3 +176,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 2026-10-26 transport 材质修正：真实 QWidget 像素测试复现玻璃开启时 transport alpha 为 185；QSS 原因是 transport 误用了共享的玻璃 `%27` 面板填充。现改为不透明 `surface` token，普通/全屏背景在玻璃开关两种状态下相同，且 alpha 为 255。`fullscreen-transport-material`、`appearance-surface-contract`、`ui-surface` 和 `code-size` 通过；不涉及视频帧、libmpv、HDR 或硬件解码路径。原生 Wayland 播放画面仍未完成全矩阵验收。
 - 播放列表面板的玻璃开关现有独立真实 QWidget 像素契约：启用时 alpha 小于 255，关闭时 alpha 为 255 且填充改变；该断言确认玻璃设置仍作用于 UI，而不是简单全局关闭透明度。
 - transport 另外有一条经过真实 Appearance 设置页的集成像素契约：切换 `appearanceGlassChoice` 会即时重建应用 QSS，而普通/全屏共用的 transport 始终不透明地绘制 `surface`。将样式映射故意改回玻璃 `panelFill()` 后，回归以 alpha 185 失败；恢复后实际设置链路通过。此测试验证 QWidget 样式，不验证合成器最终输出。最近非窗口 Debug CTest 69/69；人工 Wayland 外观矩阵仍未完成。
+- 上述设置链路测试也已在 Sanitizers 构建通过 1/1（`ASAN_OPTIONS=detect_leaks=0`，不宣称 leak 检查）；格式与 code-size 门禁通过。人工 Wayland 合成观感仍待复核。

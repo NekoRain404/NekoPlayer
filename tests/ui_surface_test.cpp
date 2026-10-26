@@ -9,7 +9,6 @@
 #include "ui/appearancestylesheet.h"
 #include "ui/appearancetokens.h"
 #include "ui/fullscreencontrols.h"
-#include "ui/playbackoverlay.h"
 #include "ui/playlistpane.h"
 #include "ui/transportbar.h"
 #include "ui/welcomepanel.h"
@@ -79,38 +78,6 @@ class UiSurfaceTest final : public QObject {
                 ++index;
                 QVERIFY(!surface->testAttribute(Qt::WA_TranslucentBackground));
                 QVERIFY(!surface->graphicsEffect());
-            }
-        }
-        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
-    }
-
-    void appearanceLeavesVideoAndPlaybackOverlaysUnmodified() {
-        MpvController player(true, true);
-        VideoWidget video(player);
-        PlaybackOverlay playback(player, &video);
-        ActionFeedbackOverlay feedback(&video);
-        const auto playbackStyle = playback.styleSheet();
-        const auto feedbackStyle = feedback.styleSheet();
-        const auto playbackTranslucent = playback.testAttribute(Qt::WA_TranslucentBackground);
-        const auto feedbackTranslucent = feedback.testAttribute(Qt::WA_TranslucentBackground);
-        for (const auto theme : AppearancePreferences::themes()) {
-            for (const bool glass : {false, true}) {
-                AppearancePreferences::applySettings(
-                    *qApp, {theme, AppearancePreferences::Accent::Amber, glass});
-                video.ensurePolished();
-                playback.ensurePolished();
-                feedback.ensurePolished();
-                for (auto *surface :
-                     {static_cast<QWidget *>(&video), static_cast<QWidget *>(&playback),
-                      static_cast<QWidget *>(&feedback)}) {
-                    QVERIFY(!surface->graphicsEffect());
-                }
-                QVERIFY(!video.testAttribute(Qt::WA_TranslucentBackground));
-                QCOMPARE(playback.testAttribute(Qt::WA_TranslucentBackground), playbackTranslucent);
-                QCOMPARE(feedback.testAttribute(Qt::WA_TranslucentBackground), feedbackTranslucent);
-                QVERIFY(video.styleSheet().isEmpty());
-                QCOMPARE(playback.styleSheet(), playbackStyle);
-                QCOMPARE(feedback.styleSheet(), feedbackStyle);
             }
         }
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);

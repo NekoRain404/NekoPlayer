@@ -35,9 +35,9 @@ class PlaybackOverlayStyleTest final : public QObject {
         image.fill(Qt::transparent);
         information->render(&image);
         const auto fill = image.pixelColor(image.width() / 2, 3);
-        QVERIFY(qAbs(fill.red() - 236) <= 2);
-        QVERIFY(qAbs(fill.green() - 236) <= 2);
-        QVERIFY(qAbs(fill.blue() - 239) <= 2);
+        QVERIFY(fill.red() > 200);
+        QVERIFY(fill.green() > 200);
+        QVERIFY(fill.blue() > 200);
 
         auto *progress = playback.findChild<QProgressBar *>(QStringLiteral("seekProgressBar"));
         auto *seekPanel = playback.findChild<QFrame *>(QStringLiteral("seekProgressOverlay"));
@@ -51,6 +51,19 @@ class PlaybackOverlayStyleTest final : public QObject {
         progressImage.fill(Qt::transparent);
         progress->render(&progressImage);
         QCOMPARE(progressImage.pixelColor(150, 4), QColor(179, 60, 109));
+
+        QImage lowOpacity(information->size(), QImage::Format_ARGB32_Premultiplied);
+        QImage highOpacity(information->size(), QImage::Format_ARGB32_Premultiplied);
+        for (const auto [opacity, target] : {std::pair{glassOpacityMinimum, &lowOpacity},
+                                             std::pair{glassOpacityMaximum, &highOpacity}}) {
+            AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Light,
+                                                         AppearancePreferences::Accent::Rose, true,
+                                                         opacity, 72});
+            target->fill(Qt::transparent);
+            information->render(target);
+        }
+        QVERIFY(lowOpacity.pixelColor(lowOpacity.width() / 2, 3) !=
+                highOpacity.pixelColor(highOpacity.width() / 2, 3));
 
         QVERIFY(!video.graphicsEffect());
         QVERIFY(video.styleSheet().isEmpty());

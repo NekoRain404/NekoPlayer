@@ -222,8 +222,8 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
             "QProgressBar#seekProgressBar{background:%4;border:none;border-radius:4px;}"
             "QProgressBar#seekProgressBar::chunk{background:%5;border-radius:4px;}")
             .arg(color(t.primaryText),
-                 glassEnabled ? translucent(t.raisedSurface, 210) : color(t.raisedSurface),
-                 glassEnabled ? translucent(t.raisedSurface, 225) : color(t.raisedSurface),
+                 panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
+                 panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
                  color(t.separator), color(t.accent));
     return style;
 }

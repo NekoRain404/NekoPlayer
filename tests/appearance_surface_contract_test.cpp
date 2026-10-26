@@ -7,8 +7,10 @@
 #include <QImage>
 #include <QLineEdit>
 #include <QPainter>
+#include <QPushButton>
 #include <QSlider>
 #include <QSpinBox>
+#include <QToolButton>
 #include <QtTest>
 
 #include <algorithm>
@@ -146,6 +148,44 @@ class AppearanceSurfaceContractTest final : public QObject {
             control->setEnabled(false);
             const auto disabled = render(*control);
             QVERIFY2(disabled != enabled, control->metaObject()->className());
+        }
+    }
+
+    void focusedFormControlsHaveVisibleFeedback() {
+        const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
+        const auto style = appearanceStyleSheet(tokens, false);
+        QWidget host;
+        auto *edit = new QLineEdit(QStringLiteral("Example"), &host);
+        auto *combo = new QComboBox(&host);
+        combo->addItem(QStringLiteral("Example"));
+        auto *spin = new QSpinBox(&host);
+        auto *button = new QPushButton(QStringLiteral("Example"), &host);
+        auto *toolButton = new QToolButton(&host);
+        QList<QWidget *> controls{edit, combo, spin, button, toolButton};
+        int top = 0;
+        for (auto *control : controls) {
+            control->setStyleSheet(style);
+            control->setGeometry(0, top, 180, 36);
+            top += 40;
+        }
+        host.resize(200, top);
+        host.setFocusPolicy(Qt::StrongFocus);
+        host.show();
+        host.activateWindow();
+        host.setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+
+        for (auto *control : controls) {
+            QImage unfocused(control->size(), QImage::Format_ARGB32_Premultiplied);
+            unfocused.fill(Qt::transparent);
+            control->render(&unfocused);
+            control->setFocus(Qt::OtherFocusReason);
+            QCoreApplication::processEvents();
+            QVERIFY2(control->hasFocus(), control->metaObject()->className());
+            QImage focused(control->size(), QImage::Format_ARGB32_Premultiplied);
+            focused.fill(Qt::transparent);
+            control->render(&focused);
+            QVERIFY2(focused != unfocused, control->metaObject()->className());
         }
     }
 

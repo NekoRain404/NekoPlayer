@@ -18,6 +18,7 @@
 #include "playlistmaintenancemenu.h"
 #include "playlistpane.h"
 #include "preview/thumbnailservice.h"
+#include "quickactionsdialog.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 #include "thumbnailpreview.h"
@@ -76,6 +77,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(fileDrop_, &LocalFileDrop::mediaFilesDropped, this, &MainWindow::appendFiles);
     connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
     createActions();
+    new QuickActionsDialog(this, this);
     connect(folderMenu_, &FolderMenu::mediaLibraryPreferencesChanged, this,
             [this](bool scanningEnabled, bool recursiveByDefault) {
                 if (session_)
@@ -139,6 +141,10 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     layout->addWidget(transport_);
     setCentralWidget(content);
     statusBar()->setSizeGripEnabled(false);
+    statusBar()->setAttribute(Qt::WA_TranslucentBackground, true);
+    statusBar()->setAttribute(Qt::WA_NoSystemBackground, true);
+    statusBar()->setAutoFillBackground(false);
+    statusBar()->setObjectName(QStringLiteral("statusBar"));
     statusBar()->showMessage(tr("就绪 · Qt 6 + libmpv"));
     connect(controller_.get(), &MpvController::stateChanged, this, &MainWindow::updateState);
     connect(controller_.get(), &MpvController::errorOccurred, this, &MainWindow::showError);

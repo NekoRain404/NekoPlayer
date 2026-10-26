@@ -9,6 +9,14 @@ target_link_libraries(preferences_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME preferences-dialog COMMAND preferences_dialog_test)
 set_tests_properties(preferences-dialog PROPERTIES TIMEOUT 20)
 
+add_executable(quick_actions_dialog_test quick_actions_dialog_test.cpp
+    ../src/ui/quickactionsdialog.cpp)
+target_include_directories(quick_actions_dialog_test PRIVATE ../src)
+target_link_libraries(quick_actions_dialog_test PRIVATE Qt6::Widgets Qt6::Test)
+add_test(NAME quick-actions-dialog COMMAND quick_actions_dialog_test)
+set_tests_properties(quick-actions-dialog PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(preferences_appearance_test preferences_appearance_test.cpp)
 target_link_libraries(preferences_appearance_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME preferences-appearance COMMAND preferences_appearance_test)

@@ -1,5 +1,14 @@
 # Verification Record
 
+Unified glass-surface verification (2026-10-26, code at `fb2b025`):
+
+- Scope: one global glass material for every non-video surface. `AppearancePreferences::applySettings` publishes `glassEnabled` / `glassOpacity` / `glassBlur` application properties; all QSS panels use the same `panelFill(surface)`; the main window, video widget, custom dialogs, menus and settings pages share the alpha-capable Wayland surface. The idle `VideoWidget` clears with the same surface tint/alpha, so the entire player is glass when no media is active; active media renders opaque video and only the chrome remains glass; fullscreen hides menu/playlist/status and keeps only the bottom transport bar glass. Defaults: opacity 72%, blur softness 55%.
+- The blur slider adjusts panel-gradient softness; actual desktop blur radius is compositor-owned. Under niri at 1.75 scale, full-screen capture confirmed real desktop blur through the menu bar and transport chrome. The idle whole-window variant could not be separately screenshot-verified in this session because the compositor stopped mapping newly spawned windows; this remains a native visual acceptance item.
+- `LC_ALL=C LANG=C ctest --preset debug -E '^(window|window-startup|file-startup|.*-window)$' --output-on-failure` passed **65/65** in **87.43 s** on the final tree.
+- `code-size` passed **1/1**; `windowactions.cpp` 550 (hard guard), `preferencesdialog.cpp` 492, `preferencesappearancepage.cpp` 83, `ui_surface_test.cpp` 528.
+- `lrelease6 translations/NekoPlayer_en.ts` reports **320 finished, 0 unfinished**; `clang-format` and `git diff --check` passed.
+- Arch package rebuilt and reinstalled from this revision (`nekoplayer 0.1.0-1`); installed smoke test passes. Window behavior tests remain compile-only; full native keyboard/pointer/HDR/GPU/audio acceptance is still open.
+
 Glass tuning and UI polish verification (2026-10-25, code at `fb65e9c`):
 
 - Scope: persisted glass opacity (40–100%, default 76) and glass blur amount (0–100%, default 52) under `appearance/glassOpacity` / `appearance/glassBlur`; the blur parameter softens the translucent gradient and rim contrast (Qt Widgets does not sample content behind a window, so this is explicitly not a true backdrop blur). The welcome panel now uses `WA_StyledBackground`/QSS instead of an opaque `paintEvent`, so it participates in the same glass material; the window chrome paints a subtle accent-tinted radial backdrop beneath translucent surfaces so the glass reads as layered without sampling the desktop. Appearance controls moved to `PreferencesAppearancePage`; sliders show live values and are disabled when glass is off.

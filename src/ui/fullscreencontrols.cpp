@@ -1,4 +1,5 @@
 #include "fullscreencontrols.h"
+#include "appearancetokens.h"
 
 #include <QAbstractSlider>
 #include <QApplication>
@@ -20,7 +21,7 @@ FullscreenControls::FullscreenControls(QWidget &transport, QWidget &video,
     opacity_->setOpacity(1);
     opacity_->setEnabled(false);
     transport_.setGraphicsEffect(opacity_);
-    animation_->setDuration(200);
+    animation_->setDuration(appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs);
     animation_->setEasingCurve(QEasingCurve::OutCubic);
     connect(animation_, &QPropertyAnimation::finished, this, [this] {
         if (active_ && opacity_->opacity() == 0) {

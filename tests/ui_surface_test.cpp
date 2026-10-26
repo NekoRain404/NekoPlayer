@@ -47,6 +47,8 @@ class UiSurfaceTest final : public QObject {
         QVERIFY(style.contains(QStringLiteral("QPushButton:focus")));
         QVERIFY(style.contains(QStringLiteral("QPushButton:disabled")));
         QVERIFY(style.contains(QStringLiteral("QMenu::item:disabled")));
+        QVERIFY(style.contains(QStringLiteral("QToolButton:pressed")));
+        QVERIFY(style.contains(QStringLiteral("QToolTip{color:")));
     }
 
     void glassChangesTransportMenuAndDialogMaterial() {
@@ -127,6 +129,8 @@ class UiSurfaceTest final : public QObject {
         auto *opacity = qobject_cast<QGraphicsOpacityEffect *>(transport.graphicsEffect());
         auto *animation = controls.findChild<QPropertyAnimation *>();
         QVERIFY(opacity && animation);
+        QCOMPARE(animation->duration(),
+                 appearanceTokens(AppearancePreferences::Theme::Dark).motionDurationMs);
         host.show();
         for (const bool glass : {false, true}) {
             AppearancePreferences::applySettings(

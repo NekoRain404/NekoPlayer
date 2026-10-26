@@ -3,7 +3,9 @@
 #include <QAction>
 #include <QApplication>
 #include <QDialogButtonBox>
+#include <QEvent>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
@@ -30,6 +32,7 @@ QuickActionsDialog::QuickActionsDialog(QWidget *actionRoot, QWidget *parent)
     search_->setObjectName(QStringLiteral("quickActionsSearch"));
     search_->setPlaceholderText(tr("搜索命令或快捷键"));
     search_->setAccessibleName(tr("搜索快速操作"));
+    search_->installEventFilter(this);
     results_->setObjectName(QStringLiteral("quickActionsResults"));
     results_->setAccessibleName(tr("操作结果"));
     results_->setUniformItemSizes(true);
@@ -69,6 +72,20 @@ void QuickActionsDialog::hideEvent(QHideEvent *event) {
     if (previousFocus_ && previousFocus_ != this)
         previousFocus_->setFocus(Qt::OtherFocusReason);
     previousFocus_.clear();
+}
+
+bool QuickActionsDialog::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == search_ && event->type() == QEvent::KeyPress && results_->count() > 0) {
+        const auto key = static_cast<QKeyEvent *>(event)->key();
+        if (key == Qt::Key_Down || key == Qt::Key_Up) {
+            const int step = key == Qt::Key_Down ? 1 : -1;
+            const int row = qBound(0, results_->currentRow() + step, results_->count() - 1);
+            results_->setCurrentRow(row);
+            results_->setFocus(Qt::TabFocusReason);
+            return true;
+        }
+    }
+    return QDialog::eventFilter(watched, event);
 }
 
 void QuickActionsDialog::filterActions() {

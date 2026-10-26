@@ -58,6 +58,18 @@ class QuickActionsDialogTest final : public QObject {
         QVERIFY(dialog.isHidden());
     }
 
+    void arrowDownMovesFromSearchIntoResults() {
+        QWidget root;
+        QAction first(QStringLiteral("第一项"), &root);
+        QAction second(QStringLiteral("第二项"), &root);
+        QuickActionsDialog dialog(&root);
+        dialog.show();
+        dialog.searchEdit()->setFocus();
+        QCOMPARE(dialog.resultsView()->currentRow(), 0);
+        QTest::keyClick(dialog.searchEdit(), Qt::Key_Down);
+        QCOMPARE(dialog.resultsView()->currentRow(), 1);
+    }
+
     void actionSnapshotRefreshesBeforeOpening() {
         QWidget root;
         QuickActionsDialog dialog(&root);

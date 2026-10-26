@@ -14,7 +14,7 @@
     <message><source>玻璃模糊程度</source><translation>Glass blur</translation></message>
     <message><source>玻璃不透明度：</source><translation>Glass opacity:</translation></message>
     <message><source>玻璃模糊程度：</source><translation>Glass blur:</translation></message>
-    <message><source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不透明度控制面板半透明程度，模糊程度调节渐变的柔化层次，不是对窗口后方内容的真实高斯模糊。</source><translation>Changes preview immediately and are saved when applied. Glass affects interface panels only, never video; opacity controls panel translucency, while blur softens the gradient layers. This is not a true Gaussian blur of content behind the window.</translation></message>
+    <message><source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不透明度控制面板半透明程度，模糊程度调节面板渐变的柔化层次。窗口外框的背景模糊由支持该能力的 Wayland 合成器提供。</source><translation>Changes preview immediately and are saved when applied. Glass affects interface panels only, never video; opacity controls panel translucency, while blur softens the panel gradient layers. Background blur behind the window chrome is provided by a Wayland compositor that supports it.</translation></message>
     <message><source>偏好设置</source><translation>Preferences</translation></message>
     <message><source>恢复上次播放位置</source><translation>Resume from the last playback position</translation></message>
     <message><source>左右键跳转时长</source><translation>Left/right seek interval</translation></message>

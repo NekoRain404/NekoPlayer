@@ -39,6 +39,7 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       languagePreferences_(languages.normalized()), lastApplyActive_(player.state().active) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
+    setAttribute(Qt::WA_TranslucentBackground, true);
     tabs_->setObjectName(QStringLiteral("preferencesCategories"));
     auto *playback = new QWidget(tabs_);
     auto *playbackForm = new QFormLayout(playback);

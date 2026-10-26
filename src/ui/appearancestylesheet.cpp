@@ -38,14 +38,10 @@ QString panelFill(const QColor &value, bool glassEnabled, int opacity, int blur)
 }
 
 QString windowBackdrop(const AppearanceTokens &tokens, bool glassEnabled) {
-    if (!glassEnabled)
-        return color(tokens.canvas);
-    const bool dark = tokens.canvas.lightnessF() < 0.5;
-    const auto glow = translucent(tokens.accent, dark ? 64 : 34);
-    const auto edge = translucent(tokens.canvas.darker(dark ? 112 : 104), 255);
-    return QStringLiteral("qradialgradient(cx:0.14,cy:-0.05,radius:1.25,fx:0.14,fy:-0.05,"
-                          "stop:0 %1,stop:0.34 %2,stop:1 %3)")
-        .arg(glow, color(tokens.canvas), edge);
+    // The main window keeps a translucent surface so compositors that support
+    // background blur can show the desktop through the glass chrome. The video
+    // widget remains opaque; when glass is off, the canvas is opaque as before.
+    return glassEnabled ? QStringLiteral("transparent") : color(tokens.canvas);
 }
 } // namespace
 
@@ -54,15 +50,15 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
     initAppearanceResources();
     const auto unit = t.spaceUnit;
     return QStringLiteral(
-               "QMainWindow{background:%30;color:%2;}"
-               "QWidget#transportBar{background:%29;color:%2;border-top:1px solid %3;}"
+               "QMainWindow{background:%28;color:%2;}"
+               "QWidget#transportBar{background:%27;color:%2;border-top:1px solid %3;}"
                "QFrame#transportDivider{background:%3;color:%3;}"
                "QWidget#playlistPane{background:%27;border-left:1px solid %3;}"
-               "QWidget#playlistHeader{background:%29;border-bottom:1px solid %3;}"
+               "QWidget#playlistHeader{background:%27;border-bottom:1px solid %3;}"
                "QLineEdit#playlistSearchEdit{color:%2;background:%4;border:1px solid "
                "%3;border-radius:%13px;padding:%8px %14px;}"
                "QLineEdit#playlistSearchEdit:focus{border:1px solid %18;}"
-               "QWidget#welcomePanel{background:%29;border:1px solid %3;border-radius:%6px;}"
+               "QWidget#welcomePanel{background:%27;border:1px solid %3;border-radius:%6px;}"
                "QLabel{color:%7;} "
                "QLabel#timeLabel{color:%7;font-family:monospace;font-size:12px;padding:0 %8px;}"
                "QLabel#playlistTitle,QLabel#welcomeTitle{color:%2;font-weight:600;}"
@@ -87,19 +83,19 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QPushButton#welcomeOpenButton:hover{background:%21;} "
                "QPushButton#welcomeOpenButton:pressed{background:%22;}"
                "QPushButton#welcomeNetworkButton{background:%5;}"
-               "QPushButton[welcomeRecentAction]{text-align:left;background:%29;border:1px solid "
+               "QPushButton[welcomeRecentAction]{text-align:left;background:%27;border:1px solid "
                "%3;border-radius:%6px;}"
                "QPushButton[welcomeRecentAction]:hover{background:%15;} "
                "QPushButton[welcomeRecentAction]:pressed{background:%16;}"
                "QPushButton[welcomeRecentAction]:focus{border:1px solid %18;}"
-               "QPushButton[welcomeContinueAction]{text-align:left;background:%29;border:1px solid "
+               "QPushButton[welcomeContinueAction]{text-align:left;background:%27;border:1px solid "
                "%3;border-radius:%6px;}"
                "QPushButton[welcomeContinueAction]:hover{background:%15;} "
                "QPushButton[welcomeContinueAction]:pressed{background:%16;}"
-               "QMenuBar,QStatusBar{background:%28;color:%2;border-bottom:1px solid %3;}"
+               "QMenuBar,QStatusBar{background:%27;color:%2;border-bottom:1px solid %3;}"
                "QStatusBar{border-top:1px solid %3;border-bottom:none;}"
-               "QMenu{background:%28;color:%2;border:1px solid %3;border-radius:%13px;padding:6px;}"
-               "QDialog{background:%28;color:%2;}"
+               "QMenu{background:%27;color:%2;border:1px solid %3;border-radius:%13px;padding:6px;}"
+               "QDialog{background:%27;color:%2;}"
                "QMenuBar{padding:2px 6px;} QMenuBar::item{padding:6px 10px;border-radius:%13px;}"
                "QMenuBar::item:selected,QMenu::item:selected{background:%24;}"
                "QMenu::item{padding:7px %25px 7px 12px;margin:1px 4px;border-radius:%13px;}"
@@ -149,10 +145,10 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                "QComboBox:focus,QFontComboBox:focus,QLineEdit:focus{border:1px solid %18;}"
                "QComboBox::drop-down{border:none;width:24px;}"
                "QComboBox::down-arrow{image:url(:/appearance/data/chevron.png);width:10px;height:10px;}"
-               "QComboBox QAbstractItemView{background:%28;color:%2;border:1px solid %3;"
+               "QComboBox QAbstractItemView{background:%27;color:%2;border:1px solid %3;"
                "border-radius:%6px;padding:%23px;selection-background-color:%24;"
                "selection-color:%26;outline:none;}"
-               "QTabWidget::pane{border:1px solid %3;border-radius:%6px;background:%29;"
+               "QTabWidget::pane{border:1px solid %3;border-radius:%6px;background:%27;"
                "top:-1px;}"
                "QTabBar::tab{background:transparent;color:%7;padding:%23px %14px;margin:2px;"
                "border:none;border-radius:%13px;}"
@@ -188,8 +184,6 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
              color(t.disabledText), color(t.focus), color(t.accentText), color(t.accentHover),
              color(t.accentHover), color(t.accentPressed), QString::number(unit + 1),
              color(t.selection), QString::number(unit * 7), color(t.selectedText),
-             panelFill(t.canvas, glassEnabled, glassOpacity, glassBlur),
-             panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
              panelFill(t.surface, glassEnabled, glassOpacity, glassBlur),
              windowBackdrop(t, glassEnabled));
 }

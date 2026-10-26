@@ -11,6 +11,7 @@ TimeSeekDialog::TimeSeekDialog(double position, double duration, QWidget *parent
     : QDialog(parent), input_(new QLineEdit(formatPlaybackTime(position, true), this)) {
     setObjectName(QStringLiteral("timeSeekDialog"));
     setWindowTitle(tr("跳转到指定时间"));
+    setAttribute(Qt::WA_TranslucentBackground, true);
     auto *layout = new QVBoxLayout(this);
     auto *label = new QLabel(tr("秒数、分:秒 或 时:分:秒（可含三位毫秒）"), this);
     label->setBuddy(input_);

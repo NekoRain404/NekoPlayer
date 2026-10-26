@@ -34,6 +34,7 @@ ShortcutsDialog::ShortcutsDialog(QMenuBar *menuBar, const QList<QAction *> &extr
     : QDialog(parent), tree_(new QTreeWidget(this)) {
     setObjectName(QStringLiteral("shortcutsDialog"));
     setWindowTitle(tr("快捷键"));
+    setAttribute(Qt::WA_TranslucentBackground, true);
 
     tree_->setObjectName(QStringLiteral("shortcutsTree"));
     tree_->setColumnCount(3);

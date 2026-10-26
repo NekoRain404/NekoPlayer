@@ -65,8 +65,8 @@ PreferencesAppearancePage::PreferencesAppearancePage(
     form->addRow(tr("玻璃模糊程度："), sliderRow(blur_, blurValue_));
     auto *help =
         new QLabel(tr("更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；"
-                      "不透明度控制面板半透明程度，模糊程度调节渐变的柔化层次，"
-                      "不是对窗口后方内容的真实高斯模糊。"),
+                      "不透明度控制面板半透明程度，模糊程度调节面板渐变的柔化层次。"
+                      "窗口外框的背景模糊由支持该能力的 Wayland 合成器提供。"),
                    this);
     help->setWordWrap(true);
     form->addRow(help);

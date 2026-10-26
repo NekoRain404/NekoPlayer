@@ -174,6 +174,21 @@ class AppearancePreferencesTest final : public QObject {
         QCOMPARE(normalized.glassBlur, glassBlurMaximum);
     }
 
+    void appliesGlassPropertiesForTheIdleVideoSurface() {
+        AppearancePreferences::applySettings(
+            *qApp, {AppearancePreferences::Theme::Dark,
+                    AppearancePreferences::Accent::Ocean, true, 63, 47});
+        QCOMPARE(qApp->property("glassEnabled").toBool(), true);
+        QCOMPARE(qApp->property("glassOpacity").toInt(), 63);
+        QCOMPARE(qApp->property("glassBlur").toInt(), 47);
+        AppearancePreferences::applySettings(
+            *qApp, {AppearancePreferences::Theme::Dark,
+                    AppearancePreferences::Accent::Ocean, false});
+        QCOMPARE(qApp->property("glassEnabled").toBool(), false);
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+        QCOMPARE(qApp->property("glassEnabled").toBool(), false);
+    }
+
     void glassOpacityAndBlurChangeThePanelMaterial() {
         const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
         const auto clear = appearanceStyleSheet(tokens, true, glassOpacityMinimum, 0);

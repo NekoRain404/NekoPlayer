@@ -15,6 +15,7 @@ MediaInformationDialog::MediaInformationDialog(MpvController &player, QWidget *p
     : QDialog(parent), player_(player), report_(new QPlainTextEdit(this)) {
     setObjectName(QStringLiteral("mediaInformationDialog"));
     setWindowTitle(tr("媒体信息"));
+    setAttribute(Qt::WA_TranslucentBackground, true);
     auto *layout = new QVBoxLayout(this);
     report_->setObjectName(QStringLiteral("mediaInformationText"));
     report_->setAccessibleName(tr("当前媒体信息"));

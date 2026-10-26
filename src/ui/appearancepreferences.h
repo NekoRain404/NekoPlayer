@@ -9,10 +9,10 @@ class QWidget;
 
 inline constexpr int glassOpacityMinimum = 40;
 inline constexpr int glassOpacityMaximum = 100;
-inline constexpr int glassOpacityDefault = 76;
+inline constexpr int glassOpacityDefault = 72;
 inline constexpr int glassBlurMinimum = 0;
 inline constexpr int glassBlurMaximum = 100;
-inline constexpr int glassBlurDefault = 52;
+inline constexpr int glassBlurDefault = 55;
 
 [[nodiscard]] constexpr int normalizedGlassOpacity(int value) {
     return value < glassOpacityMinimum   ? glassOpacityMinimum

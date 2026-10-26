@@ -17,6 +17,7 @@ VideoColorDialog::VideoColorDialog(MpvController &player, QWidget *parent)
                                     this)) {
     setObjectName(QStringLiteral("videoColorDialog"));
     setWindowTitle(tr("视频色彩调整"));
+    setAttribute(Qt::WA_TranslucentBackground, true);
     buttons_->setObjectName(QStringLiteral("videoColorButtons"));
     auto *form = new QFormLayout;
     const std::array<QString, 5> labels = {tr("亮度"), tr("对比度"), tr("饱和度"), tr("色调"),

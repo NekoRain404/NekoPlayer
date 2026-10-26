@@ -45,6 +45,12 @@ void VideoWidget::showEvent(QShowEvent *event) {
     });
 }
 
+void VideoWidget::changeEvent(QEvent *event) {
+    QOpenGLWidget::changeEvent(event);
+    if (event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange)
+        update();
+}
+
 void VideoWidget::initializeGL() {
     if (!controller_.isReady()) {
         failed_ = true;
@@ -73,8 +79,15 @@ void VideoWidget::paintGL() {
     auto *gl = context()->functions();
     // Qt enables blending before paintGL; libmpv expects the GL default.
     gl->glDisable(GL_BLEND);
-    if (!renderer_) {
-        gl->glClearColor(0, 0, 0, 1);
+    if (!renderer_ || !controller_.state().active) {
+        const bool glass = qApp->property("glassEnabled").toBool();
+        if (glass) {
+            const int opacity = qBound(0, qApp->property("glassOpacity").toInt(), 100);
+            const auto tint = palette().color(QPalette::Base);
+            gl->glClearColor(tint.redF(), tint.greenF(), tint.blueF(), opacity / 100.0);
+        } else {
+            gl->glClearColor(0, 0, 0, 1);
+        }
         gl->glClear(GL_COLOR_BUFFER_BIT);
         return;
     }

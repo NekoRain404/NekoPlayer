@@ -159,3 +159,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 后续检查发现滑块焦点规则使用了 Qt QSS 不支持的 CSS `outline`。现改为 `QSlider::handle:horizontal:focus`：获得键盘焦点时增大手柄并显示 token 焦点边界，时间轴和音量滑块共用。一个真实 QSlider 的离屏聚焦前后像素回归曾按预期失败，修复后相关 Debug 3/3、ASan/UBSan 1/1 通过；CTest 固定使用 offscreen 平台以保证焦点测试可复现。该自动化结果不能替代原生 Wayland 的焦点显示检查，窗口行为测试仍按要求跳过。详细命令见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。
 - 原生桌面静态复查：本次启动中曾观察到扫描进度浮窗，但第二次相同的无配置/无媒体启动未复现；静态调用路径中未发现启动自动扫描来源，未据此改代码或将其定性为产品缺陷。两次临时全屏截图含宿主桌面隐私内容，检查后均已删除。
 - A3 状态复核发现输入控件缺少显式禁用样式，Qt 6.12 offscreen 上禁用 QLineEdit 前后绘制完全相同。现为组合框、字体组合框、行编辑和数值框增加基于语义 token 的禁用文字、背景和边框；真实控件回归同时覆盖滑块。测试先失败后通过，Debug 4/4、ASan/UBSan 1/1、格式与 code-size 检查通过，提交为 `60d4003`。半透明合成下的禁用态仍需 Wayland 检查。
+- 另增加真实 QLineEdit/QComboBox/QSpinBox/QPushButton/QToolButton 键盘聚焦前后的像素变化契约，防止仅凭焦点 QSS 字符串断言可见。offscreen 测试容器最初自动将焦点给 line edit，导致基准帧已带焦点；调整为父容器持有基准焦点后通过五次重复运行。Debug 4/4 与 ASan/UBSan 1/1 均通过，测试单独提交 `01f560b`；它验证 Qt offscreen 样式行为，不替代 Wayland 实际焦点/键盘路径验收。

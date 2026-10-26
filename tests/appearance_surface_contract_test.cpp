@@ -3,6 +3,7 @@
 #include "ui/appearancetokens.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QImage>
 #include <QLineEdit>
@@ -138,7 +139,10 @@ class AppearanceSurfaceContractTest final : public QObject {
         QSlider slider(Qt::Horizontal);
         slider.setRange(0, 100);
         slider.setValue(50);
-        QList<QWidget *> controls{&edit, &combo, &spin, &slider};
+        QCheckBox checkBox(QStringLiteral("Example"));
+        QPushButton button(QStringLiteral("Example"));
+        QToolButton toolButton;
+        QList<QWidget *> controls{&edit, &combo, &spin, &slider, &checkBox, &button, &toolButton};
         for (auto *control : controls) {
             control->setStyleSheet(style);
             control->resize(180, 36);

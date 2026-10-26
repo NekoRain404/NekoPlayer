@@ -30,6 +30,7 @@ class QVBoxLayout;
 class QSplitter;
 class ThumbnailPreview;
 class ThumbnailService;
+class WindowOpacityTransition;
 struct ThumbnailResult;
 namespace AppearanceIcons {
 enum class Symbol;
@@ -79,6 +80,8 @@ class MainWindow final : public QMainWindow {
     void showSeekFeedback(const QString &message);
     void setFullscreen(bool enabled);
     void setMiniPlayer(bool enabled);
+    void applyMiniPlayerState(bool enabled);
+    void animateMiniPlayerWindow(qreal opacity);
     void setAlwaysOnTop(bool enabled);
     void applyPlaylistWidth();
     void rememberPlaylistWidth();
@@ -133,6 +136,7 @@ class MainWindow final : public QMainWindow {
     QMenu *playlistMenu_ = nullptr;
     PlaylistMaintenanceMenu *playlistMaintenance_ = nullptr;
     QTimer controlsTimer_;
+    WindowOpacityTransition *miniPlayerAnimation_ = nullptr;
     QString lastTitlePath_;
     QStringList pendingPaths_;
     QPersistentModelIndex pendingPlaylistIndex_;
@@ -144,6 +148,7 @@ class MainWindow final : public QMainWindow {
     QRect miniPlayerGeometry_;
     bool miniPlayerMaximized_ = false;
     bool miniPlayerActive_ = false;
+    bool miniPlayerDesired_ = false;
     bool alwaysOnTop_ = false;
     bool startPaused_ = false;
     bool sessionSaveAttempted_ = false;

@@ -52,7 +52,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
     auto style =
         QStringLiteral(
             "QMainWindow{background:%28;color:%2;}"
-            "QWidget#transportBar{background:%27;color:%2;border-top:1px solid %3;}"
+            "QWidget#transportBar{background:%5;color:%2;border-top:1px solid %3;}"
             "QFrame#transportDivider{background:%3;color:%3;}"
             "QWidget#playlistPane{background:%27;border-left:1px solid %3;}"
             "QWidget#playlistHeader{background:%27;border-bottom:1px solid %3;}"

@@ -29,6 +29,7 @@ class FullscreenTransportMaterialTest final : public QObject {
                                                      glassBlurDefault});
 
         const auto windowedFill = renderBackground(transport);
+        QCOMPARE(windowedFill.alpha(), 255);
         controls.enter();
         controls.reveal();
         auto *animation = controls.findChild<QPropertyAnimation *>();
@@ -39,10 +40,11 @@ class FullscreenTransportMaterialTest final : public QObject {
         QCOMPARE(fullscreenFill, windowedFill);
 
         AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Dark,
-                                                     AppearancePreferences::Accent::Ocean, false, 72,
-                                                     glassBlurDefault});
+                                                     AppearancePreferences::Accent::Ocean, false,
+                                                     72, glassBlurDefault});
         const auto disabledWhileFullscreen = renderBackground(transport);
         QCOMPARE(disabledWhileFullscreen.alpha(), 255);
+        QCOMPARE(disabledWhileFullscreen, windowedFill);
 
         controls.leave();
         AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Light,

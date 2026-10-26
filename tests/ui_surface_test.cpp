@@ -50,7 +50,7 @@ class UiSurfaceTest final : public QObject {
         QVERIFY(style.contains(QStringLiteral("QToolTip{color:")));
     }
 
-    void glassChangesTransportMenuAndDialogMaterial() {
+    void glassChangesPanelsButNotTransportMaterial() {
         QAction action;
         TransportBar transport(&action, &action, &action, &action, &action, &action, &action);
         QMenu menu;
@@ -73,6 +73,8 @@ class UiSurfaceTest final : public QObject {
                 const auto fill = image.pixelColor(5, 5);
                 if (!glass)
                     opaqueColors.append(fill);
+                else if (index == 0)
+                    QCOMPARE(fill, opaqueColors.at(index));
                 else
                     QVERIFY(fill != opaqueColors.at(index));
                 ++index;

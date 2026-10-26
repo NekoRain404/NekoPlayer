@@ -50,13 +50,14 @@ class AppearanceSurfaceContractTest final : public QObject {
                                           .arg(tokens.raisedSurface.red())
                                           .arg(tokens.raisedSurface.green())
                                           .arg(tokens.raisedSurface.blue());
-            const auto surfaceCenter = QStringLiteral("rgba(%1,%2,%3,")
-                                           .arg(tokens.surface.red())
-                                           .arg(tokens.surface.green())
-                                           .arg(tokens.surface.blue());
             const auto panel =
                 glass.mid(glass.indexOf(QStringLiteral("QWidget#transportBar"))).section('}', 0, 0);
-            QVERIFY(panel.contains(surfaceCenter));
+            const auto opaquePanel =
+                opaque.mid(opaque.indexOf(QStringLiteral("QWidget#transportBar")))
+                    .section('}', 0, 0);
+            QVERIFY(panel.contains(tokens.surface.name(QColor::HexRgb)));
+            QVERIFY(opaquePanel.contains(tokens.surface.name(QColor::HexRgb)));
+            QVERIFY(!panel.contains(QStringLiteral("qlineargradient")));
 
             for (const auto &selector :
                  {QStringLiteral("QMenu{"), QStringLiteral("QDialog{"),

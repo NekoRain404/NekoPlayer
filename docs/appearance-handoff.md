@@ -180,3 +180,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - Mini-player 转场现抽为 `WindowOpacityTransition`，复用全屏 transport/缩略图一致的 160ms `OutCubic` 和 Reduce Motion 策略；窗口 flags 与尺寸只在淡出完成后切换一次，再淡入恢复。没有逐帧缩放 OpenGL 视频面，也没有添加 graphics opacity effect。fresh Debug 非窗口 CTest 70/70，窗口行为测试未运行；原生 Wayland mini-player 连续性和完整外观矩阵仍需人工验收。
 - 四类可选 UI 动效现在还共享唯一 `uiMotionEasingCurve()`（`OutCubic`），避免全屏 transport、缩略图、操作反馈和 mini-player 的曲线漂移；Debug 70/70、Sanitizer 定向 1/1。原生 Wayland 的实际动效观感仍需人工验收。
 - 最新原生 Wayland 诊断实例观察 5 秒仍未出现在 niri 窗口列表，日志没有应用崩溃，仅有 AT-SPI 总线警告；诊断进程已结束，未修改桌面配置。该会话仍不能提供可信的原生 UI/mini-player 视觉证据。
+- 另外修正了 mini-player 淡出期间立即进入全屏的状态竞态：全屏路径现在同步取消 pending opacity 转场并退出 mini-player，再进入全屏；普通 mini-player 切换仍使用统一淡入淡出。新增转场取消回归，Debug 非窗口 70/70、Sanitizer 1/1；真实 Wayland 合成序列仍未验收。

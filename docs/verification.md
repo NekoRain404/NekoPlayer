@@ -904,3 +904,8 @@ Native Wayland mapping recheck (2026-10-26):
 
 - A fresh `QT_QPA_PLATFORM=wayland QT_LOGGING_RULES='qt.qpa.wayland.*=true' ./build/debug/NekoPlayer --no-config --silent-audio` instance was observed for five seconds in the active niri session. It remained alive but never appeared in `niri msg windows`; its log contained only an unrelated AT-SPI bus warning and no application crash. The diagnostic process was terminated after observation, while the pre-existing user process was left untouched.
 - This is another environment/mapping failure, not evidence about the new mini-player or motion rendering. No compositor or desktop configuration was changed; the required native Wayland theme/DPI/fullscreen/mini-player visual matrix remains open.
+
+Mini-player/fullscreen race follow-up (2026-10-26):
+
+- Review of the asynchronous mini-player transition found that entering fullscreen immediately during mini-player fade could interleave two state machines. `MainWindow::setFullscreen(true)` now cancels the pending opacity animation, restores the toplevel opacity, and exits mini-player synchronously before entering fullscreen. Normal mini-player action toggles remain animated.
+- Added `window-opacity-transition`, a real offscreen QWidget regression for cancelling a pending fade at an exact opacity. Debug full non-window CTest passed **70/70**; the focused Sanitizer test passed **1/1** with `ASAN_OPTIONS=detect_leaks=0` and `UBSAN_OPTIONS=halt_on_error=1`. Window behavior tests were not run, so the actual compositor/fullscreen sequence still needs native Wayland inspection.

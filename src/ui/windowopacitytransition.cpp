@@ -59,6 +59,11 @@ void WindowOpacityTransition::fadeTo(qreal opacity) {
     animation_->start();
 }
 
+void WindowOpacityTransition::stopAt(qreal opacity) {
+    animation_->stop();
+    window_.setWindowOpacity(opacity);
+}
+
 bool WindowOpacityTransition::isRunning() const {
     return animation_->state() == QAbstractAnimation::Running;
 }

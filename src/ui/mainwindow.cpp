@@ -564,8 +564,8 @@ void MainWindow::setFullscreen(bool enabled) {
         return;
     exitFullscreenAction_->setEnabled(enabled);
 
-    if (enabled && miniPlayerActive_)
-        setMiniPlayer(false);
+    if (enabled && (miniPlayerActive_ || miniPlayerDesired_))
+        setMiniPlayerImmediately(false);
     hideThumbnailPreview();
 
     syncingWindowState_ = true;
@@ -635,6 +635,12 @@ void MainWindow::setMiniPlayer(bool enabled) {
     if (miniPlayerAnimation_->isRunning() && miniPlayerAnimation_->targetOpacity() == 0.0)
         return;
     animateMiniPlayerWindow(0.0);
+}
+
+void MainWindow::setMiniPlayerImmediately(bool enabled) {
+    miniPlayerDesired_ = enabled;
+    miniPlayerAnimation_->stopAt(1.0);
+    applyMiniPlayerState(enabled);
 }
 
 void MainWindow::applyMiniPlayerState(bool enabled) {

@@ -10,6 +10,7 @@ class WindowOpacityTransition final : public QObject {
   public:
     explicit WindowOpacityTransition(QWidget &window, QObject *parent = nullptr);
     void fadeTo(qreal opacity);
+    void stopAt(qreal opacity);
     [[nodiscard]] bool isRunning() const;
     [[nodiscard]] qreal targetOpacity() const;
 

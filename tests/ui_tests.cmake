@@ -53,6 +53,15 @@ add_test(NAME interaction-policy COMMAND interaction_policy_test)
 set_tests_properties(interaction-policy PROPERTIES TIMEOUT 20
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(window_opacity_transition_test window_opacity_transition_test.cpp
+    ../src/ui/windowopacitytransition.cpp ../src/ui/uimotionduration.cpp
+    ../src/ui/appearancetokens.cpp)
+target_include_directories(window_opacity_transition_test PRIVATE ../src)
+target_link_libraries(window_opacity_transition_test PRIVATE Qt6::Widgets Qt6::Test)
+add_test(NAME window-opacity-transition COMMAND window_opacity_transition_test)
+set_tests_properties(window-opacity-transition PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(transport_bar_test transport_bar_test.cpp)
 target_link_libraries(transport_bar_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME transport-bar COMMAND transport_bar_test)

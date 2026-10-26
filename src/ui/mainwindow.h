@@ -80,6 +80,7 @@ class MainWindow final : public QMainWindow {
     void showSeekFeedback(const QString &message);
     void setFullscreen(bool enabled);
     void setMiniPlayer(bool enabled);
+    void setMiniPlayerImmediately(bool enabled);
     void applyMiniPlayerState(bool enabled);
     void animateMiniPlayerWindow(qreal opacity);
     void setAlwaysOnTop(bool enabled);

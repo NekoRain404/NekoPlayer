@@ -6,6 +6,11 @@ Action feedback fade follow-up (2026-10-26):
 - `action-feedback-overlay` checks shared duration/easing, no graphics effect, reveal/clear completion and replacing a message during fade-out. Debug focused selection (`action-feedback-overlay`, `action-feedback`, `thumbnail-preview`, `ui-surface`, `interaction-policy`, `transport-bar`, `quick-actions-dialog`, `code-size`) passed **8/8**; the same ASan/UBSan selection passed **8/8** with `ASAN_OPTIONS=detect_leaks=0` (not leak-check evidence). The updated overlay replacement regression was rerun in Debug and ASan/UBSan and passed **1/1** in each.
 - Changed C++ files pass `clang-format --dry-run --Werror`; scoped `git diff --check` and `code-size` passed. Window behavior tests were not run. This is an offscreen logic/paint regression, not Wayland visual acceptance.
 
+Offscreen slider-focus test stabilization (2026-10-26):
+
+- The first full non-window Debug run after the feedback-overlay commit had one failure in the pre-existing slider-focus pixel contract. Reproduction isolated it to `focusedSliderHandleHasVisibleFeedback`: it focused a top-level slider without activating its window. Under this session's Qt 6.12 offscreen platform `hasFocus()` was true, but the style did not render the `:focus` state until an active host window established a baseline focus. The test now mirrors the other form-control focus contract by activating a host and moving focus from host to slider. This changes test setup only, not application styling.
+- The corrected `appearance-surface-contract` passed **5/5** repeated Debug runs. A fresh full non-window suite is pending; window behavior tests remain unrun.
+
 Quick Actions fuzzy-search follow-up (2026-10-26):
 
 - Search now keeps case-insensitive substring matches first, then includes ordered-character fuzzy matches ranked by skipped-character count, with original QAction traversal order as a stable tie-breaker. Queries with characters only in reverse order remain excluded. The regression test first failed against substring-only behavior (0 matches instead of 2), then passed after implementation.

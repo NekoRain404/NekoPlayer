@@ -99,24 +99,29 @@ class AppearanceSurfaceContractTest final : public QObject {
     void focusedSliderHandleHasVisibleFeedback() {
         const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark,
                                              AppearancePreferences::Accent::Ocean);
-        QSlider slider(Qt::Horizontal);
-        slider.setRange(0, 100);
-        slider.setValue(50);
-        slider.resize(240, 32);
-        slider.setStyleSheet(appearanceStyleSheet(tokens, false));
-        slider.show();
+        QWidget host;
+        auto *slider = new QSlider(Qt::Horizontal, &host);
+        slider->setRange(0, 100);
+        slider->setValue(50);
+        slider->setGeometry(0, 0, 240, 32);
+        slider->setStyleSheet(appearanceStyleSheet(tokens, false));
+        host.setFocusPolicy(Qt::StrongFocus);
+        host.resize(240, 32);
+        host.show();
+        host.activateWindow();
+        host.setFocus(Qt::OtherFocusReason);
         QCoreApplication::processEvents();
 
-        QImage unfocused(slider.size(), QImage::Format_ARGB32_Premultiplied);
+        QImage unfocused(slider->size(), QImage::Format_ARGB32_Premultiplied);
         unfocused.fill(Qt::transparent);
-        slider.render(&unfocused);
+        slider->render(&unfocused);
 
-        slider.setFocus(Qt::OtherFocusReason);
+        slider->setFocus(Qt::OtherFocusReason);
         QCoreApplication::processEvents();
-        QVERIFY(slider.hasFocus());
-        QImage focused(slider.size(), QImage::Format_ARGB32_Premultiplied);
+        QVERIFY(slider->hasFocus());
+        QImage focused(slider->size(), QImage::Format_ARGB32_Premultiplied);
         focused.fill(Qt::transparent);
-        slider.render(&focused);
+        slider->render(&focused);
 
         QVERIFY(focused != unfocused);
     }

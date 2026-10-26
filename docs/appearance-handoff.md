@@ -170,3 +170,4 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 两项 OSD 收敛修复后的 fresh Debug 非窗口套件为 69/69；外观/两类 OSD 的 ASan/UBSan 定向测试为 4/4（`detect_leaks=0`）。本次环境中的 Qt Wayland 窗口仍未被 niri 枚举，因此设计要求的原生屏幕矩阵没有完成。
 - 首页最近播放卡片的标题与位置文字间距经真实布局测量曾为 3 px；现改为共享的 4 px `spaceUnit`，对应真实 QWidget 几何回归先失败后通过。没有改动卡片总体层级或尺寸。
 - 偏好设置各分类的表单标签现共用由 4 px spacing token 推导的 128 px 标签列，避免切换分类时输入列横向跳动；新布局回归曾测得 22 px 偏差并先失败后通过。Transport 在中等宽度下的控件改为严格遵循 36 px 正方形热区，紧凑态仍为 32 px。定向测试与自动化验证见 `docs/verification.md`；离屏几何不替代原生 Wayland 屏幕验收。
+- 2026-10-26 新一轮原生启动诊断中，Qt Wayland `--smoke-test --silent-audio --no-config` 可成功退出，但持久窗口收到 `xdg_toplevel.configure` 后仍标记 `suspended true`，随后又收到 0×0 configure，niri 未枚举它。相同 session 下的 XWayland 应用窗口可以直接捕获并检查；具体结果与限制见 `docs/verification.md`。没有重启 compositor 或改桌面配置，Wayland 全矩阵仍待完成。

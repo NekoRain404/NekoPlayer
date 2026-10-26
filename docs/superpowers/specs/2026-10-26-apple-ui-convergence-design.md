@@ -23,7 +23,7 @@
 3. `raisedSurface`：菜单、弹出列表、对话框和悬浮卡片。
 4. `accentSurface`：播放按钮、选中项、进度和焦点状态。
 
-每一层由 `AppearanceTokens` 生成，组件不再自行拼接颜色、透明度或渐变。玻璃开启时只改变表面填充和边缘层次；关闭时使用同一 token 的不透明 fallback。视频帧不加透明度、不模糊、不复制到 CPU。
+每一层由 `AppearanceTokens` 生成，组件不再自行拼接颜色、透明度或渐变。玻璃开启时只改变窗口及非播放控制面板的填充和边缘层次；关闭时使用同一 token 的不透明 fallback。普通与全屏播放控制栏始终使用不透明 `surface`，玻璃开关只改变控制栏之外的界面材质；视频帧不加透明度、不模糊、不复制到 CPU。
 
 ### 间距、尺寸和排版
 
@@ -42,7 +42,7 @@
 ### A1. 材质 token 与 QSS 契约
 
 - 扩展 `AppearanceTokens`，明确 canvas/surface/raised/accent 四级表面及统一的边框、焦点、禁用和 hover 语义。
-- 将窗口、菜单栏、状态栏、设置页 tab/pane、playlist、transport、首页卡片和输入控件全部映射到四级表面。
+- 将窗口、菜单栏、状态栏、设置页 tab/pane、playlist、首页卡片和输入控件映射到四级表面；transport 固定使用不透明 `surface`，普通与全屏材质一致。
 - 移除重复的控件内颜色和硬编码透明度；保留确实属于视频 OSD 的局部样式，但其颜色从 token 获取。
 - 毛玻璃开关、透明度和柔化程度只进入 `panelFill()` 等集中函数；不得在单个 widget 里解释这些设置。
 

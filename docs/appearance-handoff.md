@@ -66,7 +66,7 @@ QSettings 键固定为：
 
 ### UI 与视频边界
 
-玻璃样式覆盖欢迎页/历史操作行、播放列表、菜单、对话框和 transport 表面；关闭后这些表面由主题 token 输出不透明颜色。`VideoWidget` 不应被 QSS 透明化、安装 graphics effect 或变更渲染属性。`PlaybackOverlay` 与 `ActionFeedbackOverlay` 保留其原有局部透明背景语义，但外观切换不能给它们增加图形效果。全屏 transport 自己现有的 opacity/fade 动画必须继续独立工作。
+玻璃样式覆盖欢迎页/历史操作行、播放列表、菜单、对话框和其他非播放控制面板；普通与全屏 transport 固定使用相同的不透明 `surface` token，不受玻璃开关影响。`VideoWidget` 不应被 QSS 透明化、安装 graphics effect 或变更渲染属性。`PlaybackOverlay` 与 `ActionFeedbackOverlay` 保留其各自的 OSD 表面语义，但外观切换不能给它们增加图形效果。全屏 transport 自己现有的 opacity/fade 动画必须继续独立工作。
 
 Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有可移植 box-shadow。当前渐变下缘只是轻量阴影感模拟。Wayland 合成器的窗口外 blur 即使存在，也只影响顶层窗口背后的桌面区域，并不能模糊本窗口内部视频或相邻控件。因此 UI 开关和文案不得声称“背景模糊”。不要仅为此功能引入 Vulkan、GPU blur renderer、视频帧复制或新的渲染路径。
 
@@ -172,4 +172,5 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - 偏好设置各分类的表单标签现共用由 4 px spacing token 推导的 128 px 标签列，避免切换分类时输入列横向跳动；新布局回归曾测得 22 px 偏差并先失败后通过。Transport 在中等宽度下的控件改为严格遵循 36 px 正方形热区，紧凑态仍为 32 px。定向测试与自动化验证见 `docs/verification.md`；离屏几何不替代原生 Wayland 屏幕验收。
 - 2026-10-26 新一轮原生启动诊断中，Qt Wayland `--smoke-test --silent-audio --no-config` 可成功退出，但持久窗口收到 `xdg_toplevel.configure` 后仍标记 `suspended true`，随后又收到 0×0 configure，niri 未枚举它。相同 session 下的 XWayland 应用窗口可以直接捕获并检查；具体结果与限制见 `docs/verification.md`。没有重启 compositor 或改桌面配置，Wayland 全矩阵仍待完成。
 - 外观回归补查发现偏好设置 tab 可被键盘聚焦但没有焦点反馈：实际 QTabBar 焦点前后图像相同。应用级 QSS 已加入 token 焦点边框，新的真实控件像素测试先失败后通过；Debug 外观/UI 4/4、ASan/UBSan surface contract 1/1 通过。原生 Wayland 的焦点可见性仍需验收，细节见验证记录。
-- 全屏播放栏与普通窗口栏虽复用同一 surface token，但叠加在高饱和视频上时透明度会让画面颜色污染 UI。现在全屏状态通过 `fullscreenOverlay` 语义属性选择同一中性 surface token 的高不透明度版本（玻璃开启时至少 90%），普通播放栏仍遵循用户透明度设置；玻璃关闭时两者仍走不透明 fallback。真实 QWidget 绘制回归覆盖全屏进入/显示及玻璃关闭，Debug 定向测试通过。尚缺真实 Wayland 播放画面的对比与全矩阵验收，不得据此宣称全屏材质已完成视觉验收。
+- 旧记录：全屏曾使用至少 90% 玻璃不透明度、普通播放栏跟随用户透明度；该行为已由后续收敛取代。当前普通/全屏 transport 均固定使用不透明 `surface` token，玻璃开关只影响其他 UI 面板；淡入淡出仍只改变可见度。
+- 2026-10-26 transport 材质修正：真实 QWidget 像素测试复现玻璃开启时 transport alpha 为 185；QSS 原因是 transport 误用了共享的玻璃 `%27` 面板填充。现改为不透明 `surface` token，普通/全屏背景在玻璃开关两种状态下相同，且 alpha 为 255。`fullscreen-transport-material`、`appearance-surface-contract`、`ui-surface` 和 `code-size` 通过；不涉及视频帧、libmpv、HDR 或硬件解码路径。原生 Wayland 播放画面仍未完成全矩阵验收。

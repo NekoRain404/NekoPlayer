@@ -36,6 +36,17 @@ QString panelFill(const QColor &value, bool glassEnabled, int opacity, int blur)
         .arg(translucent(value.lighter(lighten), edgeAlpha), translucent(value, centerAlpha),
              translucent(value.darker(darken), edgeAlpha));
 }
+
+QString windowBackdrop(const AppearanceTokens &tokens, bool glassEnabled) {
+    if (!glassEnabled)
+        return color(tokens.canvas);
+    const bool dark = tokens.canvas.lightnessF() < 0.5;
+    const auto glow = translucent(tokens.accent, dark ? 64 : 34);
+    const auto edge = translucent(tokens.canvas.darker(dark ? 112 : 104), 255);
+    return QStringLiteral("qradialgradient(cx:0.14,cy:-0.05,radius:1.25,fx:0.14,fy:-0.05,"
+                          "stop:0 %1,stop:0.34 %2,stop:1 %3)")
+        .arg(glow, color(tokens.canvas), edge);
+}
 } // namespace
 
 QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int glassOpacity,
@@ -43,7 +54,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
     initAppearanceResources();
     const auto unit = t.spaceUnit;
     return QStringLiteral(
-               "QMainWindow{background:%1;color:%2;}"
+               "QMainWindow{background:%30;color:%2;}"
                "QWidget#transportBar{background:%29;color:%2;border-top:1px solid %3;}"
                "QFrame#transportDivider{background:%3;color:%3;}"
                "QWidget#playlistPane{background:%27;border-left:1px solid %3;}"
@@ -179,5 +190,6 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
              color(t.selection), QString::number(unit * 7), color(t.selectedText),
              panelFill(t.canvas, glassEnabled, glassOpacity, glassBlur),
              panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
-             panelFill(t.surface, glassEnabled, glassOpacity, glassBlur));
+             panelFill(t.surface, glassEnabled, glassOpacity, glassBlur),
+             windowBackdrop(t, glassEnabled));
 }

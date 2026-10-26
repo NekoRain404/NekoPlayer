@@ -7,6 +7,7 @@ class QAction;
 class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
+class QLabel;
 class QObject;
 
 class QuickActionsDialog final : public QDialog {
@@ -33,4 +34,5 @@ class QuickActionsDialog final : public QDialog {
     QAction *openAction_;
     QLineEdit *search_;
     QListWidget *results_;
+    QLabel *emptyState_;
 };

@@ -2,9 +2,12 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QIcon>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
+#include <QPixmap>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QtTest>
@@ -77,6 +80,85 @@ class QuickActionsDialogTest final : public QObject {
         dialog.refreshActions();
         dialog.searchEdit()->setText(QStringLiteral("添加"));
         QCOMPARE(dialog.visibleActionCount(), 1);
+    }
+
+    void rowsReuseActionIconAndMenuContextWhileDeduplicating() {
+        QWidget root;
+        QMenu playback(QStringLiteral("播放"), &root);
+        QAction action(QStringLiteral("播放/暂停"), &root);
+        QPixmap iconPixmap(8, 8);
+        iconPixmap.fill(Qt::red);
+        action.setIcon(QIcon(iconPixmap));
+        playback.addAction(&action);
+        QMenu context(QStringLiteral("上下文菜单"), &root);
+        context.addAction(&action);
+
+        QuickActionsDialog dialog(&root);
+        dialog.refreshActions();
+        QCOMPARE(dialog.visibleActionCount(), 1);
+        const auto *item = dialog.resultsView()->item(0);
+        QVERIFY(item->text().contains(QStringLiteral("播放")));
+        QVERIFY(item->text().contains(QStringLiteral("上下文菜单")));
+        QVERIFY(!item->icon().isNull());
+        QCOMPARE(item->data(Qt::UserRole).value<QObject *>(), &action);
+    }
+
+    void emptyStateTracksWhetherActionsMatch() {
+        QWidget root;
+        QAction action(QStringLiteral("打开文件"), &root);
+        QuickActionsDialog dialog(&root);
+        auto *empty = dialog.findChild<QLabel *>(QStringLiteral("quickActionsEmptyState"));
+        QVERIFY(empty);
+        dialog.show();
+        dialog.searchEdit()->setText(QStringLiteral("does-not-exist"));
+        QVERIFY(empty->isVisible());
+        QVERIFY(dialog.resultsView()->isHidden());
+        dialog.searchEdit()->clear();
+        QVERIFY(empty->isHidden());
+        QVERIFY(dialog.resultsView()->isVisible());
+    }
+
+    void closingRestoresPreviouslyFocusedControl() {
+        QWidget root;
+        QLineEdit originalFocus(&root);
+        root.show();
+        originalFocus.setFocus();
+        QTRY_COMPARE(QApplication::focusWidget(), &originalFocus);
+        QuickActionsDialog dialog(&root);
+        auto *open = root.findChild<QAction *>(QStringLiteral("quickActionsAction"));
+        QVERIFY(open);
+        open->trigger();
+        QTRY_COMPARE(QApplication::focusWidget(), dialog.searchEdit());
+        dialog.hide();
+        QTRY_COMPARE(QApplication::focusWidget(), &originalFocus);
+    }
+
+    void refreshUsesCurrentActionTextAndIcon() {
+        QWidget root;
+        QAction action(QStringLiteral("旧标题"), &root);
+        QuickActionsDialog dialog(&root);
+        action.setText(QStringLiteral("新标题"));
+        QPixmap iconPixmap(8, 8);
+        iconPixmap.fill(Qt::blue);
+        action.setIcon(QIcon(iconPixmap));
+        dialog.refreshActions();
+        QCOMPARE(dialog.resultsView()->item(0)->text(), QStringLiteral("新标题"));
+        QVERIFY(!dialog.resultsView()->item(0)->icon().isNull());
+    }
+
+    void doubleClickingResultTriggersItsAction() {
+        QWidget root;
+        QAction action(QStringLiteral("播放/暂停"), &root);
+        QSignalSpy triggered(&action, &QAction::triggered);
+        QuickActionsDialog dialog(&root);
+        dialog.show();
+        const QRect itemRect = dialog.resultsView()->visualItemRect(dialog.resultsView()->item(0));
+        QTest::mouseClick(dialog.resultsView()->viewport(), Qt::LeftButton, Qt::NoModifier,
+                          itemRect.center());
+        QTest::mouseDClick(dialog.resultsView()->viewport(), Qt::LeftButton, Qt::NoModifier,
+                           itemRect.center());
+        QCOMPARE(triggered.size(), 1);
+        QVERIFY(dialog.isHidden());
     }
 };
 

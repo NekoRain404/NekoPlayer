@@ -148,4 +148,5 @@ Qt Widgets 没有可移植的同窗兄弟控件 backdrop-filter；QSS 也没有�
 - Ctrl+K 面板采用动作名称/快捷键的大小写无关包含过滤；现阶段没有按菜单层级分组，也不做拼写容错模糊匹配。后续可根据实际动作数量和用户反馈评估分组/评分，不应重新维护一套 QAction 镜像。
 - `ThumbnailPreview` 保持立即显示/隐藏：它会随时间轴 hover 快速更换帧，不增加逐帧 opacity 合成动画；当前共享时长只用于 fullscreen transport。若之后要动画预览浮层，先在 Wayland 窗口和 GL 视频共存路径上测量合成成本与延迟。
 - 快速操作测试使用 offscreen Qt；需要在原生 Wayland 手工确认 Ctrl+K、方向键、Enter、Esc 与焦点回退。面板自身不实现背景模糊。
+- 2026-10-26 的 Quick Actions 交互复核补齐了共享 QAction 去重、菜单上下文/图标、空结果提示、双击触发和异步焦点回退；验证记录见 [verification.md](/home/nekorain/Development/NekoPlayer/docs/verification.md)。原生 Wayland 输入与实际观感仍待人工验收。
 - 当前可用环境没有完成 Dark/Light、玻璃开关、不同 accent、100%/175% 缩放、全屏视频几何与 mini-player 的原生组合验收。HDR、`hwdec-current`、音频设备与 compositor blur 仍是独立的硬件/桌面验收项；本轮不声称已通过。

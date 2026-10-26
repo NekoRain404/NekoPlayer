@@ -8,6 +8,7 @@
     <message><source>搜索命令或快捷键</source><translation>Search commands or shortcuts</translation></message>
     <message><source>搜索快速操作</source><translation>Search quick actions</translation></message>
     <message><source>操作结果</source><translation>Action results</translation></message>
+    <message><source>没有匹配的操作</source><translation>No matching actions</translation></message>
 </context>
 <context>
     <name>PreferencesDialog</name>

@@ -10,15 +10,18 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QMenu>
 #include <QSet>
 #include <QShowEvent>
+#include <QStringList>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
 
 QuickActionsDialog::QuickActionsDialog(QWidget *actionRoot, QWidget *parent)
     : QDialog(parent ? parent : actionRoot), actionRoot_(actionRoot),
       openAction_(new QAction(tr("快速操作…"), actionRoot)), search_(new QLineEdit(this)),
-      results_(new QListWidget(this)) {
+      results_(new QListWidget(this)), emptyState_(new QLabel(tr("没有匹配的操作"), this)) {
     setObjectName(QStringLiteral("quickActionsDialog"));
     setWindowTitle(tr("快速操作"));
     setModal(false);
@@ -36,12 +39,17 @@ QuickActionsDialog::QuickActionsDialog(QWidget *actionRoot, QWidget *parent)
     results_->setObjectName(QStringLiteral("quickActionsResults"));
     results_->setAccessibleName(tr("操作结果"));
     results_->setUniformItemSizes(true);
+    emptyState_->setObjectName(QStringLiteral("quickActionsEmptyState"));
+    emptyState_->setAlignment(Qt::AlignCenter);
+    emptyState_->setAccessibleName(tr("没有匹配的操作"));
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(16, 16, 16, 16);
     layout->setSpacing(12);
     layout->addWidget(search_);
     layout->addWidget(results_, 1);
+    layout->addWidget(emptyState_, 1);
     connect(openAction_, &QAction::triggered, this, [this] {
+        previousFocus_ = QApplication::focusWidget();
         refreshActions();
         show();
         raise();
@@ -63,15 +71,23 @@ QListWidget *QuickActionsDialog::resultsView() const { return results_; }
 int QuickActionsDialog::visibleActionCount() const { return results_->count(); }
 
 void QuickActionsDialog::showEvent(QShowEvent *event) {
-    previousFocus_ = QApplication::focusWidget();
+    if (!previousFocus_)
+        previousFocus_ = QApplication::focusWidget();
     QDialog::showEvent(event);
 }
 
 void QuickActionsDialog::hideEvent(QHideEvent *event) {
     QDialog::hideEvent(event);
-    if (previousFocus_ && previousFocus_ != this)
-        previousFocus_->setFocus(Qt::OtherFocusReason);
+    const auto focusTarget = previousFocus_;
     previousFocus_.clear();
+    if (focusTarget && focusTarget != this) {
+        QTimer::singleShot(0, this, [focusTarget] {
+            if (focusTarget && focusTarget->isVisible()) {
+                focusTarget->window()->activateWindow();
+                focusTarget->setFocus(Qt::OtherFocusReason);
+            }
+        });
+    }
 }
 
 bool QuickActionsDialog::eventFilter(QObject *watched, QEvent *event) {
@@ -98,6 +114,8 @@ void QuickActionsDialog::filterActions() {
     for (auto *action : actions) {
         if (!action || action == openAction_ || action->isSeparator() || seen.contains(action))
             continue;
+        if (action->menu())
+            continue;
         seen.insert(action);
         const auto text = action->text().remove(QLatin1Char('&'));
         const auto shortcut = action->shortcut().toString(QKeySequence::NativeText);
@@ -105,12 +123,27 @@ void QuickActionsDialog::filterActions() {
             !shortcut.contains(query, Qt::CaseInsensitive))
             continue;
         auto *item = new QListWidgetItem(text, results_);
+        item->setIcon(action->icon());
         item->setData(Qt::UserRole, QVariant::fromValue(static_cast<QObject *>(action)));
         item->setFlags(action->isEnabled() ? item->flags() : item->flags() & ~Qt::ItemIsEnabled);
+        QStringList contexts;
+        for (auto *associated : action->associatedObjects()) {
+            if (auto *menu = qobject_cast<QMenu *>(associated);
+                menu && !menu->title().isEmpty() && !contexts.contains(menu->title()))
+                contexts.push_back(menu->title());
+        }
+        QStringList details = contexts;
         if (!shortcut.isEmpty())
-            item->setToolTip(shortcut);
+            details.push_back(shortcut);
+        if (!details.isEmpty())
+            item->setToolTip(details.join(QStringLiteral(" · ")));
+        if (!contexts.isEmpty())
+            item->setText(contexts.join(QStringLiteral(" · ")) + QStringLiteral("  ›  ") + text);
     }
-    if (results_->count() > 0)
+    const bool hasResults = results_->count() > 0;
+    results_->setVisible(hasResults);
+    emptyState_->setVisible(!hasResults);
+    if (hasResults)
         results_->setCurrentRow(0);
 }
 

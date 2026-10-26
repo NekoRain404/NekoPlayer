@@ -1,8 +1,11 @@
+#include "playback/mpvcontroller.h"
 #include "ui/appearancepreferences.h"
 #include "ui/appearancetokens.h"
 #include "ui/mainwindow.h"
+#include "ui/preferencesdialog.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QImage>
 #include <QtTest>
 
@@ -27,6 +30,33 @@ class MainWindowTransportMaterialTest final : public QObject {
             transport->render(&image, {}, {}, QWidget::DrawWindowBackground);
             QCOMPARE(image.pixelColor(20, 5), expected);
         }
+        AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
+    }
+
+    void disablingGlassInPreferencesKeepsMainWindowTransportOpaque() {
+        MpvController player(true, true);
+        MainWindow window(true);
+        PreferencesDialog preferences(
+            player, nullptr, {}, true, 5,
+            {AppearancePreferences::Theme::Dark, AppearancePreferences::Accent::Ocean, true});
+        auto *glass = preferences.findChild<QCheckBox *>(QStringLiteral("appearanceGlassChoice"));
+        auto *transport = window.findChild<QWidget *>(QStringLiteral("transportBar"));
+        QVERIFY(glass && transport);
+        QVERIFY(glass->isChecked());
+
+        glass->setChecked(false);
+
+        QVERIFY(!qApp->property("glassEnabled").toBool());
+        QVERIFY(!transport->testAttribute(Qt::WA_TranslucentBackground));
+        const auto expected = appearanceTokens(AppearancePreferences::Theme::Dark,
+                                               AppearancePreferences::Accent::Ocean)
+                                  .surface;
+        transport->resize(400, transport->sizeHint().height());
+        QImage image(transport->size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        transport->render(&image, {}, {}, QWidget::DrawWindowBackground);
+        QCOMPARE(image.pixelColor(20, 5), expected);
+        preferences.reject();
         AppearancePreferences::applyTheme(*qApp, AppearancePreferences::Theme::System);
     }
 };

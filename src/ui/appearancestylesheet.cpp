@@ -53,7 +53,6 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
         QStringLiteral(
             "QMainWindow{background:%28;color:%2;}"
             "QWidget#transportBar{background:%27;color:%2;border-top:1px solid %3;}"
-            "QWidget#transportBar[fullscreenOverlay=\"true\"]{background:%33;}"
             "QFrame#transportDivider{background:%3;color:%3;}"
             "QWidget#playlistPane{background:%27;border-left:1px solid %3;}"
             "QWidget#playlistHeader{background:%27;border-bottom:1px solid %3;}"
@@ -215,8 +214,7 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
                  windowBackdrop(t, glassEnabled), QString::number(t.controlHeight),
                  QString::number(t.rowHeight), QString::number(t.menuItemHeight),
                  panelFill(t.raisedSurface, glassEnabled, glassOpacity, glassBlur),
-                 panelFill(t.surface, glassEnabled,
-                           glassEnabled ? qMax(glassOpacity, 90) : glassOpacity, glassBlur));
+                 panelFill(t.surface, glassEnabled, glassOpacity, glassBlur));
     style +=
         QStringLiteral(
             "QLabel#playbackInformationOverlay{color:%1;background:%2;border-radius:6px;"

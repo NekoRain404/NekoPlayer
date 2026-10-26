@@ -13,7 +13,7 @@
 class FullscreenTransportMaterialTest final : public QObject {
     Q_OBJECT
   private slots:
-    void fullscreenGlassIsMoreOpaqueThanWindowedGlass() {
+    void fullscreenTransportUsesTheSameMaterialAsWindowedTransport() {
         QWidget host;
         QVBoxLayout layout(&host);
         QWidget video(&host);
@@ -36,9 +36,13 @@ class FullscreenTransportMaterialTest final : public QObject {
         animation->setCurrentTime(animation->duration());
         const auto fullscreenFill = renderBackground(transport);
 
-        QVERIFY(fullscreenFill.alpha() > windowedFill.alpha());
-        QVERIFY(fullscreenFill.alpha() >= 225);
-        QVERIFY(fullscreenFill != windowedFill);
+        QCOMPARE(fullscreenFill, windowedFill);
+
+        AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Dark,
+                                                     AppearancePreferences::Accent::Ocean, false, 72,
+                                                     glassBlurDefault});
+        const auto disabledWhileFullscreen = renderBackground(transport);
+        QCOMPARE(disabledWhileFullscreen.alpha(), 255);
 
         controls.leave();
         AppearancePreferences::applySettings(*qApp, {AppearancePreferences::Theme::Light,

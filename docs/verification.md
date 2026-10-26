@@ -1,5 +1,12 @@
 # Verification Record
 
+Release candidate closure (2026-10-26, source at `555a663`):
+
+- Fresh final non-window Debug run: `QT_QPA_PLATFORM=offscreen LC_ALL=C LANG=C ctest --test-dir build/debug --exclude-regex 'window|backend-startup' --output-on-failure` passed **70/70** in **65.89 seconds**. Window behavior tests remain intentionally unrun.
+- `cmake -DNEKO_SOURCE_DIR="$PWD" -P cmake/CheckCodeSize.cmake` passed. It reports several named project files above the 500-line target but within the configured 550-line hard gate; the plan's separately listed integration exceptions remain below 800 lines.
+- `git diff --check -- docs/appearance-handoff.md docs/verification.md` passed. Installed `/usr/local/bin/NekoPlayer` and `build/debug/NekoPlayer` match at SHA-256 `120dd50debc421be7f6c08e16f1b5999e25ce6f4b2ad4a5bb474114bc2ff57ba`.
+- Manual Wayland evidence remains limited to the previously recorded Dark/Ocean, glass-enabled empty-home/fullscreen observation at 1.75×. This release does not claim completion of the full theme/accent/material/DPI/playback/menu/mini-player acceptance matrix.
+
 Fresh main-branch regression verification (2026-10-26, code at `7cfa700`):
 
 - `cmake --build --preset debug -j4` reported no pending build work; all Debug targets were already current.

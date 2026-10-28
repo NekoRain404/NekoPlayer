@@ -4,6 +4,7 @@
 #include "session/sessionmanager.h"
 #include "session/trackpreferencestore.h"
 
+#include <QDateTime>
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
@@ -24,6 +25,56 @@ QString backendText(MpvController &player, const char *property) {
 class TrackPreferenceSessionTest final : public QObject {
     Q_OBJECT
   private slots:
+    void identicalObservationsDoNotRewriteAndSaveFlushesChanges() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto settings = temporary.filePath(QStringLiteral("session.ini"));
+        const auto tracks = settings + QStringLiteral(".tracks.ini");
+        MpvController player(true, true);
+        PlaylistController playlist(player);
+        SessionManager session(player, playlist, settings);
+        QVERIFY(session.restore().error.isEmpty());
+        playlist.restoreFiles({QString::fromUtf8(TEST_TRACK_MEDIA_PATH)}, 0);
+        playlist.playOrPause();
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        QTRY_VERIFY(QFileInfo::exists(tracks));
+
+        QFile file(tracks);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto original = file.readAll();
+        file.close();
+        const auto frozen = QDateTime::currentDateTimeUtc().addSecs(-3600);
+        QFile timestampFile(tracks);
+        QVERIFY(timestampFile.open(QIODevice::ReadWrite));
+        QVERIFY(timestampFile.setFileTime(frozen, QFileDevice::FileModificationTime));
+        timestampFile.close();
+
+        // Repeated identical snapshots only refresh lastUsedUtcMs in memory.
+        for (int round = 0; round < 5; ++round) {
+            player.tracksChanged();
+            QTest::qWait(10);
+        }
+        QCOMPARE(QFileInfo(tracks).lastModified().toUTC().toMSecsSinceEpoch(),
+                 frozen.toMSecsSinceEpoch());
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), original);
+        file.close();
+
+        // A real selection change must reach disk before save() returns.
+        const auto alternate =
+            std::find_if(player.tracks().cbegin(), player.tracks().cend(), [](const auto &track) {
+                return track.type == MediaTrack::Type::Audio && !track.selected;
+            });
+        QVERIFY(alternate != player.tracks().cend());
+        player.selectAudioTrack(alternate->id);
+        QVERIFY2(session.save({}).isEmpty(), "close-path flush must not fail");
+        const auto stored = TrackPreferenceStore(tracks).load();
+        QVERIFY(stored.error.isEmpty());
+        QCOMPARE(stored.entries.size(), 1);
+        QCOMPARE(stored.entries.front().selection.audioTrackId,
+                 std::optional<qint64>(alternate->id));
+    }
+
     void staleHistoricalFingerprintDoesNotBlockCurrentMediaSave() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

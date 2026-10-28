@@ -189,7 +189,52 @@ void MpvController::Impl::notifySynchronousOpenFailure(uint64_t generation, int 
     emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(status)));
 }
 
+bool MpvController::Impl::handleRecoveryCommandReply(const mpv_event &event) {
+    if (!recoveryLoad || !recoveryLoad->command || event.reply_userdata != recoveryLoad->command)
+        return false;
+    recoveryLoad->command = 0;
+    if (openingCommand == event.reply_userdata)
+        openingCommand = 0;
+    if (event.error < 0) {
+        // The reload was rejected before it produced a file, so no END_FILE
+        // will follow to report the failure.
+        failRecoveryLoad(event.error, openGeneration);
+        return true;
+    }
+    if (event.data) {
+        const auto &result = static_cast<mpv_event_command *>(event.data)->result;
+        if (result.format == MPV_FORMAT_NODE_MAP) {
+            const auto &map = *result.u.list;
+            for (int index = 0; index < map.num; ++index) {
+                if (QByteArrayView(map.keys[index]) != "playlist_entry_id" ||
+                    map.values[index].format != MPV_FORMAT_INT64)
+                    continue;
+                recoveryLoad->entry = map.values[index].u.int64;
+                recoveryLoad->entryKnown = true;
+                // Match normal opens: keep the opening entry until a position
+                // observation confirms playback started.
+                openingEntry = recoveryLoad->entry;
+                // FILE_LOADED may precede its command reply. If the reload is
+                // already playing, the snapshot can be retired now.
+                if (state.active && playingEntry == recoveryLoad->entry)
+                    finishRecoveryLoad();
+                break;
+            }
+        }
+    }
+    // A failure can queue its END_FILE before this reply correlated the entry
+    // (START_FILE is then parked in startedEntries). Replay it now that the
+    // entry is known so the failure is not silently dropped.
+    if (recoveryLoad && recoveryLoad->entryKnown && endedEntries.contains(recoveryLoad->entry)) {
+        const auto end = endedEntries.take(recoveryLoad->entry);
+        handleEndFile(end);
+    }
+    return true;
+}
+
 bool MpvController::Impl::handleOpeningCommandReply(const mpv_event &event) {
+    if (handleRecoveryCommandReply(event))
+        return true;
     auto found =
         std::find_if(pendingOpens.begin(), pendingOpens.end(), [&event](const PendingOpen &open) {
             return open.command == event.reply_userdata;
@@ -264,6 +309,19 @@ void MpvController::openFileAtPosition(const QString &path, double seconds) {
     const bool suppressAutoLoad = std::exchange(impl_->suppressAutoLoadForNextOpen, false);
     if (!isReady() || path.isEmpty() || !std::isfinite(seconds) || seconds < 0)
         return;
+    // An explicit playback request supersedes a retained recovery snapshot and
+    // any reload still in flight for it. Tombstone the reload's entry like
+    // stop() does so its queued terminal event cannot report a stale failure.
+    if (impl_->recoveryLoad) {
+        if (impl_->recoveryLoad->entryKnown)
+            impl_->invalidateEntry(impl_->recoveryLoad->entry);
+        if (impl_->recoveryLoad->command)
+            impl_->canceledCommands.insert(impl_->recoveryLoad->command);
+        impl_->recoveryLoad.reset();
+    }
+    impl_->recovery.reset();
+    impl_->recoveryAttempts = 0;
+    impl_->recoveringRenderer = false;
     const auto generation = ++impl_->openGeneration;
     impl_->openingPosition = seconds;
     impl_->openingEntry = -1;
@@ -361,6 +419,8 @@ void MpvController::stop() {
     impl_->resetAbLoop();
     impl_->cancelChapterRequest();
     impl_->recovery.reset();
+    impl_->recoveryLoad.reset();
+    impl_->recoveryAttempts = 0;
     impl_->cancelTrackRestore();
     if (generation != impl_->openGeneration)
         return;
@@ -424,77 +484,4 @@ void MpvController::adjustSubtitleDelay(double seconds) {
 
 void MpvController::selectSubtitleTrack(qint64 id) {
     impl_->selectTrack(MediaTrack::Type::Subtitle, id);
-}
-
-void MpvController::prepareForRendererReset() {
-    // A context loss while a file is still loading must also be recoverable.
-    // Releasing the renderer disables video, and without a snapshot the reload
-    // never happens; only a fully idle controller keeps no snapshot.
-    if (!state().active && !impl_->loading && !impl_->pendingPlayback)
-        return;
-    impl_->recovery = Impl::RecoveryState{
-        state(), impl_->tracksToRestore.isEmpty() ? tracks() : impl_->tracksToRestore,
-        impl_->explicitExternalPaths};
-    if (impl_->openingPosition)
-        impl_->recovery->playback.position = *impl_->openingPosition;
-    impl_->recoveringRenderer = true;
-}
-
-void MpvController::resumeAfterRendererReset() {
-    if (!impl_->recovery)
-        return;
-    const auto saved = std::move(*impl_->recovery);
-    impl_->recovery.reset();
-    const auto generation = impl_->openGeneration;
-    const auto identity = impl_->restoreIdentity + 1;
-    impl_->cancelTrackRestore();
-    if (generation != impl_->openGeneration || identity != impl_->restoreIdentity)
-        return;
-    const auto selectedInternal = [&saved](MediaTrack::Type type) {
-        for (const auto &track : saved.tracks) {
-            if (track.type == type && track.selected && !track.external)
-                return QByteArray::number(track.id);
-        }
-        return QByteArray("no");
-    };
-    // Releasing an mpv renderer disables video. Reload at the saved position,
-    // including video-only files whose core may have reached END_FILE.
-    // Recovery overrides the session's sub-auto setting with an explicit no: the
-    // saved external set is restored below, so auto-loading would add duplicates.
-    // This file-local option outlives the property, so toggling auto-load while
-    // the recovered file plays takes effect on the next normal load, not a retry.
-    const auto loopPoint = [](const std::optional<double> &value) {
-        return value ? QByteArray::number(*value, 'g', 17) : QByteArray("no");
-    };
-    const auto position = MediaSource::isNetwork(saved.playback.path) && !saved.playback.seekable
-                              ? 0.0
-                              : saved.playback.position;
-    const auto options =
-        QByteArray("start=") + QByteArray::number(position, 'f', 3) +
-        ",pause=" + (saved.playback.paused ? "yes" : "no") +
-        ",aid=" + selectedInternal(MediaTrack::Type::Audio) +
-        ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no,audio-file-auto=no" +
-        ",ab-loop-a=" + loopPoint(abLoop().start) + ",ab-loop-b=" + loopPoint(abLoop().end);
-    impl_->tracksToRestore = saved.tracks;
-    impl_->state.path = saved.playback.path;
-    impl_->playingPath = saved.playback.path;
-    impl_->openingPosition = position;
-    impl_->openingEntry = -1;
-    impl_->resetPlayback();
-    impl_->explicitExternalPathsToRestore = std::move(saved.explicitExternalPaths);
-    emit stateChanged();
-    if (generation != impl_->openGeneration || identity != impl_->restoreIdentity)
-        return;
-    const auto [id, status] =
-        impl_->submitCommand({"loadfile", saved.playback.path.toUtf8(), "replace", "-1", options});
-    impl_->openingCommand = id;
-    if (!id) {
-        // No END_FILE will follow a rejected submission. Cancel recovery before
-        // reporting errors so a reentrant new media request keeps its state.
-        impl_->recoveringRenderer = false;
-        impl_->openingPosition.reset();
-        impl_->cancelTrackRestore();
-        impl_->resetAbLoop();
-    }
-    impl_->report(status);
 }

@@ -134,7 +134,6 @@ QString appearanceStyleSheet(const AppearanceTokens &t, bool glassEnabled, int g
             "QSlider#volumeSlider::handle:horizontal:hover{background:%21;width:12px;}"
             "QSlider::handle:horizontal:focus{background:%5;border:2px solid %18;width:14px;"
             "margin:-7px 0;} "
-            "QSlider:disabled{opacity:0.55;}"
             "QListView#playlistView{background:transparent;border:none;outline:none;padding:%"
             "8px;}"
             "QListView#playlistView::item{min-height:%30px;padding:%8px "

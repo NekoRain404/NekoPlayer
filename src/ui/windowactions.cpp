@@ -177,6 +177,10 @@ void MainWindow::createActions() {
     connect(recent, &RecentMediaMenu::openRequested, this, &MainWindow::openFile);
     connect(recent, &RecentMediaMenu::feedback, this,
             [this](const QString &message) { showActionFeedback(message); });
+    connect(recent, &RecentMediaMenu::cleared, this, [this] {
+        if (session_)
+            session_->clearPlaybackHistory();
+    });
     auto *currentMedia = new CurrentMediaMenu(*controller_, this);
     connect(currentMedia, &CurrentMediaMenu::feedback, this,
             [this](const QString &message) { showActionFeedback(message); });
@@ -405,6 +409,7 @@ void MainWindow::createActions() {
     connect(about, &QAction::triggered, this,
             [this] { AppearancePreferences::showAboutDialog(this); });
     auto *help = menuBar()->addMenu(tr("帮助(&H)"));
+    helpMenu_ = help;
     help->addAction(shortcutsAction);
     help->addSeparator();
     help->addAction(about);

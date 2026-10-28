@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     std::setlocale(LC_NUMERIC, "C");
     QCoreApplication::setApplicationName(QStringLiteral("NekoPlayer"));
     QCoreApplication::setOrganizationName(QStringLiteral("NekoPlayer"));
-    QCoreApplication::setApplicationVersion(QStringLiteral("0.1.0"));
+    QCoreApplication::setApplicationVersion(QStringLiteral(NEKOPLAYER_VERSION));
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("NekoPlayer — Qt 6 / libmpv 桌面播放器"));

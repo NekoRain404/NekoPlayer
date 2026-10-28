@@ -46,6 +46,10 @@ QString normalize(const QString &source) {
         return QDir::cleanPath(source);
     const QUrl url(source, QUrl::StrictMode);
     if (url.isLocalFile()) {
+        // Match drag-and-drop: a host component makes the authority ambiguous
+        // (UNC/localhost spelling), so reject instead of reinterpreting it.
+        if (!url.host().isEmpty())
+            return {};
         const auto path = url.toLocalFile();
         if (!url.isValid() || url.hasQuery() || url.hasFragment() || path.contains(QChar::Null) ||
             !QDir::isAbsolutePath(path))

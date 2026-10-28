@@ -105,6 +105,7 @@ qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
 
 add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)
+target_compile_definitions(NekoPlayer PRIVATE NEKOPLAYER_VERSION="${PROJECT_VERSION}")
 qt_add_translations(NekoPlayer TS_FILES translations/NekoPlayer_en.ts
     RESOURCE_PREFIX "/i18n")
 

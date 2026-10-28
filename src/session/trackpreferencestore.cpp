@@ -39,32 +39,6 @@ QString normalizedExternalPath(const QString &path) {
     return QDir::cleanPath(canonical.isEmpty() ? path : canonical);
 }
 
-QString validateExistingFile(const QString &path) {
-    if (!QFileInfo::exists(path))
-        return {};
-    constexpr qint64 maximumConfigurationBytes = 4 * 1024 * 1024;
-    const QFileInfo existing(path);
-    if (!existing.isFile() || existing.size() > maximumConfigurationBytes)
-        return configurationError(path);
-    QFile source(path);
-    QTemporaryFile snapshot;
-    if (!source.open(QIODevice::ReadOnly) || !snapshot.open())
-        return configurationError(path);
-    const auto bytes = source.readAll();
-    if (source.error() != QFileDevice::NoError || snapshot.write(bytes) != bytes.size() ||
-        !snapshot.flush())
-        return configurationError(path);
-    QSettings settings(snapshot.fileName(), QSettings::IniFormat);
-    const auto keys = settings.allKeys();
-    if (settings.status() != QSettings::NoError)
-        return configurationError(path);
-    if (keys.isEmpty())
-        return {};
-    bool valid = false;
-    const auto version = settings.value(QStringLiteral("schemaVersion")).toInt(&valid);
-    return valid && version == SchemaVersion ? QString{} : schemaError(path);
-}
-
 bool validOptionalId(const std::optional<qint64> &id) { return !id || *id >= 0; }
 
 bool validEntry(const TrackPreferenceEntry &entry) {
@@ -207,6 +181,106 @@ void writeId(QSettings &settings, const QString &prefix, const QString &name,
     if (id)
         settings.setValue(prefix + name + QStringLiteral("/id"), *id);
 }
+
+struct StoreContents {
+    bool exists = false;
+    bool wellFormed = false;
+    QList<TrackPreferenceEntry> entries;
+    QString error;
+};
+
+StoreContents readContents(const QString &path) {
+    StoreContents contents;
+    if (!QFileInfo::exists(path))
+        return contents;
+    contents.exists = true;
+    constexpr qint64 maximumConfigurationBytes = 4 * 1024 * 1024;
+    const QFileInfo existing(path);
+    if (!existing.isFile() || existing.size() > maximumConfigurationBytes) {
+        contents.error = configurationError(path);
+        return contents;
+    }
+    QFile source(path);
+    QTemporaryFile snapshot;
+    if (!source.open(QIODevice::ReadOnly) || !snapshot.open()) {
+        contents.error = configurationError(path);
+        return contents;
+    }
+    const auto bytes = source.readAll();
+    if (source.error() != QFileDevice::NoError || snapshot.write(bytes) != bytes.size() ||
+        !snapshot.flush()) {
+        contents.error = configurationError(path);
+        return contents;
+    }
+    // Parse a snapshot: QSettings caches data by file name and a cached parse
+    // error would otherwise hide a later format problem from this read.
+    QSettings settings(snapshot.fileName(), QSettings::IniFormat);
+    if (settings.status() != QSettings::NoError) {
+        contents.error = configurationError(path);
+        return contents;
+    }
+    if (settings.allKeys().isEmpty())
+        return contents;
+    bool versionValid = false;
+    const auto version = settings.value(QStringLiteral("schemaVersion")).toInt(&versionValid);
+    if (!versionValid || version != SchemaVersion) {
+        contents.error = schemaError(path);
+        return contents;
+    }
+    bool countValid = false;
+    const auto count = settings.value(QStringLiteral("entries/size")).toInt(&countValid);
+    if (!countValid || count < 0 || count > 100000) {
+        contents.error = schemaError(path);
+        return contents;
+    }
+    QList<TrackPreferenceEntry> parsed;
+    for (int index = 0; index < count; ++index) {
+        TrackPreferenceEntry entry;
+        if (!readEntry(settings, index, entry)) {
+            contents.error = schemaError(path);
+            return contents;
+        }
+        // Replaced media is stale data; temporarily missing media is not,
+        // because the file may come back with the same fingerprint.
+        const auto state = TrackPreferenceStore::state(entry);
+        if (state == TrackPreferenceState::Invalid || state == TrackPreferenceState::Replaced)
+            continue;
+        entry.mediaPath = TrackPreferenceStore::normalizedPath(entry.mediaPath);
+        normalizeExternalPaths(entry.selection);
+        parsed.append(std::move(entry));
+    }
+    contents.entries = normalizedEntries(parsed);
+    // A drop during normalization means disk does not hold the normalized
+    // payload, so the next save must be allowed to rewrite it.
+    contents.wellFormed = contents.entries.size() == count;
+    return contents;
+}
+
+bool sameSelection(const TrackSelectionPreference &left, const TrackSelectionPreference &right) {
+    return left.audioTrackId == right.audioTrackId &&
+           left.subtitleTrackId == right.subtitleTrackId &&
+           left.selectedExternalAudioPath == right.selectedExternalAudioPath &&
+           left.selectedExternalAudioStream == right.selectedExternalAudioStream &&
+           left.externalAudioPaths == right.externalAudioPaths &&
+           left.selectedExternalSubtitlePath == right.selectedExternalSubtitlePath &&
+           left.selectedExternalSubtitleStream == right.selectedExternalSubtitleStream &&
+           left.externalSubtitlePaths == right.externalSubtitlePaths;
+}
+
+bool sameEntries(const QList<TrackPreferenceEntry> &left,
+                 const QList<TrackPreferenceEntry> &right) {
+    if (left.size() != right.size())
+        return false;
+    for (qsizetype index = 0; index < left.size(); ++index) {
+        const auto &a = left.at(index);
+        const auto &b = right.at(index);
+        if (a.mediaPath != b.mediaPath || a.fileSize != b.fileSize ||
+            a.modifiedUtcMs != b.modifiedUtcMs || a.lastUsedUtcMs != b.lastUsedUtcMs ||
+            !sameSelection(a.selection, b.selection))
+            return false;
+    }
+    return true;
+}
 } // namespace
 
 TrackPreferenceStore::TrackPreferenceStore(QString filePath) : filePath_(std::move(filePath)) {}
@@ -242,54 +316,25 @@ bool TrackPreferenceStore::matchesFingerprint(const TrackPreferenceEntry &entry)
 }
 
 TrackPreferenceLoadResult TrackPreferenceStore::load() const {
-    if (const auto error = validateExistingFile(filePath_); !error.isEmpty())
-        return {{}, error};
-    if (!QFileInfo::exists(filePath_))
-        return {};
-    QSettings settings(filePath_, QSettings::IniFormat);
-    settings.sync();
-    if (settings.status() != QSettings::NoError)
-        return {{}, configurationError(filePath_)};
-    if (settings.allKeys().isEmpty())
-        return {};
-    bool versionValid = false;
-    const auto version = settings.value(QStringLiteral("schemaVersion")).toInt(&versionValid);
-    if (!versionValid || version != SchemaVersion)
-        return {{}, schemaError(filePath_)};
-    bool countValid = false;
-    const auto count = settings.value(QStringLiteral("entries/size")).toInt(&countValid);
-    if (!countValid || count < 0 || count > 100000)
-        return {{}, schemaError(filePath_)};
-    QList<TrackPreferenceEntry> entries;
-    bool invalid = false;
-    for (int index = 0; index < count; ++index) {
-        TrackPreferenceEntry entry;
-        if (readEntry(settings, index, entry)) {
-            // Replaced media is stale data; temporarily missing media is not,
-            // because the file may come back with the same fingerprint.
-            const auto state = TrackPreferenceStore::state(entry);
-            if (state == TrackPreferenceState::Invalid || state == TrackPreferenceState::Replaced)
-                continue;
-            entry.mediaPath = normalizedPath(entry.mediaPath);
-            normalizeExternalPaths(entry.selection);
-            entries.append(std::move(entry));
-        } else
-            invalid = true;
-    }
-    return {normalizedEntries(entries), invalid ? schemaError(filePath_) : QString{}};
+    const auto contents = readContents(filePath_);
+    return {contents.entries, contents.error};
 }
 
 QString TrackPreferenceStore::save(const QList<TrackPreferenceEntry> &entries) const {
-    if (const auto error = validateExistingFile(filePath_); !error.isEmpty())
-        return error;
-    const auto loaded = load();
-    if (!loaded.error.isEmpty())
-        return loaded.error;
+    // One parse supplies both validation and the on-disk payload used for the
+    // no-op check; loading a second time cannot reveal anything new.
+    const auto contents = readContents(filePath_);
+    if (!contents.error.isEmpty())
+        return contents.error;
     for (const auto &entry : entries) {
         if (!validEntry(entry))
             return schemaError(filePath_);
     }
     const auto retained = normalizedEntries(entries);
+    if (contents.exists && contents.wellFormed && sameEntries(contents.entries, retained)) {
+        restrictConfigurationFilePermissions(filePath_);
+        return {};
+    }
     if (!QDir().mkpath(QFileInfo(filePath_).absolutePath()))
         return configurationError(filePath_);
     QSettings settings(filePath_, QSettings::IniFormat);

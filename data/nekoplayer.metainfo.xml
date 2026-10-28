@@ -10,7 +10,7 @@
     <p>It provides a playlist with search and sorting, track and subtitle selection, keyboard-driven transport, session restore, and a single GPU-backed playback path.</p>
   </description>
   <launchable type="desktop-id">nekoplayer.desktop</launchable>
-  <url type="homepage">https://github.com/NekoRain</url>
+  <url type="homepage">https://github.com/NekoRain404/NekoPlayer</url>
   <developer id="io.github.nekorain">
     <name>NekoRain</name>
   </developer>

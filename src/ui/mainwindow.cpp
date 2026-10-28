@@ -79,6 +79,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
     createActions();
     new QuickActionsDialog(this, this);
+    if (auto *quickActions = findChild<QAction *>(QStringLiteral("quickActionsAction")))
+        helpMenu_->addAction(quickActions);
     connect(folderMenu_, &FolderMenu::mediaLibraryPreferencesChanged, this,
             [this](bool scanningEnabled, bool recursiveByDefault) {
                 if (session_)
@@ -643,9 +645,13 @@ void MainWindow::setMiniPlayer(bool enabled) {
     if (enabled == miniPlayerActive_ && !miniPlayerAnimation_->isRunning())
         return;
     miniPlayerDesired_ = enabled;
-    if (miniPlayerAnimation_->isRunning() && miniPlayerAnimation_->targetOpacity() == 0.0)
-        return;
-    animateMiniPlayerWindow(0.0);
+    // Apply the mode change immediately. Window flags, geometry and chrome must
+    // not depend on an animation completing: a suspended compositor or the
+    // reduced-motion setting can skip it entirely, leaving the UI in the old
+    // mode. The opacity fade stays purely decorative.
+    applyMiniPlayerState(enabled);
+    miniPlayerAnimation_->stopAt(0.0);
+    animateMiniPlayerWindow(1.0);
 }
 
 void MainWindow::setMiniPlayerImmediately(bool enabled) {

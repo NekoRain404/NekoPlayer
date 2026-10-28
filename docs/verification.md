@@ -1,5 +1,21 @@
 # Verification Record
 
+Implementation round (2026-10-28, audit remediation plan `docs/superpowers/plans/2026-10-28-audit-remediation.md`):
+
+- Fresh Debug build: 0 warnings. `ctest --preset debug -E window` passed **73/73** in **67.96 s** with the per-test `LC_ALL=C`/`LANG=C` environment injected by `tests/CMakeLists.txt`.
+- Window behavior tests: **11/13** passed in the native Wayland session. The five failing subtests are the pre-existing mini-player/fullscreen transition cases (`miniPlayerClearsTimelinePreview`, `miniPlayerAndFullscreenRemainMutuallyExclusive`, `fullscreenAndMiniPlayerSwitchCleanlyInBothDirections`, `miniPlayerTogglesWindowPresentation`, `playlistWidthTracksLiveResizeAndTransitions`); no new window failure was introduced.
+- Focused ASan/UBSan run with `detect_leaks=0`: `playback-history-store`, `track-preference-store`, `title-format`, `thumbnail-decoder`, `thumbnail-service`, `mpv-open-failure`, `stop-interleaving` passed **7/7**.
+- `lrelease translations/NekoPlayer_en.ts` reports **436** translations, **0** unfinished. `code-size` passes.
+- `--check-backend` reports mpv v0.41.0 / client API 2.5; offscreen `--smoke-test` exits 0.
+
+Documentation consistency audit (2026-10-28, audit run recorded in `docs/audit-2026-10-28.md`):
+
+- The audit's non-window selection `LC_ALL=C ctest --preset debug -E window` passed **71/71** in **72.46 s** against the 84 registered tests recorded at that time; window behavior tests were not run. This is the audit's dated result, not a new run performed by this documentation round.
+- `tests/CMakeLists.txt` now injects `LC_ALL=C` and `LANG=C` into every registered test, so `ctest --preset debug` no longer depends on the caller's numeric locale. The audit had observed 39/84 failures and 6 SIGSEGV under a default `en_US.UTF-8` locale before this change.
+- Window behavior tests are registered but run only through desktop presets: `debug` and `sanitizers` on native Wayland, `debug-x11` and `sanitizers-x11` under Xvfb + Openbox. `always_on_top_window_test`, `startup_options_window_test`, and `playlist_maintenance_window_test` are compile-only and are not registered as tests.
+- This round changed documentation only: README test and translation counts now point here or to `lrelease` output, the Arch packaging notes match the PKGBUILD's pinned v0.1.0 release checksum, and the AppStream homepage points at the project repository. No source, test, CMake, or translation file was changed.
+- Counts remain volatile: the English catalog is maintained with `lrelease`, and a separate change was still completing it, so no current translation total is recorded here.
+
 Release candidate closure (2026-10-26, source at `555a663`):
 
 - Fresh final non-window Debug run: `QT_QPA_PLATFORM=offscreen LC_ALL=C LANG=C ctest --test-dir build/debug --exclude-regex 'window|backend-startup' --output-on-failure` passed **70/70** in **65.89 seconds**. Window behavior tests remain intentionally unrun.

@@ -55,6 +55,22 @@ class M3u8StoreTest final : public QObject {
         QCOMPARE(loaded.currentIndex, -1);
     }
 
+    void rejectsHlsManifestInsteadOfFlatteningSegments() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("stream.m3u8"));
+        QFile output(file);
+        QVERIFY(output.open(QIODevice::WriteOnly));
+        const QByteArray manifest("#EXTM3U\n#EXT-X-TARGETDURATION:4\n#EXTINF:4.0,\n"
+                                  "segment0.ts\n#EXTINF:4.0,\nsegment1.ts\n");
+        QCOMPARE(output.write(manifest), manifest.size());
+        output.close();
+        const auto loaded = M3u8Store::load(file);
+        QVERIFY(!loaded.error.isEmpty());
+        QVERIFY(loaded.paths.isEmpty());
+        QVERIFY(loaded.error.contains(QStringLiteral("HLS")));
+    }
+
     void savesNonEmptyListWithoutCurrentRow() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

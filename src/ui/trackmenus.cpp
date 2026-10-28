@@ -28,7 +28,7 @@ QString trackLabel(const MediaTrack &track) {
 TrackMenus::TrackMenus(MpvController &controller, QWidget *window, QMenu *subtitleDelayMenu,
                        QMenu *subtitleDisplayMenu)
     : QObject(window), controller_(controller), window_(window),
-      audioMenu_(new QMenu(tr("音轨"), window)), subtitleMenu_(new QMenu(tr("字幕(&S)"), window)),
+      audioMenu_(new QMenu(tr("音轨"), window)), subtitleMenu_(new QMenu(tr("字幕(&U)"), window)),
       subtitleDelayMenu_(subtitleDelayMenu), subtitleDisplayMenu_(subtitleDisplayMenu),
       audioGroup_(new QActionGroup(audioMenu_)), subtitleGroup_(new QActionGroup(subtitleMenu_)),
       loadAudioAction_(new QAction(tr("加载外挂音轨…"), this)),

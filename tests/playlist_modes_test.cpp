@@ -2,6 +2,7 @@
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 
+#include <QAbstractItemModelTester>
 #include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -427,6 +428,67 @@ class PlaylistModesTest final : public QObject {
         QCOMPARE(player.tracks().size(), 4);
         QVERIFY(selected(MediaTrack::Type::Audio, 2));
         QVERIFY(selected(MediaTrack::Type::Subtitle, 2));
+    }
+
+    void largeShuffledBatchRemovalKeepsNavigationUsable() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        const auto first = temporary.filePath(QStringLiteral("first.mkv"));
+        const auto last = temporary.filePath(QStringLiteral("last.mkv"));
+        QVERIFY(QFile::copy(media, first));
+        QVERIFY(QFile::copy(media, last));
+
+        QStringList paths;
+        paths.fill(media, 5000);
+        paths[0] = first;
+        paths[4999] = last;
+
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QAbstractItemModelTester tester(queue.model(),
+                                        QAbstractItemModelTester::FailureReportingMode::QtTest);
+        queue.restoreFiles(paths, 2500);
+        queue.setShuffleEnabled(true);
+        queue.playAt(2500);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QTRY_COMPARE(loaded.count(), 1);
+
+        QSignalSpy changed(&queue, &PlaylistController::currentChanged);
+        QSignalSpy modelChanged(queue.model(), &PlaylistModel::currentIndexChanged);
+        QSignalSpy removals(queue.model(), &QAbstractItemModel::rowsRemoved);
+
+        QList<int> rows;
+        for (auto row = 1000; row < 2000; ++row)
+            rows.append(row);
+        for (auto row = 3000; row < 4000; ++row)
+            rows.append(row);
+        queue.removeRowsAt(rows);
+
+        QCOMPARE(queue.model()->rowCount(), 3000);
+        QCOMPARE(queue.model()->currentIndex(), 1500);
+        QCOMPARE(queue.model()->pathAt(0), first);
+        QCOMPARE(queue.model()->pathAt(2999), last);
+        // Two contiguous ranges, not one notification per removed row.
+        QCOMPARE(removals.count(), 2);
+        // One logical current change for the batch; the entry itself survives
+        // and only its row number shifts.
+        QCOMPARE(changed.count(), 1);
+        QCOMPARE(modelChanged.count(), 1);
+
+        // Pruning ran once for the batch, so both directions still reach survivors.
+        QVERIFY(queue.hasNext());
+        loaded.clear();
+        queue.playNext();
+        QTRY_COMPARE(loaded.count(), 1);
+        const auto nextRow = queue.model()->currentIndex();
+        QVERIFY(nextRow >= 0 && nextRow < 3000);
+        QVERIFY(nextRow != 1500);
+        QVERIFY(queue.hasPrevious());
+        loaded.clear();
+        queue.playPrevious();
+        QTRY_COMPARE(loaded.count(), 1);
+        QCOMPARE(queue.model()->currentIndex(), 1500);
     }
 };
 

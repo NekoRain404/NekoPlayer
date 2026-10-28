@@ -41,6 +41,37 @@ class MpvControllerTestAccess final {
         player.impl_->commitPendingOpen(entry);
     }
 
+    static void startTrackedFile(MpvController &player, int64_t entry) {
+        player.impl_->handleStartFile(entry);
+    }
+
+    static void setTracks(MpvController &player, QList<MediaTrack> tracks) {
+        player.impl_->tracks = std::move(tracks);
+    }
+
+    static bool recoveryPending(const MpvController &player) {
+        return player.impl_->recovery.has_value();
+    }
+    static double recoveryPosition(const MpvController &player) {
+        return player.impl_->recovery ? player.impl_->recovery->playback.position : -1.0;
+    }
+    static qsizetype recoveryTrackCount(const MpvController &player) {
+        return player.impl_->recovery ? player.impl_->recovery->tracks.size() : -1;
+    }
+    static qsizetype tracksToRestoreCount(const MpvController &player) {
+        return player.impl_->tracksToRestore.size();
+    }
+    static int recoveryAttempts(const MpvController &player) {
+        return player.impl_->recoveryAttempts;
+    }
+    static bool recovering(const MpvController &player) { return player.impl_->recoveringRenderer; }
+    static bool recoveryLoadTracked(const MpvController &player) {
+        return player.impl_->recoveryLoad.has_value();
+    }
+    static uint64_t recoveryCommand(const MpvController &player) {
+        return player.impl_->recoveryLoad ? player.impl_->recoveryLoad->command : 0;
+    }
+
     static void fileLoaded(MpvController &player) { player.impl_->handleFileLoaded(); }
 
     static void commandReply(MpvController &player, uint64_t command, int status,
@@ -111,6 +142,125 @@ class MpvOpenFailureTest final : public QObject {
 
         // Inspect the pending bookmark before asynchronous backend observations.
         QCOMPARE(player.resumePosition(), position);
+    }
+
+    void recoveryReloadSuccessRestoresSnapshotAndNotifiesOnce() {
+        MpvController player(true, true);
+        QVERIFY2(player.isReady(), qPrintable(player.errorString()));
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy failed(&player, &MpvController::mediaLoadFailed);
+        MpvControllerTestAccess::primeRecovery(player, QStringLiteral("/old/media.mkv"), true);
+        MpvControllerTestAccess::setTracks(
+            player, {{2, MediaTrack::Type::Audio, {}, {}, {}, false, true, {}},
+                     {5, MediaTrack::Type::Subtitle, {}, {}, {}, false, true, {}}});
+        player.prepareForRendererReset();
+        QVERIFY(MpvControllerTestAccess::recoveryPending(player));
+
+        player.resumeAfterRendererReset();
+        const auto command = MpvControllerTestAccess::recoveryCommand(player);
+        QVERIFY(command != 0);
+        QVERIFY(MpvControllerTestAccess::recoveryLoadTracked(player));
+        QCOMPARE(MpvControllerTestAccess::recoveryAttempts(player), 1);
+        QCOMPARE(MpvControllerTestAccess::recoveryTrackCount(player), 2);
+
+        // The reply supplies the entry; START_FILE and FILE_LOADED then run as
+        // they would for a normal open.
+        MpvControllerTestAccess::commandReply(player, command, 0, 501);
+        MpvControllerTestAccess::startTrackedFile(player, 501);
+        MpvControllerTestAccess::fileLoaded(player);
+
+        QCOMPARE(loaded.count(), 1);
+        QCOMPARE(failed.count(), 0);
+        QVERIFY(player.state().active);
+        QCOMPARE(player.state().path, QStringLiteral("/old/media.mkv"));
+        QVERIFY(player.state().paused);
+        QCOMPARE(MpvControllerTestAccess::tracksToRestoreCount(player), 2);
+        QVERIFY(!MpvControllerTestAccess::recoveryPending(player));
+        QVERIFY(!MpvControllerTestAccess::recovering(player));
+        QCOMPARE(MpvControllerTestAccess::recoveryAttempts(player), 0);
+    }
+
+    void recoveryReloadFailureReportsAndRetriesOnce() {
+        MpvController player(true, true);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy failed(&player, &MpvController::mediaLoadFailed);
+        MpvControllerTestAccess::primeRecovery(player, QStringLiteral("/old/media.mkv"), true);
+        player.prepareForRendererReset();
+        player.resumeAfterRendererReset();
+        auto command = MpvControllerTestAccess::recoveryCommand(player);
+        QVERIFY(command != 0);
+        MpvControllerTestAccess::commandReply(player, command, 0, 601);
+        MpvControllerTestAccess::startTrackedFile(player, 601);
+
+        mpv_event_end_file end{};
+        end.reason = MPV_END_FILE_REASON_ERROR;
+        end.error = MPV_ERROR_VO_INIT_FAILED;
+        end.playlist_entry_id = 601;
+        MpvControllerTestAccess::endFile(player, end);
+
+        QCOMPARE(loaded.count(), 0);
+        QCOMPARE(failed.count(), 1);
+        QVERIFY(!player.state().active);
+        QVERIFY(MpvControllerTestAccess::recoveryPending(player));
+        QCOMPARE(MpvControllerTestAccess::recoveryAttempts(player), 1);
+
+        // A later ready retries from the retained snapshot; the second failure
+        // exhausts the budget and reports the final failure.
+        player.resumeAfterRendererReset();
+        command = MpvControllerTestAccess::recoveryCommand(player);
+        QVERIFY(command != 0);
+        MpvControllerTestAccess::commandReply(player, command, 0, 602);
+        MpvControllerTestAccess::startTrackedFile(player, 602);
+        end.playlist_entry_id = 602;
+        MpvControllerTestAccess::endFile(player, end);
+
+        QCOMPARE(loaded.count(), 0);
+        QCOMPARE(failed.count(), 2);
+        QVERIFY(!MpvControllerTestAccess::recoveryPending(player));
+        QVERIFY(!MpvControllerTestAccess::recovering(player));
+    }
+
+    void secondContextLossKeepsRecoverySnapshot() {
+        MpvController player(true, true);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy failed(&player, &MpvController::mediaLoadFailed);
+        MpvControllerTestAccess::primeRecovery(player, QStringLiteral("/old/media.mkv"), true);
+        player.prepareForRendererReset();
+        player.resumeAfterRendererReset();
+        const auto firstCommand = MpvControllerTestAccess::recoveryCommand(player);
+        QVERIFY(firstCommand != 0);
+        MpvControllerTestAccess::commandReply(player, firstCommand, 0, 701);
+        MpvControllerTestAccess::startTrackedFile(player, 701);
+        QVERIFY(MpvControllerTestAccess::recoveryLoadTracked(player));
+
+        // A second context loss before FILE_LOADED must keep the newer snapshot
+        // instead of overwriting it with the half-reset state.
+        player.prepareForRendererReset();
+        QVERIFY(MpvControllerTestAccess::recoveryPending(player));
+        QCOMPARE(MpvControllerTestAccess::recoveryPosition(player), 12.5);
+        QVERIFY(!MpvControllerTestAccess::recoveryLoadTracked(player));
+
+        // The superseded reload's teardown is expected, not a load failure.
+        mpv_event_end_file end{};
+        end.reason = MPV_END_FILE_REASON_ERROR;
+        end.error = MPV_ERROR_VO_INIT_FAILED;
+        end.playlist_entry_id = 701;
+        MpvControllerTestAccess::endFile(player, end);
+        QCOMPARE(failed.count(), 0);
+        QVERIFY(MpvControllerTestAccess::recoveryPending(player));
+
+        player.resumeAfterRendererReset();
+        const auto retryCommand = MpvControllerTestAccess::recoveryCommand(player);
+        QVERIFY(retryCommand != 0);
+        MpvControllerTestAccess::commandReply(player, retryCommand, 0, 702);
+        MpvControllerTestAccess::startTrackedFile(player, 702);
+        MpvControllerTestAccess::fileLoaded(player);
+
+        QCOMPARE(loaded.count(), 1);
+        QCOMPARE(failed.count(), 0);
+        QVERIFY(player.state().active);
+        QVERIFY(!MpvControllerTestAccess::recoveryPending(player));
+        QVERIFY(!MpvControllerTestAccess::recovering(player));
     }
 
     void rejectedOpenNotifiesQueueAndKeepsExistingPlayback() {

@@ -65,6 +65,9 @@ void RecentMediaMenu::rebuild() {
     clear->setEnabled(index > 0);
     connect(clear, &QAction::triggered, this, [this] {
         history_.clear();
+        // Resume bookmarks live in the session store; the owner clears them too
+        // so "clear recent" cannot leave a continue-watching entry behind.
+        emit cleared();
         emit feedback(tr("最近播放记录已清空"));
     });
 }

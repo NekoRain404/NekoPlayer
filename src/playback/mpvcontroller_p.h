@@ -84,6 +84,17 @@ struct MpvController::Impl {
         int64_t entry = -1;
         bool replyReceived = false;
     };
+    // A loadfile submitted by resumeAfterRendererReset(). The recovery reload
+    // continues the current open generation, so it is kept out of pendingOpens;
+    // only its command id and playlist entry are tracked so its own terminal
+    // events can be told apart from the released renderer's teardown.
+    struct RecoveryLoad {
+        uint64_t command = 0;
+        int64_t entry = -1;
+        bool entryKnown = false;
+    };
+    // One initial reload plus one retry when another context becomes ready.
+    static constexpr int maxRecoveryAttempts = 2;
     struct TrackPreferenceRestore {
         TrackSelectionPreference preference;
         QList<std::pair<MediaTrack::Type, QString>> paths;
@@ -110,7 +121,11 @@ struct MpvController::Impl {
     bool chapterSeekStarted = false;
     bool chapterQuerySettled = false;
     bool loading = false;
+    // Retained until the recovery reload reaches FILE_LOADED (or the retry
+    // budget is exhausted) so a failed reload can be retried on a later ready.
     std::optional<RecoveryState> recovery;
+    std::optional<RecoveryLoad> recoveryLoad;
+    int recoveryAttempts = 0;
     // Canonical paths the user explicitly added or selected for this media.
     QSet<QString> explicitExternalPaths;
     // Explicit paths captured before a renderer-recovery reset; re-marked once
@@ -404,8 +419,12 @@ struct MpvController::Impl {
     bool finishInformationQuery(const mpv_event &event);
     bool finishScreenshot(const mpv_event &event);
     void drainEvents();
+    void handleStartFile(int64_t entry);
     void handleEndFile(const mpv_event_end_file &end);
     void handleFileLoaded();
+    bool handleRecoveryCommandReply(const mpv_event &event);
+    void finishRecoveryLoad();
+    void failRecoveryLoad(int status, uint64_t generation);
 
     static void wakeup(void *userdata) {
         auto *self = static_cast<Impl *>(userdata);

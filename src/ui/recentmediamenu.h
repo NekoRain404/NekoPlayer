@@ -15,6 +15,7 @@ class RecentMediaMenu final : public QObject {
 
   signals:
     void openRequested(const QString &source);
+    void cleared();
     void feedback(const QString &message);
 
   private:

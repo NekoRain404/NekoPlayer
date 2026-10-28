@@ -28,6 +28,9 @@ class SessionManager final : public QObject {
     [[nodiscard]] LanguagePreferences languagePreferences() const;
     void setLanguagePreferences(const LanguagePreferences &preferences);
     [[nodiscard]] QList<PlaybackHistoryEntry> playbackHistory() const;
+    // Clears resume bookmarks and the "continue watching" list while keeping
+    // the current queue and per-media track preferences.
+    void clearPlaybackHistory();
     void rememberMedia(const QString &path);
 
   signals:
@@ -54,6 +57,7 @@ class SessionManager final : public QObject {
     QString historyError_;
     bool stopRequested_ = false;
     QList<TrackPreferenceEntry> trackPreferences_;
+    QList<TrackPreferenceEntry> persistedTrackPreferences_;
     QString trackPreferenceError_;
     bool restoringTrackPreference_ = false;
     bool pendingMediaPreference_ = false;

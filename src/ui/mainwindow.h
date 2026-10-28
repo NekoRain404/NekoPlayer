@@ -137,6 +137,7 @@ class MainWindow final : public QMainWindow {
     QAction *alwaysOnTopAction_ = nullptr;
     QMenu *contextMenu_ = nullptr;
     QMenu *playlistMenu_ = nullptr;
+    QMenu *helpMenu_ = nullptr;
     PlaylistMaintenanceMenu *playlistMaintenance_ = nullptr;
     QTimer controlsTimer_;
     WindowOpacityTransition *miniPlayerAnimation_ = nullptr;

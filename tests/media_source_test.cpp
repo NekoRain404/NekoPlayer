@@ -47,6 +47,8 @@ class MediaSourceTest final : public QObject {
                  QStringLiteral("https://example.org/a/../b?x=/../"));
         QVERIFY(MediaSource::normalize(QStringLiteral("http:missing-host")).isEmpty());
         QVERIFY(MediaSource::normalize(QStringLiteral("file:///tmp/video?x=1")).isEmpty());
+        QVERIFY(MediaSource::normalize(QStringLiteral("file://localhost/tmp/video.mkv")).isEmpty());
+        QVERIFY(MediaSource::normalize(QStringLiteral("file://server/share/video.mkv")).isEmpty());
         QVERIFY(MediaSource::normalize(QStringLiteral("file:///tmp/%00movie.mkv")).isEmpty());
         QVERIFY(MediaSource::normalize(QStringLiteral("a") + QChar::Null).isEmpty());
     }

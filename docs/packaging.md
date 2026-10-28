@@ -19,27 +19,66 @@ the distributed source archive.
 | Kind | Arch packages |
 | --- | --- |
 | Runtime | `qt6-base`, `qt6-translations`, `mpv`, `ffmpeg`, `hicolor-icon-theme` |
-| Build | `cmake`, `ninja`, `qt6-tools` (`lrelease`), `pkgconf` |
+| Build | `cmake`, `ninja`, `pkgconf`, `qt6-tools` (`lrelease`); the `qt6-base`, `mpv`, and `ffmpeg` headers come from the runtime dependencies |
 
 `base-devel` is assumed by `makepkg`.
 
+Building NekoPlayer unconditionally requires Qt 6 Core/Concurrent/Widgets/
+OpenGLWidgets and LinguistTools (`lrelease`), the libmpv client headers, and the
+FFmpeg development libraries (`libavformat`, `libavcodec`, `libavutil`,
+`libswscale`). In this PKGBUILD they come from `qt6-base`, `qt6-tools`, `mpv`,
+and the `ffmpeg` package. `ffmpeg` is also a runtime dependency because
+thumbnail decoding links it, so `-DBUILD_TESTING=OFF` does not remove the FFmpeg
+requirement. Qt Test and Qt Network are needed only by the test suite, which
+this package disables.
+
 ## Local build and install
 
-From the repository root:
+The PKGBUILD builds from the published v0.1.0 GitHub release asset:
+
+```text
+https://github.com/NekoRain404/NekoPlayer/releases/download/v0.1.0/nekoplayer-0.1.0.tar.gz
+```
+
+and pins that asset's SHA-256:
+
+```text
+c55795e1d251224c3f957fc401d20bc03c8122ab532508826600ac1119677bf8
+```
+
+A `git archive` of the current working tree is not the published release
+asset, so `makepkg` rejects it against the pinned checksum. To build the current
+working tree, generate the archive under the name the PKGBUILD expects and
+choose one of the two options below.
 
 ```bash
+# from the repository root
 git archive --format=tar.gz --prefix=nekoplayer-0.1.0/ \
     -o packaging/arch/nekoplayer-0.1.0.tar.gz HEAD
 cd packaging/arch
+```
+
+Option A: regenerate the checksum for the local archive, then build
+(`updpkgsums` is provided by `pacman-contrib`):
+
+```bash
+updpkgsums
 makepkg -si
 ```
 
-`makepkg -si` resolves and installs missing dependencies with pacman, builds a
-Release binary, installs the package, and then removes the build directory.
+Option B: temporarily skip the checksum for an unshared local build:
 
-The PKGBUILD intentionally uses `sha256sums=('SKIP')` for the locally generated
-archive. For an AUR upload, point `source` at the published release tarball and
-run `updpkgsums` before uploading.
+```bash
+sed -i "s/^sha256sums=.*/sha256sums=('SKIP')/" PKGBUILD
+makepkg -si
+```
+
+Restore the committed `PKGBUILD` afterwards (`git restore packaging/arch/PKGBUILD`
+from the repository root). `makepkg -si` resolves and installs missing
+dependencies with pacman, builds a Release binary, installs the package, and
+then removes the build directory. Do not publish a `SKIP` checksum: for a
+release or AUR upload, keep the pinned checksum for the published asset and
+update it with `updpkgsums` whenever that asset changes.
 
 ## Installed files
 

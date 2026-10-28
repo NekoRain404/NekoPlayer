@@ -467,6 +467,33 @@ class SessionTest final : public QObject {
         }
     }
 
+    void clearingPlaybackHistoryRemovesResumeBookmarks() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("settings.ini"));
+        QVERIFY(SessionStore(path).save({}).isEmpty());
+        const auto historyPath = path + QStringLiteral(".history.ini");
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        QVERIFY(PlaybackHistoryStore(historyPath)
+                    .save({{media, 30.0, 120.0, 1700000000000LL}})
+                    .isEmpty());
+
+        MpvController player(true, true);
+        PlaylistController playlist(player);
+        SessionManager session(player, playlist, path);
+        QVERIFY(session.restore().error.isEmpty());
+        QCOMPARE(session.playbackHistory().size(), 1);
+        QSignalSpy changed(&session, &SessionManager::playbackHistoryChanged);
+
+        session.clearPlaybackHistory();
+
+        QVERIFY(session.playbackHistory().isEmpty());
+        QCOMPARE(changed.count(), 1);
+        const auto stored = PlaybackHistoryStore(historyPath).load();
+        QVERIFY(stored.error.isEmpty());
+        QVERIFY(stored.entries.isEmpty());
+    }
+
     void inaccessibleDestinationReportsFailure() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

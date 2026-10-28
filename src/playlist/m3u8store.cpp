@@ -57,12 +57,21 @@ M3u8LoadResult M3u8Store::load(const QString &filePath) {
     int current = -1;
     bool markerSeen = false;
     const auto base = QFileInfo(filePath).absolutePath();
+    int lineNumber = 0;
     for (const auto &rawLine : text.split(QLatin1Char('\n'))) {
+        ++lineNumber;
         auto line = rawLine;
         if (line.endsWith(QLatin1Char('\r')))
             line.chop(1);
         if (line.isEmpty())
             continue;
+        // HLS master/media playlists describe streams, not a queue. Importing
+        // them as paths would play a segment and then overwrite the manifest.
+        if (line.startsWith(QLatin1String("#EXT-X-")))
+            return {
+                {},
+                -1,
+                QStringLiteral("HLS playlists cannot be imported as a queue: %1").arg(filePath)};
         if (line.startsWith(QLatin1String("#NEKOPLAYER-CURRENT"))) {
             if (markerSeen || !parseCurrent(line, current))
                 return {{}, -1, QStringLiteral("Invalid current marker: %1").arg(filePath)};
@@ -72,12 +81,20 @@ M3u8LoadResult M3u8Store::load(const QString &filePath) {
         if (line.startsWith(QLatin1Char('#')))
             continue;
         if (!validEntry(line))
-            return {{}, -1, QStringLiteral("Invalid playlist entry: %1").arg(filePath)};
+            return {{},
+                    -1,
+                    QStringLiteral("Invalid playlist entry at line %1: %2")
+                        .arg(lineNumber)
+                        .arg(filePath)};
         if (!QDir::isAbsolutePath(line) && !hasUrlScheme(line))
             line = QDir(base).absoluteFilePath(line);
         const auto source = MediaSource::normalize(line);
         if (source.isEmpty())
-            return {{}, -1, QStringLiteral("Invalid playlist source: %1").arg(filePath)};
+            return {{},
+                    -1,
+                    QStringLiteral("Invalid playlist source at line %1: %2")
+                        .arg(lineNumber)
+                        .arg(filePath)};
         // Decode file URLs into the same absolute paths used by local opening
         // and history. Retain network spelling, including signed escape bytes.
         if (QDir::isAbsolutePath(source))

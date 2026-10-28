@@ -55,7 +55,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
       moveDown_(new QAction(tr("下移所选项"), this)),
       focusSearchAction_(new QAction(tr("搜索播放列表"), this)),
       clearSearchAction_(new QAction(tr("清除播放列表搜索"), this)),
-      singleClickTimer_(new QTimer(this)) {
+      singleClickTimer_(new QTimer(this)), structureUpdateTimer_(new QTimer(this)) {
     setObjectName(QStringLiteral("playlistPane"));
     setMinimumWidth(240);
     filter_->setSourceModel(model_);
@@ -135,17 +135,22 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     });
     connect(clearSearchAction_, &QAction::triggered, search_, &QLineEdit::clear);
     connect(model_, &PlaylistModel::currentIndexChanged, this, &PlaylistPane::synchronizeCurrent);
-    connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateEditingActions);
-    connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateEditingActions);
+    connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::handleStructureChange);
+    connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::handleStructureChange);
     connect(model_, &PlaylistModel::rowsMoved, this, &PlaylistPane::updateEditingActions);
     connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateEditingActions);
     connect(model_, &PlaylistModel::modelReset, this, [this] { search_->clear(); });
-    connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateEmptyHint);
-    connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateEmptyHint);
     connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateEmptyHint);
-    connect(model_, &PlaylistModel::rowsInserted, this, &PlaylistPane::updateItemCount);
-    connect(model_, &PlaylistModel::rowsRemoved, this, &PlaylistPane::updateItemCount);
     connect(model_, &PlaylistModel::modelReset, this, &PlaylistPane::updateItemCount);
+    connect(&queue_, &PlaylistController::batchEditStarted, this,
+            [this] { batchEditActive_ = true; });
+    connect(&queue_, &PlaylistController::batchEditFinished, this, [this] {
+        batchEditActive_ = false;
+        flushStructureRefresh();
+    });
+    structureUpdateTimer_->setSingleShot(true);
+    structureUpdateTimer_->setInterval(0);
+    connect(structureUpdateTimer_, &QTimer::timeout, this, &PlaylistPane::flushStructureRefresh);
     view_->setAlternatingRowColors(false);
     view_->setUniformItemSizes(true);
     view_->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -167,6 +172,7 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     auto *count = new QLabel(header);
     count->setObjectName(QStringLiteral("playlistCount"));
     count->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    countLabel_ = count;
     headerLayout->addWidget(title);
     headerLayout->addStretch();
     headerLayout->addWidget(count);
@@ -357,14 +363,38 @@ void PlaylistPane::selectSourceCurrent() {
     }
 }
 
+void PlaylistPane::handleStructureChange() {
+    if (!batchEditActive_) {
+        refreshStructure();
+        return;
+    }
+    // A batch emits one signal per contiguous range (plus selection churn).
+    // Defer the refresh so all of them share one update; endBatch flushes it.
+    structureRefreshPending_ = true;
+    structureUpdateTimer_->start();
+}
+
+void PlaylistPane::flushStructureRefresh() {
+    structureUpdateTimer_->stop();
+    if (!structureRefreshPending_)
+        return;
+    structureRefreshPending_ = false;
+    refreshStructure();
+}
+
+void PlaylistPane::refreshStructure() {
+    updateEditingActions();
+    updateEmptyHint();
+    updateItemCount();
+}
+
 void PlaylistPane::updateItemCount() {
-    auto *count = findChild<QLabel *>(QStringLiteral("playlistCount"));
-    if (!count)
+    if (!countLabel_)
         return;
     if (filtering_)
-        count->setText(tr("%1 / %2 项").arg(filter_->rowCount()).arg(model_->rowCount()));
+        countLabel_->setText(tr("%1 / %2 项").arg(filter_->rowCount()).arg(model_->rowCount()));
     else
-        count->setText(tr("%1 项").arg(model_->rowCount()));
+        countLabel_->setText(tr("%1 项").arg(model_->rowCount()));
 }
 
 void PlaylistPane::synchronizeCurrent() {

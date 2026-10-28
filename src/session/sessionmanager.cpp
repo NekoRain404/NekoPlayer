@@ -11,6 +11,33 @@
 #include <cmath>
 #include <utility>
 
+namespace {
+// The selection and fingerprint are what make a write observable to the next
+// launch; lastUsedUtcMs only orders entries and is refreshed in memory.
+bool sameTrackPayload(const QList<TrackPreferenceEntry> &left,
+                      const QList<TrackPreferenceEntry> &right) {
+    if (left.size() != right.size())
+        return false;
+    for (qsizetype index = 0; index < left.size(); ++index) {
+        const auto &a = left.at(index);
+        const auto &b = right.at(index);
+        const auto &x = a.selection;
+        const auto &y = b.selection;
+        if (a.mediaPath != b.mediaPath || a.fileSize != b.fileSize ||
+            a.modifiedUtcMs != b.modifiedUtcMs || x.audioTrackId != y.audioTrackId ||
+            x.subtitleTrackId != y.subtitleTrackId ||
+            x.selectedExternalAudioPath != y.selectedExternalAudioPath ||
+            x.selectedExternalAudioStream != y.selectedExternalAudioStream ||
+            x.externalAudioPaths != y.externalAudioPaths ||
+            x.selectedExternalSubtitlePath != y.selectedExternalSubtitlePath ||
+            x.selectedExternalSubtitleStream != y.selectedExternalSubtitleStream ||
+            x.externalSubtitlePaths != y.externalSubtitlePaths)
+            return false;
+    }
+    return true;
+}
+} // namespace
+
 SessionManager::SessionManager(MpvController &player, PlaylistController &playlist,
                                QString filePath, QObject *parent)
     : QObject(parent), player_(player), playlist_(playlist), store_(filePath),
@@ -88,6 +115,7 @@ SessionLoadResult SessionManager::restore() {
     audio_ = loaded.state.audio;
     const auto trackPreferences = trackPreferenceStore_.load();
     trackPreferences_ = trackPreferences.entries;
+    persistedTrackPreferences_ = trackPreferences_;
     trackPreferenceError_ = trackPreferences.error;
     if (!trackPreferenceError_.isEmpty())
         emit configurationErrorOccurred(trackPreferenceError_);
@@ -162,7 +190,15 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     // Auxiliary stores must not be reported as a failed session save. Their
     // errors are surfaced through the configuration-error signal instead.
     const auto historyError = savePlaybackHistory();
-    const auto auxiliaryError = !historyError.isEmpty() ? historyError : trackPreferenceError_;
+    auto preferenceError = trackPreferenceError_;
+    if (preferenceError.isEmpty()) {
+        // Close path: flush any in-memory change immediately. Nothing is
+        // deferred to a timer, so there is no window where exit loses a write.
+        preferenceError = saveTrackPreferences();
+        if (!preferenceError.isEmpty())
+            trackPreferenceError_ = preferenceError;
+    }
+    const auto auxiliaryError = !historyError.isEmpty() ? historyError : preferenceError;
     if (!auxiliaryError.isEmpty())
         emit configurationErrorOccurred(auxiliaryError);
     return {};
@@ -213,6 +249,19 @@ double SessionManager::resumePositionFor(const QString &path) {
     return resumePlaybackPositionEnabled_
                ? resumePositions_.value(PlaybackHistoryStore::normalizedPath(path), 0.0)
                : 0.0;
+}
+
+void SessionManager::clearPlaybackHistory() {
+    historyEntries_.clear();
+    resumePositions_.clear();
+    // A previously latched schema error must not keep the cleared file unwritten.
+    historyError_.clear();
+    const auto error = savePlaybackHistory();
+    if (!error.isEmpty()) {
+        historyError_ = error;
+        emit configurationErrorOccurred(error);
+    }
+    emit playbackHistoryChanged();
 }
 
 QString SessionManager::savePlaybackHistory() const {
@@ -372,7 +421,12 @@ QString SessionManager::saveTrackPreferences() {
                      });
     if (trackPreferences_.size() > TrackPreferenceStore::MaximumEntries)
         trackPreferences_.resize(TrackPreferenceStore::MaximumEntries);
-    return trackPreferenceStore_.save(trackPreferences_);
+    if (sameTrackPayload(trackPreferences_, persistedTrackPreferences_))
+        return {};
+    const auto error = trackPreferenceStore_.save(trackPreferences_);
+    if (error.isEmpty())
+        persistedTrackPreferences_ = trackPreferences_;
+    return error;
 }
 
 QString SessionManager::mediaDirectory() const { return mediaDirectory_; }

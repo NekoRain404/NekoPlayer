@@ -52,6 +52,8 @@ class PlaylistController final : public QObject {
 
   signals:
     void currentChanged(int row);
+    void batchEditStarted();
+    void batchEditFinished();
     void queueFinished();
     void queueError(const QString &message);
     void repeatModeChanged(RepeatMode mode);
@@ -83,6 +85,8 @@ class PlaylistController final : public QObject {
     bool shuffleEnabled_ = false;
     bool stopAfterCurrent_ = false;
     ShuffleOrder shuffle_;
+    int editBatchDepth_ = 0;
+    bool shufflePrunePending_ = false;
     QSet<int> failedRows_;
     QPersistentModelIndex resumeEntry_;
     double resumePosition_ = 0;

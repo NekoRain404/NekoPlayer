@@ -49,7 +49,14 @@ PlaylistController::PlaylistController(MpvController &player, QObject *parent)
                 if (shuffleEnabled_)
                     shuffle_.append(*model_, first, last);
             });
-    connect(model_, &PlaylistModel::rowsRemoved, this, [this] { shuffle_.prune(); });
+    connect(model_, &PlaylistModel::rowsRemoved, this, [this] {
+        // A batch removal emits one signal per contiguous range; prune once
+        // after the model has finished so history is not rescanned per range.
+        if (editBatchDepth_ > 0)
+            shufflePrunePending_ = true;
+        else
+            shuffle_.prune();
+    });
     connect(model_, &PlaylistModel::modelReset, this, [this] { shuffle_ = {}; });
     connect(model_, &PlaylistModel::rowsMoved, this,
             [this](const QModelIndex &, int from, int, const QModelIndex &, int destination) {
@@ -282,7 +289,19 @@ void PlaylistController::removeRowsAt(const QList<int> &rows) {
     rowList.reserve(removed.size());
     for (const auto row : removed)
         rowList.append(row);
+    const bool outermostBatch = editBatchDepth_ == 0;
+    if (outermostBatch)
+        emit batchEditStarted();
+    ++editBatchDepth_;
     model_->removeRowsAt(rowList);
+    --editBatchDepth_;
+    if (outermostBatch) {
+        if (shufflePrunePending_) {
+            shufflePrunePending_ = false;
+            shuffle_.prune();
+        }
+        emit batchEditFinished();
+    }
     if (removingCurrent && shuffleEnabled_)
         shuffle_.reset(*model_, model_->currentIndex());
     emit currentChanged(model_->currentIndex());

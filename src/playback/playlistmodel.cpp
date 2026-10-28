@@ -179,16 +179,32 @@ int PlaylistModel::removeRowsAt(const QList<int> &rows) {
         }
     }
 
-    // Descending removals keep every intermediate row number valid.
-    for (auto it = removed.crbegin(); it != removed.crend(); ++it) {
-        const auto row = *it;
-        beginRemoveRows({}, row, row);
-        paths_.removeAt(row);
-        displayNames_.removeAt(row);
-        if (currentIndex_ == row)
+    struct RemovalRange {
+        int first;
+        int last;
+    };
+    std::vector<RemovalRange> ranges;
+    ranges.reserve(removed.size());
+    for (const auto row : removed) {
+        if (!ranges.empty() && row == ranges.back().last + 1)
+            ranges.back().last = row;
+        else
+            ranges.push_back({row, row});
+    }
+
+    // Descending ranges keep every intermediate row number valid, and a run of
+    // adjacent rows costs one notification instead of one notification per row.
+    for (auto it = ranges.crbegin(); it != ranges.crend(); ++it) {
+        const auto first = it->first;
+        const auto last = it->last;
+        const auto count = last - first + 1;
+        beginRemoveRows({}, first, last);
+        paths_.remove(first, count);
+        displayNames_.remove(first, count);
+        if (currentIndex_ >= first && currentIndex_ <= last)
             currentIndex_ = -1;
-        else if (currentIndex_ > row)
-            --currentIndex_;
+        else if (currentIndex_ > last)
+            currentIndex_ -= count;
         endRemoveRows();
     }
     currentIndex_ = finalCurrent;

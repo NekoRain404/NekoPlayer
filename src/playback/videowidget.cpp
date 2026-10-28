@@ -115,12 +115,13 @@ void VideoWidget::paintGL() {
 
 void VideoWidget::onUpdate(void *userdata) {
     auto *surface = static_cast<VideoWidget *>(userdata);
-    if (!surface->closing_.load()) {
-        QMetaObject::invokeMethod(surface, &VideoWidget::processUpdate, Qt::QueuedConnection);
-    }
+    if (surface->closing_.load() || surface->updateQueued_.exchange(true))
+        return;
+    QMetaObject::invokeMethod(surface, &VideoWidget::processUpdate, Qt::QueuedConnection);
 }
 
 void VideoWidget::processUpdate() {
+    updateQueued_ = false;
     if (closing_ || !renderer_ || !context() || !context()->isValid())
         return;
     makeCurrent();

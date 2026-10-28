@@ -1,3 +1,4 @@
+#include "mediasource.h"
 #include "mpvcontroller_p.h"
 
 #include <QCoreApplication>
@@ -122,13 +123,7 @@ void MpvController::Impl::drainEvents() {
         case MPV_EVENT_NONE:
             return;
         case MPV_EVENT_START_FILE:
-            playingEntry = static_cast<mpv_event_start_file *>(event->data)->playlist_entry_id;
-            commitPendingOpen(playingEntry);
-            resetPlayback();
-            loading = true;
-            if (openGenerationsByEntry.value(playingEntry) == openGeneration)
-                pendingPlayback.reset();
-            emit owner->stateChanged();
+            handleStartFile(static_cast<mpv_event_start_file *>(event->data)->playlist_entry_id);
             break;
         case MPV_EVENT_FILE_LOADED:
             handleFileLoaded();
@@ -219,6 +214,25 @@ void MpvController::Impl::drainEvents() {
     }
 }
 
+void MpvController::Impl::handleStartFile(int64_t entry) {
+    playingEntry = entry;
+    // A recovery load is not registered in pendingOpens. Claim its entry here
+    // when the COMMAND_REPLY has not arrived yet, so a terminal event can be
+    // attributed even if it precedes the reply. Entries already owned by a
+    // normal open are left to commitPendingOpen's correlation.
+    if (recoveryLoad && !recoveryLoad->entryKnown && pendingOpens.isEmpty() &&
+        !openGenerationsByEntry.contains(entry) && !startedEntries.contains(entry)) {
+        recoveryLoad->entry = entry;
+        recoveryLoad->entryKnown = true;
+    }
+    commitPendingOpen(entry);
+    resetPlayback();
+    loading = true;
+    if (openGenerationsByEntry.value(entry) == openGeneration)
+        pendingPlayback.reset();
+    emit owner->stateChanged();
+}
+
 void MpvController::Impl::handleEndFile(const mpv_event_end_file &end) {
     if (invalidatedEntries.contains(end.playlist_entry_id)) {
         // stop() invalidated this entry. Its terminal event is still the point
@@ -229,7 +243,12 @@ void MpvController::Impl::handleEndFile(const mpv_event_end_file &end) {
         emit owner->stateChanged();
         return;
     }
-    if (!openGenerationsByEntry.contains(end.playlist_entry_id) &&
+    // Only a correlated entry may be attributed to the recovery reload. An
+    // uncorrelated END_FILE belongs to the superseded load or to the released
+    // renderer, and is swallowed by the expectedReset check below.
+    const bool recoveryEntry =
+        recoveryLoad && recoveryLoad->entryKnown && recoveryLoad->entry == end.playlist_entry_id;
+    if (!recoveryEntry && !openGenerationsByEntry.contains(end.playlist_entry_id) &&
         startedEntries.contains(end.playlist_entry_id)) {
         endedEntries.insert(end.playlist_entry_id, end);
         return;
@@ -248,10 +267,35 @@ void MpvController::Impl::handleEndFile(const mpv_event_end_file &end) {
     openGenerationsByEntry.remove(end.playlist_entry_id);
     startedEntries.remove(end.playlist_entry_id);
     loadedEntries.remove(end.playlist_entry_id);
-    const bool expectedReset = recoveringRenderer && end.error == MPV_ERROR_VO_INIT_FAILED;
+    if (recoveryEntry) {
+        // The tracked recovery reload itself ended. Distinguish its failure
+        // from the renderer teardown that initially triggered recovery.
+        if (end.reason == MPV_END_FILE_REASON_ERROR) {
+            failRecoveryLoad(end.error, generation);
+            if (generation != openGeneration)
+                return;
+            report(end.error);
+        } else {
+            finishRecoveryLoad();
+            resetPlayback();
+            pendingPlayback.reset();
+            if (generation != openGeneration)
+                return;
+            emit owner->stateChanged();
+            if (end.reason == MPV_END_FILE_REASON_EOF)
+                emit owner->playbackFinished();
+        }
+        return;
+    }
+    // A released renderer ends the old entry with VO_INIT_FAILED. While a newer
+    // recovery reload is in flight, terminal events for other entries also
+    // belong to superseded loads and must not cancel the retry.
+    const bool expectedReset =
+        recoveringRenderer && (end.error == MPV_ERROR_VO_INIT_FAILED || recoveryLoad.has_value());
     if (end.reason == MPV_END_FILE_REASON_ERROR && !expectedReset) {
         recoveringRenderer = false;
         recovery.reset();
+        recoveryLoad.reset();
     }
     resetPlayback();
     pendingPlayback.reset();
@@ -266,7 +310,9 @@ void MpvController::Impl::handleEndFile(const mpv_event_end_file &end) {
             return;
         report(end.error);
     }
-    if (end.reason == MPV_END_FILE_REASON_EOF)
+    // A superseded entry ending while the recovery reload is still in flight
+    // must not advance the session queue.
+    if (end.reason == MPV_END_FILE_REASON_EOF && !recoveryLoad)
         emit owner->playbackFinished();
 }
 
@@ -282,6 +328,15 @@ void MpvController::Impl::handleFileLoaded() {
     if (openGenerationsByEntry.contains(playingEntry) &&
         openGenerationsByEntry.value(playingEntry) != openGeneration)
         return;
+    // FILE_LOADED carries no entry id, so match the tracked recovery entry. If
+    // its COMMAND_REPLY is still pending, a START_FILE claimed while no normal
+    // open existed stands in for the correlation.
+    if (recoveryLoad &&
+        (recoveryLoad->entryKnown
+             ? recoveryLoad->entry == playingEntry
+             : (pendingOpens.isEmpty() && !openGenerationsByEntry.contains(playingEntry) &&
+                !startedEntries.contains(playingEntry))))
+        finishRecoveryLoad();
     const auto generation = openGeneration;
     loading = false;
     recoveringRenderer = false;
@@ -295,4 +350,143 @@ void MpvController::Impl::handleFileLoaded() {
                                          openGenerationsByEntry.value(playingEntry) != generation))
         return;
     emit owner->fileLoaded();
+}
+
+void MpvController::Impl::finishRecoveryLoad() {
+    recoveryLoad.reset();
+    recovery.reset();
+    recoveryAttempts = 0;
+    recoveringRenderer = false;
+}
+
+void MpvController::Impl::failRecoveryLoad(int status, uint64_t generation) {
+    recoveryLoad.reset();
+    // Let resetPlayback() clear media-local state (AB loop, chapters, tracks);
+    // resetAbLoop() is suppressed while recoveringRenderer is set.
+    recoveringRenderer = false;
+    openingCommand = 0;
+    openingPosition.reset();
+    if (recoveryAttempts >= maxRecoveryAttempts) {
+        // Retry budget exhausted: drop the snapshot so a later loss opens with
+        // a fresh state instead of replaying media that already failed twice.
+        recovery.reset();
+        recoveryAttempts = 0;
+        cancelTrackRestore();
+    }
+    resetPlayback();
+    pendingPlayback.reset();
+    // A reentrant open supersedes this failure, exactly like the normal END_FILE
+    // path; do not report the old media or clobber the newer request.
+    if (generation != openGeneration)
+        return;
+    emit owner->stateChanged();
+    if (generation != openGeneration)
+        return;
+    emit owner->mediaLoadFailed(QString::fromUtf8(mpv_error_string(status)));
+}
+
+void MpvController::prepareForRendererReset() {
+    auto &self = *impl_;
+    if (self.recovery) {
+        // A second context loss before the retained snapshot has been replayed
+        // must not replace it with the half-reset state. Keep the snapshot and
+        // refresh only the load intent that is newer than it.
+        if (self.openingPosition)
+            self.recovery->playback.position = *self.openingPosition;
+        if (!self.tracksToRestore.isEmpty())
+            self.recovery->tracks = self.tracksToRestore;
+        // The in-flight reload died with this renderer. Tombstone its entry and
+        // drop the registration so its teardown is not reported as a failure;
+        // the next ready submits a fresh attempt from the retained snapshot.
+        if (self.recoveryLoad) {
+            if (self.recoveryLoad->entryKnown)
+                self.invalidateEntry(self.recoveryLoad->entry);
+            if (self.recoveryLoad->command) {
+                self.canceledCommands.insert(self.recoveryLoad->command);
+                if (self.openingCommand == self.recoveryLoad->command)
+                    self.openingCommand = 0;
+            }
+            self.recoveryLoad.reset();
+        }
+        self.recoveringRenderer = true;
+        return;
+    }
+    // A context loss while a file is still loading must also be recoverable.
+    // Releasing the renderer disables video, and without a snapshot the reload
+    // never happens; only a fully idle controller keeps no snapshot.
+    if (!state().active && !self.loading && !self.pendingPlayback)
+        return;
+    self.recovery = Impl::RecoveryState{
+        state(), self.tracksToRestore.isEmpty() ? tracks() : self.tracksToRestore,
+        self.explicitExternalPaths};
+    if (self.openingPosition)
+        self.recovery->playback.position = *self.openingPosition;
+    self.recoveringRenderer = true;
+}
+
+void MpvController::resumeAfterRendererReset() {
+    auto &self = *impl_;
+    if (!self.recovery)
+        return;
+    // A duplicate ready while the reload is still in flight must not load the
+    // file twice. A failed attempt clears this registration so the retained
+    // snapshot can be retried.
+    if (self.recoveryLoad)
+        return;
+    const auto saved = *self.recovery;
+    const auto generation = self.openGeneration;
+    const auto identity = self.restoreIdentity + 1;
+    self.cancelTrackRestore();
+    if (generation != self.openGeneration || identity != self.restoreIdentity)
+        return;
+    const auto selectedInternal = [&saved](MediaTrack::Type type) {
+        for (const auto &track : saved.tracks) {
+            if (track.type == type && track.selected && !track.external)
+                return QByteArray::number(track.id);
+        }
+        return QByteArray("no");
+    };
+    // Releasing an mpv renderer disables video. Reload at the saved position,
+    // including video-only files whose core may have reached END_FILE.
+    // Recovery overrides the session's sub-auto setting with an explicit no: the
+    // saved external set is restored below, so auto-loading would add duplicates.
+    // This file-local option outlives the property, so toggling auto-load while
+    // the recovered file plays takes effect on the next normal load, not a retry.
+    const auto loopPoint = [](const std::optional<double> &value) {
+        return value ? QByteArray::number(*value, 'g', 17) : QByteArray("no");
+    };
+    const auto position = MediaSource::isNetwork(saved.playback.path) && !saved.playback.seekable
+                              ? 0.0
+                              : saved.playback.position;
+    const auto options =
+        QByteArray("start=") + QByteArray::number(position, 'f', 3) +
+        ",pause=" + (saved.playback.paused ? "yes" : "no") +
+        ",aid=" + selectedInternal(MediaTrack::Type::Audio) +
+        ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no,audio-file-auto=no" +
+        ",ab-loop-a=" + loopPoint(abLoop().start) + ",ab-loop-b=" + loopPoint(abLoop().end);
+    self.tracksToRestore = saved.tracks;
+    self.state.path = saved.playback.path;
+    self.playingPath = saved.playback.path;
+    self.openingPosition = position;
+    self.openingEntry = -1;
+    // Reset suppresses the AB-loop clear while a recovery is being replayed.
+    self.recoveringRenderer = true;
+    self.resetPlayback();
+    self.explicitExternalPathsToRestore = saved.explicitExternalPaths;
+    emit stateChanged();
+    if (generation != self.openGeneration || identity != self.restoreIdentity)
+        return;
+    ++self.recoveryAttempts;
+    const auto [id, status] =
+        self.submitCommand({"loadfile", saved.playback.path.toUtf8(), "replace", "-1", options});
+    self.openingCommand = id;
+    if (id) {
+        self.recoveryLoad = Impl::RecoveryLoad{};
+        self.recoveryLoad->command = id;
+    } else {
+        // No END_FILE follows a rejected submission; treat it as the attempt's
+        // terminal event so the retry budget and error signal still apply.
+        self.failRecoveryLoad(status, generation);
+    }
+    self.report(status);
 }

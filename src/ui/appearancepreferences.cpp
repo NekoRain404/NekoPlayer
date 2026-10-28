@@ -145,7 +145,8 @@ void AppearancePreferences::applyTheme(QApplication &application, Theme theme) {
 }
 
 void AppearancePreferences::showAboutDialog(QWidget *parent) {
-    const auto text = QObject::tr("NekoPlayer 0.1.0\n\nQt runtime: %1\nlibmpv client API: %2")
+    const auto text = QObject::tr("NekoPlayer %1\n\nQt runtime: %2\nlibmpv client API: %3")
+                          .arg(QCoreApplication::applicationVersion())
                           .arg(QString::fromLatin1(qVersion()))
                           .arg(BackendInfo::clientApiVersion());
     QMessageBox::about(parent, QObject::tr("关于 NekoPlayer"), text);

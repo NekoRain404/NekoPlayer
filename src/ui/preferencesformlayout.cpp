@@ -20,7 +20,10 @@ void alignPreferenceFormLabels(QWidget *root, const AppearanceTokens &tokens) {
             auto *label = item ? qobject_cast<QLabel *>(item->widget()) : nullptr;
             if (!label)
                 continue;
-            label->setFixedWidth(labelWidth);
+            // A fixed width clipped longer English labels; keep the alignment
+            // column but allow wrapping when the translated text needs it.
+            label->setMinimumWidth(labelWidth);
+            label->setWordWrap(true);
             label->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
         }
     }

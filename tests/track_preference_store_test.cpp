@@ -1,5 +1,6 @@
 #include "session/trackpreferencestore.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -61,6 +62,38 @@ class TrackPreferenceStoreTest final : public QObject {
         QCOMPARE(loaded.entries.front().selection.subtitleTrackId, std::optional<qint64>(4));
         QCOMPARE(loaded.entries.front().selection.externalSubtitlePaths,
                  QStringList{media + QStringLiteral(".srt")});
+    }
+
+    void repeatedIdenticalSavesLeaveFileUntouched() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        QFile mediaFile(media);
+        QVERIFY(mediaFile.open(QIODevice::WriteOnly));
+        QCOMPARE(mediaFile.write("video"), qint64(5));
+        mediaFile.close();
+
+        const auto path = temporary.filePath(QStringLiteral("tracks.ini"));
+        TrackPreferenceStore store(path);
+        const auto saved = entry(media, 1700000000001LL);
+        QVERIFY(store.save({saved}).isEmpty());
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto original = file.readAll();
+        file.close();
+
+        const auto frozen = QDateTime::currentDateTimeUtc().addSecs(-3600);
+        QFile timestampFile(path);
+        QVERIFY(timestampFile.open(QIODevice::ReadWrite));
+        QVERIFY(timestampFile.setFileTime(frozen, QFileDevice::FileModificationTime));
+        timestampFile.close();
+        QTest::qWait(10);
+        QVERIFY(store.save({saved}).isEmpty());
+        QCOMPARE(QFileInfo(path).lastModified().toUTC().toMSecsSinceEpoch(),
+                 frozen.toMSecsSinceEpoch());
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), original);
+        file.close();
     }
 
     void duplicateCanonicalMediaPathsKeepNewestSelection() {

@@ -1,0 +1,27 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux-debug:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build pkg-config ffmpeg \
+            qt6-base-dev qt6-base-dev-tools qt6-l10n-tools \
+            libmpv-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev
+      - name: Configure
+        run: cmake --preset debug
+      - name: Build
+        run: cmake --build --preset debug -j 4
+      # Window behaviour tests need a live desktop session; they stay in the
+      # native/Xvfb presets. The suite here is offscreen-safe and includes the
+      # code-size guard. CTest injects LC_ALL=C for libmpv.
+      - name: Test
+        run: ctest --preset debug -E window --output-on-failure

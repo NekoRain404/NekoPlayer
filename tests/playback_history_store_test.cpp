@@ -1,5 +1,6 @@
 #include "session/playbackhistorystore.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QSettings>
@@ -40,6 +41,33 @@ class PlaybackHistoryStoreTest final : public QObject {
         QCOMPARE(loaded.entries.front().position, saved.position);
         QCOMPARE(loaded.entries.front().duration, saved.duration);
         QCOMPARE(loaded.entries.front().lastPlayedUtcMs, saved.lastPlayedUtcMs);
+    }
+
+    void repeatedIdenticalSavesLeaveFileUntouched() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto path = temporary.filePath(QStringLiteral("history.ini"));
+        PlaybackHistoryStore store(path);
+        const auto saved =
+            entry(temporary.path() + QStringLiteral("/movie.mkv"), 22.25, 125.0, 1700000000000LL);
+        QVERIFY(store.save({saved}).isEmpty());
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto original = file.readAll();
+        file.close();
+
+        const auto frozen = QDateTime::currentDateTimeUtc().addSecs(-3600);
+        QFile timestampFile(path);
+        QVERIFY(timestampFile.open(QIODevice::ReadWrite));
+        QVERIFY(timestampFile.setFileTime(frozen, QFileDevice::FileModificationTime));
+        timestampFile.close();
+        QTest::qWait(10);
+        QVERIFY(store.save({saved}).isEmpty());
+        QCOMPARE(QFileInfo(path).lastModified().toUTC().toMSecsSinceEpoch(),
+                 frozen.toMSecsSinceEpoch());
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), original);
+        file.close();
     }
 
     void duplicatePathsAreReplacedByNewestEntry() {

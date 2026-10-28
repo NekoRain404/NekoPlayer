@@ -1255,14 +1255,14 @@ Open a file or folder, or drop media here</translation>
         <translation>Follow System</translation>
     </message>
     <message>
-        <source>NekoPlayer 0.1.0
+        <source>NekoPlayer %1
 
-Qt runtime: %1
-libmpv client API: %2</source>
-        <translation>NekoPlayer 0.1.0
+Qt runtime: %2
+libmpv client API: %3</source>
+        <translation>NekoPlayer %1
 
-Qt runtime: %1
-libmpv client API: %2</translation>
+Qt runtime: %2
+libmpv client API: %3</translation>
     </message>
     <message>
         <source>关于 NekoPlayer</source>

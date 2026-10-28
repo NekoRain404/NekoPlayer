@@ -47,6 +47,9 @@ class VideoWidget final : public QOpenGLWidget {
     MpvController &controller_;
     mpv_render_context *renderer_ = nullptr;
     std::atomic_bool closing_{false};
+    // At most one queued update is needed: processUpdate() consumes the latest
+    // mpv state, so callbacks arriving while one is pending are coalesced.
+    std::atomic_bool updateQueued_{false};
     QTimer singleClickTimer_;
     bool suppressReleaseClick_ = false;
     bool failed_ = false;

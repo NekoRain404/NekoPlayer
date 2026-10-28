@@ -24,34 +24,6 @@ QString schemaError(const QString &path) {
         .arg(path);
 }
 
-QString validateExistingFile(const QString &path) {
-    if (!QFileInfo::exists(path))
-        return {};
-    constexpr qint64 maximumConfigurationBytes = 4 * 1024 * 1024;
-    const QFileInfo existing(path);
-    if (!existing.isFile() || existing.size() > maximumConfigurationBytes)
-        return configurationError(path);
-
-    QFile source(path);
-    QTemporaryFile snapshot;
-    if (!source.open(QIODevice::ReadOnly) || !snapshot.open())
-        return configurationError(path);
-    const auto bytes = source.readAll();
-    if (source.error() != QFileDevice::NoError || snapshot.write(bytes) != bytes.size() ||
-        !snapshot.flush())
-        return configurationError(path);
-
-    QSettings settings(snapshot.fileName(), QSettings::IniFormat);
-    const auto keys = settings.allKeys();
-    if (settings.status() != QSettings::NoError)
-        return configurationError(path);
-    if (keys.isEmpty())
-        return {};
-    bool valid = false;
-    const auto version = settings.value(QStringLiteral("schemaVersion")).toInt(&valid);
-    return valid && version == SchemaVersion ? QString{} : schemaError(path);
-}
-
 bool validEntry(const PlaybackHistoryEntry &entry) {
     return !PlaybackHistoryStore::normalizedPath(entry.path).isEmpty() &&
            std::isfinite(entry.position) && entry.position >= 0 && std::isfinite(entry.duration) &&
@@ -96,6 +68,89 @@ bool readEntry(QSettings &settings, int index, PlaybackHistoryEntry &entry) {
         settings.value(prefix + QStringLiteral("lastPlayedUtcMs")).toLongLong(&timestampValid);
     return positionValid && durationValid && timestampValid && validEntry(entry);
 }
+
+struct StoreContents {
+    bool exists = false;
+    bool wellFormed = false;
+    QList<PlaybackHistoryEntry> entries;
+    QString error;
+};
+
+StoreContents readContents(const QString &path) {
+    StoreContents contents;
+    if (!QFileInfo::exists(path))
+        return contents;
+    contents.exists = true;
+    constexpr qint64 maximumConfigurationBytes = 4 * 1024 * 1024;
+    const QFileInfo existing(path);
+    if (!existing.isFile() || existing.size() > maximumConfigurationBytes) {
+        contents.error = configurationError(path);
+        return contents;
+    }
+    QFile source(path);
+    QTemporaryFile snapshot;
+    if (!source.open(QIODevice::ReadOnly) || !snapshot.open()) {
+        contents.error = configurationError(path);
+        return contents;
+    }
+    const auto bytes = source.readAll();
+    if (source.error() != QFileDevice::NoError || snapshot.write(bytes) != bytes.size() ||
+        !snapshot.flush()) {
+        contents.error = configurationError(path);
+        return contents;
+    }
+    // Parse a snapshot: QSettings caches data by file name and a cached parse
+    // error would otherwise hide a later format problem from this read.
+    QSettings settings(snapshot.fileName(), QSettings::IniFormat);
+    if (settings.status() != QSettings::NoError) {
+        contents.error = configurationError(path);
+        return contents;
+    }
+    if (settings.allKeys().isEmpty())
+        return contents;
+    bool versionValid = false;
+    const auto version = settings.value(QStringLiteral("schemaVersion")).toInt(&versionValid);
+    if (!versionValid || version != SchemaVersion) {
+        contents.error = schemaError(path);
+        return contents;
+    }
+    bool countValid = false;
+    const auto count = settings.value(QStringLiteral("entries/size")).toInt(&countValid);
+    if (!countValid || count < 0 || count > 100000) {
+        contents.error = schemaError(path);
+        return contents;
+    }
+    QList<PlaybackHistoryEntry> parsed;
+    bool dropped = false;
+    for (int index = 0; index < count; ++index) {
+        PlaybackHistoryEntry entry;
+        if (!readEntry(settings, index, entry)) {
+            // A single invalid entry is quarantined, not a fatal configuration
+            // error: the next save rewrites only the entries that parsed.
+            dropped = true;
+            continue;
+        }
+        entry.path = PlaybackHistoryStore::normalizedPath(entry.path);
+        parsed.append(std::move(entry));
+    }
+    contents.entries = uniqueEntries(parsed);
+    contents.wellFormed = !dropped && contents.entries.size() == count;
+    return contents;
+}
+
+bool sameEntries(const QList<PlaybackHistoryEntry> &left,
+                 const QList<PlaybackHistoryEntry> &right) {
+    if (left.size() != right.size())
+        return false;
+    for (qsizetype index = 0; index < left.size(); ++index) {
+        const auto &a = left.at(index);
+        const auto &b = right.at(index);
+        if (a.path != b.path || a.position != b.position || a.duration != b.duration ||
+            a.lastPlayedUtcMs != b.lastPlayedUtcMs)
+            return false;
+    }
+    return true;
+}
 } // namespace
 
 PlaybackHistoryStore::PlaybackHistoryStore(QString filePath) : filePath_(std::move(filePath)) {}
@@ -107,45 +162,16 @@ QString PlaybackHistoryStore::normalizedPath(const QString &path) {
 }
 
 PlaybackHistoryLoadResult PlaybackHistoryStore::load() const {
-    if (const auto error = validateExistingFile(filePath_); !error.isEmpty())
-        return {{}, error};
-    if (!QFileInfo::exists(filePath_))
-        return {};
-
-    QSettings settings(filePath_, QSettings::IniFormat);
-    settings.sync();
-    if (settings.status() != QSettings::NoError)
-        return {{}, configurationError(filePath_)};
-    if (settings.allKeys().isEmpty())
-        return {};
-
-    bool schemaValid = false;
-    const auto version = settings.value(QStringLiteral("schemaVersion")).toInt(&schemaValid);
-    if (!schemaValid || version != SchemaVersion)
-        return {{}, schemaError(filePath_)};
-    bool countValid = false;
-    const auto count = settings.value(QStringLiteral("entries/size")).toInt(&countValid);
-    if (!countValid || count < 0 || count > 100000)
-        return {{}, schemaError(filePath_)};
-
-    QList<PlaybackHistoryEntry> entries;
-    for (int index = 0; index < count; ++index) {
-        PlaybackHistoryEntry entry;
-        if (!readEntry(settings, index, entry))
-            continue;
-        // A single invalid entry is quarantined, not a fatal configuration
-        // error: the next save rewrites only the entries that parsed.
-        entry.path = normalizedPath(entry.path);
-        entries.append(std::move(entry));
-    }
-    return {uniqueEntries(entries), {}};
+    const auto contents = readContents(filePath_);
+    return {contents.entries, contents.error};
 }
 
 QString PlaybackHistoryStore::save(const QList<PlaybackHistoryEntry> &entries) const {
-    if (const auto error = validateExistingFile(filePath_); !error.isEmpty())
-        return error;
-    if (const auto loaded = load(); !loaded.error.isEmpty())
-        return loaded.error;
+    // One parse supplies both validation and the on-disk payload used for the
+    // no-op check; loading a second time cannot reveal anything new.
+    const auto contents = readContents(filePath_);
+    if (!contents.error.isEmpty())
+        return contents.error;
 
     QList<PlaybackHistoryEntry> normalized;
     normalized.reserve(entries.size());
@@ -155,6 +181,10 @@ QString PlaybackHistoryStore::save(const QList<PlaybackHistoryEntry> &entries) c
         normalized.append(entry);
     }
     const auto retained = uniqueEntries(normalized);
+    if (contents.exists && contents.wellFormed && sameEntries(contents.entries, retained)) {
+        restrictConfigurationFilePermissions(filePath_);
+        return {};
+    }
 
     if (!QDir().mkpath(QFileInfo(filePath_).absolutePath()))
         return configurationError(filePath_);

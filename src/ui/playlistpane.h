@@ -38,6 +38,9 @@ class PlaylistPane final : public QWidget {
     void refreshIcons();
     void selectSourceCurrent();
     void synchronizeCurrent();
+    void handleStructureChange();
+    void flushStructureRefresh();
+    void refreshStructure();
     void updateItemCount();
     void updateEditingActions();
     void updateEmptyHint();
@@ -58,8 +61,12 @@ class PlaylistPane final : public QWidget {
     QAction *clearSearchAction_;
     QPersistentModelIndex playingIndex_;
     QTimer *singleClickTimer_;
+    QTimer *structureUpdateTimer_;
+    QLabel *countLabel_ = nullptr;
     Qt::KeyboardModifiers lastClickModifiers_ = Qt::NoModifier;
     QPersistentModelIndex pendingClickIndex_;
     bool singleClickActivation_ = false;
     bool filtering_ = false;
+    bool batchEditActive_ = false;
+    bool structureRefreshPending_ = false;
 };

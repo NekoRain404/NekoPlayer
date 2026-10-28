@@ -3,6 +3,7 @@
 #include "interactionpolicy.h"
 #include "playback/mpvcontroller.h"
 #include "seekslidergeometry.h"
+#include "shortcutoverride.h"
 #include "transportbarmetrics.h"
 
 #include <QAction>
@@ -220,6 +221,8 @@ QToolButton *button(QAction *action, QWidget *parent, bool primary = false) {
     const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     result->setMinimumSize(tokens.controlHeight, tokens.rowHeight);
     result->setFocusPolicy(Qt::StrongFocus);
+    result->installEventFilter(
+        new ShortcutOverrideFilter(ShortcutOverrideFilter::Mode::Activation, result));
     const auto updateDescription = [result, action] {
         result->setAccessibleName(action->text());
         result->setToolTip(action->text());

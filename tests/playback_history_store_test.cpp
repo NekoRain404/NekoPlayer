@@ -83,7 +83,7 @@ class PlaybackHistoryStoreTest final : public QObject {
         QVERIFY(!store.save({entry(path, 1, 10, -1)}).isEmpty());
     }
 
-    void loadKeepsValidEntriesAndPreventsOverwritingPartialCorruption() {
+    void loadQuarantinesInvalidEntriesAndAllowsRewrite() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());
         const auto file = temporary.filePath(QStringLiteral("history.ini"));
@@ -109,18 +109,18 @@ class PlaybackHistoryStoreTest final : public QObject {
             settings.setValue(QStringLiteral("entries/3/lastPlayedUtcMs"), -1);
             settings.sync();
         }
-        QFile originalFile(file);
-        QVERIFY(originalFile.open(QIODevice::ReadOnly));
-        const auto original = originalFile.readAll();
-        originalFile.close();
         PlaybackHistoryStore store(file);
         const auto loaded = store.load();
-        QVERIFY(!loaded.error.isEmpty());
+        // Per-entry corruption is quarantined instead of latching the store.
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
         QCOMPARE(loaded.entries.size(), 1);
         QCOMPARE(loaded.entries.front().path, temporary.path() + QStringLiteral("/valid.mkv"));
-        QVERIFY(!store.save({entry(temporary.path() + QStringLiteral("/other.mkv"))}).isEmpty());
-        QVERIFY(originalFile.open(QIODevice::ReadOnly));
-        QCOMPARE(originalFile.readAll(), original);
+        QVERIFY2(store.save({entry(temporary.path() + QStringLiteral("/other.mkv"))}).isEmpty(),
+                 "a quarantined entry must not block the next save");
+        const auto rewritten = store.load();
+        QVERIFY2(rewritten.error.isEmpty(), qPrintable(rewritten.error));
+        QCOMPARE(rewritten.entries.size(), 1);
+        QCOMPARE(rewritten.entries.front().path, temporary.path() + QStringLiteral("/other.mkv"));
     }
 
     void corruptAndUnknownSchemaFilesArePreserved() {

@@ -35,6 +35,10 @@ bool parseCurrent(const QString &line, int &index) {
 } // namespace
 
 M3u8LoadResult M3u8Store::load(const QString &filePath) {
+    constexpr qint64 maximumPlaylistBytes = 16 * 1024 * 1024;
+    const QFileInfo info(filePath);
+    if (!info.isFile() || info.size() > maximumPlaylistBytes)
+        return {{}, -1, ioError(filePath)};
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly))
         return {{}, -1, ioError(filePath)};
@@ -93,7 +97,7 @@ M3u8LoadResult M3u8Store::load(const QString &filePath) {
 
 QString M3u8Store::save(const QString &filePath, const QStringList &paths, int currentIndex) {
     if ((paths.isEmpty() && currentIndex != -1) ||
-        (!paths.isEmpty() && (currentIndex < 0 || currentIndex >= paths.size())))
+        (!paths.isEmpty() && (currentIndex < -1 || currentIndex >= paths.size())))
         return QStringLiteral("Invalid current index: %1").arg(filePath);
     for (const auto &path : paths) {
         if (!validEntry(path) || path.trimmed() != path || MediaSource::normalize(path).isEmpty())

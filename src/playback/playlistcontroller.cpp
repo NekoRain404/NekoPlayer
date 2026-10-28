@@ -30,7 +30,12 @@ PlaylistController::PlaylistController(MpvController &player, QObject *parent)
     connect(&player_, &MpvController::mediaLoadFailed, this, &PlaylistController::mediaLoadFailed);
     connect(&player_, &MpvController::stopRequested, this,
             &PlaylistController::snapshotCurrentPlayback, Qt::DirectConnection);
-    connect(&player_, &MpvController::stopRequested, this, [this] { setStopAfterCurrent(false); });
+    connect(&player_, &MpvController::stopRequested, this, [this] {
+        // An explicit stop ends this playback attempt: a queued EOF event must
+        // not advance the queue afterwards.
+        playbackQueued_ = false;
+        setStopAfterCurrent(false);
+    });
     const auto cancelResume = [this] { resumeEntry_ = QPersistentModelIndex{}; };
     connect(&player_, &MpvController::stopRequested, this, cancelResume);
     connect(&player_, &MpvController::fileOpenRequested, this, cancelResume);

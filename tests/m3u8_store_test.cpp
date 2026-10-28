@@ -55,6 +55,21 @@ class M3u8StoreTest final : public QObject {
         QCOMPARE(loaded.currentIndex, -1);
     }
 
+    void savesNonEmptyListWithoutCurrentRow() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = temporary.filePath(QStringLiteral("missing.mkv"));
+        const auto file = temporary.filePath(QStringLiteral("queue.m3u8"));
+        // A queue made only of missing files has rows but no current row; it
+        // must still be saveable.
+        QVERIFY2(M3u8Store::save(file, {media}, -1).isEmpty(),
+                 "non-empty queue with no current row must be saveable");
+        const auto loaded = M3u8Store::load(file);
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.paths, QStringList{media});
+        QCOMPARE(loaded.currentIndex, 0);
+    }
+
     void rejectsInvalidOrOutOfRangeCurrentMarker() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

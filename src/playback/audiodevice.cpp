@@ -1,5 +1,6 @@
 #include "audiodevice.h"
 
+#include <QCoreApplication>
 #include <QSet>
 #include <cstring>
 
@@ -46,6 +47,7 @@ QList<AudioDevice> parseMpvAudioDevices(const mpv_node &node) {
     }
 
     if (!names.contains(QStringLiteral("auto")))
-        devices.prepend({QStringLiteral("auto"), QStringLiteral("自动选择")});
+        devices.prepend(
+            {QStringLiteral("auto"), QCoreApplication::translate("AudioDevice", "自动选择")});
     return devices;
 }

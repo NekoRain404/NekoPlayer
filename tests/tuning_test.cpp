@@ -6,6 +6,8 @@
 namespace {
 double backendValue(const MpvController &player, const char *name) {
     double result = std::numeric_limits<double>::quiet_NaN();
+    if (!player.handle())
+        return result;
     mpv_get_property(player.handle(), name, MPV_FORMAT_DOUBLE, &result);
     return result;
 }

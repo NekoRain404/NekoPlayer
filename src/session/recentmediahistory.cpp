@@ -1,5 +1,5 @@
 #include "recentmediahistory.h"
-
+#include "configfile.h"
 #include "playback/mediasource.h"
 
 #include <QCoreApplication>
@@ -121,7 +121,10 @@ QString RecentMediaHistory::save() const {
         return fileError(path_, file.errorString());
     if (file.write(bytes) != bytes.size())
         return fileError(path_, file.errorString());
-    return file.commit() ? QString{} : fileError(path_, file.errorString());
+    if (!file.commit())
+        return fileError(path_, file.errorString());
+    restrictConfigurationFilePermissions(path_);
+    return {};
 }
 
 void RecentMediaHistory::remember(const QString &source) {

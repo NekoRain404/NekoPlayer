@@ -123,6 +123,8 @@ struct MpvController::Impl {
     uint64_t restoreGeneration = 0;
     uint64_t restoreIdentity = 0;
     QSet<uint64_t> canceledRestoreRequests;
+    // Command ids invalidated by stop(); their replies are dropped silently.
+    QSet<uint64_t> canceledCommands;
     bool applyingRestoredSelections = false;
     std::optional<TrackPreferenceRestore> preferenceRestore;
     bool recoveringRenderer = false;
@@ -147,6 +149,9 @@ struct MpvController::Impl {
     QList<PendingOpen> pendingOpens;
     QSet<int64_t> startedEntries;
     QSet<int64_t> loadedEntries;
+    // Entries invalidated by stop(). Events already queued for them must not be
+    // attributed to the stopped state or to a later generation.
+    QSet<int64_t> invalidatedEntries;
     QHash<int64_t, mpv_event_end_file> endedEntries;
     QHash<int64_t, uint64_t> openGenerationsByEntry;
     QString playingPath;
@@ -183,6 +188,12 @@ struct MpvController::Impl {
             error = QString::fromUtf8(mpv_error_string(status));
             emit owner->errorOccurred(error);
         }
+    }
+
+    // Applies an optional option without failing controller construction when a
+    // build does not register it.
+    void softOption(const char *name, const char *value) {
+        mpv_set_option_string(client.get(), name, value);
     }
 
     bool option(const char *name, const char *value) {
@@ -404,6 +415,10 @@ struct MpvController::Impl {
         }
     }
 
+    void invalidateEntry(int64_t entry) {
+        if (entry >= 0)
+            invalidatedEntries.insert(entry);
+    }
     void commitPendingOpen(int64_t entry, bool alreadyStarted = false);
     void rejectPendingOpen(uint64_t command, int status);
     void notifySynchronousOpenFailure(uint64_t generation, int status);

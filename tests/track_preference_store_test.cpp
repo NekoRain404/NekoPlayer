@@ -42,6 +42,11 @@ class TrackPreferenceStoreTest final : public QObject {
         saved.selection.selectedExternalAudioStream = 1;
         const auto result = store.save({saved});
         QVERIFY2(result.isEmpty(), qPrintable(result));
+        // Signed URLs may be stored in the selection; keep the file private.
+        const auto permissions =
+            QFileInfo(temporary.filePath(QStringLiteral("session.ini.tracks.ini"))).permissions();
+        QVERIFY(!permissions.testFlag(QFileDevice::ReadOther));
+        QVERIFY(!permissions.testFlag(QFileDevice::WriteOther));
         const auto loaded = store.load();
         QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
         QCOMPARE(loaded.entries.size(), 1);
@@ -213,8 +218,17 @@ class TrackPreferenceStoreTest final : public QObject {
         file.close();
         const auto loaded = store.load();
         QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
-        QCOMPARE(loaded.entries.size(), 1);
-        QCOMPARE(loaded.entries.front().mediaPath, retained);
+        // Missing media keeps its entry (the drive may come back); replaced
+        // media is dropped; unrelated entries survive either way.
+        QCOMPARE(loaded.entries.size(), 2);
+        const auto paths = [&loaded] {
+            QStringList result;
+            for (const auto &item : loaded.entries)
+                result.append(item.mediaPath);
+            result.sort();
+            return result;
+        }();
+        QCOMPARE(paths, (QStringList{QDir::cleanPath(missing), retained}));
         QVERIFY(store.save(loaded.entries).isEmpty());
     }
 
@@ -276,20 +290,47 @@ class TrackPreferenceStoreTest final : public QObject {
         QCOMPARE(loaded.entries.front().selection.audioTrackId, std::optional<qint64>(0));
     }
 
-    void savingPrunesStaleEntries() {
+    void savingKeepsTemporarilyMissingEntries() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());
-        const auto stale = temporary.filePath(QStringLiteral("stale.mkv"));
+        const auto offline = temporary.filePath(QStringLiteral("offline.mkv"));
         const auto current = temporary.filePath(QStringLiteral("current.mkv"));
-        for (const auto &path : {stale, current}) {
+        for (const auto &path : {offline, current}) {
             QFile file(path);
             QVERIFY(file.open(QIODevice::WriteOnly));
             QCOMPARE(file.write("v"), qint64(1));
         }
-        const auto staleEntry = entry(stale, 1);
-        QVERIFY(QFile::remove(stale));
+        const auto offlineEntry = entry(offline, 1);
+        QVERIFY(QFile::remove(offline));
         TrackPreferenceStore store(temporary.filePath(QStringLiteral("tracks.ini")));
-        QVERIFY(store.save({staleEntry, entry(current, 2)}).isEmpty());
+        QVERIFY(store.save({offlineEntry, entry(current, 2)}).isEmpty());
+        const auto loaded = store.load();
+        QVERIFY(loaded.error.isEmpty());
+        QCOMPARE(loaded.entries.size(), 2);
+        const auto found = std::find_if(
+            loaded.entries.cbegin(), loaded.entries.cend(),
+            [&offline](const auto &item) { return item.mediaPath == QDir::cleanPath(offline); });
+        QVERIFY(found != loaded.entries.cend());
+        QCOMPARE(found->selection.subtitleTrackId, std::optional<qint64>(4));
+    }
+
+    void savingPrunesReplacedMedia() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto replaced = temporary.filePath(QStringLiteral("replaced.mkv"));
+        const auto current = temporary.filePath(QStringLiteral("current.mkv"));
+        for (const auto &path : {replaced, current}) {
+            QFile file(path);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QCOMPARE(file.write("v"), qint64(1));
+        }
+        const auto replacedEntry = entry(replaced, 1);
+        QFile file(replaced);
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QCOMPARE(file.write("different-content"), qint64(17));
+        file.close();
+        TrackPreferenceStore store(temporary.filePath(QStringLiteral("tracks.ini")));
+        QVERIFY(store.save({replacedEntry, entry(current, 2)}).isEmpty());
         const auto loaded = store.load();
         QVERIFY(loaded.error.isEmpty());
         QCOMPARE(loaded.entries.size(), 1);

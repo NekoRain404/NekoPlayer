@@ -32,11 +32,8 @@ class LanguageManagerTest final : public QObject {
                  QStringLiteral("Video codec"));
         QCOMPARE(QCoreApplication::translate("MediaInformation", "采样格式"),
                  QStringLiteral("Sample format"));
-        QCOMPARE(
-            QCoreApplication::translate(
-                "MainWindow", "NekoPlayer\n\n拖入视频，或按 Ctrl+O 打开文件\nCtrl+U 打开网络地址"),
-            QStringLiteral("NekoPlayer\n\nDrop a video, or press Ctrl+O to open a file\nCtrl+U to "
-                           "open a network URL"));
+        QCOMPARE(QCoreApplication::translate("MainWindow", "正在播放 · %1"),
+                 QStringLiteral("Playing · %1"));
         QCOMPARE(QCoreApplication::translate("MainWindow", "无法播放：%1"),
                  QStringLiteral("Could not play: %1"));
         QCOMPARE(QCoreApplication::translate("FolderMenu", "取消"), QStringLiteral("Cancel"));

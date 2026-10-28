@@ -211,10 +211,12 @@ void WelcomePanel::setRecentSources(const QStringList &sources) {
         textLayout->setContentsMargins(0, 0, 0, 0);
         textLayout->setSpacing(tokens.spaceUnit);
         auto *title = new QLabel(button);
+        title->setTextFormat(Qt::PlainText);
         title->setObjectName(QStringLiteral("welcomeRecentTitle%1").arg(index + 1));
         title->setProperty("welcomeRecentTitle", true);
         title->setAttribute(Qt::WA_TransparentForMouseEvents);
         auto *locationLabel = new QLabel(button);
+        locationLabel->setTextFormat(Qt::PlainText);
         locationLabel->setObjectName(QStringLiteral("welcomeRecentLocation%1").arg(index + 1));
         locationLabel->setAttribute(Qt::WA_TransparentForMouseEvents);
         locationLabel->setProperty("welcomeRecentLocation", true);
@@ -275,6 +277,7 @@ void WelcomePanel::setResumeEntries(const QList<PlaybackHistoryEntry> &entries) 
         row->setContentsMargins(12, 6, 12, 6);
         row->setSpacing(tokens.spaceUnit);
         auto *title = new QLabel(MediaSource::displayName(entry.path), button);
+        title->setTextFormat(Qt::PlainText);
         title->setObjectName(QStringLiteral("welcomeContinueTitle%1").arg(index + 1));
         title->setAttribute(Qt::WA_TransparentForMouseEvents);
         row->addWidget(title);

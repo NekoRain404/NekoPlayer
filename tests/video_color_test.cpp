@@ -17,6 +17,8 @@ double readProperty(MpvController &player, const char *name) {
 }
 
 QString readTextProperty(MpvController &player, const char *name) {
+    if (!player.handle())
+        return {};
     char *value = nullptr;
     if (mpv_get_property(player.handle(), name, MPV_FORMAT_STRING, &value) < 0 || !value)
         return {};

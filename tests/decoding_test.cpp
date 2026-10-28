@@ -11,6 +11,8 @@
 
 namespace {
 QString hardwareDecodingOption(MpvController &player) {
+    if (!player.handle())
+        return {};
     char *value = mpv_get_property_string(player.handle(), "hwdec");
     const auto text = QString::fromUtf8(value);
     mpv_free(value);

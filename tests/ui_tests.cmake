@@ -174,3 +174,9 @@ target_link_libraries(playlist_maintenance_menu_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME playlist-maintenance-menu COMMAND playlist_maintenance_menu_test)
 set_tests_properties(playlist-maintenance-menu PROPERTIES TIMEOUT 20
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(shortcut_override_test shortcut_override_test.cpp)
+target_link_libraries(shortcut_override_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME shortcut-override COMMAND shortcut_override_test)
+set_tests_properties(shortcut-override PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

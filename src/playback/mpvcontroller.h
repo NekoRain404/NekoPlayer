@@ -38,6 +38,9 @@ struct PlaybackState {
 class MpvController final : public QObject {
     Q_OBJECT
   public:
+    // Defined in the private mpvcontroller_p.h. The forward declaration is
+    // public so the private-header lifetime tests can drive controller events.
+    struct Impl;
     explicit MpvController(bool headless = false, bool silentAudio = false,
                            QObject *parent = nullptr);
     ~MpvController() override;
@@ -171,6 +174,5 @@ class MpvController final : public QObject {
 
   private:
     friend class MpvControllerTestAccess;
-    struct Impl;
     std::unique_ptr<Impl> impl_;
 };

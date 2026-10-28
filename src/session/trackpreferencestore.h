@@ -12,6 +12,8 @@ struct TrackPreferenceEntry {
     TrackSelectionPreference selection;
 };
 
+enum class TrackPreferenceState { Invalid, Missing, Current, Replaced };
+
 struct TrackPreferenceLoadResult {
     QList<TrackPreferenceEntry> entries;
     QString error;
@@ -27,6 +29,10 @@ class TrackPreferenceStore final {
     [[nodiscard]] TrackPreferenceLoadResult load() const;
     [[nodiscard]] QString save(const QList<TrackPreferenceEntry> &entries) const;
     [[nodiscard]] static QString normalizedPath(const QString &path);
+    // Missing media keeps its entry: the file may return (removable or network
+    // drive). Only a file that still exists with a different fingerprint is
+    // treated as replaced.
+    [[nodiscard]] static TrackPreferenceState state(const TrackPreferenceEntry &entry);
     [[nodiscard]] static bool matchesFingerprint(const TrackPreferenceEntry &entry);
 
   private:

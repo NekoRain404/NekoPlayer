@@ -2,6 +2,7 @@
 #include "appearanceicons.h"
 #include "appearancetokens.h"
 #include "playlistitemdelegate.h"
+#include "shortcutoverride.h"
 
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
@@ -33,6 +34,8 @@ QToolButton *actionButton(QAction *action, QWidget *parent) {
     const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     button->setMinimumSize(tokens.transportHitTarget, tokens.rowHeight);
     button->setFocusPolicy(Qt::StrongFocus);
+    button->installEventFilter(
+        new ShortcutOverrideFilter(ShortcutOverrideFilter::Mode::Activation, button));
     const auto updateDescription = [button, action] {
         button->setAccessibleName(action->text());
         button->setToolTip(action->text());
@@ -75,6 +78,10 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
     view_->setSelectionMode(QAbstractItemView::ExtendedSelection);
     view_->setDragDropMode(QAbstractItemView::InternalMove);
     view_->setDefaultDropAction(Qt::MoveAction);
+    // Navigation keys and type-ahead belong to the list, not to the global
+    // volume/seek/stop shortcuts.
+    view_->installEventFilter(
+        new ShortcutOverrideFilter(ShortcutOverrideFilter::Mode::ItemView, view_));
     view_->setDragDropOverwriteMode(false);
     view_->viewport()->installEventFilter(this);
     view_->setDropIndicatorShown(true);

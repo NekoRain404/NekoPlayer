@@ -1,4 +1,5 @@
 #include "sessionstore.h"
+#include "configfile.h"
 #include "playback/mediasource.h"
 
 #include <QCoreApplication>
@@ -20,6 +21,10 @@ QString configurationError(const QString &path) {
 QString checkFile(const QString &path) {
     if (!QFileInfo::exists(path))
         return {};
+    constexpr qint64 maximumConfigurationBytes = 4 * 1024 * 1024;
+    const QFileInfo existing(path);
+    if (!existing.isFile() || existing.size() > maximumConfigurationBytes)
+        return configurationError(path);
     QFile source(path);
     QTemporaryFile snapshot;
     if (!source.open(QIODevice::ReadOnly) || !snapshot.open())
@@ -309,5 +314,8 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("video/hue"), saved.videoColor.hue);
     settings.setValue(QStringLiteral("video/gamma"), saved.videoColor.gamma);
     settings.sync();
-    return settings.status() == QSettings::NoError ? QString{} : configurationError(filePath_);
+    if (settings.status() != QSettings::NoError)
+        return configurationError(filePath_);
+    restrictConfigurationFilePermissions(filePath_);
+    return {};
 }

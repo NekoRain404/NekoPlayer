@@ -56,7 +56,8 @@ add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.
 target_include_directories(neko_playback PUBLIC src)
 target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV)
 
-add_library(neko_session src/session/sessionstore.cpp src/session/sessionmanager.cpp
+add_library(neko_session src/session/configfile.cpp src/session/sessionstore.cpp
+    src/session/sessionmanager.cpp
     src/session/recentmediahistory.cpp
     src/session/playbackhistorystore.cpp src/session/trackpreferencestore.cpp)
 target_link_libraries(neko_session PUBLIC neko_playback)
@@ -77,7 +78,8 @@ add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/pl
     src/playlist/m3u8store.cpp
     src/ui/mediainformationtext.cpp src/ui/mediainformationdialog.cpp
     src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp
-    src/ui/windowactions.cpp src/ui/appearancemenu.cpp src/ui/windowsession.cpp
+    src/ui/windowactions.cpp src/ui/windowicons.cpp src/ui/shortcutoverride.cpp
+    src/ui/appearancemenu.cpp src/ui/windowsession.cpp
     src/ui/transportbar.cpp src/ui/foldermenu.cpp
     src/ui/windowopacitytransition.cpp
     src/ui/interactionpolicy.cpp src/ui/uimotionduration.cpp

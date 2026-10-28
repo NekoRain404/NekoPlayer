@@ -7,6 +7,8 @@
 
 namespace {
 QString option(MpvController &player, const char *name) {
+    if (!player.handle())
+        return {};
     char *value = mpv_get_property_string(player.handle(), name);
     const auto result = QString::fromUtf8(value);
     mpv_free(value);
@@ -14,6 +16,8 @@ QString option(MpvController &player, const char *name) {
 }
 double point(MpvController &player, const char *name) {
     double value = -1;
+    if (!player.handle())
+        return -1;
     return mpv_get_property(player.handle(), name, MPV_FORMAT_DOUBLE, &value) >= 0 ? value : -1;
 }
 } // namespace

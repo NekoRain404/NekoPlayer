@@ -250,7 +250,10 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         if (!pendingPaths_.isEmpty()) {
             const auto paths = std::exchange(pendingPaths_, {});
             playlist_->addFiles(paths);
-        } else if (!pendingPlaylistIndex.isValid())
+        }
+        // Appending files must not strand the recovery snapshot: only a new
+        // explicit playback request supersedes the file we were recovering.
+        if (!pendingPlaylistIndex.isValid())
             controller_->resumeAfterRendererReset();
         updateState();
     });
@@ -450,6 +453,9 @@ void MainWindow::updateState() {
     pauseAction_->setEnabled(video_->isReady() &&
                              (state.active || playlist_->model()->rowCount() > 0));
     stopAction_->setEnabled(state.active);
+    const bool canSeek = state.active && state.seekable;
+    seekBackAction_->setEnabled(canSeek);
+    seekForwardAction_->setEnabled(canSeek);
     const bool canPlay = !state.active || state.paused;
     pauseAction_->setText(canPlay ? tr("播放") : tr("暂停"));
     pauseAction_->setToolTip(pauseAction_->text());
@@ -473,16 +479,21 @@ void MainWindow::updateState() {
 
 void MainWindow::showError(const QString &message) {
     feedbackOverlay_->clearMessage();
-    statusBar()->showMessage(tr("无法播放：%1").arg(message));
-    if (isFullScreen()) {
-        revealControls();
-        feedbackOverlay_->showMessage(tr("无法播放：%1").arg(message), 5000);
+    const auto text = tr("无法播放：%1").arg(message);
+    // The status bar is hidden in fullscreen and in the mini player; those modes
+    // must still surface failures through the video overlay.
+    if (isFullScreen() || miniPlayerActive_) {
+        if (isFullScreen())
+            revealControls();
+        feedbackOverlay_->showMessage(text, 5000);
+    } else {
+        statusBar()->showMessage(text);
     }
     emit userError(message);
 }
 
 void MainWindow::showActionFeedback(const QString &message, int durationMs) {
-    if (isFullScreen())
+    if (isFullScreen() || miniPlayerActive_)
         feedbackOverlay_->showMessage(message, durationMs);
     else
         statusBar()->showMessage(message, durationMs);

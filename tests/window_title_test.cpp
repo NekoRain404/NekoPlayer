@@ -14,6 +14,13 @@ class WindowTitleTest final : public QObject {
                  QStringLiteral("Film One.mkv — NekoPlayer"));
     }
 
+    void controlCharactersCannotSpoofTheTitle() {
+        QCOMPARE(windowTitleForPath(QStringLiteral("/media/Bad\u202Ename.mkv")),
+                 QStringLiteral("Bad name.mkv — NekoPlayer"));
+        QCOMPARE(windowTitleForPath(QStringLiteral("/media/Line\nBreak\x07.mkv")),
+                 QStringLiteral("Line Break .mkv — NekoPlayer"));
+    }
+
     void networkMediaShowsTheRemoteFileName() {
         QCOMPARE(windowTitleForPath(
                      QStringLiteral("https://example.test/series/episode-01.mkv?token=secret")),

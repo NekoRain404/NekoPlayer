@@ -96,6 +96,8 @@ SessionLoadResult SessionManager::restore() {
     const auto restoredTuning = tuning_;
     const auto history = historyStore_.load();
     historyError_ = history.error;
+    if (!historyError_.isEmpty())
+        emit configurationErrorOccurred(historyError_);
     for (const auto &entry : history.entries) {
         const auto normalized = PlaybackHistoryStore::normalizedPath(entry.path);
         historyEntries_.insert(normalized, entry);
@@ -155,10 +157,15 @@ QString SessionManager::save(WindowPreferences window, const QStringList &pendin
     saved.interaction = interaction_;
     saved.languages = languages_;
     const auto sessionError = store_.save(saved);
-    const auto historyError = savePlaybackHistory();
     if (!sessionError.isEmpty())
         return sessionError;
-    return !historyError.isEmpty() ? historyError : trackPreferenceError_;
+    // Auxiliary stores must not be reported as a failed session save. Their
+    // errors are surfaced through the configuration-error signal instead.
+    const auto historyError = savePlaybackHistory();
+    const auto auxiliaryError = !historyError.isEmpty() ? historyError : trackPreferenceError_;
+    if (!auxiliaryError.isEmpty())
+        emit configurationErrorOccurred(auxiliaryError);
+    return {};
 }
 
 void SessionManager::rememberPlaybackPosition(const QString &path, double position,
@@ -353,8 +360,12 @@ void SessionManager::observeTrackPreference() {
 }
 
 QString SessionManager::saveTrackPreferences() {
-    trackPreferences_.removeIf(
-        [](const auto &entry) { return !TrackPreferenceStore::matchesFingerprint(entry); });
+    // Keep entries for media that is temporarily unavailable; drop only entries
+    // whose file was replaced or whose path is malformed.
+    trackPreferences_.removeIf([](const auto &entry) {
+        const auto state = TrackPreferenceStore::state(entry);
+        return state == TrackPreferenceState::Invalid || state == TrackPreferenceState::Replaced;
+    });
     std::stable_sort(trackPreferences_.begin(), trackPreferences_.end(),
                      [](const auto &left, const auto &right) {
                          return left.lastUsedUtcMs > right.lastUsedUtcMs;

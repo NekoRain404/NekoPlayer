@@ -10,6 +10,8 @@
 
 namespace {
 QString audioSelection(MpvController &player) {
+    if (!player.handle())
+        return {};
     char *value = mpv_get_property_string(player.handle(), "aid");
     const auto text = QString::fromUtf8(value);
     mpv_free(value);

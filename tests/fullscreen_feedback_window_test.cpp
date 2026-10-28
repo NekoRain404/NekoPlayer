@@ -19,7 +19,7 @@ class FullscreenFeedbackWindowTest final : public QObject {
         auto *action = window.findChild<QAction *>(QStringLiteral("playbackInformationAction"));
         auto *info = window.findChild<QLabel *>(QStringLiteral("playbackInformationOverlay"));
         QVERIFY(action && info);
-        QCOMPARE(action->shortcut(), QKeySequence(Qt::Key_Tab));
+        QCOMPARE(action->shortcut(), QKeySequence(Qt::CTRL | Qt::Key_Tab));
         QVERIFY(action->isCheckable());
         QVERIFY(!action->autoRepeat());
         window.show();
@@ -210,28 +210,30 @@ class FullscreenFeedbackWindowTest final : public QObject {
 
     void windowedActionsKeepUsingTheStatusBar() {
         MainWindow window(true);
-        auto *forward = window.findChild<QAction *>(QStringLiteral("seekForwardAction"));
-        QVERIFY(forward);
+        // Seek actions are disabled while no media is loaded, so use a volume
+        // action to exercise the windowed feedback path.
+        auto *louder = window.findChild<QAction *>(QStringLiteral("volumeUpAction"));
+        QVERIFY(louder);
 
-        forward->trigger();
+        louder->trigger();
 
-        QCOMPARE(window.statusBar()->currentMessage(), QStringLiteral("前进 5 秒"));
+        QCOMPARE(window.statusBar()->currentMessage(), QStringLiteral("音量 100%"));
     }
 
     void fullscreenActionsReplaceTheOverlayMessage() {
         MainWindow window(true);
         auto *overlay = window.findChild<QWidget *>(QStringLiteral("actionFeedbackOverlay"));
-        auto *forward = window.findChild<QAction *>(QStringLiteral("seekForwardAction"));
-        auto *back = window.findChild<QAction *>(QStringLiteral("seekBackAction"));
-        QVERIFY(overlay && forward && back);
+        auto *louder = window.findChild<QAction *>(QStringLiteral("volumeUpAction"));
+        auto *quieter = window.findChild<QAction *>(QStringLiteral("volumeDownAction"));
+        QVERIFY(overlay && louder && quieter);
 
         window.showFullScreen();
         QTRY_VERIFY(window.isFullScreen());
-        forward->trigger();
+        louder->trigger();
         QVERIFY(overlay->isVisible());
-        QCOMPARE(overlay->accessibleDescription(), QStringLiteral("前进 5 秒"));
-        back->trigger();
-        QCOMPARE(overlay->accessibleDescription(), QStringLiteral("后退 5 秒"));
+        QCOMPARE(overlay->accessibleDescription(), QStringLiteral("音量 100%"));
+        quieter->trigger();
+        QCOMPARE(overlay->accessibleDescription(), QStringLiteral("音量 95%"));
         QVERIFY(overlay->testAttribute(Qt::WA_TransparentForMouseEvents));
     }
 };

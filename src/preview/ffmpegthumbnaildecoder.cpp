@@ -2,28 +2,46 @@
 
 #include <QFileInfo>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <limits>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/dict.h>
 #include <libavutil/error.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 }
 
 namespace {
+// Thumbnails are best-effort previews. Bound every stage so a hostile or
+// exotic source can never pin the single decode thread (and therefore block
+// ThumbnailService shutdown) for an unbounded time.
+constexpr auto inputDeadline = std::chrono::seconds(5);
+constexpr int64_t inputTimeoutMicroseconds = 5'000'000;
+constexpr int64_t probeSizeBytes = 5 * 1024 * 1024;
+constexpr int64_t analyzeDurationMicroseconds = 5 * AV_TIME_BASE;
+// 8192 x 8192 covers 8K video while keeping frame allocations bounded.
+// libavcodec refuses media above this limit during open or decode.
+constexpr int64_t maximumPixels = int64_t{8192} * 8192;
+
 struct InterruptState {
     const std::shared_ptr<std::atomic_bool> *cancellation = nullptr;
+    std::chrono::steady_clock::time_point deadline;
 };
 
 int interruptCallback(void *opaque) {
     const auto *state = static_cast<const InterruptState *>(opaque);
-    return state && state->cancellation && *state->cancellation &&
-                   (*state->cancellation)->load(std::memory_order_relaxed)
-               ? 1
-               : 0;
+    if (!state)
+        return 0;
+    if (state->cancellation && *state->cancellation &&
+        (*state->cancellation)->load(std::memory_order_relaxed))
+        return 1;
+    // FFmpeg consults this from blocking I/O and demuxing loops, which turns
+    // the wall-clock deadline into a real bound on shutdown time.
+    return std::chrono::steady_clock::now() >= state->deadline ? 1 : 0;
 }
 
 bool cancelled(const ThumbnailRequest &request) {
@@ -89,10 +107,28 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
         result.error = QStringLiteral("could not allocate FFmpeg format context");
         return result;
     }
-    const InterruptState interrupt{&request.cancellation};
+    const auto deadline = std::chrono::steady_clock::now() + inputDeadline;
+    const InterruptState interrupt{&request.cancellation, deadline};
     format->interrupt_callback = {interruptCallback, const_cast<InterruptState *>(&interrupt)};
+
+    // Restrict demuxing to local files: no network protocol is available, and
+    // demuxers that open sub-files (concat, playlists, ...) inherit this list,
+    // so a local playlist cannot smuggle in a remote URL.
+    AVDictionary *inputOptions = nullptr;
+    const bool inputOptionsReady =
+        av_dict_set(&inputOptions, "protocol_whitelist", "file", 0) >= 0 &&
+        av_dict_set_int(&inputOptions, "rw_timeout", inputTimeoutMicroseconds, 0) >= 0 &&
+        av_dict_set_int(&inputOptions, "probesize", probeSizeBytes, 0) >= 0 &&
+        av_dict_set_int(&inputOptions, "analyzeduration", analyzeDurationMicroseconds, 0) >= 0;
+    if (!inputOptionsReady) {
+        av_dict_free(&inputOptions);
+        result.error = QStringLiteral("could not configure FFmpeg input limits");
+        avformat_close_input(&format);
+        return result;
+    }
     const auto source = request.source.toUtf8();
-    int error = avformat_open_input(&format, source.constData(), nullptr, nullptr);
+    int error = avformat_open_input(&format, source.constData(), nullptr, &inputOptions);
+    av_dict_free(&inputOptions);
     if (error < 0) {
         result.error = ffmpegError(error);
         avformat_close_input(&format);
@@ -124,9 +160,25 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
         avformat_close_input(&format);
         return result;
     }
+
+    // One decoder thread is enough for a preview and keeps the worker pool
+    // cheap; max_pixels makes libavcodec reject oversized media rather than
+    // attempting a huge allocation.
+    AVDictionary *decoderOptions = nullptr;
+    const bool decoderOptionsReady =
+        av_dict_set_int(&decoderOptions, "threads", 1, 0) >= 0 &&
+        av_dict_set_int(&decoderOptions, "max_pixels", maximumPixels, 0) >= 0;
+    if (!decoderOptionsReady) {
+        av_dict_free(&decoderOptions);
+        result.error = QStringLiteral("could not configure FFmpeg decoder limits");
+        avcodec_free_context(&decoder);
+        avformat_close_input(&format);
+        return result;
+    }
     error = avcodec_parameters_to_context(decoder, stream->codecpar);
     if (error >= 0)
-        error = avcodec_open2(decoder, codec, nullptr);
+        error = avcodec_open2(decoder, codec, &decoderOptions);
+    av_dict_free(&decoderOptions);
     if (error < 0) {
         result.error = ffmpegError(error);
         avcodec_free_context(&decoder);
@@ -165,10 +217,11 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
 
     AVPacket *packet = av_packet_alloc();
     AVFrame *frame = av_frame_alloc();
+    AVFrame *candidate = av_frame_alloc();
     bool decoded = false;
     bool reachedTarget = false;
     double candidateTimestamp = 0.0;
-    QImage candidateImage;
+    QString candidateError;
     const auto considerFrame = [&] {
         const auto timeBaseSeconds = av_q2d(stream->time_base);
         const auto frameTimestamp =
@@ -178,9 +231,13 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
         const bool isCloser = !decoded || std::abs(frameTimestamp - request.seconds) <
                                               std::abs(candidateTimestamp - request.seconds);
         if (isCloser) {
-            auto image = convertFrame(frame, request.maximumSize, &result.error);
-            if (!image.isNull()) {
-                candidateImage = std::move(image);
+            // Only reference the best candidate here. Scaling every decoded
+            // frame of a long GOP would be needlessly expensive; the single
+            // candidate is converted once after the loop.
+            av_frame_unref(candidate);
+            if (const auto refError = av_frame_ref(candidate, frame); refError < 0)
+                candidateError = ffmpegError(refError);
+            else {
                 candidateTimestamp = frameTimestamp;
                 decoded = true;
             }
@@ -194,7 +251,7 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
             considerFrame();
         return receiveError;
     };
-    if (!packet || !frame) {
+    if (!packet || !frame || !candidate) {
         result.error = QStringLiteral("could not allocate FFmpeg frame buffers");
     } else {
         while (!cancelled(request) && !reachedTarget && av_read_frame(format, packet) >= 0) {
@@ -217,12 +274,20 @@ ThumbnailResult decodeThumbnail(const ThumbnailRequest &request) {
             if (error >= 0 || error == AVERROR_EOF)
                 receiveFrames();
         }
-        if (decoded)
-            result.image = std::move(candidateImage), result.timestamp = candidateTimestamp;
-        else if (result.error.isEmpty())
-            result.error = cancelled(request) ? QStringLiteral("thumbnail request cancelled")
-                                              : QStringLiteral("could not decode video frame");
+        if (decoded) {
+            result.image = convertFrame(candidate, request.maximumSize, &result.error);
+            if (!result.image.isNull())
+                result.timestamp = candidateTimestamp;
+        } else if (result.error.isEmpty()) {
+            if (cancelled(request))
+                result.error = QStringLiteral("thumbnail request cancelled");
+            else if (!candidateError.isEmpty())
+                result.error = candidateError;
+            else
+                result.error = QStringLiteral("could not decode video frame");
+        }
     }
+    av_frame_free(&candidate);
     av_frame_free(&frame);
     av_packet_free(&packet);
     avcodec_free_context(&decoder);

@@ -83,7 +83,12 @@ class TrackPreferenceSessionTest final : public QObject {
         playlist.restoreFiles({QString::fromUtf8(TEST_TRACK_MEDIA_PATH)}, 0);
         playlist.playOrPause();
         QTRY_VERIFY(player.state().active);
-        QVERIFY(!session.save({}).isEmpty());
+        // The unsupported auxiliary store must not turn a successful session
+        // save into "session not saved"; it stays visible through the signal.
+        QVERIFY2(session.save({}).isEmpty(),
+                 "track-preference failure must not fail the session save");
+        QVERIFY(errors.count() >= 1);
+        QVERIFY(SessionStore(settings).load().error.isEmpty());
         QVERIFY(original.open(QIODevice::ReadOnly));
         QCOMPARE(original.readAll(), bytes);
     }

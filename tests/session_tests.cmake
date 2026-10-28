@@ -9,14 +9,14 @@ add_test(NAME network-session COMMAND network_session_test)
 set_tests_properties(network-session PROPERTIES TIMEOUT 30)
 
 add_executable(playback_history_store_test playback_history_store_test.cpp
-    ../src/session/playbackhistorystore.cpp)
+    ../src/session/playbackhistorystore.cpp ../src/session/configfile.cpp)
 target_include_directories(playback_history_store_test PRIVATE ../src)
 target_link_libraries(playback_history_store_test PRIVATE Qt6::Core Qt6::Test neko_options)
 add_test(NAME playback-history-store COMMAND playback_history_store_test)
 set_tests_properties(playback-history-store PROPERTIES TIMEOUT 20)
 
 add_executable(track_preference_store_test track_preference_store_test.cpp
-    ../src/session/trackpreferencestore.cpp)
+    ../src/session/trackpreferencestore.cpp ../src/session/configfile.cpp)
 target_include_directories(track_preference_store_test PRIVATE ../src)
 target_link_libraries(track_preference_store_test PRIVATE Qt6::Core Qt6::Test neko_options)
 add_test(NAME track-preference-store COMMAND track_preference_store_test)

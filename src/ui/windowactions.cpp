@@ -42,11 +42,6 @@
 #include <QtGlobal>
 #include <utility>
 
-namespace {
-constexpr auto appearanceIconSymbolProperty = "appearanceIconSymbol";
-constexpr auto appearanceIconPaletteCacheProperty = "appearanceIconPaletteCache";
-} // namespace
-
 void MainWindow::createActions() {
     const auto make = [this](const QString &text, const char *name, QKeySequence shortcut) {
         auto *action = new QAction(text, this);
@@ -112,16 +107,16 @@ void MainWindow::createActions() {
     exitFullscreenAction_->setEnabled(false);
     setAppearanceIcon(exitFullscreenAction_, AppearanceIcons::Symbol::Restore);
     connect(exitFullscreenAction_, &QAction::triggered, this, [this] { setFullscreen(false); });
-    auto *back = make(tr("后退 5 秒"), "seekBackAction", QKeySequence(Qt::Key_Left));
-    auto *forward = make(tr("前进 5 秒"), "seekForwardAction", QKeySequence(Qt::Key_Right));
-    setAppearanceIcon(back, AppearanceIcons::Symbol::SeekBackward);
-    setAppearanceIcon(forward, AppearanceIcons::Symbol::SeekForward);
-    connect(back, &QAction::triggered, this, [this] {
+    seekBackAction_ = make(tr("后退 5 秒"), "seekBackAction", QKeySequence(Qt::Key_Left));
+    seekForwardAction_ = make(tr("前进 5 秒"), "seekForwardAction", QKeySequence(Qt::Key_Right));
+    setAppearanceIcon(seekBackAction_, AppearanceIcons::Symbol::SeekBackward);
+    setAppearanceIcon(seekForwardAction_, AppearanceIcons::Symbol::SeekForward);
+    connect(seekBackAction_, &QAction::triggered, this, [this] {
         const auto seconds = seekStepSeconds();
         controller_->seekRelative(-seconds);
         showSeekFeedback(ActionFeedbackText::seek(-seconds));
     });
-    connect(forward, &QAction::triggered, this, [this] {
+    connect(seekForwardAction_, &QAction::triggered, this, [this] {
         const auto seconds = seekStepSeconds();
         controller_->seekRelative(seconds);
         showSeekFeedback(ActionFeedbackText::seek(seconds));
@@ -202,7 +197,7 @@ void MainWindow::createActions() {
     auto *playback = menuBar()->addMenu(tr("播放(&P)"));
     playback->addActions({previousAction_, pauseAction_, nextAction_, stopAction_});
     playback->addSeparator();
-    playback->addActions({back, forward});
+    playback->addActions({seekBackAction_, seekForwardAction_});
     auto *navigation = new NavigationMenu(*controller_, this);
     connect(navigation, &NavigationMenu::feedback, this,
             [this](const QString &message) { showActionFeedback(message, 4000); });
@@ -255,8 +250,8 @@ void MainWindow::createActions() {
     alwaysOnTopAction_->setCheckable(true);
     connect(alwaysOnTopAction_, &QAction::toggled, this, &MainWindow::setAlwaysOnTop);
     view->addAction(alwaysOnTopAction_);
-    auto *playbackInformation =
-        make(tr("显示当前播放信息"), "playbackInformationAction", QKeySequence(Qt::Key_Tab));
+    auto *playbackInformation = make(tr("显示当前播放信息"), "playbackInformationAction",
+                                     QKeySequence(Qt::CTRL | Qt::Key_Tab));
     setAppearanceIcon(playbackInformation, AppearanceIcons::Symbol::Information);
     playbackInformation->setCheckable(true);
     playbackInformation->setAutoRepeat(false);
@@ -450,27 +445,6 @@ void MainWindow::updateSeekActionLabels(int seconds) {
             action->setToolTip(label);
             action->setStatusTip(label);
         }
-    }
-}
-
-void MainWindow::setAppearanceIcon(QAction *action, AppearanceIcons::Symbol symbol) {
-    const auto paletteCacheKey = palette().cacheKey();
-    const auto storedSymbol = action->property(appearanceIconSymbolProperty);
-    const auto storedPaletteCache = action->property(appearanceIconPaletteCacheProperty);
-    if (storedSymbol.isValid() && storedPaletteCache.isValid() &&
-        storedSymbol.toInt() == static_cast<int>(symbol) &&
-        storedPaletteCache.toLongLong() == paletteCacheKey)
-        return;
-    action->setProperty(appearanceIconSymbolProperty, static_cast<int>(symbol));
-    action->setProperty(appearanceIconPaletteCacheProperty, paletteCacheKey);
-    action->setIcon(AppearanceIcons::icon(symbol, palette()));
-}
-
-void MainWindow::refreshAppearanceIcons() {
-    for (auto *action : findChildren<QAction *>()) {
-        const auto symbol = action->property(appearanceIconSymbolProperty);
-        if (symbol.isValid())
-            setAppearanceIcon(action, static_cast<AppearanceIcons::Symbol>(symbol.toInt()));
     }
 }
 

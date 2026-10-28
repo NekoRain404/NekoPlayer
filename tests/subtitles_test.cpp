@@ -14,6 +14,8 @@
 
 namespace {
 QString backendText(MpvController &player, const char *property) {
+    if (!player.handle())
+        return {};
     char *value = mpv_get_property_string(player.handle(), property);
     const auto text = QString::fromUtf8(value);
     mpv_free(value);

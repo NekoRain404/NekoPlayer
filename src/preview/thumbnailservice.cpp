@@ -34,11 +34,11 @@ ThumbnailService::~ThumbnailService() {
 quint64 ThumbnailService::request(const QString &source, double seconds, QSize maximumSize) {
     Q_ASSERT(thread() == QThread::currentThread());
 
-    cancel();
-    const auto requestId = ++generation_;
     maximumSize = normalizedSize(maximumSize);
     const auto path = localPath(source);
     if (path.isEmpty()) {
+        cancel();
+        const auto requestId = ++generation_;
         const auto result = failure(QStringLiteral("thumbnail source must be a local file"));
         QMetaObject::invokeMethod(
             this,
@@ -50,6 +50,8 @@ quint64 ThumbnailService::request(const QString &source, double seconds, QSize m
     }
     const QFileInfo file(path);
     if (!file.exists() || !file.isFile()) {
+        cancel();
+        const auto requestId = ++generation_;
         const auto result = failure(QStringLiteral("thumbnail source does not exist"));
         QMetaObject::invokeMethod(
             this,
@@ -60,6 +62,8 @@ quint64 ThumbnailService::request(const QString &source, double seconds, QSize m
         return requestId;
     }
     if (!std::isfinite(seconds) || seconds < 0.0) {
+        cancel();
+        const auto requestId = ++generation_;
         const auto result = failure(QStringLiteral("thumbnail timestamp is invalid"));
         QMetaObject::invokeMethod(
             this,
@@ -70,15 +74,29 @@ quint64 ThumbnailService::request(const QString &source, double seconds, QSize m
         return requestId;
     }
 
-    const auto key = cacheKey(path, seconds, maximumSize);
+    // The preview UI hovers the timeline at whole-second granularity, so target
+    // and cache by the second floor. Sub-second jitter then reuses one decode
+    // instead of evicting the cache entry a fraction of a second later.
+    const auto quantizedSeconds = std::floor(seconds);
+    const auto key = cacheKey(path, quantizedSeconds, maximumSize);
+
+    // Dragging the timeline produces a burst of requests for the same second.
+    // Reuse the decode already running for this exact target instead of
+    // cancelling it and starting the same work again.
+    if (inFlightRequestId_ != 0 && inFlightKey_ == key)
+        return inFlightRequestId_;
+
+    cancel();
+    const auto requestId = ++generation_;
+
     if (const auto cached = cache_.constFind(key); cached != cache_.cend()) {
         ThumbnailResult result;
         result.image = cached.value();
-        result.timestamp = seconds;
+        result.timestamp = quantizedSeconds;
         QMetaObject::invokeMethod(
             this,
-            [this, requestId, path, seconds, key, result] {
-                deliver(requestId, path, seconds, key, result);
+            [this, requestId, path, quantizedSeconds, key, result] {
+                deliver(requestId, path, quantizedSeconds, key, result);
             },
             Qt::QueuedConnection);
         return requestId;
@@ -86,11 +104,13 @@ quint64 ThumbnailService::request(const QString &source, double seconds, QSize m
 
     const auto cancellation = std::make_shared<std::atomic_bool>(false);
     cancellation_ = cancellation;
+    inFlightRequestId_ = requestId;
+    inFlightKey_ = key;
     const QPointer<ThumbnailService> guard(this);
-    pool_.start([guard, requestId, path, seconds, maximumSize, key, cancellation] {
+    pool_.start([guard, requestId, path, quantizedSeconds, maximumSize, key, cancellation] {
         ThumbnailRequest request;
         request.source = path;
-        request.seconds = seconds;
+        request.seconds = quantizedSeconds;
         request.maximumSize = maximumSize;
         request.cancellation = cancellation;
         auto result = decodeThumbnail(request);
@@ -98,9 +118,9 @@ quint64 ThumbnailService::request(const QString &source, double seconds, QSize m
             return;
         QMetaObject::invokeMethod(
             guard.data(),
-            [guard, requestId, path, seconds, key, result = std::move(result)]() mutable {
+            [guard, requestId, path, quantizedSeconds, key, result = std::move(result)]() mutable {
                 if (guard)
-                    guard->deliver(requestId, path, seconds, key, std::move(result));
+                    guard->deliver(requestId, path, quantizedSeconds, key, std::move(result));
             },
             Qt::QueuedConnection);
     });
@@ -113,6 +133,8 @@ void ThumbnailService::cancel() {
     if (cancellation_)
         cancellation_->store(true, std::memory_order_relaxed);
     cancellation_.reset();
+    inFlightRequestId_ = 0;
+    inFlightKey_.clear();
     pool_.clear();
 }
 
@@ -134,6 +156,10 @@ void ThumbnailService::deliver(quint64 requestId, const QString &source, double 
     Q_ASSERT(thread() == QThread::currentThread());
     if (requestId != generation_)
         return;
+    if (requestId == inFlightRequestId_) {
+        inFlightRequestId_ = 0;
+        inFlightKey_.clear();
+    }
     if (result.succeeded() && !key.isEmpty())
         store(key, result.image);
     emit thumbnailReady(requestId, source, requestedSeconds, std::move(result));

@@ -18,7 +18,9 @@ class ThumbnailService final : public QObject {
     explicit ThumbnailService(QObject *parent = nullptr);
     ~ThumbnailService() override;
 
-    // Requests are owned by the latest call. All methods must run on this object's thread.
+    // The latest call owns the pending decode; an identical in-flight target is
+    // coalesced and returns its existing id. All methods must run on this
+    // object's thread.
     [[nodiscard]] quint64 request(const QString &source, double seconds,
                                   QSize maximumSize = QSize(256, 144));
     void cancel();
@@ -42,6 +44,8 @@ class ThumbnailService final : public QObject {
     QThreadPool pool_;
     std::shared_ptr<std::atomic_bool> cancellation_;
     quint64 generation_ = 0;
+    quint64 inFlightRequestId_ = 0;
+    QString inFlightKey_;
     QHash<QString, QImage> cache_;
     QStringList cacheOrder_;
 };

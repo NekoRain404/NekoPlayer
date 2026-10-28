@@ -185,3 +185,8 @@ target_compile_definitions(track_language_test PRIVATE
 add_dependencies(track_language_test test_language_media)
 add_test(NAME track-language COMMAND track_language_test)
 set_tests_properties(track-language PROPERTIES TIMEOUT 60)
+
+add_executable(stop_interleaving_test stop_interleaving_test.cpp)
+target_link_libraries(stop_interleaving_test PRIVATE neko_playback Qt6::Test)
+add_test(NAME stop-interleaving COMMAND stop_interleaving_test)
+set_tests_properties(stop-interleaving PROPERTIES TIMEOUT 20)

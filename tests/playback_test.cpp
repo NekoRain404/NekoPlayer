@@ -127,6 +127,22 @@ class PlaybackTest final : public QObject {
         QVERIFY(!player.state().path.isEmpty());
     }
 
+    void seekBeyondKnownDurationStaysBounded() {
+        MpvController player(true, true);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        player.openFile(QString::fromUtf8(TEST_MEDIA_PATH));
+        QTRY_COMPARE_WITH_TIMEOUT(loaded.count(), 1, 5000);
+        QTRY_VERIFY(player.state().active && player.state().seekable);
+        QTRY_VERIFY(player.state().duration > 3.5);
+        const auto duration = player.state().duration;
+        player.setPaused(true);
+        player.seekAbsolute(1000.0);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            !player.state().active || player.state().position <= duration + 0.05, 5000);
+        player.seekAbsolute(-5.0);
+        QTRY_VERIFY_WITH_TIMEOUT(!player.state().active || player.state().position < 0.05, 5000);
+    }
+
     void rapidSwitchAndClose() {
         for (int i = 0; i < 3; ++i) {
             MpvController player(true, true);

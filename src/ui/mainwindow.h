@@ -124,6 +124,8 @@ class MainWindow final : public QMainWindow {
     QAction *savePlaylistAction_ = nullptr;
     QAction *pauseAction_ = nullptr;
     QAction *stopAction_ = nullptr;
+    QAction *seekBackAction_ = nullptr;
+    QAction *seekForwardAction_ = nullptr;
     QAction *muteAction_ = nullptr;
     QAction *fullscreenAction_ = nullptr;
     QAction *exitFullscreenAction_ = nullptr;

@@ -34,9 +34,14 @@ ScreenshotMenu::ScreenshotMenu(MpvController &controller, QWidget *window)
     connect(&controller_, &MpvController::screenshotPendingChanged, this,
             &ScreenshotMenu::updateActions);
     connect(&controller_, &MpvController::screenshotFinished, this,
-            [this](const QString &, bool success) {
-                if (success)
+            [this](const QString &path, bool success) {
+                if (success) {
                     emit feedback(tr("截图已保存"));
+                    return;
+                }
+                const auto name = QFileInfo(path).fileName();
+                emit feedback(name.isEmpty() ? tr("截图未保存：无法写入目标位置")
+                                             : tr("截图未保存：无法写入目标位置（%1）").arg(name));
             });
     updateActions();
 }

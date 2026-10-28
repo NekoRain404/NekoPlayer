@@ -1,4 +1,5 @@
 #include "trackpreferencestore.h"
+#include "configfile.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -22,6 +23,13 @@ QString schemaError(const QString &path) {
         .arg(path);
 }
 
+QString absoluteCleanPath(const QString &path) {
+    if (path.isEmpty() || path.size() > TrackPreferenceStore::MaximumPathLength ||
+        path.contains(QChar::Null) || !QFileInfo(path).isAbsolute())
+        return {};
+    return QDir::cleanPath(path);
+}
+
 QString normalizedExternalPath(const QString &path) {
     if (path.isEmpty() || path.size() > TrackPreferenceStore::MaximumPathLength ||
         path.contains(QChar::Null) || !QFileInfo(path).isAbsolute())
@@ -34,6 +42,10 @@ QString normalizedExternalPath(const QString &path) {
 QString validateExistingFile(const QString &path) {
     if (!QFileInfo::exists(path))
         return {};
+    constexpr qint64 maximumConfigurationBytes = 4 * 1024 * 1024;
+    const QFileInfo existing(path);
+    if (!existing.isFile() || existing.size() > maximumConfigurationBytes)
+        return configurationError(path);
     QFile source(path);
     QTemporaryFile snapshot;
     if (!source.open(QIODevice::ReadOnly) || !snapshot.open())
@@ -100,7 +112,8 @@ QList<TrackPreferenceEntry> normalizedEntries(const QList<TrackPreferenceEntry> 
     QList<TrackPreferenceEntry> unique;
     unique.reserve(entries.size());
     for (auto entry : entries) {
-        if (!TrackPreferenceStore::matchesFingerprint(entry))
+        const auto state = TrackPreferenceStore::state(entry);
+        if (state == TrackPreferenceState::Invalid || state == TrackPreferenceState::Replaced)
             continue;
         entry.mediaPath = TrackPreferenceStore::normalizedPath(entry.mediaPath);
         normalizeExternalPaths(entry.selection);
@@ -199,23 +212,33 @@ void writeId(QSettings &settings, const QString &prefix, const QString &name,
 TrackPreferenceStore::TrackPreferenceStore(QString filePath) : filePath_(std::move(filePath)) {}
 
 QString TrackPreferenceStore::normalizedPath(const QString &path) {
-    if (path.isEmpty() || path.size() > MaximumPathLength || path.contains(QChar::Null) ||
-        !QFileInfo(path).isAbsolute())
+    const auto clean = absoluteCleanPath(path);
+    if (clean.isEmpty())
         return {};
-    const QFileInfo info(path);
+    const QFileInfo info(clean);
     if (!info.exists() || !info.isFile())
-        return {};
+        return clean;
     const auto canonical = info.canonicalFilePath();
-    return canonical.isEmpty() ? QString{} : QDir::cleanPath(canonical);
+    return canonical.isEmpty() ? clean : QDir::cleanPath(canonical);
+}
+
+TrackPreferenceState TrackPreferenceStore::state(const TrackPreferenceEntry &entry) {
+    const auto path = absoluteCleanPath(entry.mediaPath);
+    if (path.isEmpty())
+        return TrackPreferenceState::Invalid;
+    const QFileInfo info(path);
+    if (!info.exists())
+        return TrackPreferenceState::Missing;
+    if (!info.isFile())
+        return TrackPreferenceState::Replaced;
+    if (info.size() != entry.fileSize ||
+        info.lastModified().toUTC().toMSecsSinceEpoch() != entry.modifiedUtcMs)
+        return TrackPreferenceState::Replaced;
+    return TrackPreferenceState::Current;
 }
 
 bool TrackPreferenceStore::matchesFingerprint(const TrackPreferenceEntry &entry) {
-    const auto path = normalizedPath(entry.mediaPath);
-    if (path.isEmpty())
-        return false;
-    const QFileInfo info(path);
-    return info.size() == entry.fileSize &&
-           info.lastModified().toUTC().toMSecsSinceEpoch() == entry.modifiedUtcMs;
+    return state(entry) == TrackPreferenceState::Current;
 }
 
 TrackPreferenceLoadResult TrackPreferenceStore::load() const {
@@ -242,8 +265,10 @@ TrackPreferenceLoadResult TrackPreferenceStore::load() const {
     for (int index = 0; index < count; ++index) {
         TrackPreferenceEntry entry;
         if (readEntry(settings, index, entry)) {
-            // Removed or replaced media is stale data, not a corrupt configuration.
-            if (!matchesFingerprint(entry))
+            // Replaced media is stale data; temporarily missing media is not,
+            // because the file may come back with the same fingerprint.
+            const auto state = TrackPreferenceStore::state(entry);
+            if (state == TrackPreferenceState::Invalid || state == TrackPreferenceState::Replaced)
                 continue;
             entry.mediaPath = normalizedPath(entry.mediaPath);
             normalizeExternalPaths(entry.selection);
@@ -304,5 +329,8 @@ QString TrackPreferenceStore::save(const QList<TrackPreferenceEntry> &entries) c
                               entry.selection.externalSubtitlePaths.at(item));
     }
     settings.sync();
-    return settings.status() == QSettings::NoError ? QString{} : configurationError(filePath_);
+    if (settings.status() != QSettings::NoError)
+        return configurationError(filePath_);
+    restrictConfigurationFilePermissions(filePath_);
+    return {};
 }

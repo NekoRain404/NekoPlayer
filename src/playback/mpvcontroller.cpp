@@ -25,6 +25,11 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
         if (!backend.option(name, value))
             return;
     }
+    // The built-in ytdl hook is not disabled by load-scripts=no. Web-page
+    // extraction is unverified, so keep external processes out of the player.
+    // Builds without the built-in script do not expose the option; that must not
+    // disable playback.
+    backend.softOption("ytdl", "no");
     if (!backend.option("vo", headless ? "null" : "libmpv"))
         return;
     if ((headless || silentAudio) && !backend.option("ao", "null"))
@@ -314,10 +319,36 @@ void MpvController::stop() {
     impl_->openingPosition.reset();
     if (!impl_->pendingOpens.isEmpty())
         impl_->state.path = impl_->playingPath;
+    // A stop invalidates outstanding commands. Keep their ids until mpv delivers
+    // the replies so a canceled command cannot surface as a user-visible error.
+    const auto cancelReply = [this](uint64_t command) {
+        if (command)
+            impl_->canceledCommands.insert(command);
+    };
+    cancelReply(impl_->openingCommand);
+    for (const auto &open : std::as_const(impl_->pendingOpens))
+        cancelReply(open.command);
+    cancelReply(impl_->chapterCommand);
+    // Keep screenshotCommand pending: its own reply still ends the operation, but
+    // a failed write after stop must not be reported as a playback error.
+    cancelReply(impl_->screenshotCommand);
     const auto generation = ++impl_->openGeneration;
     impl_->pendingPlayback.reset();
     impl_->openingCommand = 0;
     impl_->openingEntry = -1;
+    // Tombstone every entry the stop invalidates before clearing the maps.
+    // A queued END_FILE/FILE_LOADED for these entries must be ignored instead of
+    // falling back to the current generation.
+    impl_->invalidateEntry(impl_->playingEntry);
+    for (const auto entry : impl_->openGenerationsByEntry.keys())
+        impl_->invalidateEntry(entry);
+    for (const auto entry : std::as_const(impl_->startedEntries))
+        impl_->invalidateEntry(entry);
+    for (const auto entry : std::as_const(impl_->loadedEntries))
+        impl_->invalidateEntry(entry);
+    for (const auto entry : impl_->endedEntries.keys())
+        impl_->invalidateEntry(entry);
+    impl_->playingEntry = -1;
     impl_->pendingOpens.clear();
     impl_->startedEntries.clear();
     impl_->loadedEntries.clear();
@@ -343,7 +374,12 @@ void MpvController::setFileLoopEnabled(bool enabled) {
 void MpvController::seekAbsolute(double seconds) {
     if (!state().seekable || !std::isfinite(seconds))
         return;
-    const double target = std::clamp(seconds, 0.0, state().duration);
+    // mpv can seek before it knows the duration (for example while a live stream
+    // resolves). Only clamp above when the duration is a known positive value.
+    const double duration = state().duration;
+    const double target = std::isfinite(duration) && duration > 0.0
+                              ? std::clamp(seconds, 0.0, duration)
+                              : std::max(seconds, 0.0);
     impl_->cancelChapterRequest();
     impl_->command({"seek", QByteArray::number(target, 'f', 3), "absolute+exact"});
 }
@@ -391,14 +427,17 @@ void MpvController::selectSubtitleTrack(qint64 id) {
 }
 
 void MpvController::prepareForRendererReset() {
-    if (state().active) {
-        impl_->recovery = Impl::RecoveryState{
-            state(), impl_->tracksToRestore.isEmpty() ? tracks() : impl_->tracksToRestore,
-            impl_->explicitExternalPaths};
-        if (impl_->openingPosition)
-            impl_->recovery->playback.position = *impl_->openingPosition;
-        impl_->recoveringRenderer = true;
-    }
+    // A context loss while a file is still loading must also be recoverable.
+    // Releasing the renderer disables video, and without a snapshot the reload
+    // never happens; only a fully idle controller keeps no snapshot.
+    if (!state().active && !impl_->loading && !impl_->pendingPlayback)
+        return;
+    impl_->recovery = Impl::RecoveryState{
+        state(), impl_->tracksToRestore.isEmpty() ? tracks() : impl_->tracksToRestore,
+        impl_->explicitExternalPaths};
+    if (impl_->openingPosition)
+        impl_->recovery->playback.position = *impl_->openingPosition;
+    impl_->recoveringRenderer = true;
 }
 
 void MpvController::resumeAfterRendererReset() {

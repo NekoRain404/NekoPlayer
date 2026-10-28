@@ -1,6 +1,8 @@
 #include "preview/ffmpegthumbnaildecoder.h"
 
 #include <QDir>
+#include <QElapsedTimer>
+#include <QFile>
 #include <QFileInfo>
 #include <QProcess>
 #include <QTemporaryDir>
@@ -78,6 +80,32 @@ class ThumbnailDecoderTest final : public QObject {
         const auto result = decodeThumbnail(request);
         QVERIFY(!result.succeeded());
         QVERIFY(!result.error.isEmpty());
+    }
+
+    void rejectsRemotePlaylistSourceWithoutNetworkAccess() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto source = directory.filePath(QStringLiteral("remote-playlist.m3u8"));
+        QFile playlist(source);
+        QVERIFY(playlist.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        // The HLS demuxer resolves segment URLs through the input's protocol
+        // whitelist, so this local playlist referencing a remote segment must
+        // be rejected before any connection is attempted.
+        const QByteArray manifest("#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n"
+                                  "#EXTINF:10.0,\nhttps://example.com/seg0.ts\n#EXT-X-ENDLIST\n");
+        QVERIFY(playlist.write(manifest) > 0);
+        playlist.close();
+
+        ThumbnailRequest request;
+        request.source = source;
+        QElapsedTimer elapsed;
+        elapsed.start();
+        const auto result = decodeThumbnail(request);
+        QVERIFY(!result.succeeded());
+        QVERIFY(!result.error.isEmpty());
+        // The decoder's wall-clock deadline is five seconds; a blocked input
+        // must be cut off well before the test timeout.
+        QVERIFY(elapsed.elapsed() < 6000);
     }
 
     void rejectsInvalidAndCancelledRequests() {

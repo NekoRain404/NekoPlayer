@@ -510,6 +510,40 @@ class PreferencesDialogTest final : public QObject {
             QCOMPARE(control->accessibleName(), name);
         }
     }
+    void appearancePreviewRollsBackOnCancelAndSnapshotsOnApply() {
+        qApp->setProperty("glassEnabled", true);
+        qApp->setProperty("glassOpacity", 72);
+        qApp->setProperty("glassBlur", 55);
+        const auto committedPalette = qApp->palette();
+        const auto committedStyle = qApp->styleSheet();
+        MpvController player(true, true);
+        PreferencesDialog dialog(player);
+        dialog.selectCategory(PreferencesDialog::Category::Appearance);
+        auto *theme = dialog.findChild<QComboBox *>(QStringLiteral("appearanceThemeChoice"));
+        auto *glass = dialog.findChild<QCheckBox *>(QStringLiteral("appearanceGlassChoice"));
+        auto *buttons = dialog.findChild<QDialogButtonBox *>(QStringLiteral("preferencesButtons"));
+        theme->setCurrentIndex(
+            theme->findData(static_cast<int>(AppearancePreferences::Theme::Light)));
+        glass->setChecked(false);
+        QTRY_VERIFY_WITH_TIMEOUT(!qApp->property("glassEnabled").toBool(), 1000);
+        buttons->button(QDialogButtonBox::Cancel)->click();
+        QCOMPARE(qApp->palette(), committedPalette);
+        QCOMPARE(qApp->styleSheet(), committedStyle);
+        QCOMPARE(qApp->property("glassEnabled").toBool(), true);
+        QCOMPARE(qApp->property("glassOpacity").toInt(), 72);
+        QCOMPARE(qApp->property("glassBlur").toInt(), 55);
+        theme->setCurrentIndex(
+            theme->findData(static_cast<int>(AppearancePreferences::Theme::Dark)));
+        buttons->button(QDialogButtonBox::Apply)->click();
+        const auto appliedStyle = qApp->styleSheet();
+        theme->setCurrentIndex(
+            theme->findData(static_cast<int>(AppearancePreferences::Theme::Light)));
+        glass->setChecked(true);
+        QTRY_VERIFY_WITH_TIMEOUT(qApp->property("glassEnabled").toBool(), 1000);
+        buttons->button(QDialogButtonBox::Cancel)->click();
+        QCOMPARE(qApp->styleSheet(), appliedStyle);
+        QVERIFY(!qApp->property("glassEnabled").toBool());
+    }
 };
 
 QTEST_MAIN(PreferencesDialogTest)

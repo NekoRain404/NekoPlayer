@@ -1,5 +1,7 @@
 #include "mpvcontroller_p.h"
 
+#include <QCoreApplication>
+
 void MpvController::Impl::updateProperty(const mpv_event &event) {
     if (updateMediaInformation(event))
         return;
@@ -27,7 +29,8 @@ void MpvController::Impl::updateProperty(const mpv_event &event) {
         if (value.data)
             snapshot = parseMpvAudioDevices(*static_cast<mpv_node *>(value.data));
         else
-            snapshot.append({QStringLiteral("auto"), owner->tr("自动选择")});
+            snapshot.append(
+                {QStringLiteral("auto"), QCoreApplication::translate("AudioDevice", "自动选择")});
         if (audioDevices == snapshot)
             return;
         audioDevices = snapshot;
@@ -150,6 +153,18 @@ void MpvController::Impl::drainEvents() {
             queryChapterRequest(chapterSeekStarted);
             break;
         case MPV_EVENT_COMMAND_REPLY:
+            if (canceledCommands.remove(event->reply_userdata)) {
+                // A screenshot canceled by stop() still completes on its own reply;
+                // only the error must stay out of the user-facing error stream.
+                if (screenshotCommand && event->reply_userdata == screenshotCommand) {
+                    const auto path = std::exchange(screenshotPath, {});
+                    const bool success = event->error >= 0;
+                    screenshotCommand = 0;
+                    emit owner->screenshotPendingChanged();
+                    emit owner->screenshotFinished(path, success);
+                }
+                break;
+            }
             if (finishScreenshot(*event))
                 break;
             handleOpeningCommandReply(*event);
@@ -205,6 +220,15 @@ void MpvController::Impl::drainEvents() {
 }
 
 void MpvController::Impl::handleEndFile(const mpv_event_end_file &end) {
+    if (invalidatedEntries.contains(end.playlist_entry_id)) {
+        // stop() invalidated this entry. Its terminal event is still the point
+        // where the playback snapshot is cleared, but it must not report EOF or
+        // a load failure for a stopped file.
+        resetPlayback();
+        pendingPlayback.reset();
+        emit owner->stateChanged();
+        return;
+    }
     if (!openGenerationsByEntry.contains(end.playlist_entry_id) &&
         startedEntries.contains(end.playlist_entry_id)) {
         endedEntries.insert(end.playlist_entry_id, end);
@@ -247,6 +271,10 @@ void MpvController::Impl::handleEndFile(const mpv_event_end_file &end) {
 }
 
 void MpvController::Impl::handleFileLoaded() {
+    // stop() clears playingEntry and tombstones the previous entries. A stale
+    // FILE_LOADED must not resurrect playback or notify about the wrong file.
+    if (playingEntry < 0 || invalidatedEntries.contains(playingEntry))
+        return;
     if (startedEntries.contains(playingEntry) && !openGenerationsByEntry.contains(playingEntry)) {
         loadedEntries.insert(playingEntry);
         return;

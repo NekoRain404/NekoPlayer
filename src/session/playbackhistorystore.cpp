@@ -1,4 +1,5 @@
 #include "playbackhistorystore.h"
+#include "configfile.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -26,6 +27,10 @@ QString schemaError(const QString &path) {
 QString validateExistingFile(const QString &path) {
     if (!QFileInfo::exists(path))
         return {};
+    constexpr qint64 maximumConfigurationBytes = 4 * 1024 * 1024;
+    const QFileInfo existing(path);
+    if (!existing.isFile() || existing.size() > maximumConfigurationBytes)
+        return configurationError(path);
 
     QFile source(path);
     QTemporaryFile snapshot;
@@ -124,16 +129,16 @@ PlaybackHistoryLoadResult PlaybackHistoryStore::load() const {
         return {{}, schemaError(filePath_)};
 
     QList<PlaybackHistoryEntry> entries;
-    bool invalidEntryFound = false;
     for (int index = 0; index < count; ++index) {
         PlaybackHistoryEntry entry;
-        if (readEntry(settings, index, entry)) {
-            entry.path = normalizedPath(entry.path);
-            entries.append(std::move(entry));
-        } else
-            invalidEntryFound = true;
+        if (!readEntry(settings, index, entry))
+            continue;
+        // A single invalid entry is quarantined, not a fatal configuration
+        // error: the next save rewrites only the entries that parsed.
+        entry.path = normalizedPath(entry.path);
+        entries.append(std::move(entry));
     }
-    return {uniqueEntries(entries), invalidEntryFound ? schemaError(filePath_) : QString{}};
+    return {uniqueEntries(entries), {}};
 }
 
 QString PlaybackHistoryStore::save(const QList<PlaybackHistoryEntry> &entries) const {
@@ -170,5 +175,8 @@ QString PlaybackHistoryStore::save(const QList<PlaybackHistoryEntry> &entries) c
         settings.setValue(prefix + QStringLiteral("lastPlayedUtcMs"), entry.lastPlayedUtcMs);
     }
     settings.sync();
-    return settings.status() == QSettings::NoError ? QString{} : configurationError(filePath_);
+    if (settings.status() != QSettings::NoError)
+        return configurationError(filePath_);
+    restrictConfigurationFilePermissions(filePath_);
+    return {};
 }

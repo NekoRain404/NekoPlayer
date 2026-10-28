@@ -19,6 +19,7 @@
 #include <QStackedWidget>
 #include <QStyle>
 #include <QTabWidget>
+#include <QTimer>
 #include <QVBoxLayout>
 
 PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
@@ -40,6 +41,10 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
       resumePlaybackPositionDefault_(resumePlaybackPosition),
       seekStepSecondsDefault_(normalizedSeekStepSeconds(seekStepSeconds)),
       languagePreferences_(languages.normalized()), lastApplyActive_(player.state().active) {
+    // Snapshot the runtime appearance a rejected dialog must return to.
+    setProperty("nekoCommittedGlassEnabled", qApp->property("glassEnabled"));
+    setProperty("nekoCommittedGlassOpacity", qApp->property("glassOpacity"));
+    setProperty("nekoCommittedGlassBlur", qApp->property("glassBlur"));
     const auto tokens = appearanceTokens(AppearancePreferences::Theme::Dark);
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("偏好设置"));
@@ -259,8 +264,13 @@ PreferencesDialog::PreferencesDialog(MpvController &player, QWidget *parent,
     });
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(this, &QDialog::rejected, this, [this] {
+        if (auto *timer = findChild<QTimer *>(QStringLiteral("appearancePreviewTimer")))
+            timer->stop();
         qApp->setPalette(appearancePalette_);
         qApp->setStyleSheet(appearanceStyleSheet_);
+        qApp->setProperty("glassEnabled", property("nekoCommittedGlassEnabled"));
+        qApp->setProperty("glassOpacity", property("nekoCommittedGlassOpacity"));
+        qApp->setProperty("glassBlur", property("nekoCommittedGlassBlur"));
     });
     connect(restoreDefaultsButton_, &QPushButton::clicked, this, [this] {
         // Reset only the category whose page is showing; hidden pages keep their drafts.
@@ -298,16 +308,23 @@ void PreferencesDialog::selectCategory(Category category) {
 }
 
 void PreferencesDialog::apply() {
+    // Flush a throttled preview so Apply and the rollback snapshot see the draft.
+    auto *previewTimer = findChild<QTimer *>(QStringLiteral("appearancePreviewTimer"));
+    if (previewTimer && previewTimer->isActive()) {
+        previewTimer->stop();
+        previewAppearance();
+    }
     if (appearanceChanged()) {
         appearanceBaseline_ = appearanceDraft();
         appearancePage_->accept();
-        // The draft is already live through previewAppearance(); snapshot that
-        // state so Cancel after Apply returns to the committed appearance. The
-        // appearance owner handles the final apply and persistence below.
-        appearancePalette_ = qApp->palette();
-        appearanceStyleSheet_ = qApp->styleSheet();
         emit appearancePreferencesChanged(appearanceBaseline_);
     }
+    // Apply commits the live preview; a later Cancel returns to this state.
+    appearancePalette_ = qApp->palette();
+    appearanceStyleSheet_ = qApp->styleSheet();
+    setProperty("nekoCommittedGlassEnabled", qApp->property("glassEnabled"));
+    setProperty("nekoCommittedGlassOpacity", qApp->property("glassOpacity"));
+    setProperty("nekoCommittedGlassBlur", qApp->property("glassBlur"));
     const bool decodingChanged =
         hardwareDecoding_->currentData().toBool() != player_.hardwareDecodingEnabled();
     if (decodingChanged)
@@ -368,8 +385,21 @@ void PreferencesDialog::updateApplyButton() {
 
 void PreferencesDialog::createAppearancePage() {
     appearancePage_ = new PreferencesAppearancePage(appearanceBaseline_, tabs_);
-    connect(appearancePage_, &PreferencesAppearancePage::edited, this,
-            &PreferencesDialog::previewAppearance);
+    auto *previewTimer = new QTimer(this);
+    previewTimer->setObjectName(QStringLiteral("appearancePreviewTimer"));
+    previewTimer->setSingleShot(true);
+    previewTimer->setInterval(120);
+    connect(previewTimer, &QTimer::timeout, this, &PreferencesDialog::previewAppearance);
+    connect(appearancePage_, &PreferencesAppearancePage::edited, this, [this, previewTimer] {
+        // Leading-edge throttle: the first change of a gesture previews
+        // immediately (so combo/checkbox edits feel instant), while the rest of
+        // a slider drag is coalesced into one restyle per interval.
+        updateApplyButton();
+        if (previewTimer->isActive())
+            return;
+        previewAppearance();
+        previewTimer->start();
+    });
     tabs_->addTab(appearancePage_, style()->standardIcon(QStyle::SP_DesktopIcon), tr("外观"));
 }
 

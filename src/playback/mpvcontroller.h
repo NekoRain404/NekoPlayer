@@ -19,6 +19,12 @@
 #include <memory>
 #include <mpv/client.h>
 
+// Audio equalizer presets and video filter strengths are user-facing choices;
+// the controller owns their mpv representation.
+enum class EqualizerPreset { Off, Flat, Rock, Pop, Jazz, Classical, Vocal, BassBoost };
+enum class SharpenLevel { Off, Low, Medium, High };
+enum class DenoiseLevel { Off, Low, Medium, High };
+
 struct PlaybackState {
     bool active = false;
     bool paused = false;
@@ -83,6 +89,11 @@ class MpvController final : public QObject {
     [[nodiscard]] const VideoColorAdjustment &videoColorAdjustment() const;
     [[nodiscard]] HdrToneMapping hdrToneMapping() const;
     [[nodiscard]] DeinterlaceMode deinterlaceMode() const;
+    [[nodiscard]] EqualizerPreset equalizerPreset() const;
+    [[nodiscard]] SharpenLevel sharpenLevel() const;
+    [[nodiscard]] DenoiseLevel denoiseLevel() const;
+    void setEqualizerPreset(EqualizerPreset preset);
+    void setVideoFilters(SharpenLevel sharpen, DenoiseLevel denoise);
     void setVideoColorAdjustment(const VideoColorAdjustment &adjustment);
     void setHdrToneMapping(HdrToneMapping mapping);
     void setDeinterlaceMode(DeinterlaceMode mode);
@@ -152,6 +163,8 @@ class MpvController final : public QObject {
     void videoColorAdjustmentChanged();
     void hdrToneMappingChanged();
     void deinterlaceModeChanged();
+    void equalizerPresetChanged();
+    void videoFiltersChanged();
     void abLoopChanged();
     void stateChanged();
     void mediaInformationChanged();

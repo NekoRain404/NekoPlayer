@@ -97,9 +97,12 @@ set_tests_properties(window-startup file-startup PROPERTIES TIMEOUT 20 ENVIRONME
 add_executable(always_on_top_window_test always_on_top_window_test.cpp)
 target_link_libraries(always_on_top_window_test PRIVATE neko_ui Qt6::Test)
 
-# Compile-only coverage for the --fullscreen / --start-paused startup paths.
 add_executable(startup_options_window_test startup_options_window_test.cpp)
 target_link_libraries(startup_options_window_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME startup-options-window COMMAND ${WINDOW_TEST_RUNNER}
+    $<TARGET_FILE:startup_options_window_test>)
+set_tests_properties(startup-options-window PROPERTIES TIMEOUT 30
+    ENVIRONMENT "${WINDOW_TEST_ENVIRONMENT}")
 
 # Compile-only coverage for the playlist sort submenu and cleanup action wiring.
 add_executable(playlist_maintenance_window_test playlist_maintenance_window_test.cpp)

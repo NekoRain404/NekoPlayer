@@ -8,6 +8,7 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QMenu>
+#include <QTimer>
 #include <QWidget>
 #include <cmath>
 
@@ -63,6 +64,28 @@ NavigationMenu::NavigationMenu(MpvController &player, QWidget *window)
     menu_->addSeparator();
     menu_->addMenu(loop->menu());
     connect(loop, &AbLoopMenu::feedback, this, &NavigationMenu::feedback);
+    menu_->addSeparator();
+    sleepMenu_ = menu_->addMenu(tr("睡眠定时器"));
+    sleepMenu_->setObjectName(QStringLiteral("sleepTimerMenu"));
+    auto *sleepGroup = new QActionGroup(sleepMenu_);
+    const auto addSleepTimerAction = [this, sleepGroup](int seconds, const QString &name) {
+        auto *action = sleepMenu_->addAction(sleepTimerText(seconds));
+        action->setObjectName(name);
+        action->setCheckable(true);
+        action->setData(seconds);
+        sleepGroup->addAction(action);
+        sleepActions_.append(action);
+        return action;
+    };
+    sleepOff_ = addSleepTimerAction(0, QStringLiteral("sleepTimerOffAction"));
+    sleepOff_->setChecked(true);
+    for (const auto seconds : {15 * 60, 30 * 60, 60 * 60, 90 * 60, 120 * 60})
+        addSleepTimerAction(seconds, QStringLiteral("sleepTimer%1Action").arg(seconds / 60));
+    sleepTimer_ = new QTimer(this);
+    sleepTimer_->setObjectName(QStringLiteral("sleepTimer"));
+    sleepTimer_->setSingleShot(true);
+    connect(sleepGroup, &QActionGroup::triggered, this, &NavigationMenu::selectSleepTimer);
+    connect(sleepTimer_, &QTimer::timeout, this, &NavigationMenu::sleepTimerExpired);
     connect(seekTime_, &QAction::triggered, this, &NavigationMenu::chooseTime);
     connect(previous_, &QAction::triggered, &player_, &MpvController::previousChapter);
     connect(next_, &QAction::triggered, &player_, &MpvController::nextChapter);
@@ -95,6 +118,9 @@ void NavigationMenu::retranslate() {
     setText("nextFrameAction", tr("下一帧"));
     for (auto *loop : window_->findChildren<AbLoopMenu *>())
         loop->retranslate();
+    sleepMenu_->setTitle(tr("睡眠定时器"));
+    for (auto *action : sleepActions_)
+        action->setText(sleepTimerText(action->data().toInt()));
     rebuildChapters();
 }
 
@@ -171,4 +197,53 @@ void NavigationMenu::chooseTime() {
         return;
     }
     player_.seekAbsolute(*seconds);
+}
+
+QString NavigationMenu::sleepTimerText(int seconds) const {
+    switch (seconds) {
+    case 15 * 60:
+        return tr("15 分钟");
+    case 30 * 60:
+        return tr("30 分钟");
+    case 60 * 60:
+        return tr("1 小时");
+    case 90 * 60:
+        return tr("90 分钟");
+    case 120 * 60:
+        return tr("2 小时");
+    default:
+        return tr("关闭");
+    }
+}
+
+void NavigationMenu::selectSleepTimer(QAction *action) {
+    const int seconds = action->data().toInt();
+    if (seconds <= 0) {
+        cancelSleepTimer();
+        return;
+    }
+    sleepTimer_->start(seconds * 1000);
+    emit feedback(tr("睡眠定时器：%1后停止").arg(sleepTimerText(seconds)));
+}
+
+void NavigationMenu::cancelSleepTimer() {
+    const bool wasActive = sleepTimer_->isActive();
+    sleepTimer_->stop();
+    sleepOff_->setChecked(true);
+    if (wasActive)
+        emit feedback(tr("睡眠定时器已取消"));
+}
+
+void NavigationMenu::sleepTimerExpired() {
+    sleepOff_->setChecked(true);
+    player_.stop();
+    emit feedback(tr("定时停止已触发"));
+}
+
+void NavigationMenu::setSleepTimerForTest(int milliseconds) {
+    if (milliseconds <= 0) {
+        cancelSleepTimer();
+        return;
+    }
+    sleepTimer_->start(milliseconds);
 }

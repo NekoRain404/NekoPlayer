@@ -1,6 +1,12 @@
+#include "playback/mpvcontroller.h"
 #include "ui/mainwindow.h"
+#include "ui/navigationmenu.h"
 
 #include <QAction>
+#include <QMenu>
+#include <QSignalSpy>
+#include <QTimer>
+#include <QWidget>
 #include <QtTest>
 
 namespace {
@@ -79,6 +85,64 @@ class StartupOptionsWindowTest final : public QObject {
         QVERIFY(top->isChecked());
         QVERIFY(window.windowFlags().testFlag(Qt::WindowStaysOnTopHint));
         QVERIFY(window.isVisible());
+    }
+
+    void sleepTimerActionsArmAndCancelSessionTimer() {
+        MpvController player(true, true);
+        QWidget window;
+        NavigationMenu navigation(player, &window);
+        auto *off = window.findChild<QAction *>(QStringLiteral("sleepTimerOffAction"));
+        auto *thirty = window.findChild<QAction *>(QStringLiteral("sleepTimer30Action"));
+        auto *ninety = window.findChild<QAction *>(QStringLiteral("sleepTimer90Action"));
+        auto *timer = window.findChild<QTimer *>(QStringLiteral("sleepTimer"));
+        QVERIFY(off && thirty && ninety && timer);
+        QVERIFY(off->isChecked() && !thirty->isChecked());
+        QVERIFY(!timer->isActive());
+        QSignalSpy feedback(&navigation, &NavigationMenu::feedback);
+        thirty->trigger();
+        QVERIFY(thirty->isChecked() && !off->isChecked());
+        QVERIFY(timer->isActive());
+        QCOMPARE(timer->interval(), 30 * 60 * 1000);
+        QCOMPARE(feedback.count(), 1);
+        QCOMPARE(feedback.takeFirst().at(0).toString(),
+                 QStringLiteral("睡眠定时器：30 分钟后停止"));
+        ninety->trigger();
+        QVERIFY(ninety->isChecked() && !thirty->isChecked());
+        QCOMPARE(timer->interval(), 90 * 60 * 1000);
+        QCOMPARE(feedback.count(), 1);
+        feedback.clear();
+        off->trigger();
+        QVERIFY(off->isChecked() && !ninety->isChecked());
+        QVERIFY(!timer->isActive());
+        QCOMPARE(feedback.count(), 1);
+        QCOMPARE(feedback.takeFirst().at(0).toString(), QStringLiteral("睡眠定时器已取消"));
+        // Selecting 关闭 without a running timer stays silent.
+        off->trigger();
+        QVERIFY(feedback.isEmpty());
+    }
+
+    void sleepTimerExpiryStopsPlayback() {
+        MpvController player(true, true);
+        QWidget window;
+        NavigationMenu navigation(player, &window);
+        auto *off = window.findChild<QAction *>(QStringLiteral("sleepTimerOffAction"));
+        auto *fifteen = window.findChild<QAction *>(QStringLiteral("sleepTimer15Action"));
+        auto *timer = window.findChild<QTimer *>(QStringLiteral("sleepTimer"));
+        QVERIFY(off && fifteen && timer);
+        QSignalSpy stop(&player, &MpvController::stopRequested);
+        QSignalSpy feedback(&navigation, &NavigationMenu::feedback);
+        fifteen->trigger();
+        QVERIFY(fifteen->isChecked() && timer->isActive());
+        // The seam shortens the same single-shot timer; the menu owns it and
+        // the timeout path is identical to a real duration.
+        feedback.clear();
+        navigation.setSleepTimerForTest(10);
+        QVERIFY(timer->isActive());
+        QTRY_COMPARE_WITH_TIMEOUT(stop.count(), 1, 1000);
+        QTRY_COMPARE_WITH_TIMEOUT(feedback.count(), 1, 1000);
+        QVERIFY(!timer->isActive());
+        QVERIFY(off->isChecked() && !fifteen->isChecked());
+        QCOMPARE(feedback.takeFirst().at(0).toString(), QStringLiteral("定时停止已触发"));
     }
 };
 

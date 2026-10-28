@@ -54,6 +54,20 @@ class MediaReportTest final : public QObject {
         QVERIFY(!idle.contains(QStringLiteral("stale-codec")));
         QVERIFY(!idle.contains(state.path));
     }
+
+    void redactsNetworkCredentialsAndQueryFromReport() {
+        PlaybackState state;
+        state.active = true;
+        state.path = QStringLiteral("https://user:token@example.test/video.mkv?sig=secret");
+        const auto report = formatMediaInformation(MediaInformation{}, state);
+        QVERIFY(report.contains(QStringLiteral("example.test")));
+        QVERIFY(report.contains(QStringLiteral("video.mkv")));
+        QVERIFY(report.contains(QStringLiteral("已隐藏凭据与查询参数")));
+        QVERIFY(!report.contains(QStringLiteral("user")));
+        QVERIFY(!report.contains(QStringLiteral("token")));
+        QVERIFY(!report.contains(QStringLiteral("sig=secret")));
+        QVERIFY(!report.contains(QStringLiteral("?")));
+    }
 };
 
 QTEST_GUILESS_MAIN(MediaReportTest)

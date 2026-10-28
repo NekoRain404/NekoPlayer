@@ -31,7 +31,7 @@ bool sameTrackPayload(const QList<TrackPreferenceEntry> &left,
             x.externalAudioPaths != y.externalAudioPaths ||
             x.selectedExternalSubtitlePath != y.selectedExternalSubtitlePath ||
             x.selectedExternalSubtitleStream != y.selectedExternalSubtitleStream ||
-            x.externalSubtitlePaths != y.externalSubtitlePaths)
+            x.externalSubtitlePaths != y.externalSubtitlePaths || !sameTuningPayload(a, b))
             return false;
     }
     return true;
@@ -54,7 +54,12 @@ SessionManager::SessionManager(MpvController &player, PlaylistController &playli
             [this] { player_.applyAudioDevicePreference(audio_.outputDevice); });
     connect(&player_, &MpvController::tuningRequested, this,
             [this](double speed, double audioDelay, double subtitleDelay) {
+                // Applying a per-media record must not rewrite the global
+                // fallback; only explicit user changes update it.
+                if (restoringTrackPreference_)
+                    return;
                 tuning_ = {speed, audioDelay, subtitleDelay};
+                rememberTrackPreference();
             });
     connect(&playlist_, &PlaylistController::playbackPositionSnapshot, this,
             &SessionManager::rememberPlaybackPosition);
@@ -302,6 +307,12 @@ void SessionManager::restoreTrackPreference() {
         return;
     }
     restoringTrackPreference_ = true;
+    // The flag above also suppresses the save the tuning signals would trigger.
+    if (found->hasTuning) {
+        player_.setPlaybackSpeed(found->playbackSpeed);
+        player_.setAudioDelay(found->audioDelay);
+        player_.setSubtitleDelay(found->subtitleDelay);
+    }
     player_.restoreTrackPreference(found->selection);
 }
 
@@ -317,6 +328,10 @@ void SessionManager::rememberTrackPreference() {
         return;
     auto entry = *loadedMediaFingerprint_;
     entry.lastUsedUtcMs = QDateTime::currentMSecsSinceEpoch();
+    entry.hasTuning = true;
+    entry.playbackSpeed = tuning_.playbackSpeed;
+    entry.audioDelay = tuning_.audioDelay;
+    entry.subtitleDelay = tuning_.subtitleDelay;
     const auto &tracks = player_.tracks();
     const auto requestedTrack = [&tracks](MediaTrack::Type type, const std::optional<qint64> &id) {
         const auto selected =

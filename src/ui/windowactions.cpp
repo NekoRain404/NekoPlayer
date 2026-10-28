@@ -227,6 +227,7 @@ void MainWindow::createActions() {
     audio->addMenu(audioDevices->menu());
     audio->addMenu(trackMenus_->audioMenu());
     audio->addMenu(tuning->audioDelayMenu());
+    audio->addMenu(tuning->equalizerMenu());
     menuBar()->addMenu(trackMenus_->subtitleMenu());
     auto *video = new VideoMenu(*controller_, this);
     connect(video, &VideoMenu::feedback, this,
@@ -423,6 +424,7 @@ void MainWindow::createActions() {
     contextMenu_->addMenu(navigation->menu());
     contextMenu_->addMenu(tuning->speedMenu());
     contextMenu_->addMenu(tuning->audioDelayMenu());
+    contextMenu_->addMenu(tuning->equalizerMenu());
     contextMenu_->addMenu(modeMenu->menu());
     contextMenu_->addActions({previousAction_, nextAction_, showPlaylistAction_, muteAction_,
                               fullscreenAction_, miniPlayer});

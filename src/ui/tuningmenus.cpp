@@ -3,12 +3,34 @@
 
 #include <QAction>
 #include <QActionGroup>
+#include <QApplication>
 #include <QInputDialog>
 #include <QMenu>
+#include <QSettings>
 #include <QWidget>
 #include <cmath>
 
 namespace {
+constexpr std::array equalizerKeys{"off",  "flat",      "rock",  "pop",
+                                   "jazz", "classical", "vocal", "bass"};
+constexpr std::array equalizerActionNames{"equalizerOffAction",   "equalizerFlatAction",
+                                          "equalizerRockAction",  "equalizerPopAction",
+                                          "equalizerJazzAction",  "equalizerClassicalAction",
+                                          "equalizerVocalAction", "equalizerBassBoostAction"};
+std::array<QString, 8> equalizerLabels() {
+    return {TuningMenus::tr("关闭"), TuningMenus::tr("平坦"),    TuningMenus::tr("摇滚"),
+            TuningMenus::tr("流行"), TuningMenus::tr("爵士"),    TuningMenus::tr("古典"),
+            TuningMenus::tr("人声"), TuningMenus::tr("低音增强")};
+}
+QString presetKey(EqualizerPreset preset) {
+    return QString::fromLatin1(equalizerKeys[static_cast<size_t>(preset)]);
+}
+EqualizerPreset presetFromKey(const QString &key) {
+    for (size_t index = 0; index < equalizerKeys.size(); ++index)
+        if (key == QLatin1String(equalizerKeys[index]))
+            return static_cast<EqualizerPreset>(index);
+    return EqualizerPreset::Off;
+}
 QAction *addAction(QMenu *menu, QWidget *window, const QString &text, const QString &name,
                    QKeySequence shortcut, const std::function<void()> &invoke) {
     auto *action = menu->addAction(text);
@@ -23,20 +45,29 @@ QAction *addAction(QMenu *menu, QWidget *window, const QString &text, const QStr
 TuningMenus::TuningMenus(MpvController &controller, QWidget *window)
     : QObject(window), controller_(controller), window_(window), speedMenu_(new QMenu(window)),
       audioDelayMenu_(new QMenu(window)), subtitleDelayMenu_(new QMenu(window)),
-      speedGroup_(new QActionGroup(speedMenu_)) {
+      equalizerMenu_(new QMenu(window)), speedGroup_(new QActionGroup(speedMenu_)),
+      equalizerGroup_(new QActionGroup(equalizerMenu_)) {
     speedMenu_->setObjectName(QStringLiteral("speedMenu"));
     audioDelayMenu_->setObjectName(QStringLiteral("audioDelayMenu"));
     subtitleDelayMenu_->setObjectName(QStringLiteral("subtitleDelayMenu"));
     createSpeedMenu();
     createDelayMenu(audioDelayMenu_, true);
     createDelayMenu(subtitleDelayMenu_, false);
+    createEqualizerMenu();
+    // TuningMenus is attached to the 声音 menu through its audio delay menu, so
+    // the equalizer lives there until a dedicated audio-effects menu exists.
+    audioDelayMenu_->addSeparator();
+    audioDelayMenu_->addMenu(equalizerMenu_);
     connect(&controller_, &MpvController::tuningChanged, this, &TuningMenus::update);
+    connect(&controller_, &MpvController::equalizerPresetChanged, this, &TuningMenus::update);
+    restoreEqualizer();
     update();
 }
 
 QMenu *TuningMenus::speedMenu() const { return speedMenu_; }
 QMenu *TuningMenus::audioDelayMenu() const { return audioDelayMenu_; }
 QMenu *TuningMenus::subtitleDelayMenu() const { return subtitleDelayMenu_; }
+QMenu *TuningMenus::equalizerMenu() const { return equalizerMenu_; }
 
 void TuningMenus::retranslate() {
     const auto speedActions = speedGroup_->actions();
@@ -60,6 +91,10 @@ void TuningMenus::retranslate() {
     setText(subtitleDelayMenu_, "subtitleLaterAction", tr("延后 %1 毫秒").arg(100));
     setText(subtitleDelayMenu_, "subtitleDelayResetAction", tr("延迟归零"));
     setText(subtitleDelayMenu_, "subtitleCustomDelayAction", tr("自定义延迟…"));
+    equalizerMenu_->setTitle(tr("均衡器"));
+    const auto labels = equalizerLabels();
+    for (size_t index = 0; index < labels.size(); ++index)
+        setText(equalizerMenu_, equalizerActionNames[index], labels[index]);
     update();
 }
 
@@ -125,6 +160,41 @@ void TuningMenus::createDelayMenu(QMenu *menu, bool audio) {
               [this, audio] { chooseValue(false, audio); });
 }
 
+void TuningMenus::createEqualizerMenu() {
+    equalizerMenu_->setObjectName(QStringLiteral("equalizerMenu"));
+    const auto labels = equalizerLabels();
+    for (size_t index = 0; index < labels.size(); ++index) {
+        auto *action = equalizerMenu_->addAction(labels[index]);
+        action->setObjectName(QString::fromLatin1(equalizerActionNames[index]));
+        action->setCheckable(true);
+        action->setData(static_cast<int>(index));
+        equalizerGroup_->addAction(action);
+        connect(action, &QAction::triggered, this, [this, index, text = labels[index]] {
+            const auto preset = static_cast<EqualizerPreset>(index);
+            controller_.setEqualizerPreset(preset);
+            if (controller_.equalizerPreset() != preset)
+                return;
+            saveEqualizer(preset);
+            emit feedback(tr("均衡器：%1").arg(text));
+            update();
+        });
+    }
+}
+
+void TuningMenus::restoreEqualizer() {
+    if (!qApp->property("configurationEnabled").toBool())
+        return;
+    const QSettings store;
+    controller_.setEqualizerPreset(presetFromKey(
+        store.value(QStringLiteral("effects/equalizerPreset"), QStringLiteral("off")).toString()));
+}
+
+void TuningMenus::saveEqualizer(EqualizerPreset preset) {
+    if (!qApp->property("configurationEnabled").toBool())
+        return;
+    QSettings().setValue(QStringLiteral("effects/equalizerPreset"), presetKey(preset));
+}
+
 void TuningMenus::chooseValue(bool speed, bool audio) {
     const auto &state = controller_.state();
     const auto title = speed ? tr("播放速度") : (audio ? tr("音频延迟") : tr("字幕延迟"));
@@ -154,8 +224,12 @@ void TuningMenus::update() {
     subtitleDelayMenu_->setTitle(tr("字幕延迟 · %1 秒").arg(state.subtitleDelay, 0, 'f', 3));
     for (auto *action : speedGroup_->actions())
         action->setChecked(std::abs(action->data().toDouble() - state.playbackSpeed) < 0.000001);
+    for (auto *action : equalizerGroup_->actions())
+        action->setChecked(action->data().toInt() ==
+                           static_cast<int>(controller_.equalizerPreset()));
     for (auto *menu : {speedMenu_, audioDelayMenu_, subtitleDelayMenu_})
         menu->setEnabled(controller_.isReady());
+    equalizerGroup_->setEnabled(controller_.isReady());
     if (announce_)
         emit feedback(tr("速度 %1 倍 · 音频 %2 秒 · 字幕 %3 秒")
                           .arg(state.playbackSpeed, 0, 'f', 2)

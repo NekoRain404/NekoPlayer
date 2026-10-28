@@ -20,6 +20,16 @@ void MpvController::setSubtitlePreferences(const SubtitlePreferences &preference
     submit("sub-pos", target.position, current.position,
            QByteArray::number(target.position, 'g', 15));
     submit("sub-font", target.font, current.font, target.font.toUtf8());
+    submit("sub-color", target.textColor, current.textColor, target.textColor.toUtf8());
+    submit("sub-outline-color", target.outlineColor, current.outlineColor,
+           target.outlineColor.toUtf8());
+    submit("sub-outline-size", target.outlineSize, current.outlineSize,
+           QByteArray::number(target.outlineSize, 'g', 15));
+    submit("sub-shadow-offset", target.shadowOffset, current.shadowOffset,
+           QByteArray::number(target.shadowOffset, 'g', 15));
+    submit("sub-back-color", target.backgroundColor, current.backgroundColor,
+           target.backgroundColor.toUtf8());
+    submit("sub-codepage", target.codepage, current.codepage, target.codepage.toUtf8());
     if (changed)
         emit subtitlePreferencesChanged();
 }

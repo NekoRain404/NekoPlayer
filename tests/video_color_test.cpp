@@ -77,6 +77,34 @@ class VideoColorTest final : public QObject {
         QTRY_COMPARE(readProperty(player, "gamma"), 0.0);
     }
 
+    void videoFiltersCombineAndPreserveDeinterlace() {
+        MpvController player(true, true);
+        QCOMPARE(player.sharpenLevel(), SharpenLevel::Off);
+        QCOMPARE(player.denoiseLevel(), DenoiseLevel::Off);
+        player.setDeinterlaceMode(DeinterlaceMode::On);
+        QSignalSpy changed(&player, &MpvController::videoFiltersChanged);
+        player.setVideoFilters(SharpenLevel::High, DenoiseLevel::Off);
+        QCOMPARE(player.sharpenLevel(), SharpenLevel::High);
+        QTRY_VERIFY(readTextProperty(player, "vf").contains(QStringLiteral("unsharp")));
+        QVERIFY(readTextProperty(player, "vf").contains(QStringLiteral("luma_amount")));
+        QVERIFY(readTextProperty(player, "vf").contains(QStringLiteral("1.5")));
+        QCOMPARE(readTextProperty(player, "deinterlace"), QStringLiteral("yes"));
+        player.setVideoFilters(SharpenLevel::Off, DenoiseLevel::Medium);
+        QCOMPARE(player.sharpenLevel(), SharpenLevel::Off);
+        QCOMPARE(player.denoiseLevel(), DenoiseLevel::Medium);
+        QTRY_VERIFY(readTextProperty(player, "vf").contains(QStringLiteral("hqdn3d")));
+        QVERIFY(!readTextProperty(player, "vf").contains(QStringLiteral("unsharp")));
+        player.setVideoFilters(SharpenLevel::Low, DenoiseLevel::High);
+        QTRY_VERIFY(readTextProperty(player, "vf").contains(QStringLiteral("unsharp")));
+        QVERIFY(readTextProperty(player, "vf").contains(QStringLiteral("hqdn3d")));
+        QCOMPARE(readTextProperty(player, "deinterlace"), QStringLiteral("yes"));
+        player.setVideoFilters(SharpenLevel::Off, DenoiseLevel::Off);
+        QTRY_VERIFY(readTextProperty(player, "vf").isEmpty() ||
+                    readTextProperty(player, "vf") == QStringLiteral("no"));
+        QCOMPARE(readTextProperty(player, "deinterlace"), QStringLiteral("yes"));
+        QCOMPARE(changed.count(), 4);
+    }
+
     void settingsPersistAndRestoreColorAdjustments() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

@@ -1,5 +1,6 @@
 #include "subtitledisplaymenu.h"
 #include "playback/mpvcontroller.h"
+#include "subtitlestyledialog.h"
 
 #include <QAction>
 #include <QMenu>
@@ -36,6 +37,12 @@ SubtitleDisplayMenu::SubtitleDisplayMenu(
     connect(up, &QAction::triggered, this, [this] { controller_.adjustSubtitlePosition(-2); });
     connect(down, &QAction::triggered, this, [this] { controller_.adjustSubtitlePosition(2); });
     menu_->addSeparator();
+    auto *style = make(tr("字幕样式…"), "subtitleStyleAction", {});
+    connect(style, &QAction::triggered, this, [this, window] {
+        SubtitleStyleDialog dialog(controller_, window);
+        dialog.exec();
+    });
+    menu_->addSeparator();
     settings_ = make(tr("字幕显示设置…"), "subtitleSettingsAction", QKeySequence(Qt::Key_F6));
     connect(settings_, &QAction::triggered, this, [this] {
         if (showPreferences_)
@@ -66,6 +73,7 @@ void SubtitleDisplayMenu::retranslate() {
     setText("subtitleScaleDownAction", tr("缩小字幕"));
     setText("subtitleMoveUpAction", tr("上移字幕"));
     setText("subtitleMoveDownAction", tr("下移字幕"));
+    setText("subtitleStyleAction", tr("字幕样式…"));
     setText("subtitleSettingsAction", tr("字幕显示设置…"));
 }
 

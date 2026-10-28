@@ -11,7 +11,10 @@ const QStringList &supportedMediaExtensions() {
         QStringLiteral("wav"),  QStringLiteral("m4a"),  QStringLiteral("aac"),
         QStringLiteral("ogg"),  QStringLiteral("opus"), QStringLiteral("wma"),
         QStringLiteral("aiff"), QStringLiteral("aif"),  QStringLiteral("mka"),
-        QStringLiteral("ac3"),  QStringLiteral("dts"),  QStringLiteral("ape")};
+        QStringLiteral("ac3"),  QStringLiteral("dts"),  QStringLiteral("ape"),
+        QStringLiteral("png"),  QStringLiteral("jpg"),  QStringLiteral("jpeg"),
+        QStringLiteral("webp"), QStringLiteral("bmp"),  QStringLiteral("gif"),
+        QStringLiteral("avif"), QStringLiteral("heic")};
     return extensions;
 }
 

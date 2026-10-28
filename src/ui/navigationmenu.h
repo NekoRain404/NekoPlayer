@@ -8,6 +8,7 @@ class QMenu;
 class QWidget;
 class QAction;
 class QActionGroup;
+class QTimer;
 
 class NavigationMenu final : public QObject {
     Q_OBJECT
@@ -15,12 +16,18 @@ class NavigationMenu final : public QObject {
     NavigationMenu(MpvController &player, QWidget *window);
     [[nodiscard]] QMenu *menu() const;
     void retranslate();
+    // Test seam: arms the same session-only timer with a short duration.
+    void setSleepTimerForTest(int milliseconds);
 
   signals:
     void feedback(const QString &message);
     void seekFeedback(const QString &message);
 
   private:
+    QString sleepTimerText(int seconds) const;
+    void selectSleepTimer(QAction *action);
+    void cancelSleepTimer();
+    void sleepTimerExpired();
     void rebuildChapters();
     void updateState();
     void chooseTime();
@@ -29,6 +36,10 @@ class NavigationMenu final : public QObject {
     QMenu *menu_;
     QMenu *chaptersMenu_;
     QActionGroup *chapterGroup_;
+    QMenu *sleepMenu_;
+    QAction *sleepOff_;
+    QList<QAction *> sleepActions_;
+    QTimer *sleepTimer_;
     QAction *seekTime_;
     QAction *previous_;
     QAction *next_;

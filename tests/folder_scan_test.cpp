@@ -82,7 +82,10 @@ class FolderScanTest final : public QObject {
             QStringLiteral("wav"),  QStringLiteral("m4a"),  QStringLiteral("aac"),
             QStringLiteral("ogg"),  QStringLiteral("opus"), QStringLiteral("wma"),
             QStringLiteral("aiff"), QStringLiteral("aif"),  QStringLiteral("mka"),
-            QStringLiteral("ac3"),  QStringLiteral("dts"),  QStringLiteral("ape")};
+            QStringLiteral("ac3"),  QStringLiteral("dts"),  QStringLiteral("ape"),
+            QStringLiteral("png"),  QStringLiteral("jpg"),  QStringLiteral("jpeg"),
+            QStringLiteral("webp"), QStringLiteral("bmp"),  QStringLiteral("gif"),
+            QStringLiteral("avif"), QStringLiteral("heic")};
         QCOMPARE(supportedMediaExtensions(), expected);
 
         const auto patterns = mediaFileNameFilterPatterns().split(QLatin1Char(' '));
@@ -100,9 +103,10 @@ class FolderScanTest final : public QObject {
         QVERIFY(touch(directory.filePath("nested/episode0.mp4")));
         const auto result = scan(directory.path());
         QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
-        QCOMPARE(result.paths, QStringList({directory.filePath("episode1.flac"),
-                                            directory.filePath("episode2.mp4"),
-                                            directory.filePath("episode10.MKV")}));
+        QCOMPARE(
+            result.paths,
+            QStringList({directory.filePath("cover.jpg"), directory.filePath("episode1.flac"),
+                         directory.filePath("episode2.mp4"), directory.filePath("episode10.MKV")}));
         QVERIFY(!result.cancelled);
     }
 
@@ -149,12 +153,13 @@ class FolderScanTest final : public QObject {
         QVERIFY(sortChecks >= 2);
     }
 
-    void includesPracticalVideoAndAudioExtensions() {
+    void includesPracticalVideoAudioAndImageExtensions() {
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
         const QStringList suffixes =
             QStringLiteral("mkv mp4 avi mov webm m4v ts m2ts mts mpg mpeg wmv flv ogv 3gp vob "
-                           "mp3 flac wav m4a aac ogg opus wma aiff aif mka ac3 dts ape")
+                           "mp3 flac wav m4a aac ogg opus wma aiff aif mka ac3 dts ape "
+                           "png jpg jpeg webp bmp gif avif heic")
                 .split(' ');
         for (const auto &suffix : suffixes)
             QVERIFY(touch(directory.filePath("media." + suffix.toUpper())));

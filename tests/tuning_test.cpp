@@ -11,6 +11,16 @@ double backendValue(const MpvController &player, const char *name) {
     mpv_get_property(player.handle(), name, MPV_FORMAT_DOUBLE, &result);
     return result;
 }
+QString readTextProperty(const MpvController &player, const char *name) {
+    if (!player.handle())
+        return {};
+    char *value = nullptr;
+    if (mpv_get_property(player.handle(), name, MPV_FORMAT_STRING, &value) < 0 || !value)
+        return {};
+    const auto result = QString::fromUtf8(value);
+    mpv_free(value);
+    return result;
+}
 bool set(MpvController &player, const char *method, double value) {
     return QMetaObject::invokeMethod(&player, method, Qt::DirectConnection, Q_ARG(double, value));
 }
@@ -150,6 +160,31 @@ class TuningTest final : public QObject {
         QTRY_VERIFY(qAbs(player.state().playbackSpeed - 1.9) < 0.0001);
         QTRY_VERIFY(qAbs(player.state().audioDelay - (-0.25)) < 0.000001);
         QTRY_VERIFY(qAbs(player.state().subtitleDelay - 0.6) < 0.0001);
+    }
+
+    void equalizerPresetsSetAndClearAudioFilterChain() {
+        MpvController player(true, true);
+        QVERIFY2(player.isReady(), qPrintable(player.errorString()));
+        QSignalSpy changed(&player, &MpvController::equalizerPresetChanged);
+        QCOMPARE(player.equalizerPreset(), EqualizerPreset::Off);
+        for (const auto preset :
+             {EqualizerPreset::Flat, EqualizerPreset::Rock, EqualizerPreset::Pop,
+              EqualizerPreset::Jazz, EqualizerPreset::Classical, EqualizerPreset::Vocal,
+              EqualizerPreset::BassBoost}) {
+            player.setEqualizerPreset(preset);
+            QCOMPARE(player.equalizerPreset(), preset);
+            QTRY_VERIFY(readTextProperty(player, "af").contains(QStringLiteral("equalizer")));
+            const auto chain = readTextProperty(player, "af");
+            QVERIFY2(chain.contains(QStringLiteral("f=31")), qPrintable(chain));
+            QVERIFY2(chain.contains(QStringLiteral("f=16000")), qPrintable(chain));
+            QCOMPARE(chain.count(QStringLiteral("equalizer=")), 10);
+        }
+        QCOMPARE(changed.count(), 7);
+        player.setEqualizerPreset(EqualizerPreset::Off);
+        QCOMPARE(player.equalizerPreset(), EqualizerPreset::Off);
+        QTRY_VERIFY(readTextProperty(player, "af").isEmpty() ||
+                    readTextProperty(player, "af") == QStringLiteral("no"));
+        QCOMPARE(changed.count(), 8);
     }
 };
 

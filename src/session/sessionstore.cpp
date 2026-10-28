@@ -215,6 +215,23 @@ SessionLoadResult SessionStore::load() const {
     state.subtitles.position = valid ? position : 100;
     state.subtitles.font =
         settings.value(QStringLiteral("subtitles/font"), QStringLiteral("sans-serif")).toString();
+    state.subtitles.textColor =
+        settings.value(QStringLiteral("subtitles/textColor"), QStringLiteral("#FFFFFFFF"))
+            .toString();
+    state.subtitles.outlineColor =
+        settings.value(QStringLiteral("subtitles/outlineColor"), QStringLiteral("#FF000000"))
+            .toString();
+    state.subtitles.backgroundColor =
+        settings.value(QStringLiteral("subtitles/backgroundColor"), QStringLiteral("#AF000000"))
+            .toString();
+    const auto outlineSize =
+        settings.value(QStringLiteral("subtitles/outlineSize"), 1.65).toDouble(&valid);
+    state.subtitles.outlineSize = valid ? outlineSize : 1.65;
+    const auto shadowOffset =
+        settings.value(QStringLiteral("subtitles/shadowOffset"), 0).toDouble(&valid);
+    state.subtitles.shadowOffset = valid ? shadowOffset : 0;
+    state.subtitles.codepage =
+        settings.value(QStringLiteral("subtitles/codepage"), QStringLiteral("auto")).toString();
     state.languages.audioLanguages =
         settings.value(QStringLiteral("tracks/preferredAudioLanguages")).toStringList();
     state.languages.subtitleLanguages =
@@ -299,6 +316,12 @@ QString SessionStore::save(const SessionState &state) const {
     settings.setValue(QStringLiteral("subtitles/scale"), saved.subtitles.scale);
     settings.setValue(QStringLiteral("subtitles/position"), saved.subtitles.position);
     settings.setValue(QStringLiteral("subtitles/font"), saved.subtitles.font);
+    settings.setValue(QStringLiteral("subtitles/textColor"), saved.subtitles.textColor);
+    settings.setValue(QStringLiteral("subtitles/outlineColor"), saved.subtitles.outlineColor);
+    settings.setValue(QStringLiteral("subtitles/backgroundColor"), saved.subtitles.backgroundColor);
+    settings.setValue(QStringLiteral("subtitles/outlineSize"), saved.subtitles.outlineSize);
+    settings.setValue(QStringLiteral("subtitles/shadowOffset"), saved.subtitles.shadowOffset);
+    settings.setValue(QStringLiteral("subtitles/codepage"), saved.subtitles.codepage);
     settings.setValue(QStringLiteral("tracks/preferredAudioLanguages"),
                       saved.languages.audioLanguages);
     settings.setValue(QStringLiteral("tracks/preferredSubtitleLanguages"),

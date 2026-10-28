@@ -8,6 +8,7 @@
 #include <QTemporaryDir>
 #include <QtTest>
 #include <algorithm>
+#include <limits>
 
 class TrackPreferenceStoreTest final : public QObject {
     Q_OBJECT
@@ -22,6 +23,8 @@ class TrackPreferenceStoreTest final : public QObject {
         result.selection.audioTrackId = 2;
         result.selection.subtitleTrackId = 4;
         result.selection.externalSubtitlePaths = {path + QStringLiteral(".srt")};
+        result.hasTuning = true;
+        result.playbackSpeed = 1.25;
         return result;
     }
 
@@ -62,6 +65,94 @@ class TrackPreferenceStoreTest final : public QObject {
         QCOMPARE(loaded.entries.front().selection.subtitleTrackId, std::optional<qint64>(4));
         QCOMPARE(loaded.entries.front().selection.externalSubtitlePaths,
                  QStringList{media + QStringLiteral(".srt")});
+    }
+
+    void tuningValuesRoundTrip() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        QFile mediaFile(media);
+        QVERIFY(mediaFile.open(QIODevice::WriteOnly));
+        QCOMPARE(mediaFile.write("video"), qint64(5));
+        mediaFile.close();
+
+        TrackPreferenceStore store(temporary.filePath(QStringLiteral("tracks.ini")));
+        auto saved = entry(media, 1700000000001LL);
+        saved.playbackSpeed = 1.5;
+        saved.audioDelay = -0.25;
+        saved.subtitleDelay = 2.75;
+        QVERIFY(store.save({saved}).isEmpty());
+        const auto loaded = store.load();
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.entries.size(), 1);
+        QVERIFY(loaded.entries.front().hasTuning);
+        QCOMPARE(loaded.entries.front().playbackSpeed, 1.5);
+        QCOMPARE(loaded.entries.front().audioDelay, -0.25);
+        QCOMPARE(loaded.entries.front().subtitleDelay, 2.75);
+        QCOMPARE(loaded.entries.front().selection.audioTrackId, std::optional<qint64>(2));
+    }
+
+    void legacyEntryWithoutTuningLoadsWithDefaults() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        QFile mediaFile(media);
+        QVERIFY(mediaFile.open(QIODevice::WriteOnly));
+        QCOMPARE(mediaFile.write("video"), qint64(5));
+        mediaFile.close();
+
+        const auto path = temporary.filePath(QStringLiteral("tracks.ini"));
+        TrackPreferenceStore store(path);
+        QVERIFY(store.save({entry(media, 1)}).isEmpty());
+        {
+            // Simulate a file written before tuning existed.
+            QSettings settings(path, QSettings::IniFormat);
+            settings.remove(QStringLiteral("entries/0/tuning"));
+            settings.sync();
+        }
+        const auto loaded = store.load();
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.entries.size(), 1);
+        QVERIFY(!loaded.entries.front().hasTuning);
+        QCOMPARE(loaded.entries.front().playbackSpeed, 1.0);
+        QCOMPARE(loaded.entries.front().audioDelay, 0.0);
+        QCOMPARE(loaded.entries.front().subtitleDelay, 0.0);
+        QCOMPARE(loaded.entries.front().selection.subtitleTrackId, std::optional<qint64>(4));
+    }
+
+    void invalidTuningValuesCannotBeSavedOrLoaded() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = temporary.filePath(QStringLiteral("movie.mkv"));
+        QFile mediaFile(media);
+        QVERIFY(mediaFile.open(QIODevice::WriteOnly));
+        QCOMPARE(mediaFile.write("video"), qint64(5));
+        mediaFile.close();
+        const auto path = temporary.filePath(QStringLiteral("tracks.ini"));
+        TrackPreferenceStore store(path);
+        const auto saved = entry(media, 1);
+        QVERIFY(store.save({saved}).isEmpty());
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        const auto original = file.readAll();
+        file.close();
+
+        const auto rejected = [&](double speed, double audioDelay, double subtitleDelay) {
+            auto candidate = saved;
+            candidate.playbackSpeed = speed;
+            candidate.audioDelay = audioDelay;
+            candidate.subtitleDelay = subtitleDelay;
+            QVERIFY(!store.save({candidate}).isEmpty());
+        };
+        rejected(5.0, 0, 0);
+        rejected(0.1, 0, 0);
+        rejected(1.0, 11.0, 0);
+        rejected(1.0, 0, -601.0);
+        rejected(std::numeric_limits<double>::quiet_NaN(), 0, 0);
+        rejected(1.0, std::numeric_limits<double>::infinity(), 0);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QCOMPARE(file.readAll(), original);
+        file.close();
     }
 
     void repeatedIdenticalSavesLeaveFileUntouched() {
@@ -201,6 +292,19 @@ class TrackPreferenceStoreTest final : public QObject {
             << QStringLiteral("externalAudioCount") << QVariant(-1);
         QTest::newRow("audio-count-large") << QStringLiteral("externalAudioCount") << QVariant(65);
         QTest::newRow("audio-path-missing") << QStringLiteral("externalAudioCount") << QVariant(1);
+        QTest::newRow("tuning-presence")
+            << QStringLiteral("tuning/present") << QVariant(QStringLiteral("garbage"));
+        QTest::newRow("tuning-speed-large") << QStringLiteral("tuning/speed") << QVariant(5.0);
+        QTest::newRow("tuning-speed-small") << QStringLiteral("tuning/speed") << QVariant(0.1);
+        QTest::newRow("tuning-speed-nan")
+            << QStringLiteral("tuning/speed") << QVariant(QStringLiteral("nan"));
+        QTest::newRow("tuning-speed-missing") << QStringLiteral("tuning/speed") << QVariant();
+        QTest::newRow("tuning-audio-large")
+            << QStringLiteral("tuning/audioDelay") << QVariant(11.0);
+        QTest::newRow("tuning-audio-inf")
+            << QStringLiteral("tuning/audioDelay") << QVariant(QStringLiteral("inf"));
+        QTest::newRow("tuning-subtitle-small")
+            << QStringLiteral("tuning/subtitleDelay") << QVariant(-601.0);
     }
 
     void malformedSelectionFieldsArePreserved() {
@@ -333,7 +437,8 @@ class TrackPreferenceStoreTest final : public QObject {
             QVERIFY(file.open(QIODevice::WriteOnly));
             QCOMPARE(file.write("v"), qint64(1));
         }
-        const auto offlineEntry = entry(offline, 1);
+        auto offlineEntry = entry(offline, 1);
+        offlineEntry.playbackSpeed = 1.75;
         QVERIFY(QFile::remove(offline));
         TrackPreferenceStore store(temporary.filePath(QStringLiteral("tracks.ini")));
         QVERIFY(store.save({offlineEntry, entry(current, 2)}).isEmpty());
@@ -345,6 +450,8 @@ class TrackPreferenceStoreTest final : public QObject {
             [&offline](const auto &item) { return item.mediaPath == QDir::cleanPath(offline); });
         QVERIFY(found != loaded.entries.cend());
         QCOMPARE(found->selection.subtitleTrackId, std::optional<qint64>(4));
+        QVERIFY(found->hasTuning);
+        QCOMPARE(found->playbackSpeed, 1.75);
     }
 
     void savingPrunesReplacedMedia() {
@@ -357,7 +464,8 @@ class TrackPreferenceStoreTest final : public QObject {
             QVERIFY(file.open(QIODevice::WriteOnly));
             QCOMPARE(file.write("v"), qint64(1));
         }
-        const auto replacedEntry = entry(replaced, 1);
+        auto replacedEntry = entry(replaced, 1);
+        replacedEntry.hasTuning = true;
         QFile file(replaced);
         QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
         QCOMPARE(file.write("different-content"), qint64(17));

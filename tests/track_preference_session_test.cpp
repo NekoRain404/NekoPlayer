@@ -457,6 +457,36 @@ class TrackPreferenceSessionTest final : public QObject {
         QVERIFY(secondEntry != entries.cend());
         QCOMPARE(secondEntry->selection.subtitleTrackId, std::optional<qint64>(initialSubtitleId));
     }
+
+    void playbackTuningIsRememberedPerMedia() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto settings = temporary.filePath(QStringLiteral("session.ini"));
+        const auto first = temporary.filePath(QStringLiteral("first.mkv"));
+        const auto second = temporary.filePath(QStringLiteral("second.mkv"));
+        QVERIFY(QFile::copy(QString::fromUtf8(TEST_TRACK_MEDIA_PATH), first));
+        QVERIFY(QFile::copy(QString::fromUtf8(TEST_TRACK_MEDIA_PATH), second));
+        MpvController player(true, true);
+        PlaylistController playlist(player);
+        SessionManager session(player, playlist, settings);
+        QVERIFY(session.restore().error.isEmpty());
+        playlist.restoreFiles({first, second}, 0);
+        playlist.playOrPause();
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        player.setPlaybackSpeed(2.0);
+        QTRY_VERIFY(qAbs(player.state().playbackSpeed - 2.0) < 1e-6);
+        // Switching media snapshots the outgoing entry, tuning included.
+        playlist.playAt(1);
+        QTRY_VERIFY(player.state().path == second && !player.tracks().isEmpty());
+        player.setPlaybackSpeed(0.5);
+        QTRY_VERIFY(qAbs(player.state().playbackSpeed - 0.5) < 1e-6);
+        playlist.playAt(0);
+        QTRY_VERIFY(player.state().path == first && !player.tracks().isEmpty());
+        QTRY_VERIFY(qAbs(player.state().playbackSpeed - 2.0) < 1e-6);
+        playlist.playAt(1);
+        QTRY_VERIFY(player.state().path == second && !player.tracks().isEmpty());
+        QTRY_VERIFY(qAbs(player.state().playbackSpeed - 0.5) < 1e-6);
+    }
 };
 
 QTEST_GUILESS_MAIN(TrackPreferenceSessionTest)

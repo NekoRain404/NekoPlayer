@@ -392,6 +392,47 @@ class SubtitlesTest final : public QObject {
         QCOMPARE(mixed.position, 0.0);
         QCOMPARE(mixed.font, QStringLiteral("Noto Sans"));
     }
+    void subtitleStylePreferencesReachMpvProperties() {
+        MpvController player(true, true);
+        SubtitlePreferences preferences;
+        preferences.textColor = QStringLiteral("#FF112233");
+        preferences.outlineColor = QStringLiteral("#80AABBCC");
+        preferences.backgroundColor = QStringLiteral("#40000000");
+        preferences.outlineSize = 2.5;
+        preferences.shadowOffset = 1.5;
+        preferences.codepage = QStringLiteral("GB18030");
+        player.setSubtitlePreferences(preferences);
+
+        QTRY_COMPARE_WITH_TIMEOUT(backendText(player, "sub-color"), QStringLiteral("#FF112233"),
+                                  5000);
+        QTRY_COMPARE_WITH_TIMEOUT(backendText(player, "sub-outline-color"),
+                                  QStringLiteral("#80AABBCC"), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(backendText(player, "sub-back-color"),
+                                  QStringLiteral("#40000000"), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            qAbs(backendText(player, "sub-outline-size").toDouble() - 2.5) < 0.01, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            qAbs(backendText(player, "sub-shadow-offset").toDouble() - 1.5) < 0.01, 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(backendText(player, "sub-codepage"), QStringLiteral("GB18030"),
+                                  5000);
+    }
+
+    void invalidSubtitleStyleValuesFallBackToDefaults() {
+        SubtitlePreferences preferences;
+        preferences.textColor = QStringLiteral("red");
+        preferences.outlineColor = QStringLiteral("#12345");
+        preferences.backgroundColor = QStringLiteral("#GGGGGGGG");
+        preferences.outlineSize = std::numeric_limits<double>::quiet_NaN();
+        preferences.shadowOffset = -5;
+        preferences.codepage = QStringLiteral("bad\ncodec");
+        const auto normalized = preferences.normalized();
+        QCOMPARE(normalized.textColor, QStringLiteral("#FFFFFFFF"));
+        QCOMPARE(normalized.outlineColor, QStringLiteral("#FF000000"));
+        QCOMPARE(normalized.backgroundColor, QStringLiteral("#AF000000"));
+        QCOMPARE(normalized.outlineSize, 1.65);
+        QCOMPARE(normalized.shadowOffset, 0.0);
+        QCOMPARE(normalized.codepage, QStringLiteral("auto"));
+    }
 };
 
 QTEST_GUILESS_MAIN(SubtitlesTest)

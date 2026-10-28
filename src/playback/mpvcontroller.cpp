@@ -485,3 +485,66 @@ void MpvController::adjustSubtitleDelay(double seconds) {
 void MpvController::selectSubtitleTrack(qint64 id) {
     impl_->selectTrack(MediaTrack::Type::Subtitle, id);
 }
+namespace {
+constexpr std::array equalizerBands{31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000};
+constexpr std::array<std::array<int, 10>, 7> equalizerGains{{
+    {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}},
+    {{5, 4, 3, 1, -1, -1, 0, 2, 3, 4}},
+    {{-1, 0, 2, 4, 4, 2, 0, -1, -1, -1}},
+    {{4, 3, 1, 2, -1, -1, 0, 1, 2, 3}},
+    {{4, 3, 2, 1, 0, 0, 1, 2, 3, 4}},
+    {{-3, -2, -1, 1, 3, 4, 4, 2, 0, -1}},
+    {{6, 5, 4, 2, 1, 0, 0, 0, 0, 0}},
+}};
+QByteArray equalizerChain(EqualizerPreset preset) {
+    if (preset == EqualizerPreset::Off)
+        return {}; // mpv rejects "no" here; an empty value clears the chain.
+    const auto &gains = equalizerGains[static_cast<size_t>(preset) - 1];
+    QByteArray chain;
+    for (size_t index = 0; index < gains.size(); ++index)
+        chain += "equalizer=f=" + QByteArray::number(equalizerBands[index]) +
+                 ":width_type=o:width=1:g=" + QByteArray::number(gains[index]) + ',';
+    chain.chop(1);
+    return chain;
+}
+QByteArray videoChain(SharpenLevel sharpen, DenoiseLevel denoise) {
+    static constexpr std::array sharpenAmounts{0.0, 0.5, 1.0, 1.5};
+    static constexpr std::array denoiseStrength{"", "2:1.5:3:2.25", "4:3:6:4.5", "6:4.5:9:6.75"};
+    QStringList filters;
+    if (sharpen != SharpenLevel::Off)
+        filters << QStringLiteral("unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=%1")
+                       .arg(sharpenAmounts[static_cast<size_t>(sharpen)], 0, 'f', 1);
+    if (denoise != DenoiseLevel::Off)
+        filters << QStringLiteral("hqdn3d=") +
+                       QLatin1String(denoiseStrength[static_cast<size_t>(denoise)]);
+    return filters.isEmpty() ? QByteArray() : filters.join(',').toUtf8();
+}
+} // namespace
+EqualizerPreset MpvController::equalizerPreset() const {
+    return static_cast<EqualizerPreset>(property("equalizerPreset").toInt());
+}
+SharpenLevel MpvController::sharpenLevel() const {
+    return static_cast<SharpenLevel>(property("sharpenLevel").toInt());
+}
+DenoiseLevel MpvController::denoiseLevel() const {
+    return static_cast<DenoiseLevel>(property("denoiseLevel").toInt());
+}
+void MpvController::setEqualizerPreset(EqualizerPreset preset) {
+    if (preset == equalizerPreset())
+        return;
+    // af is the only audio filter chain today, so a preset replaces it wholesale.
+    if (!impl_->command({"set", "af", equalizerChain(preset)}))
+        return;
+    setProperty("equalizerPreset", static_cast<int>(preset));
+    emit equalizerPresetChanged();
+}
+void MpvController::setVideoFilters(SharpenLevel sharpen, DenoiseLevel denoise) {
+    if (sharpen == sharpenLevel() && denoise == denoiseLevel())
+        return;
+    // vf is a single chain (nothing else sets it today); deinterlace is separate.
+    if (!impl_->command({"set", "vf", videoChain(sharpen, denoise)}))
+        return;
+    setProperty("sharpenLevel", static_cast<int>(sharpen));
+    setProperty("denoiseLevel", static_cast<int>(denoise));
+    emit videoFiltersChanged();
+}

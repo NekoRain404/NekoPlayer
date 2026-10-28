@@ -1,5 +1,16 @@
 # Verification Record
 
+Feature round (2026-10-28, subtitle styling, equalizer/filters, per-media tuning, sleep timer, single instance, images, URL redaction):
+
+- Non-window suite **73/73** in **68.95 s**; window suite **14/14** in **30.98 s** (including the newly registered `startup-options-window` sleep-timer tests).
+- Focused ASan/UBSan run with `detect_leaks=0`: **14/14** passed (`tuning`, `video-color`, `subtitles`, `track-preference*`, `media-report`, `folder-scan`, `session`, `playback-history`, `navigation`).
+- Subtitle styling maps text/outline/background colours, outline width, shadow offset and codepage to libmpv properties and persists them; tests assert the property round-trip and normalization fallbacks.
+- Equalizer presets and sharpen/denoise filters set mpv `af`/`vf` chains (empty string clears), preserve deinterlace, and persist through `QSettings` when configuration is enabled.
+- Per-media speed/audio-delay/subtitle-delay records extend the track-preference schema (optional `tuning/*`) without breaking legacy files; restore paths are covered by session tests.
+- Sleep timer and single-instance handoff were exercised manually (second instance exits and forwards, stale socket recovery works, `--no-config`/`--smoke-test` bypass); the timer slots run in CTest.
+- `lrelease` reports **473** translations, 0 unfinished. `code-size` passes with `mpvcontroller.cpp` at the 550-line hard limit.
+- Not verified: audible EQ quality, rendered sharpening/denoise on real GPU paths, Wayland second-instance focus activation, animated GIF/AVIF/HEIC decode on every FFmpeg build.
+
 Third remediation round (2026-10-28, sort keys, scan cancellation, network playlist gate):
 
 - Non-window suite passed **73/73** in **66.98 s**; window behaviour suite passed **13/13** in **28.57 s** on native Wayland.

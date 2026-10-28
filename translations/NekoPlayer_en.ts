@@ -566,6 +566,46 @@
         <source>媒体已改变，未执行时间跳转。</source>
         <translation>Media changed; seek was not performed.</translation>
     </message>
+    <message>
+      <source>睡眠定时器</source>
+      <translation>Sleep Timer</translation>
+    </message>
+    <message>
+      <source>关闭</source>
+      <translation>Off</translation>
+    </message>
+    <message>
+      <source>15 分钟</source>
+      <translation>15 minutes</translation>
+    </message>
+    <message>
+      <source>30 分钟</source>
+      <translation>30 minutes</translation>
+    </message>
+    <message>
+      <source>1 小时</source>
+      <translation>1 hour</translation>
+    </message>
+    <message>
+      <source>90 分钟</source>
+      <translation>90 minutes</translation>
+    </message>
+    <message>
+      <source>2 小时</source>
+      <translation>2 hours</translation>
+    </message>
+    <message>
+      <source>睡眠定时器：%1后停止</source>
+      <translation>Sleep timer: stops in %1</translation>
+    </message>
+    <message>
+      <source>睡眠定时器已取消</source>
+      <translation>Sleep timer cancelled</translation>
+    </message>
+    <message>
+      <source>定时停止已触发</source>
+      <translation>Sleep timer stopped playback</translation>
+    </message>
 </context>
 <context>
     <name>NetworkOpenDialog</name>
@@ -809,6 +849,10 @@
     <message>
         <source>采样格式</source>
         <translation>Sample format</translation>
+    </message>
+    <message>
+      <source>（已隐藏凭据与查询参数）</source>
+      <translation> (credentials and query parameters hidden)</translation>
     </message>
 </context>
 
@@ -1667,6 +1711,46 @@ libmpv client API: %3</translation>
         <source>速度 %1 倍 · 音频 %2 秒 · 字幕 %3 秒</source>
         <translation>Speed %1× · Audio %2 s · Subtitles %3 s</translation>
     </message>
+    <message>
+      <source>均衡器</source>
+      <translation>Equalizer</translation>
+    </message>
+    <message>
+      <source>均衡器：%1</source>
+      <translation>Equalizer: %1</translation>
+    </message>
+    <message>
+      <source>关闭</source>
+      <translation>Off</translation>
+    </message>
+    <message>
+      <source>平坦</source>
+      <translation>Flat</translation>
+    </message>
+    <message>
+      <source>摇滚</source>
+      <translation>Rock</translation>
+    </message>
+    <message>
+      <source>流行</source>
+      <translation>Pop</translation>
+    </message>
+    <message>
+      <source>爵士</source>
+      <translation>Jazz</translation>
+    </message>
+    <message>
+      <source>古典</source>
+      <translation>Classical</translation>
+    </message>
+    <message>
+      <source>人声</source>
+      <translation>Vocal</translation>
+    </message>
+    <message>
+      <source>低音增强</source>
+      <translation>Bass Boost</translation>
+    </message>
 </context>
 <context>
     <name>VideoColorDialog</name>
@@ -1816,6 +1900,30 @@ libmpv client API: %3</translation>
         <source>画面比例：%1 · 旋转：%2°</source>
         <translation>Aspect ratio: %1 · Rotation: %2°</translation>
     </message>
+    <message>
+      <source>锐化</source>
+      <translation>Sharpen</translation>
+    </message>
+    <message>
+      <source>降噪</source>
+      <translation>Denoise</translation>
+    </message>
+    <message>
+      <source>低</source>
+      <translation>Low</translation>
+    </message>
+    <message>
+      <source>中</source>
+      <translation>Medium</translation>
+    </message>
+    <message>
+      <source>高</source>
+      <translation>High</translation>
+    </message>
+    <message>
+      <source>锐化：%1 · 降噪：%2</source>
+      <translation>Sharpen: %1 · Denoise: %2</translation>
+    </message>
 </context>
 <context>
     <name>VideoWidget</name>
@@ -1872,6 +1980,52 @@ libmpv client API: %3</translation>
     <message>
       <source>自动选择</source>
       <translation>Auto (select)</translation>
+    </message>
+  </context>
+  <context>
+    <name>SubtitleDisplayMenu</name>
+    <message>
+      <source>字幕样式…</source>
+      <translation>Subtitle Style…</translation>
+    </message>
+  </context>
+  <context>
+    <name>SubtitleStyleDialog</name>
+    <message>
+      <source>字幕样式</source>
+      <translation>Subtitle Style</translation>
+    </message>
+    <message>
+      <source>文字颜色：</source>
+      <translation>Text color:</translation>
+    </message>
+    <message>
+      <source>描边颜色：</source>
+      <translation>Outline color:</translation>
+    </message>
+    <message>
+      <source>背景颜色：</source>
+      <translation>Background color:</translation>
+    </message>
+    <message>
+      <source>描边宽度：</source>
+      <translation>Outline width:</translation>
+    </message>
+    <message>
+      <source>阴影偏移：</source>
+      <translation>Shadow offset:</translation>
+    </message>
+    <message>
+      <source>文字编码：</source>
+      <translation>Text encoding:</translation>
+    </message>
+    <message>
+      <source>编码选择用于非 UTF-8 的外挂字幕；自动模式交给 libmpv 判断。</source>
+      <translation>Encoding applies to non-UTF-8 external subtitles; Auto lets libmpv decide.</translation>
+    </message>
+    <message>
+      <source>选择字幕颜色</source>
+      <translation>Choose subtitle color</translation>
     </message>
   </context>
 </TS>

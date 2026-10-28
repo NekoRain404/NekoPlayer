@@ -6,6 +6,7 @@
 #include <QCoreApplication>
 #include <QLocale>
 #include <QStringList>
+#include <QUrl>
 
 QString formatMediaInformation(const MediaInformation &info, const PlaybackState &state) {
     const auto tr = [](const char *text) {
@@ -17,11 +18,27 @@ QString formatMediaInformation(const MediaInformation &info, const PlaybackState
     const auto text = [&unknown](const QString &value) {
         return value.isEmpty() ? unknown : value;
     };
+    // Network sources can carry credentials and signed query parameters. The
+    // report and its copy action are meant to be shareable, so show the host
+    // and path only and tell the reader that details were withheld. Plain
+    // local paths (including paths containing '?') are never rewritten.
+    const auto source = [&tr](const QString &path) {
+        const QUrl url(path);
+        if (!url.isValid() || url.isLocalFile() || url.scheme().isEmpty() || url.host().isEmpty())
+            return path;
+        const bool withheld =
+            !url.userInfo().isEmpty() || url.hasQuery() || !url.fragment().isEmpty();
+        if (!withheld)
+            return path;
+        return url.adjusted(QUrl::RemoveUserInfo | QUrl::RemoveQuery | QUrl::RemoveFragment)
+                   .toDisplayString() +
+               tr("（已隐藏凭据与查询参数）");
+    };
     QStringList lines;
     const auto field = [&lines](const QString &label, const QString &value) {
         lines.append(label + QStringLiteral(": ") + value);
     };
-    field(tr("文件"), text(state.path));
+    field(tr("文件"), text(source(state.path)));
     field(tr("容器格式"), text(info.fileFormat));
     field(
         tr("文件大小"),

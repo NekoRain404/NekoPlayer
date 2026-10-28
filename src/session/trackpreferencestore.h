@@ -10,7 +10,17 @@ struct TrackPreferenceEntry {
     qint64 modifiedUtcMs = -1;
     qint64 lastUsedUtcMs = 0;
     TrackSelectionPreference selection;
+    bool hasTuning = false;
+    double playbackSpeed = 1;
+    double audioDelay = 0;
+    double subtitleDelay = 0;
 };
+
+[[nodiscard]] inline bool sameTuningPayload(const TrackPreferenceEntry &left,
+                                            const TrackPreferenceEntry &right) {
+    return left.hasTuning == right.hasTuning && left.playbackSpeed == right.playbackSpeed &&
+           left.audioDelay == right.audioDelay && left.subtitleDelay == right.subtitleDelay;
+}
 
 enum class TrackPreferenceState { Invalid, Missing, Current, Replaced };
 

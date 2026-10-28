@@ -8,6 +8,7 @@
 #include <QSettings>
 #include <QTemporaryFile>
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace {
@@ -41,6 +42,18 @@ QString normalizedExternalPath(const QString &path) {
 
 bool validOptionalId(const std::optional<qint64> &id) { return !id || *id >= 0; }
 
+// Same limits as TuningPreferences::normalized(). Out-of-range and
+// non-finite values are malformed rather than silently clamped.
+bool validTuning(const TrackPreferenceEntry &entry) {
+    if (!entry.hasTuning)
+        return true;
+    return std::isfinite(entry.playbackSpeed) && entry.playbackSpeed >= 0.25 &&
+           entry.playbackSpeed <= 4.0 && std::isfinite(entry.audioDelay) &&
+           entry.audioDelay >= -10.0 && entry.audioDelay <= 10.0 &&
+           std::isfinite(entry.subtitleDelay) && entry.subtitleDelay >= -600.0 &&
+           entry.subtitleDelay <= 600.0;
+}
+
 bool validEntry(const TrackPreferenceEntry &entry) {
     if (normalizedExternalPath(entry.mediaPath).isEmpty() || entry.fileSize < 0 ||
         entry.modifiedUtcMs <= 0 || entry.lastUsedUtcMs <= 0 ||
@@ -50,7 +63,7 @@ bool validEntry(const TrackPreferenceEntry &entry) {
         entry.selection.selectedExternalAudioStream > 65535 ||
         entry.selection.externalAudioPaths.size() > 64 ||
         entry.selection.selectedExternalSubtitleStream < -1 ||
-        entry.selection.externalSubtitlePaths.size() > 64)
+        entry.selection.externalSubtitlePaths.size() > 64 || !validTuning(entry))
         return false;
     if (!entry.selection.selectedExternalAudioPath.isEmpty() &&
         normalizedExternalPath(entry.selection.selectedExternalAudioPath).isEmpty())
@@ -172,6 +185,29 @@ bool readEntry(QSettings &settings, int index, TrackPreferenceEntry &entry) {
         entry.selection.externalSubtitlePaths.append(
             settings.value(prefix + QStringLiteral("externalSubtitles/%1/path").arg(item))
                 .toString());
+    // Tuning is an optional addition to schema 1; entries written before it
+    // existed load without per-media tuning rather than as malformed.
+    const auto tuningPrefix = prefix + QStringLiteral("tuning/");
+    const auto tuningPresence =
+        settings.value(tuningPrefix + QStringLiteral("present")).toString().toLower();
+    if (!tuningPresence.isEmpty()) {
+        if (tuningPresence != QStringLiteral("true") && tuningPresence != QStringLiteral("false"))
+            return false;
+        entry.hasTuning = tuningPresence == QStringLiteral("true");
+        if (entry.hasTuning) {
+            bool speedValid = false;
+            bool audioValid = false;
+            bool subtitleValid = false;
+            entry.playbackSpeed =
+                settings.value(tuningPrefix + QStringLiteral("speed")).toDouble(&speedValid);
+            entry.audioDelay =
+                settings.value(tuningPrefix + QStringLiteral("audioDelay")).toDouble(&audioValid);
+            entry.subtitleDelay = settings.value(tuningPrefix + QStringLiteral("subtitleDelay"))
+                                      .toDouble(&subtitleValid);
+            if (!speedValid || !audioValid || !subtitleValid)
+                return false;
+        }
+    }
     return validEntry(entry);
 }
 
@@ -276,7 +312,7 @@ bool sameEntries(const QList<TrackPreferenceEntry> &left,
         const auto &b = right.at(index);
         if (a.mediaPath != b.mediaPath || a.fileSize != b.fileSize ||
             a.modifiedUtcMs != b.modifiedUtcMs || a.lastUsedUtcMs != b.lastUsedUtcMs ||
-            !sameSelection(a.selection, b.selection))
+            !sameSelection(a.selection, b.selection) || !sameTuningPayload(a, b))
             return false;
     }
     return true;
@@ -372,6 +408,12 @@ QString TrackPreferenceStore::save(const QList<TrackPreferenceEntry> &entries) c
         for (qsizetype item = 0; item < entry.selection.externalSubtitlePaths.size(); ++item)
             settings.setValue(prefix + QStringLiteral("externalSubtitles/%1/path").arg(item),
                               entry.selection.externalSubtitlePaths.at(item));
+        settings.setValue(prefix + QStringLiteral("tuning/present"), entry.hasTuning);
+        if (entry.hasTuning) {
+            settings.setValue(prefix + QStringLiteral("tuning/speed"), entry.playbackSpeed);
+            settings.setValue(prefix + QStringLiteral("tuning/audioDelay"), entry.audioDelay);
+            settings.setValue(prefix + QStringLiteral("tuning/subtitleDelay"), entry.subtitleDelay);
+        }
     }
     settings.sync();
     if (settings.status() != QSettings::NoError)

@@ -506,6 +506,24 @@ class PlaylistEditTest final : public QObject {
         QCOMPARE(stableChanged.count(), 0);
         QVERIFY(!stableData.isEmpty());
     }
+    void playlistMetadataFollowsSortAndRemoval() {
+        PlaylistModel model;
+        QCOMPARE(model.addFiles({QStringLiteral("/tmp/z.mkv"), QStringLiteral("/tmp/a.mkv")},
+                                {{12.5, QStringLiteral("Zulu")}, {3.0, QStringLiteral("Alpha")}}),
+                 2);
+        QCOMPARE(model.data(model.index(0), Qt::DisplayRole).toString(), QStringLiteral("Zulu"));
+        QCOMPARE(model.metadataAt(0).durationSeconds, 12.5);
+
+        QVERIFY(model.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+        QCOMPARE(model.pathAt(0), QStringLiteral("/tmp/a.mkv"));
+        QCOMPARE(model.metadataAt(0).title, QStringLiteral("Alpha"));
+        QCOMPARE(model.metadataAt(0).durationSeconds, 3.0);
+        QCOMPARE(model.metadataAt(1).title, QStringLiteral("Zulu"));
+
+        QVERIFY(model.removeAt(0));
+        QCOMPARE(model.metadataAt(0).title, QStringLiteral("Zulu"));
+        QCOMPARE(model.metadataAt(0).durationSeconds, 12.5);
+    }
 };
 
 QTEST_GUILESS_MAIN(PlaylistEditTest)

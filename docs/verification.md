@@ -1,5 +1,14 @@
 # Verification Record
 
+Final feature round (2026-10-28, media library, shortcut customization, M3U8 metadata):
+
+- Non-window suite **75/75** in **89.00 s**; window suite **14/14** in **45.90 s**.
+- Media library: persistent watch folders/index with caps and corruption preservation, cancellable background scan, search/play/append dialog (`Ctrl+Shift+L`); store, scan and offscreen dialog tests pass, and the media-library subset passed ASan/UBSan 10/10.
+- Shortcut customization: `ShortcutSettings` captures named actions, applies/persists overrides, validates same-context conflicts, and exposes an editor from the F1 dialog; 16 test cases pass including MainWindow override application offscreen.
+- M3U8: `#EXTINF` duration/title parsing and round-trip; playlist metadata follows sort/move/removal and titles become display names. Regression tests pass.
+- `lrelease` reports **527** translations, 0 unfinished; build has 0 warnings and `code-size` passes.
+- Per the wrap-up request, the full sanitizer rebuild was stopped; only the media-library subset was run under ASan/UBSan in this round.
+
 Feature round (2026-10-28, subtitle styling, equalizer/filters, per-media tuning, sleep timer, single instance, images, URL redaction):
 
 - Non-window suite **73/73** in **68.95 s**; window suite **14/14** in **30.98 s** (including the newly registered `startup-options-window` sleep-timer tests).

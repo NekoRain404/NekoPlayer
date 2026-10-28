@@ -4,6 +4,12 @@
 #include <QList>
 #include <QStringList>
 
+struct PlaylistEntryMetadata {
+    double durationSeconds = -1; // -1 means unknown, matching #EXTINF:-1
+    QString title;               // optional display title from the playlist
+    bool operator==(const PlaylistEntryMetadata &) const = default;
+};
+
 class PlaylistModel final : public QAbstractListModel {
     Q_OBJECT
   public:
@@ -30,7 +36,10 @@ class PlaylistModel final : public QAbstractListModel {
     [[nodiscard]] QString pathAt(int row) const;
     [[nodiscard]] const QStringList &paths() const;
 
-    int addFiles(const QStringList &paths);
+    int addFiles(const QStringList &paths,
+                 const QList<PlaylistEntryMetadata> &metadata = {});
+    [[nodiscard]] PlaylistEntryMetadata metadataAt(int row) const;
+    [[nodiscard]] QList<PlaylistEntryMetadata> metadata() const;
     int removeRowsAt(const QList<int> &rows);
     bool removeAt(int row);
     bool sortEntries(SortKey key, Qt::SortOrder order);
@@ -43,5 +52,8 @@ class PlaylistModel final : public QAbstractListModel {
   private:
     QStringList paths_;
     QStringList displayNames_;
+    // Row-aligned optional playlist metadata. It follows inserts, moves,
+    // sorting and removal so a re-saved playlist keeps its #EXTINF lines.
+    QList<PlaylistEntryMetadata> metadata_;
     int currentIndex_ = -1;
 };

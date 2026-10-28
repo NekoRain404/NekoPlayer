@@ -21,6 +21,7 @@
 #include "quickactionsdialog.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
+#include "shortcutsdialog.h"
 #include "thumbnailpreview.h"
 #include "thumbnailpreviewpolicy.h"
 #include "transportbar.h"
@@ -46,6 +47,7 @@
 #include <QStyle>
 #include <QUrl>
 #include <QVBoxLayout>
+#include <QVariant>
 #include <algorithm>
 #include <utility>
 
@@ -295,6 +297,11 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         child->setMouseTracking(true);
         child->installEventFilter(this);
     }
+    // Created after the menus and panes so every action with a default
+    // shortcut is captured; windowactions.cpp discovers it via qApp.
+    shortcutSettings_ = new ShortcutSettings(this, {}, this);
+    qApp->setProperty("shortcutSettings",
+                      QVariant::fromValue(static_cast<QObject *>(shortcutSettings_)));
     restoreSession(sessionPath);
     updateState();
     if (!controller_->isReady())
@@ -302,6 +309,8 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
 }
 
 MainWindow::~MainWindow() {
+    if (qApp && qApp->property("shortcutSettings").value<QObject *>() == shortcutSettings_)
+        qApp->setProperty("shortcutSettings", QVariant{});
     folderMenu_->cancel();
     controlsTimer_.stop();
     if (!sessionSaveAttempted_) {
@@ -370,24 +379,6 @@ void MainWindow::clearPlaylist() {
     playlist_->clear();
 }
 
-void MainWindow::choosePlaylistToOpen() {
-    folderMenu_->cancel();
-    const auto path = QFileDialog::getOpenFileName(this, tr("打开播放列表"), mediaDirectory(),
-                                                   tr("M3U8 播放列表 (*.m3u8);;所有文件 (*)"));
-    if (!path.isEmpty())
-        openPlaylist(path);
-}
-
-void MainWindow::choosePlaylistToSave() {
-    auto path = QFileDialog::getSaveFileName(this, tr("保存播放列表"), mediaDirectory(),
-                                             tr("M3U8 播放列表 (*.m3u8)"));
-    if (path.isEmpty())
-        return;
-    if (QFileInfo(path).suffix().isEmpty())
-        path += QStringLiteral(".m3u8");
-    savePlaylist(path);
-}
-
 void MainWindow::openPlaylist(const QString &path) {
     folderMenu_->cancel();
     if (video_->hasFailed()) {
@@ -404,7 +395,11 @@ void MainWindow::openPlaylist(const QString &path) {
                     [](const QString &source) { return MediaSource::isNetwork(source); });
     pendingPaths_.clear();
     pendingPlaylistIndex_ = QPersistentModelIndex{};
-    playlist_->restoreFiles(loaded.paths, loaded.currentIndex);
+    QList<PlaylistEntryMetadata> metadata;
+    metadata.reserve(loaded.entries.size());
+    for (const auto &entry : loaded.entries)
+        metadata.append({entry.durationSeconds, entry.title});
+    playlist_->restoreFilesWithMetadata(loaded.paths, loaded.currentIndex, 0, metadata);
     if (containsNetworkSource) {
         // An imported queue can name arbitrary hosts. Select the saved row but
         // require an explicit Play/Space before resolving a network address.
@@ -420,8 +415,14 @@ void MainWindow::openPlaylist(const QString &path) {
 }
 
 void MainWindow::savePlaylist(const QString &path) {
-    const auto error =
-        M3u8Store::save(path, playlist_->model()->paths(), playlist_->model()->currentIndex());
+    const auto &model = *playlist_->model();
+    QList<M3u8Entry> entries;
+    entries.reserve(model.rowCount());
+    for (auto row = 0; row < model.rowCount(); ++row) {
+        const auto metadata = model.metadataAt(row);
+        entries.append({model.pathAt(row), metadata.durationSeconds, metadata.title});
+    }
+    const auto error = M3u8Store::saveEntries(path, entries, model.currentIndex());
     if (!error.isEmpty())
         showError(error);
     else

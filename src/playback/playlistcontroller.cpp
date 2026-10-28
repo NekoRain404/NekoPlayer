@@ -164,8 +164,13 @@ void PlaylistController::updateFileLoop() {
 }
 
 void PlaylistController::addFiles(const QStringList &paths) {
+    addFilesWithMetadata(paths, {});
+}
+
+void PlaylistController::addFilesWithMetadata(const QStringList &paths,
+                                              const QList<PlaylistEntryMetadata> &metadata) {
     const auto firstNewRow = model_->rowCount();
-    if (model_->addFiles(paths) == 0)
+    if (model_->addFiles(paths, metadata) == 0)
         return;
     if (model_->currentIndex() < 0 || exhausted_) {
         failedRows_.clear();
@@ -185,8 +190,14 @@ void PlaylistController::playAt(int row) {
 
 void PlaylistController::restoreFiles(const QStringList &paths, int currentIndex,
                                       double resumePosition) {
+    restoreFilesWithMetadata(paths, currentIndex, resumePosition, {});
+}
+
+void PlaylistController::restoreFilesWithMetadata(const QStringList &paths, int currentIndex,
+                                                  double resumePosition,
+                                                  const QList<PlaylistEntryMetadata> &metadata) {
     clear();
-    model_->addFiles(paths);
+    model_->addFiles(paths, metadata);
     if (model_->rowCount() > 0)
         model_->setCurrentIndex(qBound(0, currentIndex, model_->rowCount() - 1));
     if (shuffleEnabled_)

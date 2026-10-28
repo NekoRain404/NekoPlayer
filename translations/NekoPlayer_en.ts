@@ -457,6 +457,10 @@
         <source>无法播放：%1</source>
         <translation>Could not play: %1</translation>
     </message>
+    <message>
+      <source>媒体库…</source>
+      <translation>Media Library…</translation>
+    </message>
 </context>
 <context>
     <name>MediaInformationDialog</name>
@@ -1466,6 +1470,10 @@ libmpv client API: %3</translation>
         <source>全局</source>
         <translation>Global</translation>
     </message>
+    <message>
+      <source>编辑快捷键…</source>
+      <translation>Edit Shortcuts…</translation>
+    </message>
 </context>
 <context>
     <name>SubtitleDisplayMenu</name>
@@ -2026,6 +2034,220 @@ libmpv client API: %3</translation>
     <message>
       <source>选择字幕颜色</source>
       <translation>Choose subtitle color</translation>
+    </message>
+  </context>
+  <context>
+    <name>LibraryDialog</name>
+    <message>
+      <source>媒体库</source>
+      <translation>Media Library</translation>
+    </message>
+    <message>
+      <source>监视文件夹</source>
+      <translation>Watched Folders</translation>
+    </message>
+    <message>
+      <source>添加文件夹…</source>
+      <translation>Add Folder…</translation>
+    </message>
+    <message>
+      <source>移除</source>
+      <translation>Remove</translation>
+    </message>
+    <message>
+      <source>刷新</source>
+      <translation>Refresh</translation>
+    </message>
+    <message>
+      <source>包含子文件夹</source>
+      <translation>Include subfolders</translation>
+    </message>
+    <message>
+      <source>搜索媒体库</source>
+      <translation>Search library</translation>
+    </message>
+    <message>
+      <source>名称</source>
+      <translation>Name</translation>
+    </message>
+    <message>
+      <source>文件夹</source>
+      <translation>Folder</translation>
+    </message>
+    <message>
+      <source>路径</source>
+      <translation>Path</translation>
+    </message>
+    <message>
+      <source>播放</source>
+      <translation>Play</translation>
+    </message>
+    <message>
+      <source>添加到播放列表</source>
+      <translation>Add to Playlist</translation>
+    </message>
+    <message>
+      <source>关闭</source>
+      <translation>Close</translation>
+    </message>
+    <message>
+      <source>取消</source>
+      <translation>Cancel</translation>
+    </message>
+    <message>
+      <source>共 %1 项</source>
+      <translation>%1 items</translation>
+    </message>
+    <message>
+      <source>显示 %1 / 共 %2 项</source>
+      <translation>Showing %1 of %2 items</translation>
+    </message>
+    <message>
+      <source>正在扫描媒体库…</source>
+      <translation>Scanning media library…</translation>
+    </message>
+    <message>
+      <source>扫描完成，共 %1 项。</source>
+      <translation>Scan complete: %1 items.</translation>
+    </message>
+    <message>
+      <source>扫描完成，共 %1 项。\n%2</source>
+      <translation>Scan complete: %1 items.\n%2</translation>
+    </message>
+    <message>
+      <source>扫描已取消。</source>
+      <translation>Scan cancelled.</translation>
+    </message>
+    <message>
+      <source>没有匹配的媒体。</source>
+      <translation>No matching media.</translation>
+    </message>
+    <message>
+      <source>媒体库为空。\n点击“刷新”扫描已添加的文件夹。</source>
+      <translation>The library is empty.\nClick Refresh to scan the added folders.</translation>
+    </message>
+    <message>
+      <source>尚未添加媒体文件夹。\n点击“添加文件夹…”并刷新以建立媒体库。</source>
+      <translation>No media folders yet.\nClick Add Folder… and refresh to build the library.</translation>
+    </message>
+    <message>
+      <source>已添加文件夹，点击“刷新”开始扫描。</source>
+      <translation>Folder added. Click Refresh to start scanning.</translation>
+    </message>
+    <message>
+      <source>已移除文件夹。</source>
+      <translation>Folder removed.</translation>
+    </message>
+    <message>
+      <source>当前为临时模式：媒体库更改不会保存。</source>
+      <translation>Temporary mode: library changes will not be saved.</translation>
+    </message>
+    <message>
+      <source>无法添加文件夹：请选择可访问的绝对目录（最多 %1 个）。</source>
+      <translation>Cannot add folder: choose an accessible absolute directory (maximum %1).</translation>
+    </message>
+    <message>
+      <source>添加媒体文件夹</source>
+      <translation>Add media folder</translation>
+    </message>
+    <message>
+      <source>移除选中的媒体文件夹</source>
+      <translation>Remove selected media folder</translation>
+    </message>
+    <message>
+      <source>刷新媒体库</source>
+      <translation>Refresh library</translation>
+    </message>
+    <message>
+      <source>取消媒体库扫描</source>
+      <translation>Cancel library scan</translation>
+    </message>
+    <message>
+      <source>播放选中的媒体</source>
+      <translation>Play selected media</translation>
+    </message>
+    <message>
+      <source>将选中媒体添加到播放列表</source>
+      <translation>Add selected media to the playlist</translation>
+    </message>
+    <message>
+      <source>媒体库条目</source>
+      <translation>Media library items</translation>
+    </message>
+    <message>
+      <source>媒体库条目数量</source>
+      <translation>Media library item count</translation>
+    </message>
+    <message>
+      <source>媒体库扫描进度</source>
+      <translation>Library scan progress</translation>
+    </message>
+    <message>
+      <source>扫描时包含子文件夹</source>
+      <translation>Include subfolders when scanning</translation>
+    </message>
+    <message>
+      <source>关闭媒体库</source>
+      <translation>Close media library</translation>
+    </message>
+    <message>
+      <source>%1 / %2 个文件夹</source>
+      <translation>%1 / %2 folders</translation>
+    </message>
+    <message>
+      <source>监视文件夹列表</source>
+      <translation>Watched folder list</translation>
+    </message>
+  </context>
+  <context>
+    <name>ShortcutEditorDialog</name>
+    <message>
+      <source>编辑快捷键</source>
+      <translation>Edit Shortcuts</translation>
+    </message>
+    <message>
+      <source>快捷键：</source>
+      <translation>Shortcut:</translation>
+    </message>
+    <message>
+      <source>设置</source>
+      <translation>Set</translation>
+    </message>
+    <message>
+      <source>清除</source>
+      <translation>Clear</translation>
+    </message>
+    <message>
+      <source>恢复默认</source>
+      <translation>Restore Default</translation>
+    </message>
+    <message>
+      <source>确定</source>
+      <translation>OK</translation>
+    </message>
+    <message>
+      <source>取消</source>
+      <translation>Cancel</translation>
+    </message>
+    <message>
+      <source>快捷键冲突</source>
+      <translation>Shortcut conflict</translation>
+    </message>
+    <message>
+      <source>“%1”与“%2”都使用了 %3。</source>
+      <translation>"%1" and "%2" both use %3.</translation>
+    </message>
+    <message>
+      <source>无法应用“%1”的快捷键。</source>
+      <translation>Cannot apply the shortcut for "%1".</translation>
+    </message>
+    <message>
+      <source>保存失败</source>
+      <translation>Save failed</translation>
+    </message>
+    <message>
+      <source>默认：%1</source>
+      <translation>Default: %1</translation>
     </message>
   </context>
 </TS>

@@ -7,6 +7,8 @@
 
 #include <QAction>
 #include <QCloseEvent>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QStandardPaths>
 #include <QStatusBar>
@@ -88,4 +90,24 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     if (!error.isEmpty())
         QMessageBox::warning(this, tr("会话未保存"), error);
     QMainWindow::closeEvent(event);
+}
+
+// Playlist file pickers live with the other desktop/session integration code so
+// the window coordination unit stays focused on playback state.
+void MainWindow::choosePlaylistToOpen() {
+    folderMenu_->cancel();
+    const auto path = QFileDialog::getOpenFileName(this, tr("打开播放列表"), mediaDirectory(),
+                                                   tr("M3U8 播放列表 (*.m3u8);;所有文件 (*)"));
+    if (!path.isEmpty())
+        openPlaylist(path);
+}
+
+void MainWindow::choosePlaylistToSave() {
+    auto path = QFileDialog::getSaveFileName(this, tr("保存播放列表"), mediaDirectory(),
+                                             tr("M3U8 播放列表 (*.m3u8)"));
+    if (path.isEmpty())
+        return;
+    if (QFileInfo(path).suffix().isEmpty())
+        path += QStringLiteral(".m3u8");
+    savePlaylist(path);
 }

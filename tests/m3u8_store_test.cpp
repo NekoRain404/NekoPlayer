@@ -71,6 +71,37 @@ class M3u8StoreTest final : public QObject {
         QVERIFY(loaded.error.contains(QStringLiteral("HLS")));
     }
 
+    void extinfDurationsAndTitlesSurviveRoundTrip() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto input = temporary.filePath(QStringLiteral("input.m3u8"));
+        {
+            QFile file(input);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            const auto body = QStringLiteral("#EXTM3U\n#EXTINF:12.5,Episode Two\n%1\n"
+                                             "#EXTINF:-1,Local Clip\n%2\n")
+                                  .arg(temporary.filePath(QStringLiteral("b.mkv")),
+                                       temporary.filePath(QStringLiteral("a.mkv")))
+                                  .toUtf8();
+            QCOMPARE(file.write(body), body.size());
+        }
+        const auto loaded = M3u8Store::load(input);
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.entries.size(), 2);
+        QCOMPARE(loaded.entries.at(0).durationSeconds, 12.5);
+        QCOMPARE(loaded.entries.at(0).title, QStringLiteral("Episode Two"));
+        QCOMPARE(loaded.entries.at(1).durationSeconds, -1.0);
+        QCOMPARE(loaded.entries.at(1).title, QStringLiteral("Local Clip"));
+
+        const auto output = temporary.filePath(QStringLiteral("output.m3u8"));
+        QVERIFY(M3u8Store::saveEntries(output, loaded.entries, 1).isEmpty());
+        const auto again = M3u8Store::load(output);
+        QVERIFY2(again.error.isEmpty(), qPrintable(again.error));
+        QCOMPARE(again.entries, loaded.entries);
+        QCOMPARE(again.currentIndex, 1);
+        QCOMPARE(again.paths, loaded.paths);
+    }
+
     void savesNonEmptyListWithoutCurrentRow() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

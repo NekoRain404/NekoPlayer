@@ -7,6 +7,7 @@
 #include "currentmediamenu.h"
 #include "foldermenu.h"
 #include "languagemanager.h"
+#include "librarydialog.h"
 #include "mainwindow.h"
 #include "mediainformationdialog.h"
 #include "navigationmenu.h"
@@ -69,6 +70,14 @@ void MainWindow::createActions() {
         make(tr("添加文件…"), "appendAction", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
     setAppearanceIcon(appendAction_, AppearanceIcons::Symbol::Add);
     connect(appendAction_, &QAction::triggered, this, &MainWindow::chooseFilesToAppend);
+    auto *mediaLibraryAction =
+        make(tr("媒体库…"), "mediaLibraryAction", QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_L));
+    setAppearanceIcon(mediaLibraryAction, AppearanceIcons::Symbol::MediaFile);
+    connect(mediaLibraryAction, &QAction::triggered, this, [this] {
+        LibraryDialogSupport::show(
+            this, [this](const QString &path) { openFile(path); },
+            [this](const QStringList &paths) { appendFiles(paths); });
+    });
     pauseAction_ = make(tr("暂停"), "pauseAction", QKeySequence(Qt::Key_Space));
     connect(pauseAction_, &QAction::triggered, playlist_.get(), &PlaylistController::playOrPause);
     connect(pauseAction_, &QAction::triggered, this, [this] {
@@ -190,6 +199,7 @@ void MainWindow::createActions() {
     file->addAction(openNetworkAction_);
     file->addAction(appendAction_);
     file->addMenu(folderMenu_->menu());
+    file->addAction(mediaLibraryAction);
     file->addMenu(recent->menu());
     file->addMenu(currentMedia->menu());
     file->addSeparator();
@@ -479,6 +489,7 @@ void MainWindow::changeEvent(QEvent *event) {
     setActionText("openPlaylistAction", tr("打开播放列表…"));
     setActionText("savePlaylistAction", tr("保存播放列表…"));
     setActionText("appendAction", tr("添加文件…"));
+    setActionText("mediaLibraryAction", tr("媒体库…"));
     setActionText("pauseAction", controller_->state().paused ? tr("播放") : tr("暂停"));
     setActionText("stopAction", tr("停止"));
     setActionText("previousAction", tr("上一个"));

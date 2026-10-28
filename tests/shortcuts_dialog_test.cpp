@@ -1,13 +1,21 @@
+#include "ui/mainwindow.h"
 #include "ui/shortcutsdialog.h"
 
 #include <QAbstractItemView>
 #include <QAction>
+#include <QApplication>
+#include <QDialogButtonBox>
 #include <QKeySequence>
+#include <QKeySequenceEdit>
 #include <QList>
 #include <QMenu>
 #include <QMenuBar>
+#include <QPushButton>
+#include <QSettings>
+#include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QVariant>
 #include <QtTest>
 
 namespace {
@@ -32,6 +40,75 @@ QList<QTreeWidgetItem *> rowsWithText(QTreeWidget *tree, const QString &text) {
 }
 
 QString native(const QKeySequence &sequence) { return sequence.toString(QKeySequence::NativeText); }
+
+struct ActionHost {
+    QWidget root;
+    QAction open{literal("Open"), &root};
+    QAction save{literal("Save"), &root};
+    QAction panel{literal("Panel"), &root};
+
+    ActionHost() {
+        open.setObjectName(QStringLiteral("openAction"));
+        open.setShortcut(QKeySequence::Open);
+        save.setObjectName(QStringLiteral("saveAction"));
+        save.setShortcut(QKeySequence::Save);
+        panel.setObjectName(QStringLiteral("panelAction"));
+        panel.setShortcut(QKeySequence(Qt::Key_Escape));
+        panel.setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        root.addAction(&open);
+        root.addAction(&save);
+        root.addAction(&panel);
+    }
+};
+
+QString settingsFile(const QTemporaryDir &directory) {
+    return directory.filePath(QStringLiteral("shortcuts.ini"));
+}
+
+class ApplicationPropertyGuard {
+  public:
+    explicit ApplicationPropertyGuard(const char *name)
+        : name_(name), previous_(qApp->property(name)) {}
+    ~ApplicationPropertyGuard() { qApp->setProperty(name_, previous_); }
+
+  private:
+    const char *name_;
+    QVariant previous_;
+};
+
+class ApplicationIdentityGuard {
+  public:
+    ApplicationIdentityGuard(const QString &organization, const QString &application)
+        : organization_(QCoreApplication::organizationName()),
+          application_(QCoreApplication::applicationName()) {
+        QCoreApplication::setOrganizationName(organization);
+        QCoreApplication::setApplicationName(application);
+    }
+    ~ApplicationIdentityGuard() {
+        QCoreApplication::setOrganizationName(organization_);
+        QCoreApplication::setApplicationName(application_);
+    }
+
+  private:
+    QString organization_;
+    QString application_;
+};
+
+class SettingsPathGuard {
+  public:
+    explicit SettingsPathGuard(const QString &directory)
+        : previousFormat_(QSettings::defaultFormat()) {
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, directory);
+    }
+    ~SettingsPathGuard() {
+        QSettings::setDefaultFormat(previousFormat_);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, QString());
+    }
+
+  private:
+    QSettings::Format previousFormat_;
+};
 } // namespace
 
 class ShortcutsDialogTest final : public QObject {
@@ -188,6 +265,198 @@ class ShortcutsDialogTest final : public QObject {
         QCOMPARE(tree->topLevelItemCount(), 1);
         QCOMPARE(tree->topLevelItem(0)->text(0), QStringLiteral("File"));
         QVERIFY(rowsWithText(tree, QStringLiteral("面板快捷键")).isEmpty());
+    }
+
+    void shortcutSettingsCaptureDefaultsAndApplyStoredOverrides() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QKeySequence custom(Qt::CTRL | Qt::Key_O);
+        {
+            QSettings store(settingsFile(directory), QSettings::IniFormat);
+            store.beginGroup(QStringLiteral("shortcuts"));
+            store.setValue(QStringLiteral("openAction"),
+                           custom.toString(QKeySequence::PortableText));
+            store.setValue(QStringLiteral("saveAction"), QStringLiteral("none"));
+        }
+        ActionHost host;
+        ShortcutSettings settings(&host.root, settingsFile(directory));
+        QCOMPARE(settings.actions().size(), 3);
+        QCOMPARE(settings.actions().at(0), &host.open);
+        QCOMPARE(settings.actions().at(1), &host.panel);
+        QCOMPARE(settings.actions().at(2), &host.save);
+        QCOMPARE(settings.defaults().value(QStringLiteral("openAction")),
+                 QKeySequence(QKeySequence::Open));
+        QCOMPARE(settings.current(&host.open), custom);
+        QCOMPARE(host.open.shortcut(), custom);
+        QVERIFY(settings.current(&host.save).isEmpty());
+        QVERIFY(host.save.shortcut().isEmpty());
+    }
+
+    void shortcutSettingsRejectConflictsOnlyWithinContext() {
+        QTemporaryDir directory;
+        ActionHost host;
+        ShortcutSettings settings(&host.root, settingsFile(directory));
+        const QKeySequence custom(Qt::CTRL | Qt::Key_R);
+        QVERIFY(settings.setShortcut(&host.open, custom));
+        QVERIFY(!settings.setShortcut(&host.save, custom));
+        QCOMPARE(settings.current(&host.save), QKeySequence(QKeySequence::Save));
+        QVERIFY(settings.setShortcut(&host.panel, custom));
+        QVERIFY(settings.conflicts().isEmpty());
+        QVERIFY(settings.setShortcut(&host.open, QKeySequence{}));
+        QVERIFY(settings.setShortcut(&host.save, QKeySequence{}));
+        QVERIFY(settings.setShortcut(&host.save, custom));
+        settings.reset(&host.save);
+        QCOMPARE(host.save.shortcut(), QKeySequence(QKeySequence::Save));
+        QVERIFY(settings.setShortcut(&host.open, custom));
+        settings.resetAll();
+        QCOMPARE(host.open.shortcut(), QKeySequence(QKeySequence::Open));
+        QCOMPARE(host.save.shortcut(), QKeySequence(QKeySequence::Save));
+        QCOMPARE(host.panel.shortcut(), QKeySequence(Qt::Key_Escape));
+    }
+
+    void shortcutSettingsReportStoredConflicts() {
+        QTemporaryDir directory;
+        const QKeySequence custom(Qt::CTRL | Qt::Key_R);
+        {
+            QSettings store(settingsFile(directory), QSettings::IniFormat);
+            store.beginGroup(QStringLiteral("shortcuts"));
+            store.setValue(QStringLiteral("openAction"),
+                           custom.toString(QKeySequence::PortableText));
+            store.setValue(QStringLiteral("saveAction"),
+                           custom.toString(QKeySequence::PortableText));
+        }
+        ActionHost host;
+        ShortcutSettings settings(&host.root, settingsFile(directory));
+        QCOMPARE(host.open.shortcut(), custom);
+        QCOMPARE(host.save.shortcut(), custom);
+        QVERIFY(!settings.conflicts().isEmpty());
+    }
+
+    void shortcutSettingsPersistOverridesAndClears() {
+        QTemporaryDir directory;
+        const auto path = settingsFile(directory);
+        const QKeySequence custom(Qt::CTRL | Qt::SHIFT | Qt::Key_O);
+        {
+            ActionHost host;
+            ShortcutSettings settings(&host.root, path);
+            QVERIFY(settings.setShortcut(&host.open, custom));
+            QVERIFY(settings.setShortcut(&host.save, QKeySequence{}));
+            QCOMPARE(settings.save(), QString());
+        }
+        ActionHost host;
+        ShortcutSettings reloaded(&host.root, path);
+        QCOMPARE(reloaded.current(&host.open), custom);
+        QCOMPARE(reloaded.current(&host.save), QKeySequence{});
+        QCOMPARE(reloaded.current(&host.panel), QKeySequence(Qt::Key_Escape));
+        reloaded.reset(&host.open);
+        QCOMPARE(reloaded.save(), QString());
+        ShortcutSettings again(&host.root, path);
+        QCOMPARE(again.current(&host.open), QKeySequence(QKeySequence::Open));
+    }
+
+    void shortcutEditorAppliesPendingEditsOnAccept() {
+        QTemporaryDir directory;
+        ActionHost host;
+        ShortcutSettings settings(&host.root, settingsFile(directory));
+        ShortcutEditorDialog editor(&settings);
+        auto *tree = editor.findChild<QTreeWidget *>(QStringLiteral("shortcutEditorTree"));
+        auto *keyEdit = editor.findChild<QKeySequenceEdit *>(QStringLiteral("shortcutKeyEdit"));
+        auto *setButton = editor.findChild<QPushButton *>(QStringLiteral("setShortcutButton"));
+        auto *restoreButton =
+            editor.findChild<QPushButton *>(QStringLiteral("restoreDefaultShortcutButton"));
+        auto *buttons =
+            editor.findChild<QDialogButtonBox *>(QStringLiteral("shortcutEditorButtons"));
+        QVERIFY(tree && keyEdit && setButton && restoreButton && buttons);
+        QCOMPARE(tree->topLevelItemCount(), 3);
+        QTreeWidgetItem *saveRow = nullptr;
+        for (int row = 0; row < tree->topLevelItemCount(); ++row) {
+            auto *item = tree->topLevelItem(row);
+            if (item->data(0, Qt::UserRole).toString() == QLatin1String("saveAction"))
+                saveRow = item;
+        }
+        QVERIFY(saveRow);
+        tree->setCurrentItem(saveRow);
+        QVERIFY(!restoreButton->isEnabled());
+        const QKeySequence custom(Qt::CTRL | Qt::Key_R);
+        keyEdit->setKeySequence(custom);
+        setButton->click();
+        QCOMPARE(host.save.shortcut(), QKeySequence(QKeySequence::Save));
+        QVERIFY(restoreButton->isEnabled());
+        QCOMPARE(saveRow->text(1), native(custom));
+        buttons->button(QDialogButtonBox::Ok)->click();
+        QCOMPARE(editor.result(), int(QDialog::Accepted));
+        QCOMPARE(host.save.shortcut(), custom);
+        ShortcutSettings persisted(&host.root, settingsFile(directory));
+        QCOMPARE(persisted.current(&host.save), custom);
+    }
+
+    void shortcutEditorCancelDiscardsPendingEdits() {
+        QTemporaryDir directory;
+        ActionHost host;
+        ShortcutSettings settings(&host.root, settingsFile(directory));
+        ShortcutEditorDialog editor(&settings);
+        auto *tree = editor.findChild<QTreeWidget *>(QStringLiteral("shortcutEditorTree"));
+        auto *keyEdit = editor.findChild<QKeySequenceEdit *>(QStringLiteral("shortcutKeyEdit"));
+        auto *setButton = editor.findChild<QPushButton *>(QStringLiteral("setShortcutButton"));
+        auto *buttons =
+            editor.findChild<QDialogButtonBox *>(QStringLiteral("shortcutEditorButtons"));
+        QVERIFY(tree && keyEdit && setButton && buttons);
+        tree->setCurrentItem(tree->topLevelItem(0));
+        keyEdit->setKeySequence(QKeySequence(Qt::CTRL | Qt::Key_R));
+        setButton->click();
+        buttons->button(QDialogButtonBox::Cancel)->click();
+        QCOMPARE(editor.result(), int(QDialog::Rejected));
+        QCOMPARE(host.open.shortcut(), QKeySequence(QKeySequence::Open));
+        ShortcutSettings reloaded(&host.root, settingsFile(directory));
+        QCOMPARE(reloaded.current(&host.open), QKeySequence(QKeySequence::Open));
+    }
+
+    void shortcutsDialogShowsEditorOnlyWhenSettingsArePublished() {
+        QMenuBar menuBar;
+        auto *file = menuBar.addMenu(literal("File"));
+        auto *open = file->addAction(literal("Open"));
+        open->setShortcut(QKeySequence::Open);
+        QTemporaryDir directory;
+        ActionHost host;
+        ShortcutSettings settings(&host.root, settingsFile(directory));
+        ApplicationPropertyGuard guard("shortcutSettings");
+        qApp->setProperty("shortcutSettings", QVariant{});
+        ShortcutsDialog readOnly(&menuBar);
+        QVERIFY(!readOnly.findChild<QPushButton *>(QStringLiteral("editShortcutsButton")));
+        qApp->setProperty("shortcutSettings",
+                          QVariant::fromValue(static_cast<QObject *>(&settings)));
+        ShortcutsDialog editable(&menuBar);
+        auto *editButton = editable.findChild<QPushButton *>(QStringLiteral("editShortcutsButton"));
+        QVERIFY(editButton);
+        QCOMPARE(editButton->text(), QStringLiteral("编辑快捷键…"));
+    }
+
+    void mainWindowAppliesStoredOverrideAndPublishesSettings() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        SettingsPathGuard pathGuard(directory.path());
+        ApplicationIdentityGuard identityGuard(QStringLiteral("NekoPlayerTest"),
+                                               QStringLiteral("shortcuts_dialog_test"));
+        ApplicationPropertyGuard settingsGuard("shortcutSettings");
+        ApplicationPropertyGuard configGuard("configurationEnabled");
+        const QKeySequence custom(Qt::CTRL | Qt::SHIFT | Qt::Key_O);
+        {
+            QSettings store;
+            store.beginGroup(QStringLiteral("shortcuts"));
+            store.setValue(QStringLiteral("openAction"),
+                           custom.toString(QKeySequence::PortableText));
+        }
+        qApp->setProperty("configurationEnabled", true);
+        {
+            MainWindow window(true);
+            auto *settings = qobject_cast<ShortcutSettings *>(
+                qApp->property("shortcutSettings").value<QObject *>());
+            QVERIFY(settings);
+            auto *open = window.findChild<QAction *>(QStringLiteral("openAction"));
+            QVERIFY(open);
+            QVERIFY(settings->isManaged(open));
+            QCOMPARE(open->shortcut(), custom);
+        }
     }
 };
 

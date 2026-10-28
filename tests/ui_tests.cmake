@@ -180,3 +180,14 @@ target_link_libraries(shortcut_override_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME shortcut-override COMMAND shortcut_override_test)
 set_tests_properties(shortcut-override PROPERTIES TIMEOUT 20
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(media_library_test media_library_test.cpp)
+target_link_libraries(media_library_test PRIVATE neko_session Qt6::Test)
+add_test(NAME media-library COMMAND media_library_test)
+set_tests_properties(media-library PROPERTIES TIMEOUT 30)
+
+add_executable(library_dialog_test library_dialog_test.cpp)
+target_link_libraries(library_dialog_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME library-dialog COMMAND library_dialog_test)
+set_tests_properties(library-dialog PROPERTIES TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

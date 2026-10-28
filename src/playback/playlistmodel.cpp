@@ -94,6 +94,7 @@ bool PlaylistModel::moveRows(const QModelIndex &sourceParent, int sourceRow, int
     const auto previous = currentIndex_;
     paths_.move(sourceRow, target);
     displayNames_.move(sourceRow, target);
+    metadata_.move(sourceRow, target);
     if (currentIndex_ == sourceRow)
         currentIndex_ = target;
     else if (sourceRow < currentIndex_ && currentIndex_ <= target)
@@ -115,16 +116,38 @@ QString PlaylistModel::currentPath() const {
 QString PlaylistModel::pathAt(int row) const { return paths_.value(row); }
 const QStringList &PlaylistModel::paths() const { return paths_; }
 
-int PlaylistModel::addFiles(const QStringList &paths) {
+namespace {
+QString metadataDisplayName(const QString &path, const PlaylistEntryMetadata &metadata) {
+    auto title = metadata.title;
+    for (auto &character : title) {
+        const auto category = character.category();
+        if (category == QChar::Other_Control || category == QChar::Other_Format ||
+            category == QChar::Separator_Line || category == QChar::Separator_Paragraph)
+            character = QLatin1Char(' ');
+    }
+    title = title.simplified();
+    if (title.size() > 256)
+        title = title.left(255) + QChar(0x2026);
+    return title.isEmpty() ? MediaSource::displayName(path) : title;
+}
+} // namespace
+
+int PlaylistModel::addFiles(const QStringList &paths,
+                            const QList<PlaylistEntryMetadata> &metadata) {
+    const bool aligned = metadata.size() == paths.size();
     QStringList additions;
     QStringList displayNames;
-    for (const auto &path : paths) {
+    QList<PlaylistEntryMetadata> additionMetadata;
+    for (qsizetype index = 0; index < paths.size(); ++index) {
+        const auto &path = paths.at(index);
         const QUrl url(path, QUrl::StrictMode);
         const auto absolute =
             url.isValid() && !url.scheme().isEmpty() ? path : QFileInfo(path).absoluteFilePath();
         if (!absolute.isEmpty()) {
+            const auto entry = aligned ? metadata.at(index) : PlaylistEntryMetadata{};
             additions.append(absolute);
-            displayNames.append(MediaSource::displayName(absolute));
+            displayNames.append(metadataDisplayName(absolute, entry));
+            additionMetadata.append(entry);
         }
     }
     if (additions.isEmpty())
@@ -133,9 +156,16 @@ int PlaylistModel::addFiles(const QStringList &paths) {
     beginInsertRows({}, first, first + additions.size() - 1);
     paths_.append(additions);
     displayNames_.append(displayNames);
+    metadata_.append(additionMetadata);
     endInsertRows();
     return additions.size();
 }
+
+PlaylistEntryMetadata PlaylistModel::metadataAt(int row) const {
+    return row >= 0 && row < metadata_.size() ? metadata_.at(row) : PlaylistEntryMetadata{};
+}
+
+QList<PlaylistEntryMetadata> PlaylistModel::metadata() const { return metadata_; }
 
 int PlaylistModel::removeRowsAt(const QList<int> &rows) {
     std::vector<int> removed;
@@ -201,6 +231,7 @@ int PlaylistModel::removeRowsAt(const QList<int> &rows) {
         beginRemoveRows({}, first, last);
         paths_.remove(first, count);
         displayNames_.remove(first, count);
+        metadata_.remove(first, count);
         if (currentIndex_ >= first && currentIndex_ <= last)
             currentIndex_ = -1;
         else if (currentIndex_ > last)
@@ -284,14 +315,18 @@ bool PlaylistModel::sortEntries(SortKey key, Qt::SortOrder order) {
         changePersistentIndexList(from, to);
     QStringList sortedPaths;
     QStringList sortedNames;
+    QList<PlaylistEntryMetadata> sortedMetadata;
     sortedPaths.reserve(count);
     sortedNames.reserve(count);
+    sortedMetadata.reserve(count);
     for (const auto source : permutation) {
         sortedPaths.append(paths_.at(source));
         sortedNames.append(displayNames_.at(source));
+        sortedMetadata.append(metadata_.value(source));
     }
     paths_ = std::move(sortedPaths);
     displayNames_ = std::move(sortedNames);
+    metadata_ = std::move(sortedMetadata);
     currentIndex_ = newCurrent;
     emit layoutChanged({}, QAbstractItemModel::VerticalSortHint);
 
@@ -312,6 +347,7 @@ void PlaylistModel::clear() {
     beginResetModel();
     paths_.clear();
     displayNames_.clear();
+    metadata_.clear();
     const bool hadCurrent = currentIndex_ != -1;
     currentIndex_ = -1;
     endResetModel();

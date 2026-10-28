@@ -26,6 +26,7 @@ class FolderMenu;
 class RecentMediaHistory;
 class FullscreenControls;
 class PreferencesCoordinator;
+class ShortcutSettings;
 class QVBoxLayout;
 class QSplitter;
 class ThumbnailPreview;
@@ -104,6 +105,7 @@ class MainWindow final : public QMainWindow {
     std::unique_ptr<SessionManager> session_;
     std::unique_ptr<RecentMediaHistory> recentMedia_;
     PreferencesCoordinator *preferencesCoordinator_ = nullptr;
+    ShortcutSettings *shortcutSettings_ = nullptr;
     VideoWidget *video_ = nullptr;
     TransportBar *transport_ = nullptr;
     FullscreenControls *fullscreenControls_ = nullptr;

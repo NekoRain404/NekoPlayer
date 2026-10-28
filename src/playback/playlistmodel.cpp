@@ -221,13 +221,22 @@ bool PlaylistModel::sortEntries(SortKey key, Qt::SortOrder order) {
     const auto count = paths_.size();
     if (count < 2)
         return false;
+    // Collation dominates the sort cost, so build one key per row. Every
+    // comparison below then only compares precomputed keys; for a given collator
+    // QCollatorSortKey::compare orders like QCollator::compare, which keeps the
+    // observable order identical.
+    const auto &sortTexts = key == SortKey::Title ? displayNames_ : paths_;
+    std::vector<QCollatorSortKey> sortKeys;
+    sortKeys.reserve(static_cast<std::size_t>(count));
+    for (const auto &text : sortTexts)
+        sortKeys.push_back(naturalSortKey(text));
+
     std::vector<int> permutation(static_cast<std::size_t>(count));
     std::iota(permutation.begin(), permutation.end(), 0);
     const auto ascending = order == Qt::AscendingOrder;
-    const auto compareRows = [this, key](int left, int right) {
-        auto compared = key == SortKey::Title
-                            ? naturalCompare(displayNames_.at(left), displayNames_.at(right))
-                            : naturalCompare(paths_.at(left), paths_.at(right));
+    const auto compareRows = [this, key, &sortKeys](int left, int right) {
+        auto compared = sortKeys[static_cast<std::size_t>(left)].compare(
+            sortKeys[static_cast<std::size_t>(right)]);
         if (compared == 0 && key == SortKey::Title)
             compared = QString::compare(paths_.at(left), paths_.at(right), Qt::CaseSensitive);
         return compared;

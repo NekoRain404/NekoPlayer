@@ -1,5 +1,24 @@
 # Verification Record
 
+Third remediation round (2026-10-28, sort keys, scan cancellation, network playlist gate):
+
+- Non-window suite passed **73/73** in **66.98 s**; window behaviour suite passed **13/13** in **28.57 s** on native Wayland.
+- Focused ASan/UBSan run with `detect_leaks=0`: **14/14** passed (`playlist*`, `folder-scan`, `session`, `playlist-window`).
+- Playlist sorting now precomputes `QCollatorSortKey` once per row: the 5000-row benchmark dropped from ~5.6 ms to ~1.8 ms with identical ordering; a pairwise test compares key ordering against `naturalCompare` across numeric/CJK/case/punctuation corpora.
+- Folder scanning replaced the final `std::sort` with a chunked stable merge sort that polls cancellation every 1024 elements; a cancelled scan still commits nothing. New tests cover 2000-file ordering and cancellation during the final sort.
+- Imported playlists containing any network entry now load without auto-play and require an explicit Play/Space action; local-only imports keep auto-play.
+- `SessionStore::load()` parses one validated snapshot instead of reading and parsing the file twice.
+- One full-suite run executed during an unrelated Rust build saw `frame-step` and `ab-loop` fail; both passed immediately when rerun alone, confirming load-sensitive timing rather than a product regression.
+
+Second remediation round (2026-10-28, playback recovery, playlist batch removal, persistence churn):
+
+- Debug build: 0 warnings. Non-window suite `ctest --preset debug -E window` passed **73/73** in **72.66 s**.
+- Window behaviour suite passed **13/13** in **29.60 s** on the native Wayland session. The five mini-player/fullscreen subtests that failed in earlier rounds now pass: mode changes are applied immediately and the opacity fade is decorative only.
+- Focused ASan/UBSan run with `detect_leaks=0`: **21/21** passed, including `mpv-open-failure` (renderer-recovery correlation and retry), `stop-interleaving`, `playlist*`, `playback-history*`, `track-preference*`, `session`, and `thumbnail-*`.
+- Recovery coverage now injects COMMAND_REPLY/START_FILE/FILE_LOADED/END_FILE sequences: successful reload restores pause/position/tracks exactly once, a `VO_INIT_FAILED` reload reports and retries once, and a second context loss keeps the newer snapshot.
+- Playlist batch removal collapses adjacent removals into range notifications (2000 single-row signals → 1 in the regression case), prunes shuffle state once per batch, and coalesces pane refreshes. Persistence skips rewrites when the normalized payload is unchanged while `save()` still flushes synchronously.
+- `lrelease` reports 436 translations, 0 unfinished; `code-size` passes. `.github/workflows/ci.yml` was added but has not been executed on GitHub yet.
+
 Implementation round (2026-10-28, audit remediation plan `docs/superpowers/plans/2026-10-28-audit-remediation.md`):
 
 - Fresh Debug build: 0 warnings. `ctest --preset debug -E window` passed **73/73** in **67.96 s** with the per-test `LC_ALL=C`/`LANG=C` environment injected by `tests/CMakeLists.txt`.

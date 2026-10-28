@@ -77,6 +77,9 @@ void VideoWidget::initializeGL() {
         emit renderError(QString::fromUtf8(mpv_error_string(result)));
         return;
     }
+    // A transient failure (for example a slow first context) must not disable
+    // media opening for the rest of the session once rendering works again.
+    failed_ = false;
     connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &VideoWidget::cleanup,
             Qt::DirectConnection);
     // this stays alive through callback deregistration and renderer destruction.

@@ -490,6 +490,37 @@ class PlaylistModesTest final : public QObject {
         QTRY_COMPARE(loaded.count(), 1);
         QCOMPARE(queue.model()->currentIndex(), 1500);
     }
+    void finishedHandlerCanNavigateWithoutDoubleAdvance() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto media = QString::fromUtf8(TEST_MEDIA_PATH);
+        QStringList paths;
+        for (const auto *name : {"first.mkv", "second.mkv", "third.mkv"}) {
+            const auto path = temporary.filePath(QString::fromLatin1(name));
+            QVERIFY(QFile::copy(media, path));
+            paths.append(path);
+        }
+        MpvController player(true, true);
+        PlaylistController queue(player);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        queue.restoreFiles(paths, 0);
+        queue.playAt(0);
+        QTRY_COMPARE(loaded.count(), 1);
+
+        bool navigated = false;
+        connect(&queue, &PlaylistController::mediaPlaybackFinished, &queue, [&] {
+            if (!navigated) {
+                navigated = true;
+                queue.playNext();
+            }
+        });
+        QVERIFY(QMetaObject::invokeMethod(&queue, "playFinished", Qt::DirectConnection));
+
+        // The handler already advanced to row 1; playFinished must not advance
+        // a second time from the new state.
+        QTRY_COMPARE(loaded.count(), 2);
+        QCOMPARE(queue.model()->currentIndex(), 1);
+    }
 };
 
 QTEST_GUILESS_MAIN(PlaylistModesTest)

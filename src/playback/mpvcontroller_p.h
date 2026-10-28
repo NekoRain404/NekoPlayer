@@ -146,6 +146,9 @@ struct MpvController::Impl {
     QString error;
     std::atomic_bool shuttingDown{false};
     bool ready = false;
+    // Property observations can arrive many times per event-loop turn (time-pos
+    // ticks). Coalesce their stateChanged notifications into one per drain.
+    bool stateDirty = false;
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
     bool suppressAutoLoadForNextOpen = false;
@@ -434,6 +437,12 @@ struct MpvController::Impl {
         }
     }
 
+    void flushStateChanged() {
+        if (!stateDirty)
+            return;
+        stateDirty = false;
+        emit owner->stateChanged();
+    }
     void invalidateEntry(int64_t entry) {
         if (entry >= 0)
             invalidatedEntries.insert(entry);

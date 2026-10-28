@@ -1,4 +1,5 @@
 #include "playback/mpvcontroller.h"
+#include "playback/naturalcompare.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 #include "session/sessionmanager.h"
@@ -11,6 +12,7 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest>
+
 #include <memory>
 
 class PlaylistEditTest final : public QObject {
@@ -421,6 +423,18 @@ class PlaylistEditTest final : public QObject {
         QCOMPARE(chinese.data(chinese.index(0)).toString(), QStringLiteral("第 2 集.mkv"));
         QCOMPARE(chinese.data(chinese.index(1)).toString(), QStringLiteral("第 10 集.mkv"));
         QVERIFY(!chinese.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+
+        // Equal display names collide in the collation key; the path tiebreak
+        // still gives a deterministic order.
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const auto sameName = [&directory](const char *sub) {
+            return directory.filePath(QString::fromLatin1(sub)) + QStringLiteral("/same.mkv");
+        };
+        PlaylistModel duplicates;
+        duplicates.addFiles({sameName("c"), sameName("a"), sameName("b")});
+        QVERIFY(duplicates.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+        QCOMPARE(duplicates.paths(), QStringList({sameName("a"), sameName("b"), sameName("c")}));
     }
 
     void pathSortIsNaturalAndRemapsPersistentIndexes() {

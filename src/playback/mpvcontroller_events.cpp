@@ -10,7 +10,7 @@ void MpvController::Impl::updateProperty(const mpv_event &event) {
     if (event.reply_userdata == VideoImage) {
         hasMotionVideo =
             value.data && (state.active || loading) && !*static_cast<int *>(value.data);
-        emit owner->stateChanged();
+        stateDirty = true;
         return;
     }
     if (event.reply_userdata == Chapters) {
@@ -44,7 +44,7 @@ void MpvController::Impl::updateProperty(const mpv_event &event) {
         if (selectedAudioDevice == selected)
             return;
         selectedAudioDevice = selected;
-        emit owner->stateChanged();
+        stateDirty = true;
         return;
     }
     if (!value.data) {
@@ -67,7 +67,7 @@ void MpvController::Impl::updateProperty(const mpv_event &event) {
         default:
             return;
         }
-        emit owner->stateChanged();
+        stateDirty = true;
         return;
     }
     switch (event.reply_userdata) {
@@ -112,7 +112,7 @@ void MpvController::Impl::updateProperty(const mpv_event &event) {
     default:
         return;
     }
-    emit owner->stateChanged();
+    stateDirty = true;
 }
 
 void MpvController::Impl::drainEvents() {
@@ -121,6 +121,7 @@ void MpvController::Impl::drainEvents() {
     while (const auto *event = mpv_wait_event(client.get(), 0)) {
         switch (event->event_id) {
         case MPV_EVENT_NONE:
+            flushStateChanged();
             return;
         case MPV_EVENT_START_FILE:
             handleStartFile(static_cast<mpv_event_start_file *>(event->data)->playlist_entry_id);
@@ -206,12 +207,14 @@ void MpvController::Impl::drainEvents() {
             openingCommand = 0;
             recoveringRenderer = false;
             resetPlayback();
+            stateDirty = false;
             emit owner->stateChanged();
             return;
         default:
             break;
         }
     }
+    flushStateChanged();
 }
 
 void MpvController::Impl::handleStartFile(int64_t entry) {

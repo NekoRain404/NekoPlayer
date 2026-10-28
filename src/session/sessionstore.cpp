@@ -11,6 +11,7 @@
 #include <QUrl>
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <utility>
 
 namespace {
@@ -18,7 +19,8 @@ QString configurationError(const QString &path) {
     return QCoreApplication::translate("SessionStore", "无法读写配置文件：%1").arg(path);
 }
 
-QString checkFile(const QString &path) {
+QString openValidatedSettings(const QString &path, QTemporaryFile &snapshot,
+                              std::unique_ptr<QSettings> &settings) {
     if (!QFileInfo::exists(path))
         return {};
     constexpr qint64 maximumConfigurationBytes = 4 * 1024 * 1024;
@@ -26,27 +28,32 @@ QString checkFile(const QString &path) {
     if (!existing.isFile() || existing.size() > maximumConfigurationBytes)
         return configurationError(path);
     QFile source(path);
-    QTemporaryFile snapshot;
     if (!source.open(QIODevice::ReadOnly) || !snapshot.open())
         return configurationError(path);
     const auto bytes = source.readAll();
     if (source.error() != QFileDevice::NoError || snapshot.write(bytes) != bytes.size() ||
         !snapshot.flush())
         return configurationError(path);
-    // QSettings caches parsed INI data by path, but FormatError belongs to an instance.
-    // Validate a fresh snapshot so a second load/save cannot lose the parser error.
-    QSettings settings(snapshot.fileName(), QSettings::IniFormat);
-    const auto keys = settings.allKeys();
-    if (settings.status() != QSettings::NoError)
+    // Parse a snapshot: QSettings caches data by file name and a cached parse
+    // error would otherwise hide a later format problem from this read.
+    auto parsed = std::make_unique<QSettings>(snapshot.fileName(), QSettings::IniFormat);
+    if (parsed->status() != QSettings::NoError)
         return configurationError(path);
-    if (keys.isEmpty())
+    if (parsed->allKeys().isEmpty())
         return {};
     bool valid = false;
-    const auto version = settings.value(QStringLiteral("schemaVersion")).toInt(&valid);
+    const auto version = parsed->value(QStringLiteral("schemaVersion")).toInt(&valid);
     if (!valid || version != 1)
         return QCoreApplication::translate("SessionStore", "配置版本不受支持，已保留原文件：%1")
             .arg(path);
+    settings = std::move(parsed);
     return {};
+}
+
+QString checkFile(const QString &path) {
+    QTemporaryFile snapshot;
+    std::unique_ptr<QSettings> settings;
+    return openValidatedSettings(path, snapshot, settings);
 }
 
 bool readBool(QSettings &settings, const QString &key, bool fallback = false) {
@@ -158,12 +165,13 @@ LanguagePreferences LanguagePreferences::normalized() const {
 SessionStore::SessionStore(QString filePath) : filePath_(std::move(filePath)) {}
 
 SessionLoadResult SessionStore::load() const {
-    if (const auto error = checkFile(filePath_); !error.isEmpty())
+    QTemporaryFile snapshot;
+    std::unique_ptr<QSettings> parsed;
+    if (const auto error = openValidatedSettings(filePath_, snapshot, parsed); !error.isEmpty())
         return {{}, error};
-    QSettings settings(filePath_, QSettings::IniFormat);
-    settings.sync();
-    if (settings.status() != QSettings::NoError)
-        return {{}, configurationError(filePath_)};
+    if (!parsed)
+        return {};
+    auto &settings = *parsed;
     SessionState state;
     bool valid = false;
     const auto volume = settings.value(QStringLiteral("audio/volume"), 100).toDouble(&valid);

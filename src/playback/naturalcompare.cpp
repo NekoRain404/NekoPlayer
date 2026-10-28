@@ -26,3 +26,5 @@ bool naturalLess(const QString &left, const QString &right) {
     const auto compared = naturalCompare(left, right);
     return compared != 0 ? compared < 0 : left < right;
 }
+
+QCollatorSortKey naturalSortKey(const QString &text) { return englishCollator().sortKey(text); }

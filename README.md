@@ -28,7 +28,7 @@ ctest --preset debug
 ./build/debug/NekoPlayer --start-paused first.mkv second.mkv
 ```
 
-`ctest` 由测试配置自动注入 `LC_ALL=C` 与 `LANG=C`（libmpv 要求 C 数值 locale），无需手动设置；这与应用启动时的 `setlocale` 处理一致。
+`ctest` 由测试配置自动注入 `LC_ALL=C` 与 `LANG=C`（libmpv 要求 C 数值 locale），无需手动设置；这与应用启动时的 `setlocale` 处理一致。仓库另提供 `.github/workflows/ci.yml`，在 Ubuntu 24.04 上执行 Debug 构建与非窗口套件；该工作流的依赖包名需在首次远端运行后确认。
 
 `--fullscreen` 在窗口显示后进入全屏，并复用现有窗口状态同步来更新菜单、播放列表与全屏控制区；`--start-paused` 仅在提供命令行媒体时生效，在首个文件成功加载后暂停一次，加载失败或显式停止会取消该次暂停请求。两个选项都不会持久化全屏或暂停状态。
 

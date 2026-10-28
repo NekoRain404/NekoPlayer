@@ -62,6 +62,8 @@ class MainWindow final : public QMainWindow {
     void closeEvent(QCloseEvent *event) override;
 
   private:
+    friend class WindowTest;
+
     void createActions();
     void updateSeekActionLabels(int seconds);
     void setAppearanceIcon(QAction *action, AppearanceIcons::Symbol symbol);

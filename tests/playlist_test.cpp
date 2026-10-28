@@ -1,4 +1,5 @@
 #include "playback/mpvcontroller.h"
+#include "playback/naturalcompare.h"
 #include "playback/playlistcontroller.h"
 #include "playback/playlistmodel.h"
 
@@ -8,6 +9,9 @@
 #include <QTemporaryDir>
 #include <QUrl>
 #include <QtTest>
+
+#include <algorithm>
+#include <vector>
 
 class PlaylistTest final : public QObject {
     Q_OBJECT
@@ -454,6 +458,76 @@ class PlaylistTest final : public QObject {
         queue.playNext();
         QTRY_COMPARE(loaded.count(), 3);
         QCOMPARE(queue.model()->currentPath(), paths.at(1));
+    }
+
+    void sortKeysOrderLikeNaturalCompare() {
+        // Representative corpus: numeric runs, mixed case, CJK, punctuation,
+        // accented text and exact duplicate strings.
+        const QStringList corpus = {
+            QStringLiteral("第 2 集.mkv"),  QStringLiteral("第 10 集.mkv"),
+            QStringLiteral("Episode2.mkv"), QStringLiteral("episode10.mkv"),
+            QStringLiteral("EPISODE1.MKV"), QStringLiteral("episode2.mkv"),
+            QStringLiteral("episode2.mkv"), QStringLiteral("a-b.mkv"),
+            QStringLiteral("a b.mkv"),      QStringLiteral("(movie).mkv"),
+            QStringLiteral("café.mkv"),     QStringLiteral("0"),
+        };
+        std::vector<QCollatorSortKey> keys;
+        keys.reserve(corpus.size());
+        for (const auto &text : corpus)
+            keys.push_back(naturalSortKey(text));
+        const auto sign = [](int value) { return (value > 0) - (value < 0); };
+        for (qsizetype left = 0; left < corpus.size(); ++left) {
+            for (qsizetype right = 0; right < corpus.size(); ++right) {
+                QCOMPARE(sign(naturalCompare(corpus.at(left), corpus.at(right))),
+                         sign(keys[static_cast<std::size_t>(left)].compare(
+                             keys[static_cast<std::size_t>(right)])));
+            }
+        }
+    }
+
+    void largePlaylistSortsCorrectly() {
+        constexpr auto entryCount = 5000;
+        const QStringList formats = {
+            QStringLiteral("Episode %1.mkv"), QStringLiteral("episode%1.mkv"),
+            QStringLiteral("第 %1 集.mkv"),   QStringLiteral("Movie-%1.mkv"),
+            QStringLiteral("movie_%1.mkv"),   QStringLiteral("EPISODE%1.MKV"),
+            QStringLiteral("Extra (%1).mkv"), QStringLiteral("Clip %1.mkv"),
+        };
+        struct Entry {
+            QString path;
+            QString name;
+        };
+        std::vector<Entry> entries;
+        entries.reserve(entryCount);
+        QStringList paths;
+        paths.reserve(entryCount);
+        for (auto row = 0; row < entryCount; ++row) {
+            const auto index = (row * 7919) % entryCount; // deterministic shuffle
+            // 20 directories share each display name to exercise the path tiebreak.
+            const auto group = index % 250;
+            const auto name = formats.at(group % formats.size()).arg(group);
+            const auto path =
+                QStringLiteral("/neko-large-playlist/%1/%2").arg(index / 250).arg(name);
+            entries.push_back({path, name});
+            paths.append(path);
+        }
+        PlaylistModel model;
+        QCOMPARE(model.addFiles(paths), entryCount);
+        QVERIFY(model.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
+        // Independent expectation from naturalCompare and the documented
+        // duplicate-title path tiebreak.
+        std::stable_sort(entries.begin(), entries.end(), [](const Entry &left, const Entry &right) {
+            const auto compared = naturalCompare(left.name, right.name);
+            if (compared != 0)
+                return compared < 0;
+            return QString::compare(left.path, right.path, Qt::CaseSensitive) < 0;
+        });
+        QStringList expected;
+        expected.reserve(entryCount);
+        for (const auto &entry : entries)
+            expected.append(entry.path);
+        QCOMPARE(model.paths(), expected);
+        QVERIFY(!model.sortEntries(PlaylistModel::SortKey::Title, Qt::AscendingOrder));
     }
 };
 

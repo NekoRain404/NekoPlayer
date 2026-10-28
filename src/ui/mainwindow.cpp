@@ -399,9 +399,19 @@ void MainWindow::openPlaylist(const QString &path) {
         showError(loaded.error);
         return;
     }
+    const bool containsNetworkSource =
+        std::any_of(loaded.paths.cbegin(), loaded.paths.cend(),
+                    [](const QString &source) { return MediaSource::isNetwork(source); });
     pendingPaths_.clear();
     pendingPlaylistIndex_ = QPersistentModelIndex{};
     playlist_->restoreFiles(loaded.paths, loaded.currentIndex);
+    if (containsNetworkSource) {
+        // An imported queue can name arbitrary hosts. Select the saved row but
+        // require an explicit Play/Space before resolving a network address.
+        updateState();
+        showActionFeedback(tr("已导入含网络地址的播放列表；确认后按空格开始播放"));
+        return;
+    }
     if (video_->isReady() && loaded.currentIndex >= 0)
         playlist_->playAt(loaded.currentIndex);
     else if (loaded.currentIndex >= 0)

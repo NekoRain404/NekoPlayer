@@ -1,6 +1,7 @@
 #include "input/folderscanjob.h"
 #include "input/mediafiletypes.h"
 #include "input/mediafolderscan.h"
+#include "playback/naturalcompare.h"
 
 #include <QDir>
 #include <QElapsedTimer>
@@ -15,6 +16,7 @@
 #include <QThreadPool>
 #include <QtConcurrentRun>
 #include <QtTest>
+#include <algorithm>
 #include <memory>
 
 namespace {
@@ -102,6 +104,49 @@ class FolderScanTest final : public QObject {
                                             directory.filePath("episode2.mp4"),
                                             directory.filePath("episode10.MKV")}));
         QVERIFY(!result.cancelled);
+    }
+
+    void largeScanMatchesStableNaturalOrder() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        constexpr int fileCount = 2000;
+        QStringList expected;
+        expected.reserve(fileCount);
+        for (int i = 0; i < fileCount; ++i) {
+            const auto name = QStringLiteral("episode %1.mp4").arg(i);
+            QVERIFY(touch(directory.filePath(name)));
+            expected.append(directory.filePath(name));
+        }
+        std::stable_sort(expected.begin(), expected.end(), naturalLess);
+        const auto result = scan(directory.path());
+        QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
+        QVERIFY(!result.cancelled);
+        QCOMPARE(result.paths, expected);
+        // The cancellation seam must produce the production ordering when it
+        // never cancels.
+        const auto unchecked =
+            scanMediaFolder(directory.path(), false, std::make_shared<std::atomic_bool>(false),
+                            [] { return false; });
+        QVERIFY2(unchecked.error.isEmpty(), qPrintable(unchecked.error));
+        QCOMPARE(unchecked.paths, expected);
+    }
+
+    void cancellationDuringFinalSortCommitsNothing() {
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        for (int i = 0; i < 2000; ++i)
+            QVERIFY(touch(directory.filePath(QStringLiteral("episode %1.mp4").arg(i))));
+        // Only the final natural sort polls this predicate. Cancelling on its
+        // second poll happens after the first bounded chunk was sorted, so the
+        // scan is cancelled while sorting and must not publish partial paths.
+        int sortChecks = 0;
+        const auto result =
+            scanMediaFolder(directory.path(), false, std::make_shared<std::atomic_bool>(false),
+                            [&sortChecks] { return ++sortChecks == 2; });
+        QVERIFY(result.cancelled);
+        QVERIFY(result.paths.isEmpty());
+        QVERIFY(result.error.isEmpty());
+        QVERIFY(sortChecks >= 2);
     }
 
     void includesPracticalVideoAndAudioExtensions() {

@@ -7,10 +7,16 @@
 #include <QFileInfo>
 #include <algorithm>
 #include <filesystem>
+#include <functional>
 #include <vector>
 
 namespace {
 constexpr qsizetype maximumVisitedEntries = 100000;
+// Bounded sort steps keep cancellation latency at milliseconds even for a scan
+// at the visited-entry cap instead of one uninterruptible O(n log n) call.
+constexpr qsizetype sortChunkSize = 1024;
+
+using CancellationCheck = std::function<bool()>;
 
 std::filesystem::path nativePath(const QString &path) {
 #ifdef Q_OS_WIN
@@ -35,10 +41,72 @@ bool supportedMedia(const QFileInfo &file) {
 MediaFolderScanResult unreadable(const QString &path) {
     return {{}, QStringLiteral("无法读取媒体文件夹：%1").arg(path), false};
 }
+
+// Stable merge: the left run wins ties so equal keys keep discovery order,
+// matching a whole-list std::stable_sort. Cancellation is polled every
+// sortChunkSize emitted elements, so a single large merge stays interruptible.
+bool mergeRuns(const QStringList &source, QStringList &target, qsizetype left, qsizetype middle,
+               qsizetype right, const CancellationCheck &isCancelled) {
+    qsizetype head = left;
+    qsizetype tail = middle;
+    qsizetype out = left;
+    qsizetype sinceCheck = 0;
+    while (out < right) {
+        if (head < middle && (tail >= right || !naturalLess(source.at(tail), source.at(head))))
+            target[out++] = source.at(head++);
+        else
+            target[out++] = source.at(tail++);
+        if (++sinceCheck >= sortChunkSize) {
+            if (isCancelled())
+                return false;
+            sinceCheck = 0;
+        }
+    }
+    return true;
+}
+
+// Bottom-up merge sort over initially sorted chunks. The chunk pre-sort plus
+// stable merges produce exactly the ordering of std::stable_sort over the whole
+// list, while cancellation is observed between chunks instead of only after
+// the entire sort. Returns false as soon as cancellation is observed; the
+// caller discards `paths` in that case.
+[[nodiscard]] bool stableNaturalSort(QStringList &paths, const CancellationCheck &isCancelled) {
+    const auto count = paths.size();
+    if (count < 2)
+        return true;
+    for (qsizetype start = 0; start < count; start += sortChunkSize) {
+        if (isCancelled())
+            return false;
+        const auto stop = std::min(start + sortChunkSize, count);
+        std::stable_sort(paths.begin() + start, paths.begin() + stop, naturalLess);
+    }
+    if (count <= sortChunkSize)
+        return true;
+    QStringList merged;
+    merged.resize(count);
+    for (qsizetype width = sortChunkSize; width < count; width *= 2) {
+        for (qsizetype left = 0; left < count; left += width * 2) {
+            if (isCancelled())
+                return false;
+            const auto middle = std::min(left + width, count);
+            const auto right = std::min(left + width * 2, count);
+            if (!mergeRuns(paths, merged, left, middle, right, isCancelled))
+                return false;
+        }
+        paths.swap(merged);
+    }
+    return true;
+}
 } // namespace
 
 MediaFolderScanResult scanMediaFolder(const QString &directory, bool recursive,
                                       const std::shared_ptr<std::atomic_bool> &cancelled) {
+    return scanMediaFolder(directory, recursive, cancelled, {});
+}
+
+MediaFolderScanResult scanMediaFolder(const QString &directory, bool recursive,
+                                      const std::shared_ptr<std::atomic_bool> &cancelled,
+                                      const std::function<bool()> &sortCancelled) {
     const auto isCancelled = [&] {
         return cancelled && cancelled->load(std::memory_order_relaxed);
     };
@@ -90,7 +158,13 @@ MediaFolderScanResult scanMediaFolder(const QString &directory, bool recursive,
         return {{}, {}, true};
     // The shared helper pins an English locale so ordering is natural and
     // deterministic across the user's locale settings and matches title sorts.
-    std::sort(paths.begin(), paths.end(), naturalLess);
+    const auto sortCancelledNow = [&] {
+        return isCancelled() || (sortCancelled && sortCancelled());
+    };
+    if (!stableNaturalSort(paths, sortCancelledNow))
+        return {{}, {}, true};
+    // Keep the pre-existing final poll: a cancellation requested after the
+    // last merge chunk must still discard the result rather than commit it.
     if (isCancelled())
         return {{}, {}, true};
     return {std::move(paths), {}, false};

@@ -339,7 +339,13 @@ void PlaylistController::sortPlaylist(PlaylistModel::SortKey key, Qt::SortOrder 
 void PlaylistController::playFinished() {
     if (!playbackQueued_)
         return;
+    // A handler of mediaPlaybackFinished may navigate, clear or replace the
+    // queue; advancing again afterwards would skip an entry or reopen a cleared
+    // queue. The error paths already guard against this class of reentrancy.
+    const auto revision = playbackRevision_;
     emit mediaPlaybackFinished(model_->currentPath());
+    if (revision != playbackRevision_)
+        return;
     failedRows_.clear();
     if (stopAfterCurrent_) {
         // Disarming may re-enable native loop-file for repeat modes, but libmpv

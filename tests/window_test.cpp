@@ -13,6 +13,7 @@
 #include <QDialogButtonBox>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QFile>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
@@ -742,6 +743,35 @@ class WindowTest final : public QObject {
         auto *secondChoice = second->findChild<QSpinBox *>(QStringLiteral("seekStepChoice"));
         QVERIFY(secondChoice);
         QCOMPARE(secondChoice->value(), 10);
+    }
+
+    void importedPlaylistWithNetworkEntryWaitsForExplicitPlayback() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto playlistPath = temporary.filePath(QStringLiteral("network.m3u8"));
+        QFile playlist(playlistPath);
+        QVERIFY(playlist.open(QIODevice::WriteOnly));
+        const auto contents =
+            QByteArray("#EXTM3U\nhttps://example.test/live.mkv\n") + mediaPath().toUtf8() + '\n';
+        QCOMPARE(playlist.write(contents), contents.size());
+        playlist.close();
+
+        MainWindow window(true);
+        QSignalSpy fileLoaded(window.controller(), &MpvController::fileLoaded);
+        window.openPlaylist(playlistPath);
+        QCOMPARE(window.playlist()->model()->rowCount(), 2);
+        QCOMPARE(window.playlist()->model()->currentIndex(), 0);
+        const auto feedback = window.statusBar()->currentMessage();
+        QVERIFY(feedback.contains(QStringLiteral("网络地址")));
+        QVERIFY(feedback.contains(QStringLiteral("空格")));
+        QVERIFY(!window.controller()->state().active);
+        // A deferred auto-play would fire once the renderer reports ready.
+        window.show();
+        QTRY_VERIFY(window.videoWidget()->isReady());
+        QTest::qWait(100);
+        QVERIFY(!window.controller()->state().active);
+        QVERIFY(window.controller()->state().path.isEmpty());
+        QVERIFY(fileLoaded.isEmpty());
     }
 
     void reportsMissingGraphicsContext() {

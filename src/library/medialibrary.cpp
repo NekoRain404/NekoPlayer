@@ -1,8 +1,8 @@
 #include "medialibrary.h"
 
 #include "input/mediafolderscan.h"
-#include "playback/mediasource.h"
-#include "playback/naturalcompare.h"
+#include "playback/media/mediasource.h"
+#include "playback/playlist/naturalcompare.h"
 #include "session/configfile.h"
 
 #include <QCoreApplication>

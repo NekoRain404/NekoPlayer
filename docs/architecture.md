@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | `MpvController` | client RAII、异步命令、属性观察、文件事件、播放状态、`alang`/`slang`／`sub-auto` 语言偏好应用（自动加载默认关闭）和渲染恢复快照 | Qt Core / libmpv client API，不依赖窗口 |
 | `PlaybackState` | 只读播放快照；秒为时间单位，音量 0–100 | 控制器与展示层共用 |
-| `MediaInformation` / `mpvcontroller_information.cpp` | 容器及当前音视频解码参数的拥有数据快照、属性观察与异步补全 | Qt Core 值类型；实现复用同一 mpv client，不依赖 UI |
+| `MediaInformation` / `playback/mpv/mpvcontroller_information.cpp` | 容器及当前音视频解码参数的拥有数据快照、属性观察与异步补全 | Qt Core 值类型；实现复用同一 mpv client，不依赖 UI |
 | `MediaInformationDialog` / `mediainformationtext.cpp` | 当前媒体的非模态纯文本报告与显式复制 | 只读取控制器快照，文本格式化不依赖窗口，无原始 mpv 调用 |
 | `MediaTrack` / `mpvtracks.cpp` | 类型内唯一的轨道编号、元数据、选择状态；将 mpv node 解析为拥有数据的快照 | 领域类型不依赖 mpv；解析器只依赖 Qt Core / client API |
 | `AudioDevice` / `audiodevice.cpp` / `mpvcontroller_audio.cpp` | 音频输出设备值类型、mpv node 解析、设备列表观察与异步选择 | 值类型不依赖 mpv；解析器和控制器复用同一 client，不依赖 UI |
@@ -102,7 +102,7 @@ A–B 循环复用 mpv 原生 `ab-loop-a`／`ab-loop-b`，端点必须有限、�
 
 上下文重建：表面发出即将重建信号 → 控制器保存当前文件、位置、暂停状态及轨道快照 → renderer 释放 → 新 GL context 创建 renderer → 控制器异步重新加载文件并恢复状态。外挂字幕按路径去重，并在 FILE_LOADED 后逐个异步加载，收到完成回复后才处理下一个。全部完成后异步查询轨道列表，按内部编号或外挂文件内的流顺序恢复音轨/字幕的选择或关闭状态；不能仅依赖加载选项，因为 mpv 会在轨道布局变化时重置选择。恢复这一文件时禁用字幕自动发现，避免同一文件重复加入。连续重建时保留尚未完成的目标快照，忽略旧恢复请求的回复；用户手动选择轨道或添加字幕会取消待完成的恢复。正常全屏切换不重新挂载视频控件；测试通过跨窗口重新挂载主动触发 context 重建。
 
-普通手写代码文件以 500 行为目标，自动检查允许少量超出至 550 行（含头文件、测试、CMake 和测试启动脚本）。`src/ui/mainwindow.cpp` 和 `tests/window_test.cpp` 是已登记的集中协调/桌面集成例外，最多 800 行；例外列表由 `cmake/CheckCodeSize.cmake` 强制执行，新增项必须有明确理由。新增职责拆成独立组件；同一类的紧密相关装配代码可以分文件，不为行数拆分而增加无用途的抽象。保持 Qt parent ownership 与 RAII 的资源归属唯一。
+普通手写代码文件以 500 行为目标，自动检查允许少量超出至 550 行（含头文件、测试、CMake 和测试启动脚本）。`src/ui/window/mainwindow.cpp` 和 `tests/window/window_test.cpp` 是已登记的集中协调/桌面集成例外，最多 800 行；例外列表由 `cmake/CheckCodeSize.cmake` 强制执行，新增项必须有明确理由。新增职责拆成独立组件；同一类的紧密相关装配代码可以分文件，不为行数拆分而增加无用途的抽象。保持 Qt parent ownership 与 RAII 的资源归属唯一。
 
 会话只在启动读取、关闭保存，不订阅时间进度写盘。音量和静音偏好订阅控制器的用户意图信号，避免异步初始属性通知或刚启动就关闭时把已保存值覆盖为默认值。队列通过 restoreFiles 恢复但不播放；窗口播放入口在 renderer ready 后启用。渲染就绪前的待播路径也纳入退出快照，清空动作同时清除它们；渲染失败保留它们供下次启动。MainWindow 关闭时保存，未经过 closeEvent 的析构提供一次兜底保存。
 
@@ -138,3 +138,12 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 缺失文件的同步错误回调也允许修改队列：顺序扫描在首次报错前才为剩余候选建立持久索引快照，按原遍历顺序最多尝试每个仍存在的候选一次，回调中新追加的项留给下一次导航。随机扫描沿持久候选池继续，可在固定扫描预算内访问回调新加入的项。正常有效文件入口不构建整表快照。新扫描、清空或移除当前项会使旧扫描修订号失效；取消与耗尽是不同结果，取消不能发出 queueFinished 或覆盖重入的新播放请求。
 
 安装与桌面集成：CMake 使用 GNUInstallDirs 将 `NekoPlayer` 安装到 `bin/`，并将 `data/nekoplayer.desktop` 与原创 SVG 图标安装到应用和图标目录；`main.cpp` 调用 `QGuiApplication::setDesktopFileName("nekoplayer")` 关联桌面条目。桌面条目使用 `Exec=NekoPlayer %F`，声明常见音视频 MIME 类型。本阶段只提供 `cmake --install` 布局，不包含 CPack、Flatpak、发行版打包或许可证选择。
+
+## 2026-10-28 功能补全后的模块边界
+
+- `src/library/medialibrary.*`：监视文件夹与媒体索引的持久化（`library.ini`，schema/上限/损坏保留/0600），扫描复用 `MediaFolderScan` 并只在 GUI 线程提交结果。
+- `src/ui/dialogs/librarydialog.*`：媒体库搜索、扫描进度/取消、播放与追加动作；通过 `LibraryDialogSupport` 懒创建，不直接调用 mpv。
+- `src/ui/dialogs/shortcutsdialog.*`：`ShortcutSettings` 捕获具名动作、应用/持久化覆盖并按作用域校验冲突；`ShortcutEditorDialog` 提供编辑界面，F1 参考对话框只读模式保持不变。
+- `src/playlist/m3u8store.*` 与 `src/playback/playlist/playlistmodel.*`：`#EXTINF` 时长/标题随行保存为 `PlaylistEntryMetadata`，跟随插入、移动、排序与删除；标题参与显示名。
+- 音频/视频效果：`MpvController` 生成 `af`/`vf` 链（均衡器预设、锐化/降噪），`TuningMenus`/`VideoMenu` 负责菜单与 `QSettings` 记忆；去隔行仍是独立 mpv 选项。
+- 其他独立组件：`SubtleStyleDialog`（字幕颜色/描边/背景/编码）、`configfile.*`（配置文件权限）、`shortcutoverride.*`（键盘焦点保护）、`windowicons.*`（图标缓存）。

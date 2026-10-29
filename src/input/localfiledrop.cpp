@@ -1,5 +1,5 @@
 #include "localfiledrop.h"
-#include "playback/mpvcontroller.h"
+#include "playback/mpv/mpvcontroller.h"
 
 #include <QFileInfo>
 

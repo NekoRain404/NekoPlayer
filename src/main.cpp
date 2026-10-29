@@ -1,11 +1,11 @@
 #include "cli/commandlinearguments.h"
-#include "playback/backenddiagnostic.h"
-#include "playback/mpvcontroller.h"
-#include "playback/videowidget.h"
-#include "ui/appearancepreferences.h"
-#include "ui/appicon.h"
-#include "ui/languagemanager.h"
-#include "ui/mainwindow.h"
+#include "playback/mpv/backenddiagnostic.h"
+#include "playback/mpv/mpvcontroller.h"
+#include "playback/render/videowidget.h"
+#include "ui/theme/appearancepreferences.h"
+#include "ui/theme/appicon.h"
+#include "ui/theme/languagemanager.h"
+#include "ui/window/mainwindow.h"
 
 #include <QApplication>
 #include <QCommandLineParser>

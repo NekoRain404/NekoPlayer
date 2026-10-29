@@ -1,5 +1,22 @@
 # Verification Record
 
+## 2026-10-29 — pre-release wrap-up, repository layout, README and release flow
+
+- Reorganized `src/playback` into `mpv/`, `media/`, `playlist/`, `render/`; `src/ui` into `window/`, `dialogs/`, `menus/`, `panels/`, `theme/`; tests mirror the same layout with registration modules under `tests/cmake/`. Includes and CMake lists were rewritten mechanically; `code-size` exception paths were updated.
+- Debug build after the move: 0 warnings. `ctest --preset debug -j 6`: **89/89** passed in **27.34 s**, including the 14 registered window tests on the native Wayland session.
+- Removed parallel-suite timing assumptions in `video-framing`, `screenshot`, `ab-loop` and `video-presentation` tests: reply-space recovery now retries with bounded `QTRY` waits instead of assuming one `processEvents()` drains libmpv replies. The screenshot test's failure branch now matches the documented `stop()` behavior (write error suppressed, completion still emitted).
+- Found and fixed a real startup UI bug: the folder-scan `QProgressDialog` was constructed eagerly with `setMinimumDuration(0)`, so an empty “扫描文件夹 / 正在扫描媒体文件…” window appeared during idle startup (visible in the first fullscreen capture). It is now created on the first scan; `folder-window` asserts no dialog exists at startup and that a scan creates a non-modal one.
+- Replaced ambiguous shared icons: clear-playlist uses a trash can, quit uses a close mark, and mini-player uses a dedicated mark instead of the generic minus/restore shapes.
+- README rebuilt with a banner, four real Xvfb screenshots, a Mermaid layer diagram, a pre-release roadmap and documentation map; the detailed behavior manual moved to `docs/features.md` without dropping content.
+- Process: `PROJECT_VERSION` raised to **0.2.0**; added `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, issue/PR templates, a tag-driven source release workflow (`.github/workflows/release.yml`, pre-release detection) and an X11 window CI job (`debug-x11` under Xvfb + Openbox).
+- X11 preset validated locally: `cmake --preset debug-x11`, `cmake --build --preset debug-x11`, then `ctest --preset debug-x11` passed **89/89** in **150.18 s** under per-test `xvfb-run` + Openbox; a later run after the global C++20 change passed **89/89** in **153.89 s**.
+- Focused ASan/UBSan build (`detect_leaks=0`) of the recovery-sensitive targets passed **5/5**: `tracks`, `video-framing`, `screenshot`, `ab-loop` and `folder-window`.
+- CI hardening after the first remote runs: Ubuntu 24.04 ships Qt 6.4.2 (below the 6.5 minimum) and mpv 0.37 (older than the tested 0.41 baseline). Moving both jobs to `archlinux:base-devel` matched the packaging target and fixed Qt/mpv version drift; test targets also inherit a global `CMAKE_CXX_STANDARD 20` instead of relying on `neko_options`.
+- Full-suite runs inside the hosted Arch container still exposed headless-video limitations: paused `frame-step` is a no-op after a seek, media-information refresh and several media tests time out, and font-metric layout assertions differ from a real desktop. Those are environment boundaries, not reproducible on the local desktop with the same Qt 6.12/mpv 0.41 packages. CI is therefore scoped to a full build plus a 16-test core smoke set; the complete 89-test suite and the X11 window preset remain mandatory desktop acceptance gates. The local `QT_QPA_PLATFORM=offscreen ctest --preset debug-x11` equivalent passed **89/89** in **152.32 s**.
+- Fixed a real renderer-recovery race exposed by the X11 run: a reset during an in-flight external-track restore could let the superseded `sub-add` worker land in the new file and duplicate restored tracks (observed as 7 instead of 5). Recovery now defers the reload until the superseded command/property reply settles; `tracks` passed 10/10 stress repetitions on both presets and the full 89/89 suites were re-run.
+- Final local gates: `ctest --preset debug -j 6` **89/89** in **19.57 s**; `ctest --preset debug-x11` **89/89** in **157.10 s**. CI `arch-smoke` passed in **5m17s** with the full Arch-container build and the 16-test smoke set.
+- Boundary: native Wayland HDR/hardware-decoding, multi-monitor scaling and Windows packaging remain outstanding.
+
 Final feature round (2026-10-28, media library, shortcut customization, M3U8 metadata):
 
 - Non-window suite **75/75** in **89.00 s**; window suite **14/14** in **45.90 s**.
@@ -47,7 +64,7 @@ Implementation round (2026-10-28, audit remediation plan `docs/superpowers/plans
 - `lrelease translations/NekoPlayer_en.ts` reports **436** translations, **0** unfinished. `code-size` passes.
 - `--check-backend` reports mpv v0.41.0 / client API 2.5; offscreen `--smoke-test` exits 0.
 
-Documentation consistency audit (2026-10-28, audit run recorded in `docs/audit-2026-10-28.md`):
+Documentation consistency audit (2026-10-28, audit run recorded in `docs/audit/2026-10-28.md`):
 
 - The audit's non-window selection `LC_ALL=C ctest --preset debug -E window` passed **71/71** in **72.46 s** against the 84 registered tests recorded at that time; window behavior tests were not run. This is the audit's dated result, not a new run performed by this documentation round.
 - `tests/CMakeLists.txt` now injects `LC_ALL=C` and `LANG=C` into every registered test, so `ctest --preset debug` no longer depends on the caller's numeric locale. The audit had observed 39/84 failures and 6 SIGSEGV under a default `en_US.UTF-8` locale before this change.
@@ -59,7 +76,7 @@ Release candidate closure (2026-10-26, source at `555a663`):
 
 - Fresh final non-window Debug run: `QT_QPA_PLATFORM=offscreen LC_ALL=C LANG=C ctest --test-dir build/debug --exclude-regex 'window|backend-startup' --output-on-failure` passed **70/70** in **65.89 seconds**. Window behavior tests remain intentionally unrun.
 - `cmake -DNEKO_SOURCE_DIR="$PWD" -P cmake/CheckCodeSize.cmake` passed. It reports several named project files above the 500-line target but within the configured 550-line hard gate; the plan's separately listed integration exceptions remain below 800 lines.
-- `git diff --check -- docs/appearance-handoff.md docs/verification.md` passed. Installed `/usr/local/bin/NekoPlayer` and `build/debug/NekoPlayer` match at SHA-256 `120dd50debc421be7f6c08e16f1b5999e25ce6f4b2ad4a5bb474114bc2ff57ba`.
+- `git diff --check -- docs/history/2026-10-26-appearance-handoff.md docs/verification.md` passed. Installed `/usr/local/bin/NekoPlayer` and `build/debug/NekoPlayer` match at SHA-256 `120dd50debc421be7f6c08e16f1b5999e25ce6f4b2ad4a5bb474114bc2ff57ba`.
 - Manual Wayland evidence remains limited to the previously recorded Dark/Ocean, glass-enabled empty-home/fullscreen observation at 1.75×. This release does not claim completion of the full theme/accent/material/DPI/playback/menu/mini-player acceptance matrix.
 
 Fresh main-branch regression verification (2026-10-26, code at `7cfa700`):

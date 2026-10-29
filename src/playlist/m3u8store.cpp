@@ -1,5 +1,5 @@
 #include "m3u8store.h"
-#include "playback/mediasource.h"
+#include "playback/media/mediasource.h"
 
 #include <QDir>
 #include <QFile>
@@ -50,8 +50,7 @@ M3u8LoadResult M3u8Store::load(const QString &filePath) {
     QStringDecoder decoder(QStringDecoder::Utf8);
     QString text = decoder(bytes);
     if (decoder.hasError())
-        return {{}, -1, QStringLiteral("Playlist is not valid UTF-8: %1").arg(filePath),
-                {}};
+        return {{}, -1, QStringLiteral("Playlist is not valid UTF-8: %1").arg(filePath), {}};
     if (!text.isEmpty() && text.front() == QChar(0xfeff))
         text.remove(0, 1);
 
@@ -125,13 +124,11 @@ M3u8LoadResult M3u8Store::load(const QString &filePath) {
 
     if (paths.isEmpty()) {
         if (markerSeen && current != -1)
-            return {{}, -1, QStringLiteral("Current marker is out of range: %1").arg(filePath),
-                {}};
+            return {{}, -1, QStringLiteral("Current marker is out of range: %1").arg(filePath), {}};
         return {{}, -1, {}, {}};
     }
     if (markerSeen && current >= paths.size())
-        return {{}, -1, QStringLiteral("Current marker is out of range: %1").arg(filePath),
-                {}};
+        return {{}, -1, QStringLiteral("Current marker is out of range: %1").arg(filePath), {}};
     return {paths, markerSeen ? current : 0, {}, entries};
 }
 
@@ -171,11 +168,11 @@ QString M3u8Store::saveEntries(const QString &filePath, const QList<M3u8Entry> &
     for (const auto &entry : entries) {
         const auto title = sanitizedTitle(entry.title);
         if (entry.durationSeconds >= 0 || !title.isEmpty()) {
-            contents += "#EXTINF:" +
-                        (entry.durationSeconds >= 0
-                             ? QByteArray::number(entry.durationSeconds, 'g', 17)
-                             : QByteArray("-1")) +
-                        ',' + title.toUtf8() + '\n';
+            contents +=
+                "#EXTINF:" +
+                (entry.durationSeconds >= 0 ? QByteArray::number(entry.durationSeconds, 'g', 17)
+                                            : QByteArray("-1")) +
+                ',' + title.toUtf8() + '\n';
         }
         contents += entry.source.toUtf8() + '\n';
     }

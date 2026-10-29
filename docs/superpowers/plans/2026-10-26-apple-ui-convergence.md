@@ -29,7 +29,7 @@
 - `src/ui/mainwindow.h`, `src/ui/windowactions.cpp`: 创建并注册快速操作 QAction，管理对话框生命周期和焦点回退。
 - `tests/appearance_preferences_test.cpp`, `tests/ui_surface_test.cpp`, `tests/playlist_pane_test.cpp`, `tests/transport_bar_test.cpp`: 视觉契约和布局回归。
 - `tests/quick_actions_dialog_test.cpp`, `tests/ui_tests.cmake`: 快速操作行为测试及 CTest 注册。
-- `docs/verification.md`, `docs/appearance-handoff.md`: 新鲜验证证据、已知 Wayland 人工验收缺口和后续工作。
+- `docs/verification.md`, `docs/history/2026-10-26-appearance-handoff.md`: 新鲜验证证据、已知 Wayland 人工验收缺口和后续工作。
 
 ### Task 1: AppearanceTokens 与 QSS 四级材质契约
 
@@ -258,7 +258,7 @@ git commit -m "feat: add keyboard first quick actions dialog"
 
 **Files:**
 - Modify: `docs/verification.md`
-- Modify: `docs/appearance-handoff.md`
+- Modify: `docs/history/2026-10-26-appearance-handoff.md`
 - Optionally modify: `tests/appearance_preferences_test.cpp`, `tests/ui_surface_test.cpp` only for evidence gaps found by the commands below.
 
 **Interfaces:**
@@ -288,7 +288,7 @@ Record the commits, token/QSS contract, QuickActions shortcut, and known gaps: r
 - [x] **Step 4: Commit documentation**
 
 ```bash
-git add docs/verification.md docs/appearance-handoff.md
+git add docs/verification.md docs/history/2026-10-26-appearance-handoff.md
 git commit -m "docs: record apple ui convergence verification"
 ```
 

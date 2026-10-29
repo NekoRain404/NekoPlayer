@@ -1,4 +1,6 @@
 # Maintainer: NekoRain <yukathleenlxy@gmail.com>
+# Tracks the latest published GitHub release. Update pkgver, the source URL
+# and sha256sums together when a new release asset is available.
 pkgname=nekoplayer
 pkgver=0.1.0
 pkgrel=1

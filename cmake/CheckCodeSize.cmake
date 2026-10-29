@@ -1,7 +1,8 @@
 file(GLOB_RECURSE sources
     "${NEKO_SOURCE_DIR}/src/*.cpp" "${NEKO_SOURCE_DIR}/src/*.h"
     "${NEKO_SOURCE_DIR}/tests/*.cpp" "${NEKO_SOURCE_DIR}/tests/*.h"
-    "${NEKO_SOURCE_DIR}/tests/*.sh" "${NEKO_SOURCE_DIR}/cmake/*.cmake")
+    "${NEKO_SOURCE_DIR}/tests/*.sh" "${NEKO_SOURCE_DIR}/cmake/*.cmake"
+    "${NEKO_SOURCE_DIR}/tests/cmake/*.cmake")
 list(APPEND sources "${NEKO_SOURCE_DIR}/CMakeLists.txt"
     "${NEKO_SOURCE_DIR}/tests/CMakeLists.txt")
 set(target_line_limit 500)
@@ -11,8 +12,8 @@ set(default_line_limit 550)
 set(special_line_limit 800)
 # These integration/coordinator files may legitimately hold several tightly
 # coupled desktop scenarios. New exceptions require an explicit entry and reason.
-set(special_sources "${NEKO_SOURCE_DIR}/src/ui/mainwindow.cpp"
-    "${NEKO_SOURCE_DIR}/tests/window_test.cpp")
+set(special_sources "${NEKO_SOURCE_DIR}/src/ui/window/mainwindow.cpp"
+    "${NEKO_SOURCE_DIR}/tests/window/window_test.cpp")
 foreach(source IN LISTS sources)
     file(READ "${source}" contents)
     string(REGEX REPLACE "[^\n]" "" newlines "${contents}")

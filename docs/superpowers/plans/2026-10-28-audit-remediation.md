@@ -2,14 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 修复 `docs/audit-2026-10-28.md` 中的 P0 问题与高价值 P1 问题，并补齐回归测试。
+**Goal:** 修复 `docs/audit/2026-10-28.md` 中的 P0 问题与高价值 P1 问题，并补齐回归测试。
 
 **Architecture:** 保持现有分层（playback/session/input/preview/ui）。正确性修复优先在控制器与存储边界内完成，
 不改变公共 UI 结构；体验与文档修复独立进行。
 
 **Tech Stack:** C++20、Qt 6 Widgets、libmpv render API、FFmpeg、CTest。
 
-**Spec:** `docs/audit-2026-10-28.md`
+**Spec:** `docs/audit/2026-10-28.md`
 
 > **执行状态（2026-10-28）:** Task 1–9 已实施。验证结果：非窗口套件 73/73（66.41 秒，
 > 自动注入 `LC_ALL=C`）；窗口套件 11/13，剩余 5 个子用例为既有的小窗/全屏切换问题；

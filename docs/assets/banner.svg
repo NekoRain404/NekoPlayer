@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="300" viewBox="0 0 1280 300" role="img" aria-label="NekoPlayer：C++20 / Qt 6 / libmpv 桌面播放器">
+  <title>NekoPlayer</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#070a16"/>
+      <stop offset="0.55" stop-color="#11132a"/>
+      <stop offset="1" stop-color="#241342"/>
+    </linearGradient>
+    <radialGradient id="pink" cx="0.85" cy="0.1" r="0.55">
+      <stop offset="0" stop-color="#ff4f8b" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ff4f8b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cyan" cx="0.08" cy="0.95" r="0.5">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#c7d2fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="300" rx="28" fill="url(#bg)"/>
+  <rect width="1280" height="300" rx="28" fill="url(#pink)"/>
+  <rect width="1280" height="300" rx="28" fill="url(#cyan)"/>
+  <rect x="1" y="1" width="1278" height="298" rx="27" fill="none" stroke="#8ba9ef" stroke-opacity="0.28"/>
+  <g transform="translate(64 22)">
+    <path d="M 24 88 L 24 78 Q 24 72 28 66 L 48 22 Q 52 12 61 19 L 104 56 L 152 56 L 195 19 Q 204 12 208 22 L 228 66 Q 232 72 232 78 L 232 188 Q 232 232 188 232 L 68 232 Q 24 232 24 188 Z" fill="#1f2228" stroke="#8ba9ef" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M 108 106 Q 108 100 114 104 L 174 140 Q 180 144 174 148 L 114 184 Q 108 188 108 182 Z" fill="#8ba9ef"/>
+  </g>
+  <text x="364" y="132" font-family="'Noto Sans CJK SC','Segoe UI',sans-serif" font-size="76" font-weight="700" fill="url(#word)" letter-spacing="1">NekoPlayer</text>
+  <text x="366" y="184" font-family="'Noto Sans CJK SC','Segoe UI',sans-serif" font-size="27" fill="#c7d2fe">为桌面而生的轻量播放器</text>
+  <text x="366" y="228" font-family="'Noto Sans CJK SC','Segoe UI',sans-serif" font-size="19" fill="#94a3b8">C++20  ·  Qt 6 Widgets  ·  libmpv  ·  Linux</text>
+  <g transform="translate(1046 60)">
+    <rect width="164" height="38" rx="19" fill="#22d3ee" fill-opacity="0.12" stroke="#22d3ee" stroke-opacity="0.45"/>
+    <text x="82" y="25" text-anchor="middle" font-family="'Noto Sans CJK SC','Segoe UI',sans-serif" font-size="16" fill="#a5f3fc">v0.2.0 · pre-release</text>
+  </g>
+</svg>

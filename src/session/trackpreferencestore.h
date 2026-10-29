@@ -1,6 +1,6 @@
 #pragma once
 
-#include "playback/trackselectionpreference.h"
+#include "playback/mpv/trackselectionpreference.h"
 #include <QList>
 #include <QString>
 

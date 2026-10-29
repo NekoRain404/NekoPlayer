@@ -273,7 +273,7 @@
 - Modify `README.md`
 - Modify `docs/architecture.md`
 - Modify `docs/verification.md`
-- Modify `docs/appearance-handoff.md` only where the current state changed.
+- Modify `docs/history/2026-10-26-appearance-handoff.md` only where the current state changed.
 - Create `docs/superpowers/specs/2026-10-24-release-readiness-design.md` if it is not already present.
 
 **Steps:**

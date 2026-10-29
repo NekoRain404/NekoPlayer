@@ -1,6 +1,6 @@
 #include "mediafolderscan.h"
 #include "mediafiletypes.h"
-#include "playback/naturalcompare.h"
+#include "playback/playlist/naturalcompare.h"
 
 #include <QDir>
 #include <QFile>

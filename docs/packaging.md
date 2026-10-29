@@ -34,6 +34,13 @@ this package disables.
 
 ## Local build and install
 
+The release workflow (`.github/workflows/release.yml`) publishes a
+`nekoplayer-<version>.tar.gz` source archive plus `SHA256SUMS` for every `v*`
+tag. The PKGBUILD tracks the most recently published asset; at the time of
+writing that is v0.1.0, while the repository prepares the v0.2.0 pre-release.
+Update `pkgver`, the source URL and `sha256sums` only after the new asset is
+available; do not commit a placeholder checksum.
+
 The PKGBUILD builds from the published v0.1.0 GitHub release asset:
 
 ```text
@@ -90,6 +97,20 @@ update it with `updpkgsums` whenever that asset changes.
 
 `appstreamcli validate data/nekoplayer.metainfo.xml` passes (pedantic notes
 only).
+
+## Desktop integration
+
+The desktop entry launches `Exec=NekoPlayer %F`, so `~/.local/bin` must be on
+`PATH` when installing under `~/.local`. If the entry or icon does not appear,
+refresh the user databases:
+
+```bash
+update-desktop-database ~/.local/share/applications
+gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor
+```
+
+Use `cmake --install build/debug --prefix /tmp/neko-install` to inspect the
+install layout without touching the user profile.
 
 ## Verification boundary
 

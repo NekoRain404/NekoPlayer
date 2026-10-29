@@ -1,6 +1,6 @@
 #include "recentmediahistory.h"
 #include "configfile.h"
-#include "playback/mediasource.h"
+#include "playback/media/mediasource.h"
 
 #include <QCoreApplication>
 #include <QDir>

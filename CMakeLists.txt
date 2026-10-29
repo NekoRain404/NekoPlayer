@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.25)
-project(NekoPlayer VERSION 0.1.0 LANGUAGES CXX)
+project(NekoPlayer VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)
@@ -34,25 +36,25 @@ if(NEKOPLAYER_SANITIZERS)
     endif()
 endif()
 
-add_library(neko_playback src/playback/mpvcontroller.cpp src/playback/mpvtracks.cpp
-    src/playback/audiodevice.cpp src/playback/mpvcontroller_audio.cpp
-    src/playback/mpvcontroller_events.cpp src/playback/mpvcontroller_information.cpp
-    src/playback/mpvcontroller_trackpreferences.cpp
-    src/playback/mpvcontroller_languages.cpp
-    src/playback/mpvcontroller_externaltracks.cpp
-    src/playback/mpvcontroller_navigation.cpp
-    src/playback/mpvcontroller_loop.cpp
-    src/playback/mpvcontroller_video.cpp
-    src/playback/mpvcontroller_framing.cpp
-    src/playback/mpvcontroller_screenshot.cpp
-    src/playback/mpvcontroller_subtitles.cpp src/playback/subtitlepreferences.cpp
-    src/playback/mpvcontroller_video_color.cpp src/playback/videocoloradjustment.cpp
-    src/playback/mpvcontroller_hdr.cpp
-    src/playback/mpvcontroller_deinterlace.cpp
-    src/playback/mpvchapters.cpp src/playback/playbacktime.cpp src/playback/mediasource.cpp
-    src/playback/backendinfo.cpp src/playback/playlistcontroller.cpp
-    src/playback/playlistmodel.cpp src/playback/shuffleorder.cpp
-    src/playback/naturalcompare.cpp)
+add_library(neko_playback src/playback/mpv/mpvcontroller.cpp src/playback/mpv/mpvtracks.cpp
+    src/playback/mpv/audiodevice.cpp src/playback/mpv/mpvcontroller_audio.cpp
+    src/playback/mpv/mpvcontroller_events.cpp src/playback/mpv/mpvcontroller_information.cpp
+    src/playback/mpv/mpvcontroller_trackpreferences.cpp
+    src/playback/mpv/mpvcontroller_languages.cpp
+    src/playback/mpv/mpvcontroller_externaltracks.cpp
+    src/playback/mpv/mpvcontroller_navigation.cpp
+    src/playback/mpv/mpvcontroller_loop.cpp
+    src/playback/mpv/mpvcontroller_video.cpp
+    src/playback/mpv/mpvcontroller_framing.cpp
+    src/playback/mpv/mpvcontroller_screenshot.cpp
+    src/playback/mpv/mpvcontroller_subtitles.cpp src/playback/mpv/subtitlepreferences.cpp
+    src/playback/mpv/mpvcontroller_video_color.cpp src/playback/media/videocoloradjustment.cpp
+    src/playback/mpv/mpvcontroller_hdr.cpp
+    src/playback/mpv/mpvcontroller_deinterlace.cpp
+    src/playback/mpv/mpvchapters.cpp src/playback/media/playbacktime.cpp src/playback/media/mediasource.cpp
+    src/playback/mpv/backendinfo.cpp src/playback/playlist/playlistcontroller.cpp
+    src/playback/playlist/playlistmodel.cpp src/playback/playlist/shuffleorder.cpp
+    src/playback/playlist/naturalcompare.cpp)
 target_include_directories(neko_playback PUBLIC src)
 target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV)
 
@@ -72,40 +74,40 @@ target_include_directories(neko_preview PUBLIC src)
 target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Concurrent Qt6::Gui
     PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
 
-add_library(neko_ui src/playback/videowidget.cpp src/ui/mainwindow.cpp src/ui/playlistpane.cpp
-    src/ui/appearanceicons.cpp src/ui/appicon.cpp
-    src/ui/playlistitemdelegate.cpp
-    src/ui/welcomepanel.cpp
+add_library(neko_ui src/playback/render/videowidget.cpp src/ui/window/mainwindow.cpp src/ui/panels/playlistpane.cpp
+    src/ui/theme/appearanceicons.cpp src/ui/theme/appicon.cpp
+    src/ui/panels/playlistitemdelegate.cpp
+    src/ui/panels/welcomepanel.cpp
     src/playlist/m3u8store.cpp
-    src/ui/mediainformationtext.cpp src/ui/mediainformationdialog.cpp
-    src/ui/playbackoverlay.cpp src/ui/playbackoverlaytext.cpp
-    src/ui/windowactions.cpp src/ui/windowicons.cpp src/ui/shortcutoverride.cpp
-    src/ui/appearancemenu.cpp src/ui/windowsession.cpp
-    src/ui/transportbar.cpp src/ui/foldermenu.cpp
-    src/ui/windowopacitytransition.cpp
-    src/ui/interactionpolicy.cpp src/ui/uimotionduration.cpp
-    src/ui/thumbnailpreview.cpp
-    src/ui/thumbnailpreviewpolicy.cpp
-    src/ui/recentmediamenu.cpp
-    src/ui/currentmediamenu.cpp src/ui/fullscreencontrols.cpp src/ui/appearancepreferences.cpp
-    src/ui/appearancetokens.cpp src/ui/appearancestylesheet.cpp
-    src/ui/languagemanager.cpp
-    src/ui/videoframingmenu.cpp
-    src/ui/actionfeedbacktext.cpp src/ui/actionfeedbackoverlay.cpp src/ui/trackmenus.cpp
-    src/ui/tuningmenus.cpp src/ui/playlistmodemenu.cpp src/ui/playlistmaintenancemenu.cpp
-    src/ui/navigationmenu.cpp src/ui/videomenu.cpp
-    src/ui/timeseekdialog.cpp src/ui/networkopendialog.cpp
-    src/ui/abloopmenu.cpp src/ui/audiodevicemenu.cpp src/ui/screenshotmenu.cpp
-    src/ui/subtitledisplaymenu.cpp src/ui/subtitlestyledialog.cpp
-    src/ui/preferencesdialog.cpp src/ui/preferencesformlayout.cpp src/ui/preferencescoordinator.cpp src/ui/preferencesappearancepage.cpp src/ui/videocolordialog.cpp
-    src/ui/shortcutsdialog.cpp src/ui/quickactionsdialog.cpp src/ui/windowtitle.cpp
-    src/ui/librarydialog.cpp)
+    src/ui/dialogs/mediainformationtext.cpp src/ui/dialogs/mediainformationdialog.cpp
+    src/ui/panels/playbackoverlay.cpp src/ui/panels/playbackoverlaytext.cpp
+    src/ui/window/windowactions.cpp src/ui/window/windowicons.cpp src/ui/window/shortcutoverride.cpp
+    src/ui/menus/appearancemenu.cpp src/ui/window/windowsession.cpp
+    src/ui/panels/transportbar.cpp src/ui/menus/foldermenu.cpp
+    src/ui/window/windowopacitytransition.cpp
+    src/ui/window/interactionpolicy.cpp src/ui/window/uimotionduration.cpp
+    src/ui/panels/thumbnailpreview.cpp
+    src/ui/panels/thumbnailpreviewpolicy.cpp
+    src/ui/menus/recentmediamenu.cpp
+    src/ui/menus/currentmediamenu.cpp src/ui/window/fullscreencontrols.cpp src/ui/theme/appearancepreferences.cpp
+    src/ui/theme/appearancetokens.cpp src/ui/theme/appearancestylesheet.cpp
+    src/ui/theme/languagemanager.cpp
+    src/ui/menus/videoframingmenu.cpp
+    src/ui/panels/actionfeedbacktext.cpp src/ui/panels/actionfeedbackoverlay.cpp src/ui/menus/trackmenus.cpp
+    src/ui/menus/tuningmenus.cpp src/ui/menus/playlistmodemenu.cpp src/ui/menus/playlistmaintenancemenu.cpp
+    src/ui/menus/navigationmenu.cpp src/ui/menus/videomenu.cpp
+    src/ui/dialogs/timeseekdialog.cpp src/ui/dialogs/networkopendialog.cpp
+    src/ui/menus/abloopmenu.cpp src/ui/menus/audiodevicemenu.cpp src/ui/menus/screenshotmenu.cpp
+    src/ui/menus/subtitledisplaymenu.cpp src/ui/dialogs/subtitlestyledialog.cpp
+    src/ui/dialogs/preferencesdialog.cpp src/ui/dialogs/preferencesformlayout.cpp src/ui/dialogs/preferencescoordinator.cpp src/ui/dialogs/preferencesappearancepage.cpp src/ui/dialogs/videocolordialog.cpp
+    src/ui/dialogs/shortcutsdialog.cpp src/ui/dialogs/quickactionsdialog.cpp src/ui/window/windowtitle.cpp
+    src/ui/dialogs/librarydialog.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
     Qt6::OpenGLWidgets)
 qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
     FILES data/checkmark.png data/chevron.png data/chevron-up.png data/chevron-down.png)
 
-add_executable(NekoPlayer src/main.cpp src/playback/backenddiagnostic.cpp)
+add_executable(NekoPlayer src/main.cpp src/playback/mpv/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)
 target_compile_definitions(NekoPlayer PRIVATE NEKOPLAYER_VERSION="${PROJECT_VERSION}")
 qt_add_translations(NekoPlayer TS_FILES translations/NekoPlayer_en.ts

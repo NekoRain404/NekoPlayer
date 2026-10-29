@@ -1,7 +1,7 @@
 #pragma once
 
-#include "playback/subtitlepreferences.h"
-#include "playback/videocoloradjustment.h"
+#include "playback/media/videocoloradjustment.h"
+#include "playback/mpv/subtitlepreferences.h"
 #include <QByteArray>
 #include <QStringList>
 

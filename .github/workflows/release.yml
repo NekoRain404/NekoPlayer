@@ -1,0 +1,40 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  source-archive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create source archive and checksum
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          prefix="nekoplayer-${version}"
+          git archive --format=tar.gz --prefix="${prefix}/" -o "${prefix}.tar.gz" HEAD
+          sha256sum "${prefix}.tar.gz" > SHA256SUMS
+          cat SHA256SUMS
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          prerelease=()
+          case "$tag" in
+            *-rc*|*-beta*|*-alpha*) prerelease=(--prerelease) ;;
+          esac
+          gh release create "$tag" "nekoplayer-${version}.tar.gz" SHA256SUMS \
+            --title "NekoPlayer ${version}" --generate-notes "${prerelease[@]}"

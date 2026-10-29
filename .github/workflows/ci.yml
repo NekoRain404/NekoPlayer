@@ -4,24 +4,47 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+# Superseded force-pushes should not keep a stale run alive.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  linux-debug:
+  arch-smoke:
     runs-on: ubuntu-24.04
+    container:
+      image: archlinux:base-devel
+      options: --shm-size=1g
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - name: Install build dependencies
+      - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            cmake ninja-build pkg-config ffmpeg \
-            qt6-base-dev qt6-base-dev-tools qt6-l10n-tools \
-            libmpv-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev
+          pacman -Syu --noconfirm --needed \
+            git cmake ninja pkgconf qt6-base qt6-tools mpv ffmpeg mesa \
+            fontconfig noto-fonts noto-fonts-cjk
+      - uses: actions/checkout@v4
       - name: Configure
         run: cmake --preset debug
       - name: Build
         run: cmake --build --preset debug -j 4
-      # Window behaviour tests need a live desktop session; they stay in the
-      # native/Xvfb presets. The suite here is offscreen-safe and includes the
-      # code-size guard. CTest injects LC_ALL=C for libmpv.
-      - name: Test
-        run: ctest --preset debug -E window --output-on-failure
+      # The hosted container has no GPU/audio/display, and libmpv's video
+      # pipeline (frame stepping, media-info refresh) is not deterministic
+      # there. Keep CI to a build + core-logic smoke set; the full 89-test
+      # suite and the X11 window preset are desktop-run acceptance gates.
+      - name: Smoke tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+          HOME: /tmp/neko-home
+          XDG_CACHE_HOME: /tmp/neko-home/.cache
+          XDG_CONFIG_HOME: /tmp/neko-home/.config
+          XDG_RUNTIME_DIR: /tmp/neko-run
+          TMPDIR: /tmp/neko-tmp
+        run: |
+          mkdir -p "$HOME" "$XDG_CACHE_HOME" "$XDG_CONFIG_HOME" "$XDG_RUNTIME_DIR" "$TMPDIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          fc-cache -f >/dev/null
+          ctest --preset debug --output-on-failure --timeout 180 -R \
+            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report)$'

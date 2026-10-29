@@ -1,0 +1,49 @@
+name: Bug 报告
+description: 报告可复现的播放、界面或构建问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先搜索现有 issue，并使用最新 `main` 或预发布版本复现。安全问题请走私密漏洞报告，不要在这里公开。
+  - type: input
+    id: version
+    attributes:
+      label: NekoPlayer 版本/提交
+      placeholder: "例如 v0.2.0-rc1 或 git commit"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 环境
+      description: 发行版、桌面/合成器、Qt、libmpv、FFmpeg、GPU 与缩放
+      placeholder: "Arch Linux, niri/Wayland, Qt 6.12, mpv 0.41, Intel, scale 1.75"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: "1. 打开... 2. 按下... 3. 观察到..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为与实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志/截图/媒体信息
+      description: 请移除真实凭据与个人路径；可用 --check-backend 与媒体信息辅助定位。
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认
+      options:
+        - label: 我已确认这不是安全漏洞（安全漏洞走私密报告）
+          required: true

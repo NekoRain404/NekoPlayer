@@ -1,8 +1,8 @@
 #include "sessionmanager.h"
-#include "playback/mediasource.h"
-#include "playback/mpvcontroller.h"
-#include "playback/playlistcontroller.h"
-#include "playback/playlistmodel.h"
+#include "playback/media/mediasource.h"
+#include "playback/mpv/mpvcontroller.h"
+#include "playback/playlist/playlistcontroller.h"
+#include "playback/playlist/playlistmodel.h"
 
 #include <QDateTime>
 #include <QFileInfo>

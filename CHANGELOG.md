@@ -24,7 +24,7 @@
 ### 变更
 - 源码按职责重组：`playback/{mpv,media,playlist,render}`、`ui/{window,dialogs,menus,panels,theme}`；测试镜像同一分层，注册模块迁入 `tests/cmake/`。
 - README 重构为带横幅、真实截图和架构图的概览；逐项行为迁入 `docs/features.md`。
-- 版本号提升到 0.2.0，新增标签驱动的源码发布工作流与 X11 窗口测试 CI 任务。
+- 版本号提升到 0.2.0，新增标签驱动的源码发布工作流；CI 在 Arch 容器中执行完整构建与核心 smoke，完整媒体/窗口套件由桌面预设验收。
 
 ### 修复
 - 文件夹扫描进度对话框在空闲启动时误显示；改为首次扫描时懒创建，并补窗口测试。

@@ -4,10 +4,11 @@ The package installs the release binary, desktop entry, SVG icon, AppStream
 metadata, and the GPL-3.0-only license.
 
 The PKGBUILD downloads the matching source archive from the GitHub release
-and verifies its SHA-256 checksum. It always tracks the **most recently
-published** release (currently v0.1.0); the v0.2.0 pre-release will be published
-by `.github/workflows/release.yml`, and `pkgver`/`sha256sums` are updated in a
-follow-up commit after that asset exists. Never commit a placeholder checksum.
+and verifies its SHA-256 checksum. It tracks the **most recently published**
+release, currently **v0.2.0-rc1**. `pkgver=0.2.0rc1` is the Arch-normalized
+form (Arch package versions cannot contain hyphens); `_tag` and `_archive`
+keep the GitHub tag and extracted directory names. Update all three together
+when a later release is published, and never commit a placeholder checksum.
 
 After the release is published:
 

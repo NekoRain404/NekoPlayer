@@ -44,7 +44,7 @@ NekoPlayer 用原生 Qt Widgets 承载界面、用 libmpv 负责解码与渲染�
 
 ## 快速开始
 
-**依赖**：CMake 3.25+、Ninja、C++20 编译器、Qt 6.5+（Core/Concurrent/Widgets/OpenGLWidgets/LinguistTools）、libmpv 与 FFmpeg 开发库、pkg-config。Arch 用户可使用 `packaging/arch/PKGBUILD`；它当前固定最近已发布的 **v0.1.0** 源码归档，`v0.2.0-rc1` 发布后再更新 `pkgver` 与校验和。
+**依赖**：CMake 3.25+、Ninja、C++20 编译器、Qt 6.5+（Core/Concurrent/Widgets/OpenGLWidgets/LinguistTools）、libmpv 与 FFmpeg 开发库、pkg-config。Arch 用户可使用 `packaging/arch/PKGBUILD`；它已更新到最近发布的 **v0.2.0-rc1** 源码归档与校验和。
 
 ```bash
 cmake --preset debug
@@ -109,17 +109,18 @@ flowchart TB
 
 ## 项目状态与路线图
 
-- **v0.2.0 pre-release**：媒体库、快捷键编辑、字幕样式、均衡器与视频滤镜、按媒体调优、睡眠定时器、单实例、图片媒体、M3U8 `#EXTINF` 元数据，以及 2026-10-28 审计整改。
+- **v0.2.0-rc1 pre-release**（[发布页](https://github.com/NekoRain404/NekoPlayer/releases/tag/v0.2.0-rc1)）：媒体库、快捷键编辑、字幕样式、均衡器与视频滤镜、按媒体调优、睡眠定时器、单实例、图片媒体、M3U8 `#EXTINF` 元数据，以及 2026-10-28 审计整改。
 - **验证**：Linux Wayland 桌面上的 89 项 CTest（含窗口集成）全部通过；X11 预设通过 Xvfb + Openbox 回归。测试计数与逐轮证据记录在 [验证记录](docs/verification.md)，不在 README 中固化。
 - **边界**：原生 Wayland HDR 输出、真实 GPU 硬解、多显示器混合缩放、物理音频设备与 Windows 打包仍需实机验收；字幕在线搜索/下载明确推迟。
 
 路线图：
 
 - [x] Linux 可播放版本与 Arch 打包（v0.1.0）
-- [x] 媒体库、快捷键编辑、字幕样式、音视频效果与审计整改（v0.2.0-rc）
+- [x] 媒体库、快捷键编辑、字幕样式、音视频效果与审计整改（v0.2.0-rc1）
+- [x] 标签驱动的源码归档、校验和与 Arch 打包跟进
 - [ ] 原生 Wayland HDR / 硬件解码 / 多显示器实机验收
 - [ ] 字幕搜索与下载、Windows 构建
-- [ ] 发布流程自动化与可复现构建证据
+- [ ] 可复现构建与更多架构的发布证据
 
 ## 文档
 

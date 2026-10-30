@@ -36,21 +36,22 @@ this package disables.
 
 The release workflow (`.github/workflows/release.yml`) publishes a
 `nekoplayer-<version>.tar.gz` source archive plus `SHA256SUMS` for every `v*`
-tag. The PKGBUILD tracks the most recently published asset; at the time of
-writing that is v0.1.0, while the repository prepares the v0.2.0 pre-release.
-Update `pkgver`, the source URL and `sha256sums` only after the new asset is
-available; do not commit a placeholder checksum.
+tag. The PKGBUILD tracks the most recently published asset, currently the
+**v0.2.0-rc1** pre-release. It uses `pkgver=0.2.0rc1` (Arch-normalized; package
+versions cannot contain hyphens) and separate `_tag`/`_archive` variables for
+the GitHub tag and extracted directory. Update all of them together when a
+later release is published; do not commit a placeholder checksum.
 
-The PKGBUILD builds from the published v0.1.0 GitHub release asset:
+The PKGBUILD builds from the published v0.2.0-rc1 GitHub release asset:
 
 ```text
-https://github.com/NekoRain404/NekoPlayer/releases/download/v0.1.0/nekoplayer-0.1.0.tar.gz
+https://github.com/NekoRain404/NekoPlayer/releases/download/v0.2.0-rc1/nekoplayer-0.2.0-rc1.tar.gz
 ```
 
 and pins that asset's SHA-256:
 
 ```text
-c55795e1d251224c3f957fc401d20bc03c8122ab532508826600ac1119677bf8
+d9e57a8267be1f753ec4d6f3f88eeb38a109085276ee870a705a3a3c05dc5988
 ```
 
 A `git archive` of the current working tree is not the published release
@@ -60,8 +61,8 @@ choose one of the two options below.
 
 ```bash
 # from the repository root
-git archive --format=tar.gz --prefix=nekoplayer-0.1.0/ \
-    -o packaging/arch/nekoplayer-0.1.0.tar.gz HEAD
+git archive --format=tar.gz --prefix=nekoplayer-0.2.0-rc1/ \
+    -o packaging/arch/nekoplayer-0.2.0-rc1.tar.gz HEAD
 cd packaging/arch
 ```
 

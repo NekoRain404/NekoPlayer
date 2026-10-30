@@ -1,5 +1,13 @@
 # Verification Record
 
+## 2026-10-30 — v0.2.0-rc1 published
+
+- Tag `v0.2.0-rc1` created at `e41af19` and pushed with tagger/committer `NekoRain <yukathleenlxy@gmail.com>`; the release workflow (run `40989255745`) completed successfully.
+- GitHub release: <https://github.com/NekoRain404/NekoPlayer/releases/tag/v0.2.0-rc1>, marked **pre-release**. Assets: `nekoplayer-0.2.0-rc1.tar.gz` (690,891 bytes) and `SHA256SUMS`.
+- Downloaded the published archive and verified `d9e57a8267be1f753ec4d6f3f88eeb38a109085276ee870a705a3a3c05dc5988`.
+- Updated `packaging/arch/PKGBUILD` to the published asset (`pkgver=0.2.0rc1`, `_tag=v0.2.0-rc1`, `_archive=nekoplayer-0.2.0-rc1`). `makepkg --verifysource` passed, and a full `makepkg -f` build produced `nekoplayer 0.2.0rc1-1` plus the debug package; generated sources/packages were removed afterwards.
+- Boundary: the packaged binary was not installed system-wide in this round; installation acceptance remains the same desktop/HDR/GPU/audio matrix recorded above.
+
 ## 2026-10-29 — pre-release wrap-up, repository layout, README and release flow
 
 - Reorganized `src/playback` into `mpv/`, `media/`, `playlist/`, `render/`; `src/ui` into `window/`, `dialogs/`, `menus/`, `panels/`, `theme/`; tests mirror the same layout with registration modules under `tests/cmake/`. Includes and CMake lists were rewritten mechanically; `code-size` exception paths were updated.

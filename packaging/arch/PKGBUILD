@@ -2,7 +2,7 @@
 # Tracks the latest published GitHub release. Update pkgver, the source URL
 # and sha256sums together when a new release asset is available.
 pkgname=nekoplayer
-pkgver=0.1.0
+pkgver=0.2.0rc1
 pkgrel=1
 pkgdesc="A compact Qt 6 and libmpv desktop media player"
 url='https://github.com/NekoRain404/NekoPlayer'
@@ -10,11 +10,13 @@ arch=('x86_64')
 license=('GPL-3.0-only')
 depends=('qt6-base' 'qt6-translations' 'mpv' 'ffmpeg' 'hicolor-icon-theme')
 makedepends=('cmake' 'ninja' 'qt6-tools' 'pkgconf')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/NekoRain404/NekoPlayer/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('c55795e1d251224c3f957fc401d20bc03c8122ab532508826600ac1119677bf8')
+_tag=v0.2.0-rc1
+_archive=nekoplayer-0.2.0-rc1
+source=("$_archive.tar.gz::$url/releases/download/$_tag/$_archive.tar.gz")
+sha256sums=('d9e57a8267be1f753ec4d6f3f88eeb38a109085276ee870a705a3a3c05dc5988')
 
 build() {
-    cmake -S "$pkgname-$pkgver" -B build \
+    cmake -S "$_archive" -B build \
         -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \

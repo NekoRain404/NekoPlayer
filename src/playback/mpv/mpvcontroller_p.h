@@ -4,6 +4,7 @@
 #include "playback/mpv/mpvcontroller.h"
 #include "playback/mpv/mpvtracks.h"
 
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QHash>
 #include <QMetaObject>
@@ -14,6 +15,7 @@
 #include <climits>
 #include <cmath>
 #include <initializer_list>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <tuple>
@@ -160,6 +162,10 @@ struct MpvController::Impl {
     // Serializes the wakeup callback with destruction: a callback that already
     // passed the flag check must finish posting before the client is released.
     std::mutex wakeupMutex;
+    // Queued wakeups target the application object, which outlives every
+    // controller, and carry this flag so a late delivery after Impl is gone is
+    // a no-op instead of a dangling drain.
+    std::shared_ptr<std::atomic_bool> wakeupAlive = std::make_shared<std::atomic_bool>(true);
     bool ready = false;
     // Property observations can arrive many times per event-loop turn (time-pos
     // ticks). Coalesce their stateChanged notifications into one per drain.
@@ -471,9 +477,16 @@ struct MpvController::Impl {
     static void wakeup(void *userdata) {
         auto *self = static_cast<Impl *>(userdata);
         const std::lock_guard lock(self->wakeupMutex);
-        if (!self->shuttingDown.load())
-            QMetaObject::invokeMethod(
-                self->owner, [self] { self->drainEvents(); }, Qt::QueuedConnection);
+        if (self->shuttingDown.load())
+            return;
+        const auto alive = self->wakeupAlive;
+        QMetaObject::invokeMethod(
+            qApp,
+            [self, alive] {
+                if (alive->load())
+                    self->drainEvents();
+            },
+            Qt::QueuedConnection);
     }
 
     void flushStateChanged() {

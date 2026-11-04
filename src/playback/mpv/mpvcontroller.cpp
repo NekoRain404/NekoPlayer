@@ -10,7 +10,7 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
     const auto options = std::array{
         std::pair{"config", "no"}, std::pair{"load-scripts", "no"}, std::pair{"terminal", "no"},
         std::pair{"osc", "no"}, std::pair{"input-default-bindings", "no"},
-        std::pair{"input-vo-keyboard", "no"}, std::pair{"hwdec", headless ? "no" : "auto-safe"},
+        std::pair{"input-vo-keyboard", "no"}, std::pair{"hwdec", "auto-safe"},
         std::pair{"idle", "yes"}, std::pair{"audio-pitch-correction", "yes"},
         std::pair{"deinterlace", "auto"}, std::pair{"reset-on-next-file", "ab-loop-a,ab-loop-b"},
         std::pair{"keep-open", "no"}, std::pair{"video-timing-offset", "0"},
@@ -73,6 +73,7 @@ MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
 
 MpvController::~MpvController() {
     impl_->shuttingDown = true;
+    impl_->wakeupAlive->store(false);
     if (impl_->client) {
         mpv_set_wakeup_callback(impl_->client.get(), nullptr, nullptr);
         // Wait for a wakeup that already passed the shutdown check before the

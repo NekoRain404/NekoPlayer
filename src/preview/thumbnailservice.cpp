@@ -1,5 +1,6 @@
 #include "thumbnailservice.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QMetaObject>
 #include <QPointer>
@@ -168,6 +169,10 @@ void ThumbnailService::deliver(quint64 requestId, const QString &source, double 
 QString ThumbnailService::localPath(const QString &source) {
     if (source.trimmed().isEmpty())
         return {};
+    // A Windows drive path ("C:/...") parses as a URL with scheme "c"; check the
+    // filesystem form first so local previews work on every platform.
+    if (QDir::isAbsolutePath(source))
+        return source;
     const QUrl url(source);
     if (url.isValid() && !url.scheme().isEmpty()) {
         if (url.scheme().compare(QStringLiteral("file"), Qt::CaseInsensitive) != 0)

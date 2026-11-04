@@ -233,6 +233,9 @@ class FolderScanTest final : public QObject {
     }
 
     void rejectsUnreadableRoot() {
+#ifdef Q_OS_WIN
+        QSKIP("Windows does not expose POSIX permission bits for directories");
+#endif
         QTemporaryDir directory;
         QVERIFY(directory.isValid());
         const auto permissions = QFile::permissions(directory.path());

@@ -25,6 +25,15 @@ class ThumbnailServiceTest final : public QObject {
         QVERIFY(result.error.contains(QStringLiteral("local"), Qt::CaseInsensitive));
     }
 
+    void acceptsWindowsDrivePathsAsLocal() {
+#ifdef Q_OS_WIN
+        QVERIFY(ThumbnailService::isLocalSource(QStringLiteral("C:/media/clip.mp4")));
+        QVERIFY(!ThumbnailService::isLocalSource(QStringLiteral("https://example.com/a.mp4")));
+#else
+        QSKIP("Windows drive-letter paths are only meaningful on Windows");
+#endif
+    }
+
     void latestRequestSuppressesOlderResult() {
         ThumbnailService service;
         QSignalSpy ready(&service, &ThumbnailService::thumbnailReady);

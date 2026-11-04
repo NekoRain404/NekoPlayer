@@ -98,6 +98,7 @@ class SingleInstance::Private {
         QObject::connect(server_, &QLocalServer::newConnection, owner_,
                          [this] { acceptPending(); });
         if (!server_->listen(endpoint_)) {
+            qWarning("single-instance listen failed: %s", qPrintable(server_->errorString()));
             delete server_;
             server_ = nullptr;
             QLocalServer::removeServer(endpoint_);
@@ -114,14 +115,18 @@ class SingleInstance::Private {
     [[nodiscard]] Probe forward(const QByteArray &payload) {
         QLocalSocket socket;
         socket.connectToServer(endpoint_);
-        if (!socket.waitForConnected(kConnectTimeoutMs))
+        if (!socket.waitForConnected(kConnectTimeoutMs)) {
+            qWarning("single-instance connect failed: %s", qPrintable(socket.errorString()));
             return Probe::NotRunning;
+        }
         if (socket.write(payload) != payload.size()) {
+            qWarning("single-instance write failed: %s", qPrintable(socket.errorString()));
             socket.abort();
             return Probe::Failed;
         }
         socket.flush();
         if (socket.bytesToWrite() > 0 && !socket.waitForBytesWritten(kWriteTimeoutMs)) {
+            qWarning("single-instance flush failed: %s", qPrintable(socket.errorString()));
             socket.abort();
             return Probe::Failed;
         }

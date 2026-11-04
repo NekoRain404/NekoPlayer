@@ -128,6 +128,52 @@ class SecondarySubtitlesTest final : public QObject {
         QVERIFY(errors.isEmpty());
     }
 
+    void usesExternalSubtitleAsSecondary() {
+        MpvController player(true, true);
+        QSignalSpy loaded(&player, &MpvController::fileLoaded);
+        QSignalSpy errors(&player, &MpvController::errorOccurred);
+        player.openFile(QString::fromUtf8(TEST_TRACK_MEDIA_PATH));
+        QTRY_VERIFY(player.state().active && player.tracks().size() == 3);
+        player.setPaused(true);
+        player.addSubtitle(QString::fromUtf8(TEST_EXTERNAL_SUBTITLE_PATH));
+        QTRY_COMPARE(player.tracks().size(), 4);
+        auto externalId = qint64{0};
+        for (const auto &track : player.tracks()) {
+            if (track.external)
+                externalId = track.id;
+        }
+        QVERIFY(externalId > 0);
+        // mpv rejects using the primary track as its own secondary layer.
+        player.selectSecondarySubtitleTrack(externalId);
+        QTRY_COMPARE(errors.count(), 1);
+        QCOMPARE(player.secondarySubtitleTrack(), qint64{0});
+        auto internalId = qint64{0};
+        for (const auto &track : player.tracks()) {
+            if (track.type == MediaTrack::Type::Subtitle && !track.external)
+                internalId = track.id;
+        }
+        QVERIFY(internalId > 0);
+        player.selectSecondarySubtitleTrack(internalId);
+        QTRY_COMPARE(player.secondarySubtitleTrack(), internalId);
+        QTRY_COMPARE(backendSecondary(player), internalId);
+
+        player.prepareForRendererReset();
+        player.resumeAfterRendererReset();
+        QTRY_COMPARE(loaded.count(), 2);
+        QTRY_VERIFY(!player.trackRestorationPending());
+        QTRY_COMPARE(player.tracks().size(), 4);
+        auto restoredId = qint64{0};
+        for (const auto &track : player.tracks()) {
+            if (track.external)
+                restoredId = track.id;
+        }
+        QVERIFY(restoredId > 0);
+        QTRY_COMPARE(player.secondarySubtitleTrack(),
+                     restoredId == externalId ? internalId : restoredId);
+        QTRY_COMPARE(backendSecondary(player), player.secondarySubtitleTrack());
+        QCOMPARE(errors.count(), 1);
+    }
+
     void dropsMissingSecondaryAfterReload() {
         MpvController player(true, true);
         player.openFile(QString::fromUtf8(TEST_LANGUAGE_MEDIA_PATH));

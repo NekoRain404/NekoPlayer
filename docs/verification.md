@@ -2,11 +2,11 @@
 
 ## 2026-11-04 — secondary subtitles
 
-- Debug build with `-j4`: 0 warnings; full serial `ctest --preset debug`: **100/100** passed in 140.08 s.
+- Debug build with `-j4`: 0 warnings; full serial `ctest --preset debug`: **100/100** passed in 118.12 s.
 - Added the “字幕 → 第二字幕” submenu backed by mpv `secondary-sid`. Selecting a secondary track no longer disturbs the primary choice, hiding subtitles hides both layers, and both are restored after a renderer-context rebuild.
-- `secondary-subtitles` covers selection/clearing, backend property values, rejecting non-subtitle ids, idle and stop behavior, reload of a different file, two consecutive renderer resets, and visibility coupling. `track-menus` verifies the submenu's object names, exclusive checks and action wiring.
+- `secondary-subtitles` covers selection/clearing, backend property values, rejecting non-subtitle ids and same-as-primary selections, idle and stop behavior, reload of a different file, external subtitles as the secondary layer across a renderer reset, two consecutive resets, and visibility coupling. `track-menus` verifies the submenu's object names, exclusive checks and action wiring.
 - Track parsing now honors mpv's `main-selection` field: mpv reports a secondary subtitle as `selected`, which previously made the primary menu and restore matching ambiguous.
-- Translation `lupdate`/`lrelease`: **581** finished, 0 unfinished; three obsolete playlist/subtitle labels remain vanished.
+- Translation `lupdate`/`lrelease`: **582** finished, 0 unfinished; three obsolete playlist/subtitle labels remain vanished.
 - Boundary: dual-subtitle visual layout (position/overlap) was not inspected on a real display.
 
 ## 2026-11-04 — desktop integration, autosave and network options

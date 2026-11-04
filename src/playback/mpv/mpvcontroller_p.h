@@ -406,6 +406,13 @@ struct MpvController::Impl {
             return;
         command({"set", type == MediaTrack::Type::Audio ? "aid" : "sid",
                  id == 0 ? QByteArray("no") : QByteArray::number(id)});
+        // mpv clears the secondary selection when it becomes the primary one;
+        // mirror that so the menu and restore snapshot do not keep stale state.
+        if (type == MediaTrack::Type::Subtitle && id != 0 && id == secondarySid) {
+            secondarySid = 0;
+            secondarySidToRestore = 0;
+            emit owner->secondarySubtitleChanged();
+        }
     }
 
     void settleDeferredRecovery();

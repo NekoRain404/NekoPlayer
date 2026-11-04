@@ -1058,7 +1058,7 @@ Click “Refresh” to scan the added folders.</translation>
     <name>MpvController</name>
     <message>
         <location filename="../src/playback/mpv/mpvcontroller_p.h" line="389"/>
-        <location filename="../src/playback/mpv/mpvcontroller_secondary_subtitles.cpp" line="16"/>
+        <location filename="../src/playback/mpv/mpvcontroller_secondary_subtitles.cpp" line="17"/>
         <source>所选轨道不存在</source>
         <translation>The selected track does not exist</translation>
     </message>
@@ -1071,6 +1071,11 @@ Click “Refresh” to scan the added folders.</translation>
         <location filename="../src/playback/mpv/mpvcontroller_trackpreferences.cpp" line="217"/>
         <source>外挂字幕文件不可用：%1</source>
         <translation>External subtitle file unavailable: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/playback/mpv/mpvcontroller_secondary_subtitles.cpp" line="28"/>
+        <source>第二字幕不能与主字幕相同</source>
+        <translation>The secondary subtitle must differ from the primary subtitle</translation>
     </message>
 </context>
 <context>

@@ -190,7 +190,8 @@ add_executable(secondary_subtitles_test playback/secondary_subtitles_test.cpp)
 target_link_libraries(secondary_subtitles_test PRIVATE neko_playback Qt6::Test)
 target_compile_definitions(secondary_subtitles_test PRIVATE
     TEST_LANGUAGE_MEDIA_PATH="${TEST_LANGUAGE_MEDIA}"
-    TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}")
+    TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}"
+    TEST_EXTERNAL_SUBTITLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/data/外部 subtitle [1].srt")
 add_dependencies(secondary_subtitles_test test_language_media test_track_media)
 add_test(NAME secondary-subtitles COMMAND secondary_subtitles_test)
 set_tests_properties(secondary-subtitles PROPERTIES TIMEOUT 90)

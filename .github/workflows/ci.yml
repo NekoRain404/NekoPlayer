@@ -80,3 +80,16 @@ jobs:
         run: |
           ctest --preset windows --output-on-failure --timeout 180 -R \
             '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move|single-instance)$'
+      - name: Diagnose failing smoke tests
+        if: failure()
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          set +e
+          for test in folder_scan_test track_preference_store_test \
+              interaction_preferences_test language_preferences_test \
+              single_instance_test media_library_test thumbnail_service_test; do
+            echo "===== $test"
+            "./build/windows/tests/$test.exe" 2>&1 | tail -100
+            echo "exit=${PIPESTATUS[0]}"
+          done

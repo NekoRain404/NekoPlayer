@@ -201,15 +201,22 @@ class FolderScanTest final : public QObject {
         QVERIFY(touch(directory.filePath("part2/猫 2.mp4")));
         QVERIFY(touch(directory.filePath(".hidden/secret.mp4")));
         QVERIFY(touch(outside.filePath("outside.mp4")));
+#ifndef Q_OS_WIN
+        // Creating symlinks on Windows needs Developer Mode or elevated rights,
+        // which hosted runners do not grant; the scanner still rejects any
+        // symlink it encounters there.
         QVERIFY(QFile::link(outside.filePath("outside.mp4"), directory.filePath("linked.mp4")));
         QVERIFY(QFile::link(outside.path(), directory.filePath("linked-directory")));
         QVERIFY(QFile::link(directory.path(), directory.filePath("part2/loop")));
+#endif
         const auto result = scan(directory.path(), true);
         QVERIFY2(result.error.isEmpty(), qPrintable(result.error));
         QCOMPARE(result.paths, QStringList({directory.filePath("part2/deeper/猫 10.mp4"),
                                             directory.filePath("part2/猫 2.mp4")}));
+#ifndef Q_OS_WIN
         QVERIFY(!scan(directory.filePath("linked-directory"), true).error.isEmpty());
         QVERIFY(!scan(directory.filePath("linked-directory/"), true).error.isEmpty());
+#endif
     }
 
     void rejectsInvalidRootsAndAcceptsAnEmptyFolder() {

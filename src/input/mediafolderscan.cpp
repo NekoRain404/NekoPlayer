@@ -142,7 +142,11 @@ MediaFolderScanResult scanMediaFolder(const QString &directory, bool recursive,
                 return unreadable(displayPath(entry->path()));
             if (!std::filesystem::is_symlink(status)) {
                 const QFileInfo file(displayPath(entry->path()));
-                if (!file.isHidden()) {
+                // Windows does not treat dot-files as hidden; keep the skip
+                // rule identical on every platform so scans do not depend on
+                // the host filesystem's hidden-attribute semantics.
+                const bool dotHidden = file.fileName().startsWith(QLatin1Char('.'));
+                if (!file.isHidden() && !dotHidden) {
                     if (std::filesystem::is_directory(status) && recursive)
                         pending.push_back(entry->path());
                     else if (std::filesystem::is_regular_file(status) && supportedMedia(file))

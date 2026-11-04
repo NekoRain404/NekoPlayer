@@ -46,11 +46,14 @@ class TrackPreferenceStoreTest final : public QObject {
         saved.selection.selectedExternalAudioStream = 1;
         const auto result = store.save({saved});
         QVERIFY2(result.isEmpty(), qPrintable(result));
+#ifndef Q_OS_WIN
         // Signed URLs may be stored in the selection; keep the file private.
+        // Windows reports inherited ACL bits rather than POSIX mode bits.
         const auto permissions =
             QFileInfo(temporary.filePath(QStringLiteral("session.ini.tracks.ini"))).permissions();
         QVERIFY(!permissions.testFlag(QFileDevice::ReadOther));
         QVERIFY(!permissions.testFlag(QFileDevice::WriteOther));
+#endif
         const auto loaded = store.load();
         QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
         QCOMPARE(loaded.entries.size(), 1);

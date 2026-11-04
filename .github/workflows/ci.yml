@@ -90,6 +90,7 @@ jobs:
               interaction_preferences_test language_preferences_test \
               single_instance_test media_library_test thumbnail_service_test; do
             echo "===== $test"
-            "./build/windows/tests/$test.exe" 2>&1 | tail -100
+            "./build/windows/tests/$test.exe" -o "$test.txt,txt" 2>&1 | tail -40
             echo "exit=${PIPESTATUS[0]}"
+            [ -f "$test.txt" ] && cat "$test.txt"
           done

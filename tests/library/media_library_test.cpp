@@ -74,6 +74,8 @@ class MediaLibraryTest final : public QObject {
         QCOMPARE(loaded.entries().at(0).path,
                  QDir(folder).filePath(QStringLiteral("episode 2.mp4")));
 
+#ifndef Q_OS_WIN
+        // The INI is owner-only on POSIX; Windows inherits NTFS ACLs.
         const auto permissions = QFile::permissions(path);
         QVERIFY(permissions.testFlag(QFileDevice::ReadOwner));
         QVERIFY(permissions.testFlag(QFileDevice::WriteOwner));
@@ -81,6 +83,7 @@ class MediaLibraryTest final : public QObject {
         QVERIFY(!permissions.testFlag(QFileDevice::WriteGroup));
         QVERIFY(!permissions.testFlag(QFileDevice::ReadOther));
         QVERIFY(!permissions.testFlag(QFileDevice::WriteOther));
+#endif
     }
 
     void rejectsRelativeMissingAndExcessFolders() {

@@ -1,5 +1,6 @@
 #include "ui/menus/tuningmenus.h"
 #include "playback/mpv/mpvcontroller.h"
+#include "ui/dialogs/equalizerdialog.h"
 
 #include <QAction>
 #include <QActionGroup>
@@ -48,7 +49,8 @@ TuningMenus::TuningMenus(MpvController &controller, QWidget *window)
       equalizerMenu_(new QMenu(window)), replayGainMenu_(new QMenu(window)),
       speedGroup_(new QActionGroup(speedMenu_)), equalizerGroup_(new QActionGroup(equalizerMenu_)),
       replayGainGroup_(new QActionGroup(replayGainMenu_)),
-      audioExclusiveAction_(new QAction(tr("独占音频输出"), window)) {
+      audioExclusiveAction_(new QAction(tr("独占音频输出"), window)),
+      customEqualizerAction_(nullptr) {
     speedMenu_->setObjectName(QStringLiteral("speedMenu"));
     audioDelayMenu_->setObjectName(QStringLiteral("audioDelayMenu"));
     subtitleDelayMenu_->setObjectName(QStringLiteral("subtitleDelayMenu"));
@@ -102,6 +104,7 @@ void TuningMenus::retranslate() {
     const auto labels = equalizerLabels();
     for (size_t index = 0; index < labels.size(); ++index)
         setText(equalizerMenu_, equalizerActionNames[index], labels[index]);
+    setText(equalizerMenu_, "customEqualizerAction", tr("自定义均衡器…"));
     replayGainMenu_->setTitle(tr("重放增益"));
     setText(replayGainMenu_, "replayGainOffAction", tr("关闭"));
     setText(replayGainMenu_, "replayGainTrackAction", tr("按音轨"));
@@ -191,6 +194,24 @@ void TuningMenus::createEqualizerMenu() {
             update();
         });
     }
+    customEqualizerAction_ = equalizerMenu_->addAction(tr("自定义均衡器…"));
+    customEqualizerAction_->setObjectName(QStringLiteral("customEqualizerAction"));
+    connect(customEqualizerAction_, &QAction::triggered, this, [this] {
+        EqualizerDialog dialog(controller_.equalizerGains(), window_);
+        if (dialog.exec() != QDialog::Accepted)
+            return;
+        controller_.setEqualizerGains(dialog.gains());
+        if (!controller_.equalizerCustom())
+            return;
+        if (qApp->property("configurationEnabled").toBool()) {
+            QVariantList values;
+            for (const auto gain : controller_.equalizerGains())
+                values.append(gain);
+            QSettings().setValue(QStringLiteral("effects/equalizerGains"), values);
+        }
+        emit feedback(tr("均衡器：自定义"));
+        update();
+    });
 }
 
 void TuningMenus::createAudioEffectsMenu() {
@@ -255,6 +276,15 @@ void TuningMenus::restoreEqualizer() {
     if (!qApp->property("configurationEnabled").toBool())
         return;
     const QSettings store;
+    const auto custom = store.value(QStringLiteral("effects/equalizerGains")).toList();
+    if (custom.size() == 10) {
+        QList<double> gains;
+        for (const auto &value : custom)
+            gains.append(value.toDouble());
+        controller_.setEqualizerGains(gains);
+        if (controller_.equalizerCustom())
+            return;
+    }
     controller_.setEqualizerPreset(presetFromKey(
         store.value(QStringLiteral("effects/equalizerPreset"), QStringLiteral("off")).toString()));
 }
@@ -262,7 +292,9 @@ void TuningMenus::restoreEqualizer() {
 void TuningMenus::saveEqualizer(EqualizerPreset preset) {
     if (!qApp->property("configurationEnabled").toBool())
         return;
-    QSettings().setValue(QStringLiteral("effects/equalizerPreset"), presetKey(preset));
+    QSettings store;
+    store.setValue(QStringLiteral("effects/equalizerPreset"), presetKey(preset));
+    store.remove(QStringLiteral("effects/equalizerGains"));
 }
 
 void TuningMenus::chooseValue(bool speed, bool audio) {
@@ -295,8 +327,10 @@ void TuningMenus::update() {
     for (auto *action : speedGroup_->actions())
         action->setChecked(std::abs(action->data().toDouble() - state.playbackSpeed) < 0.000001);
     for (auto *action : equalizerGroup_->actions())
-        action->setChecked(action->data().toInt() ==
-                           static_cast<int>(controller_.equalizerPreset()));
+        action->setChecked(!controller_.equalizerCustom() &&
+                           action->data().toInt() ==
+                               static_cast<int>(controller_.equalizerPreset()));
+    customEqualizerAction_->setEnabled(controller_.isReady());
     for (auto *action : replayGainGroup_->actions())
         action->setChecked(action->data().toInt() ==
                            static_cast<int>(controller_.replayGainMode()));

@@ -51,6 +51,7 @@ add_library(neko_playback src/playback/mpv/mpvcontroller.cpp src/playback/mpv/mp
     src/playback/mpv/mpvcontroller_video_color.cpp
     src/playback/mpv/mpvcontroller_network.cpp
     src/playback/mpv/mpvcontroller_audioeffects.cpp
+    src/playback/mpv/mpvcontroller_equalizer.cpp
     src/playback/mpv/mpvcontroller_recording.cpp src/playback/media/videocoloradjustment.cpp
     src/playback/mpv/mpvcontroller_hdr.cpp
     src/playback/mpv/mpvcontroller_deinterlace.cpp
@@ -104,7 +105,7 @@ add_library(neko_ui src/playback/render/videowidget.cpp src/desktop/mprisplayer.
     src/ui/menus/subtitledisplaymenu.cpp src/ui/dialogs/subtitlestyledialog.cpp
     src/ui/dialogs/preferencesdialog.cpp src/ui/dialogs/preferencesformlayout.cpp src/ui/dialogs/preferencescoordinator.cpp src/ui/dialogs/preferencesappearancepage.cpp src/ui/dialogs/videocolordialog.cpp
     src/ui/dialogs/shortcutsdialog.cpp src/ui/dialogs/quickactionsdialog.cpp src/ui/window/windowtitle.cpp
-    src/ui/dialogs/librarydialog.cpp)
+    src/ui/dialogs/librarydialog.cpp src/ui/dialogs/equalizerdialog.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
     Qt6::OpenGLWidgets Qt6::DBus)
 qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"

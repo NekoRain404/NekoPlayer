@@ -163,6 +163,8 @@ struct MpvController::Impl {
     VideoPresentation presentation;
     VideoFraming framing;
     VideoColorAdjustment videoColor;
+    QList<double> customEqualizerGains;
+    bool customEqualizer = false;
     ReplayGainMode replayGainMode = ReplayGainMode::Off;
     bool audioExclusive = false;
     HdrToneMapping hdrToneMapping = HdrToneMapping::Auto;

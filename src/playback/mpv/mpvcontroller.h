@@ -103,11 +103,14 @@ class MpvController final : public QObject {
     [[nodiscard]] HdrToneMapping hdrToneMapping() const;
     [[nodiscard]] DeinterlaceMode deinterlaceMode() const;
     [[nodiscard]] EqualizerPreset equalizerPreset() const;
+    [[nodiscard]] QList<double> equalizerGains() const;
+    [[nodiscard]] bool equalizerCustom() const;
     [[nodiscard]] ReplayGainMode replayGainMode() const;
     [[nodiscard]] bool audioExclusive() const;
     [[nodiscard]] SharpenLevel sharpenLevel() const;
     [[nodiscard]] DenoiseLevel denoiseLevel() const;
     void setEqualizerPreset(EqualizerPreset preset);
+    void setEqualizerGains(const QList<double> &gains);
     void setReplayGainMode(ReplayGainMode mode);
     void setAudioExclusive(bool enabled);
     void setVideoFilters(SharpenLevel sharpen, DenoiseLevel denoise);

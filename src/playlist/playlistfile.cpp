@@ -2,12 +2,12 @@
 #include "playback/media/mediasource.h"
 
 #include <QDir>
-#include <QUrl>
 #include <QFile>
 #include <QFileInfo>
 #include <QMap>
 #include <QSaveFile>
 #include <QStringDecoder>
+#include <QUrl>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 #include <cmath>
@@ -180,7 +180,10 @@ M3u8LoadResult loadXspf(const QString &path) {
         }
     }
     if (reader.hasError())
-        return {{}, -1, QStringLiteral("Invalid XSPF playlist %1: %2").arg(path, reader.errorString()), {}};
+        return {{},
+                -1,
+                QStringLiteral("Invalid XSPF playlist %1: %2").arg(path, reader.errorString()),
+                {}};
     return {paths, paths.isEmpty() ? -1 : 0, {}, entries};
 }
 

@@ -9,9 +9,9 @@
 - Screenshot: `screenshot-menu` verifies Ctrl+Shift+E copies the current frame to the clipboard and removes its temporary file.
 - Network: `network-options` verifies proxy/header normalization and mpv property application; `network-open-dialog` verifies URL/advanced-field parsing. Options are session-only and require a D-Bus session for MPRIS only.
 - Playlist: `playlist-file` covers PLS and XSPF relative paths, metadata, network URLs and malformed XML; `playlist-block-move` covers contiguous multi-row block moves.
-- Audio: `audio-effects` verifies ReplayGain mode and audio-exclusive properties reach mpv.
+- Audio: `audio-effects` verifies ReplayGain mode, audio-exclusive properties and custom 10-band EQ reach mpv.
 - Recording: `recording` verifies stream-record starts only with active media and writes a non-empty file.
-- Translation `lrelease`: **578** finished, 0 unfinished.
+- Translation `lrelease`: **583** finished, 0 unfinished.
 - Boundary: native Wayland HDR/hardware decoding, multi-monitor scaling, real audio devices, tray appearance across compositors and Windows packaging remain manual acceptance items.
 
 ## 2026-10-30 — v0.2.0-rc1 published

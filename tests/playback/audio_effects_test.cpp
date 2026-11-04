@@ -34,6 +34,20 @@ class AudioEffectsTest final : public QObject {
         player.setAudioExclusive(false);
         QCOMPARE(option(player, "audio-exclusive"), QStringLiteral("no"));
     }
+
+    void customEqualizerBandsReachTheAudioChain() {
+        MpvController player(true, true);
+        QVERIFY(player.isReady());
+        const QList<double> gains{1.0, 2.0, -3.0, 0.5, 0.0, -0.5, 3.0, -2.0, 1.5, 0.0};
+        player.setEqualizerGains(gains);
+        QVERIFY(player.equalizerCustom());
+        QCOMPARE(player.equalizerGains(), gains);
+        QTRY_VERIFY(option(player, "af").contains(QStringLiteral("equalizer=f=31")));
+        QVERIFY(option(player, "af").contains(QStringLiteral("g=-3")));
+        player.setEqualizerPreset(EqualizerPreset::Off);
+        QVERIFY(!player.equalizerCustom());
+        QTRY_VERIFY(option(player, "af").isEmpty() || option(player, "af") == QStringLiteral("no"));
+    }
 };
 
 QTEST_GUILESS_MAIN(AudioEffectsTest)

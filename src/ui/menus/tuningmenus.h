@@ -47,5 +47,6 @@ class TuningMenus final : public QObject {
     QMenu *replayGainMenu_;
     QActionGroup *replayGainGroup_;
     QAction *audioExclusiveAction_;
+    QAction *customEqualizerAction_;
     bool announce_ = false;
 };

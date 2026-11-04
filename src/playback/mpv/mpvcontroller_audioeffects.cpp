@@ -6,9 +6,9 @@ bool MpvController::audioExclusive() const { return impl_->audioExclusive; }
 
 void MpvController::setReplayGainMode(ReplayGainMode mode) {
     auto &self = *impl_;
-    const char *value = mode == ReplayGainMode::Track ? "track"
+    const char *value = mode == ReplayGainMode::Track   ? "track"
                         : mode == ReplayGainMode::Album ? "album"
-                                                           : "no";
+                                                        : "no";
     const int status = mpv_set_property_string(self.client.get(), "replaygain", value);
     self.report(status);
     if (status < 0 || self.replayGainMode == mode)

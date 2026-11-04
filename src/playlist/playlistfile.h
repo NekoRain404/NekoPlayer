@@ -8,6 +8,6 @@
 class PlaylistFile final {
   public:
     [[nodiscard]] static M3u8LoadResult load(const QString &filePath);
-    [[nodiscard]] static QString save(const QString &filePath,
-                                      const QList<M3u8Entry> &entries, int currentIndex);
+    [[nodiscard]] static QString save(const QString &filePath, const QList<M3u8Entry> &entries,
+                                      int currentIndex);
 };

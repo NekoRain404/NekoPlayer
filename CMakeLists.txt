@@ -11,17 +11,33 @@ include(GNUInstallDirs)
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools Network)
 # Qt DBus (and therefore MPRIS) is not available in every platform build.
 find_package(Qt6 6.5 QUIET COMPONENTS DBus)
-if(WIN32)
-    # MSYS2 .pc files carry Unix-style prefixes (/ucrt64). pkgconf can rewrite
-    # them from the .pc file location so native Windows CMake sees real paths.
-    set(PKG_CONFIG_ARGN --define-prefix)
-endif()
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
-pkg_check_modules(AVFORMAT REQUIRED IMPORTED_TARGET libavformat)
-pkg_check_modules(AVCODEC REQUIRED IMPORTED_TARGET libavcodec)
-pkg_check_modules(AVUTIL REQUIRED IMPORTED_TARGET libavutil)
-pkg_check_modules(SWSCALE REQUIRED IMPORTED_TARGET libswscale)
+if(WIN32)
+    # MSYS2 .pc files carry Unix-style prefixes (/ucrt64) that native Windows
+    # CMake cannot resolve. Derive the real sysroot from the pkg-config
+    # location instead (…/ucrt64/bin/pkg-config.exe -> …/ucrt64).
+    get_filename_component(_neko_pkg_bin "${PKG_CONFIG_EXECUTABLE}" DIRECTORY)
+    get_filename_component(NEKOPLAYER_DEPENDENCY_PREFIX "${_neko_pkg_bin}" DIRECTORY)
+    add_library(neko_mpv INTERFACE)
+    target_include_directories(neko_mpv INTERFACE "${NEKOPLAYER_DEPENDENCY_PREFIX}/include")
+    target_link_directories(neko_mpv INTERFACE "${NEKOPLAYER_DEPENDENCY_PREFIX}/lib")
+    target_link_libraries(neko_mpv INTERFACE mpv)
+    add_library(neko_ffmpeg INTERFACE)
+    target_include_directories(neko_ffmpeg INTERFACE "${NEKOPLAYER_DEPENDENCY_PREFIX}/include")
+    target_link_directories(neko_ffmpeg INTERFACE "${NEKOPLAYER_DEPENDENCY_PREFIX}/lib")
+    target_link_libraries(neko_ffmpeg INTERFACE avformat avcodec avutil swscale)
+else()
+    pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
+    pkg_check_modules(AVFORMAT REQUIRED IMPORTED_TARGET libavformat)
+    pkg_check_modules(AVCODEC REQUIRED IMPORTED_TARGET libavcodec)
+    pkg_check_modules(AVUTIL REQUIRED IMPORTED_TARGET libavutil)
+    pkg_check_modules(SWSCALE REQUIRED IMPORTED_TARGET libswscale)
+    add_library(neko_mpv INTERFACE)
+    target_link_libraries(neko_mpv INTERFACE PkgConfig::MPV)
+    add_library(neko_ffmpeg INTERFACE)
+    target_link_libraries(neko_ffmpeg INTERFACE
+        PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
+endif()
 
 option(NEKOPLAYER_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 
@@ -68,7 +84,7 @@ add_library(neko_playback src/playback/mpv/mpvcontroller.cpp src/playback/mpv/mp
     src/playback/playlist/playlistmodel.cpp src/playback/playlist/shuffleorder.cpp
     src/playback/playlist/naturalcompare.cpp)
 target_include_directories(neko_playback PUBLIC src)
-target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core PkgConfig::MPV)
+target_link_libraries(neko_playback PUBLIC neko_options Qt6::Core neko_mpv)
 
 add_library(neko_input src/input/localfiledrop.cpp src/input/mediafolderscan.cpp
     src/input/folderscanjob.cpp src/input/mediafiletypes.cpp)
@@ -84,7 +100,7 @@ target_link_libraries(neko_session PUBLIC neko_playback neko_input Qt6::Concurre
 add_library(neko_preview src/preview/ffmpegthumbnaildecoder.cpp src/preview/thumbnailservice.cpp)
 target_include_directories(neko_preview PUBLIC src)
 target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Concurrent Qt6::Gui
-    PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
+    neko_ffmpeg)
 
 add_library(neko_ui src/playback/render/videowidget.cpp src/desktop/singleinstance.cpp
     src/ui/theme/platformappearance.cpp src/ui/window/mainwindow.cpp src/ui/panels/playlistpane.cpp

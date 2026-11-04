@@ -1,3 +1,6 @@
+#include "playback/mpv/mpvcontroller.h"
+#include "playback/playlist/playlistcontroller.h"
+#include "playback/playlist/playlistmodel.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
 #include "ui/menus/foldermenu.h"
@@ -31,6 +34,7 @@ void MainWindow::restoreSession(const QString &path) {
         statusBar()->showMessage(tr("无法恢复会话：%1").arg(loaded.error));
         return;
     }
+    sessionReady_ = true;
     folderMenu_->setMediaLibraryPreferences(loaded.state.mediaLibrary);
     updateSeekActionLabels(loaded.state.seekStepSeconds);
     applyInteractionPreferences(session_->interactionPreferences());
@@ -52,6 +56,7 @@ void MainWindow::restoreSession(const QString &path) {
         statusBar()->showMessage(loaded.state.resumePosition > 0
                                      ? tr("已恢复播放列表 · 按空格从上次位置继续播放")
                                      : tr("已恢复播放列表 · 按空格开始播放"));
+    setupSessionAutosave();
 }
 
 QString MainWindow::saveSession() {
@@ -85,6 +90,7 @@ int MainWindow::seekStepSeconds() const {
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     folderMenu_->cancel();
+    sessionAutosaveTimer_.stop();
     const auto error = saveSession();
     sessionSaveAttempted_ = true;
     if (!error.isEmpty())
@@ -110,4 +116,39 @@ void MainWindow::choosePlaylistToSave() {
     if (QFileInfo(path).suffix().isEmpty())
         path += QStringLiteral(".m3u8");
     savePlaylist(path);
+}
+
+void MainWindow::setupSessionAutosave() {
+    if (!session_)
+        return;
+    sessionAutosaveTimer_.setSingleShot(true);
+    const int override = qEnvironmentVariableIntValue("NEKOPLAYER_AUTOSAVE_MS");
+    sessionAutosaveTimer_.setInterval(override > 0 ? override : 4000);
+    connect(&sessionAutosaveTimer_, &QTimer::timeout, this, [this] {
+        if (!session_ || !sessionReady_ || sessionSaveAttempted_)
+            return;
+        const auto error = saveSession();
+        if (!error.isEmpty())
+            statusBar()->showMessage(error, 5000);
+    });
+    connect(controller_.get(), &MpvController::stateChanged, this,
+            &MainWindow::scheduleSessionAutosave);
+    connect(playlist_.get(), &PlaylistController::currentChanged, this,
+            &MainWindow::scheduleSessionAutosave);
+    connect(playlist_.get(), &PlaylistController::navigationChanged, this,
+            &MainWindow::scheduleSessionAutosave);
+    connect(playlist_->model(), &PlaylistModel::rowsInserted, this,
+            &MainWindow::scheduleSessionAutosave);
+    connect(playlist_->model(), &PlaylistModel::rowsRemoved, this,
+            &MainWindow::scheduleSessionAutosave);
+    connect(playlist_->model(), &PlaylistModel::rowsMoved, this,
+            &MainWindow::scheduleSessionAutosave);
+    connect(playlist_->model(), &PlaylistModel::modelReset, this,
+            &MainWindow::scheduleSessionAutosave);
+}
+
+void MainWindow::scheduleSessionAutosave() {
+    if (session_ && sessionReady_ && !sessionSaveAttempted_ &&
+        !sessionAutosaveTimer_.isActive())
+        sessionAutosaveTimer_.start();
 }

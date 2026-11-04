@@ -80,9 +80,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     connect(fileDrop_, &LocalFileDrop::mediaFilesDropped, this, &MainWindow::appendFiles);
     connect(fileDrop_, &LocalFileDrop::errorOccurred, this, &MainWindow::showError);
     createActions();
-    new QuickActionsDialog(this, this);
-    if (auto *quickActions = findChild<QAction *>(QStringLiteral("quickActionsAction")))
-        helpMenu_->addAction(quickActions);
+    setupDesktopIntegration();
     connect(folderMenu_, &FolderMenu::mediaLibraryPreferencesChanged, this,
             [this](bool scanningEnabled, bool recursiveByDefault) {
                 if (session_)
@@ -313,6 +311,7 @@ MainWindow::~MainWindow() {
         qApp->setProperty("shortcutSettings", QVariant{});
     folderMenu_->cancel();
     controlsTimer_.stop();
+    sessionAutosaveTimer_.stop();
     if (!sessionSaveAttempted_) {
         if (const auto error = saveSession(); !error.isEmpty())
             qWarning().noquote() << error;
@@ -441,8 +440,11 @@ void MainWindow::chooseFile() {
 void MainWindow::chooseNetworkUrl() {
     folderMenu_->cancel();
     NetworkOpenDialog dialog(this);
-    if (dialog.exec() == QDialog::Accepted)
+    dialog.setNetworkOptions(controller_->networkOptions());
+    if (dialog.exec() == QDialog::Accepted) {
+        controller_->setNetworkOptions(dialog.networkOptions());
         openFile(dialog.mediaUrl());
+    }
 }
 
 void MainWindow::chooseFilesToAppend() {
@@ -480,6 +482,7 @@ void MainWindow::updateState() {
                                                : AppearanceIcons::Symbol::Volume);
     previousAction_->setEnabled(video_->isReady() && playlist_->hasPrevious());
     nextAction_->setEnabled(video_->isReady() && playlist_->hasNext());
+    updateDesktopState();
     clearPlaylistAction_->setEnabled(playlist_->model()->rowCount() > 0 ||
                                      !pendingPaths_.isEmpty());
     transport_->present(state);

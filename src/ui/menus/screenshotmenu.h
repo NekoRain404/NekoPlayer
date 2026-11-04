@@ -18,11 +18,14 @@ class ScreenshotMenu final : public QObject {
 
   private:
     void chooseDestination(bool includeSubtitles);
+    void copyToClipboard();
     void updateActions();
     MpvController &controller_;
     QWidget *window_;
     QMenu *menu_;
     QAction *withSubtitles_;
     QAction *withoutSubtitles_;
+    QAction *copyToClipboard_;
     QString directory_;
+    QString clipboardPath_;
 };

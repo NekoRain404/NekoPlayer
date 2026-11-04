@@ -8,7 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools DBus)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 pkg_check_modules(AVFORMAT REQUIRED IMPORTED_TARGET libavformat)
@@ -48,7 +48,8 @@ add_library(neko_playback src/playback/mpv/mpvcontroller.cpp src/playback/mpv/mp
     src/playback/mpv/mpvcontroller_framing.cpp
     src/playback/mpv/mpvcontroller_screenshot.cpp
     src/playback/mpv/mpvcontroller_subtitles.cpp src/playback/mpv/subtitlepreferences.cpp
-    src/playback/mpv/mpvcontroller_video_color.cpp src/playback/media/videocoloradjustment.cpp
+    src/playback/mpv/mpvcontroller_video_color.cpp
+    src/playback/mpv/mpvcontroller_network.cpp src/playback/media/videocoloradjustment.cpp
     src/playback/mpv/mpvcontroller_hdr.cpp
     src/playback/mpv/mpvcontroller_deinterlace.cpp
     src/playback/mpv/mpvchapters.cpp src/playback/media/playbacktime.cpp src/playback/media/mediasource.cpp
@@ -74,14 +75,14 @@ target_include_directories(neko_preview PUBLIC src)
 target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Concurrent Qt6::Gui
     PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
 
-add_library(neko_ui src/playback/render/videowidget.cpp src/ui/window/mainwindow.cpp src/ui/panels/playlistpane.cpp
+add_library(neko_ui src/playback/render/videowidget.cpp src/desktop/mprisplayer.cpp src/ui/window/mainwindow.cpp src/ui/panels/playlistpane.cpp
     src/ui/theme/appearanceicons.cpp src/ui/theme/appicon.cpp
     src/ui/panels/playlistitemdelegate.cpp
     src/ui/panels/welcomepanel.cpp
     src/playlist/m3u8store.cpp
     src/ui/dialogs/mediainformationtext.cpp src/ui/dialogs/mediainformationdialog.cpp
     src/ui/panels/playbackoverlay.cpp src/ui/panels/playbackoverlaytext.cpp
-    src/ui/window/windowactions.cpp src/ui/window/windowicons.cpp src/ui/window/shortcutoverride.cpp
+    src/ui/window/windowactions.cpp src/ui/window/windowdesktop.cpp src/ui/window/windowicons.cpp src/ui/window/shortcutoverride.cpp
     src/ui/menus/appearancemenu.cpp src/ui/window/windowsession.cpp
     src/ui/panels/transportbar.cpp src/ui/menus/foldermenu.cpp
     src/ui/window/windowopacitytransition.cpp
@@ -103,7 +104,7 @@ add_library(neko_ui src/playback/render/videowidget.cpp src/ui/window/mainwindow
     src/ui/dialogs/shortcutsdialog.cpp src/ui/dialogs/quickactionsdialog.cpp src/ui/window/windowtitle.cpp
     src/ui/dialogs/librarydialog.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
-    Qt6::OpenGLWidgets)
+    Qt6::OpenGLWidgets Qt6::DBus)
 qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
     FILES data/checkmark.png data/chevron.png data/chevron-up.png data/chevron-down.png)
 

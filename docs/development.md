@@ -3,7 +3,7 @@
 ## 环境与依赖
 
 - CMake 3.25+、Ninja、支持 C++20 的 GCC/Clang。
-- Qt 6.5+：Core、Concurrent、Widgets、OpenGLWidgets、Network（测试）、LinguistTools。
+- Qt 6.5+：Core、Concurrent、Widgets、OpenGLWidgets、DBus（MPRIS）、Network（测试）、LinguistTools。
 - libmpv 开发库、FFmpeg 开发库（libavformat/libavcodec/libavutil/libswscale）、pkg-config。
 - 测试额外需要 Qt Test、Qt Network（仅本地 HTTP 测试服务）与本地 `ffmpeg` 可执行文件（生成测试媒体）。缩略图预览直接使用 FFmpeg 解码，因此即使 `-DBUILD_TESTING=OFF` 仍需要 FFmpeg 开发包。
 - 原生 Wayland 测试需要 Qt Wayland 平台插件和可用的 Wayland 会话；Xvfb、xvfb-run、Openbox 仅用于显式 X11 回归。
@@ -48,8 +48,9 @@ src/
   preview/      FFmpeg 缩略图解码与请求合并
   playlist/     M3U8 读写（含 #EXTINF 元数据）
   library/      媒体库文件夹/条目持久化与扫描协调
+  desktop/     MPRIS/D-Bus 桌面媒体集成
   ui/
-    window/     主窗口、全屏/小窗、窗口动作、标题与图标
+    window/     主窗口、全屏/小窗、窗口动作、桌面集成、标题与图标
     dialogs/    偏好设置、媒体库、快捷键、字幕样式、媒体信息
     menus/      共享 QAction 菜单（文件/播放/视频/字幕/音轨）
     panels/     播放区、播放列表、控制条、缩略图预览

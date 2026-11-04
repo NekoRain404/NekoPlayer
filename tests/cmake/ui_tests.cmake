@@ -191,3 +191,17 @@ target_link_libraries(library_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME library-dialog COMMAND library_dialog_test)
 set_tests_properties(library-dialog PROPERTIES TIMEOUT 30
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(screenshot_menu_test ui/screenshot_menu_test.cpp)
+target_link_libraries(screenshot_menu_test PRIVATE neko_ui Qt6::Test)
+target_compile_definitions(screenshot_menu_test PRIVATE TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(screenshot_menu_test test_media)
+add_test(NAME screenshot-menu COMMAND screenshot_menu_test)
+set_tests_properties(screenshot-menu PROPERTIES TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(network_open_dialog_test ui/network_open_dialog_test.cpp)
+target_link_libraries(network_open_dialog_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME network-open-dialog COMMAND network_open_dialog_test)
+set_tests_properties(network-open-dialog PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

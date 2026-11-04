@@ -147,3 +147,7 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 - `src/playlist/m3u8store.*` 与 `src/playback/playlist/playlistmodel.*`：`#EXTINF` 时长/标题随行保存为 `PlaylistEntryMetadata`，跟随插入、移动、排序与删除；标题参与显示名。
 - 音频/视频效果：`MpvController` 生成 `af`/`vf` 链（均衡器预设、锐化/降噪），`TuningMenus`/`VideoMenu` 负责菜单与 `QSettings` 记忆；去隔行仍是独立 mpv 选项。
 - 其他独立组件：`SubtleStyleDialog`（字幕颜色/描边/背景/编码）、`configfile.*`（配置文件权限）、`shortcutoverride.*`（键盘焦点保护）、`windowicons.*`（图标缓存）。
+
+- `src/desktop/mprisplayer.*`：把 `MpvController`/`PlaylistController` 的只读状态翻译为 MPRIS 属性与命令；不直接调用 libmpv，不改变播放层职责。
+- `src/ui/window/windowdesktop.cpp`：托盘、媒体键动作与桌面状态更新；共享既有 `QAction`，不复制播放逻辑。
+- `SessionManager` 的自动快照仍通过 `SessionStore` 原子写入；UI 只调度保存，不直接拼会话格式。

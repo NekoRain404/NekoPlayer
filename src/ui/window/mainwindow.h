@@ -27,6 +27,8 @@ class RecentMediaHistory;
 class FullscreenControls;
 class PreferencesCoordinator;
 class ShortcutSettings;
+class MprisPlayer;
+class QSystemTrayIcon;
 class QVBoxLayout;
 class QSplitter;
 class ThumbnailPreview;
@@ -93,6 +95,12 @@ class MainWindow final : public QMainWindow {
     void applyInteractionPreferences(const InteractionPreferences &preferences);
     void restoreSession(const QString &path);
     QString saveSession();
+    void createDesktopActions();
+    void setupTrayIcon();
+    void setupDesktopIntegration();
+    void setupSessionAutosave();
+    void scheduleSessionAutosave();
+    void updateDesktopState();
     void requestThumbnailPreview(double seconds, QPoint globalPosition);
     void hideThumbnailPreview();
     void showThumbnailPreview(quint64 requestId, const QString &source, double requestedSeconds,
@@ -104,6 +112,7 @@ class MainWindow final : public QMainWindow {
     std::unique_ptr<PlaylistController> playlist_;
     std::unique_ptr<SessionManager> session_;
     std::unique_ptr<RecentMediaHistory> recentMedia_;
+    MprisPlayer *mpris_ = nullptr;
     PreferencesCoordinator *preferencesCoordinator_ = nullptr;
     ShortcutSettings *shortcutSettings_ = nullptr;
     VideoWidget *video_ = nullptr;
@@ -137,13 +146,20 @@ class MainWindow final : public QMainWindow {
     QAction *previousAction_ = nullptr;
     QAction *nextAction_ = nullptr;
     QAction *clearPlaylistAction_ = nullptr;
+    QAction *quitAction_ = nullptr;
     QAction *showPlaylistAction_ = nullptr;
+    QAction *mediaPlayAction_ = nullptr;
+    QAction *mediaPauseAction_ = nullptr;
+    QAction *mediaToggleAction_ = nullptr;
+    QAction *mediaStopAction_ = nullptr;
     QAction *alwaysOnTopAction_ = nullptr;
     QMenu *contextMenu_ = nullptr;
     QMenu *playlistMenu_ = nullptr;
     QMenu *helpMenu_ = nullptr;
     PlaylistMaintenanceMenu *playlistMaintenance_ = nullptr;
     QTimer controlsTimer_;
+    QTimer sessionAutosaveTimer_;
+    QSystemTrayIcon *trayIcon_ = nullptr;
     WindowOpacityTransition *miniPlayerAnimation_ = nullptr;
     QString lastTitlePath_;
     QStringList pendingPaths_;
@@ -160,6 +176,7 @@ class MainWindow final : public QMainWindow {
     bool alwaysOnTop_ = false;
     bool startPaused_ = false;
     bool sessionSaveAttempted_ = false;
+    bool sessionReady_ = false;
     // Session-only fallbacks used when --no-config leaves session_ null.
     bool resumePlaybackPositionDefault_ = true;
     int seekStepSecondsDefault_ = 5;

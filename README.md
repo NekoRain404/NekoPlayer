@@ -28,7 +28,8 @@ NekoPlayer 用原生 Qt Widgets 承载界面、用 libmpv 负责解码与渲染�
 | 📚 | **队列与媒体库** | 拖放、文件夹递归扫描、多选与排序、缺失文件清理、UTF-8 M3U8（保留 `#EXTINF` 标题与时长）、监视文件夹与搜索 |
 | ⌨ | **可编辑快捷键** | F1 实时快捷键参考；选择动作后设置/清除/恢复默认，按作用域校验冲突并持久化 |
 | 🪟 | **桌面手感** | 深色玻璃质感、五种强调色、可调透明度与模糊层次、全屏/小窗、窗口置顶、单实例转发 |
-| 💾 | **会话与恢复** | 队列、当前行、播放位置、音量、窗口状态、最近 100 个文件的续播位置和按媒体轨道记忆；原子写、版本化、损坏文件保留原样 |
+| 🖥 | **桌面集成** | MPRIS/D-Bus 媒体控制、系统托盘、播放/暂停/停止媒体键；截图可直接复制到剪贴板 |
+| 💾 | **会话与恢复** | 队列、当前行、播放位置、音量、窗口状态、最近 100 个文件的续播位置和按媒体轨道记忆；约 4 秒自动快照，异常退出后可恢复；原子写、版本化、损坏文件保留原样 |
 
 ## 界面
 
@@ -44,7 +45,7 @@ NekoPlayer 用原生 Qt Widgets 承载界面、用 libmpv 负责解码与渲染�
 
 ## 快速开始
 
-**依赖**：CMake 3.25+、Ninja、C++20 编译器、Qt 6.5+（Core/Concurrent/Widgets/OpenGLWidgets/LinguistTools）、libmpv 与 FFmpeg 开发库、pkg-config。Arch 用户可使用 `packaging/arch/PKGBUILD`；它已更新到最近发布的 **v0.2.0-rc1** 源码归档与校验和。
+**依赖**：CMake 3.25+、Ninja、C++20 编译器、Qt 6.5+（Core/Concurrent/Widgets/OpenGLWidgets/DBus/LinguistTools）、libmpv 与 FFmpeg 开发库、pkg-config。Arch 用户可使用 `packaging/arch/PKGBUILD`；它已更新到最近发布的 **v0.2.0-rc1** 源码归档与校验和。
 
 ```bash
 cmake --preset debug
@@ -73,7 +74,8 @@ cmake --install build/debug --prefix ~/.local
 | 全屏 / 退出 | F / Esc | 小窗 | Ctrl+Shift+M |
 | 加载字幕 / 音轨 | Ctrl+Shift+S / Ctrl+Shift+A | 显示/隐藏字幕 | V |
 | 偏好设置 | F5 / F6 | 媒体信息 | Ctrl+F1 |
-| 截图 | Ctrl+E / Ctrl+Alt+E | 媒体库 | Ctrl+Shift+L |
+| 截图 | Ctrl+E / Ctrl+Alt+E | 复制截图 | Ctrl+Shift+E |
+| 媒体库 | Ctrl+Shift+L | 播放/暂停/停止媒体键 | 多媒体键 |
 | 快捷键参考 | F1 | 快速操作 | Ctrl+K |
 
 完整快捷键、菜单路径与逐项行为见 [功能参考](docs/features.md#快捷键)。
@@ -110,7 +112,7 @@ flowchart TB
 ## 项目状态与路线图
 
 - **v0.2.0-rc1 pre-release**（[发布页](https://github.com/NekoRain404/NekoPlayer/releases/tag/v0.2.0-rc1)）：媒体库、快捷键编辑、字幕样式、均衡器与视频滤镜、按媒体调优、睡眠定时器、单实例、图片媒体、M3U8 `#EXTINF` 元数据，以及 2026-10-28 审计整改。
-- **验证**：Linux Wayland 桌面上的 89 项 CTest（含窗口集成）全部通过；X11 预设通过 Xvfb + Openbox 回归。测试计数与逐轮证据记录在 [验证记录](docs/verification.md)，不在 README 中固化。
+- **验证**：Linux Wayland 桌面上的完整 CTest 套件（含窗口集成）通过；X11 预设通过 Xvfb + Openbox 回归。测试计数与逐轮证据记录在 [验证记录](docs/verification.md)，不在 README 中固化。
 - **边界**：原生 Wayland HDR 输出、真实 GPU 硬解、多显示器混合缩放、物理音频设备与 Windows 打包仍需实机验收；字幕在线搜索/下载明确推迟。
 
 路线图：
@@ -118,6 +120,7 @@ flowchart TB
 - [x] Linux 可播放版本与 Arch 打包（v0.1.0）
 - [x] 媒体库、快捷键编辑、字幕样式、音视频效果与审计整改（v0.2.0-rc1）
 - [x] 标签驱动的源码归档、校验和与 Arch 打包跟进
+- [x] MPRIS/托盘/媒体键、自动会话快照、截图剪贴板、网络代理/请求头
 - [ ] 原生 Wayland HDR / 硬件解码 / 多显示器实机验收
 - [ ] 字幕搜索与下载、Windows 构建
 - [ ] 可复现构建与更多架构的发布证据

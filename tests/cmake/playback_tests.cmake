@@ -190,3 +190,8 @@ add_executable(stop_interleaving_test playback/stop_interleaving_test.cpp)
 target_link_libraries(stop_interleaving_test PRIVATE neko_playback Qt6::Test)
 add_test(NAME stop-interleaving COMMAND stop_interleaving_test)
 set_tests_properties(stop-interleaving PROPERTIES TIMEOUT 20)
+
+add_executable(network_options_test playback/network_options_test.cpp)
+target_link_libraries(network_options_test PRIVATE neko_playback Qt6::Test)
+add_test(NAME network-options COMMAND network_options_test)
+set_tests_properties(network-options PROPERTIES TIMEOUT 20)

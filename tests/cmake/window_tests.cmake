@@ -107,3 +107,13 @@ set_tests_properties(startup-options-window PROPERTIES TIMEOUT 30
 # Compile-only coverage for the playlist sort submenu and cleanup action wiring.
 add_executable(playlist_maintenance_window_test window/playlist_maintenance_window_test.cpp)
 target_link_libraries(playlist_maintenance_window_test PRIVATE neko_ui Qt6::Test)
+
+add_executable(session_autosave_window_test window/session_autosave_window_test.cpp)
+target_link_libraries(session_autosave_window_test PRIVATE neko_ui Qt6::Test)
+target_compile_definitions(session_autosave_window_test PRIVATE
+    TEST_MEDIA_PATH="${TEST_MEDIA}")
+add_dependencies(session_autosave_window_test test_media)
+add_test(NAME session-autosave-window COMMAND ${WINDOW_TEST_RUNNER}
+    $<TARGET_FILE:session_autosave_window_test>)
+set_tests_properties(session-autosave-window PROPERTIES TIMEOUT 30
+    ENVIRONMENT "${WINDOW_TEST_ENVIRONMENT}")

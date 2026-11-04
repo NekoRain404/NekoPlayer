@@ -1,3 +1,4 @@
+#include "desktop/mprisplayer.h"
 #include "playback/mpv/mpvcontroller.h"
 #include "playback/playlist/playlistcontroller.h"
 #include "playback/playlist/playlistmodel.h"
@@ -27,6 +28,9 @@
 #include "ui/theme/appearancepreferences.h"
 #include "ui/theme/languagemanager.h"
 #include "ui/window/mainwindow.h"
+
+#include <QApplication>
+#include <QSystemTrayIcon>
 
 #include <QAction>
 #include <QActionGroup>
@@ -146,9 +150,9 @@ void MainWindow::createActions() {
         controller_->setVolume(volume);
         showActionFeedback(ActionFeedbackText::volume(qRound(volume)));
     });
-    auto *quit = make(tr("退出"), "quitAction", QKeySequence::Quit);
-    setAppearanceIcon(quit, AppearanceIcons::Symbol::Close);
-    connect(quit, &QAction::triggered, this, &QWidget::close);
+    quitAction_ = make(tr("退出"), "quitAction", QKeySequence::Quit);
+    setAppearanceIcon(quitAction_, AppearanceIcons::Symbol::Close);
+    connect(quitAction_, &QAction::triggered, this, &QWidget::close);
     auto *information =
         make(tr("媒体信息…"), "mediaInformationAction", QKeySequence(Qt::CTRL | Qt::Key_F1));
     setAppearanceIcon(information, AppearanceIcons::Symbol::Information);
@@ -207,7 +211,7 @@ void MainWindow::createActions() {
     file->addSeparator();
     file->addAction(information);
     file->addSeparator();
-    file->addAction(quit);
+    file->addAction(quitAction_);
     auto *playback = menuBar()->addMenu(tr("播放(&P)"));
     playback->addActions({previousAction_, pauseAction_, nextAction_, stopAction_});
     playback->addSeparator();
@@ -450,6 +454,7 @@ void MainWindow::createActions() {
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QWidget::customContextMenuRequested, this,
             [this](const QPoint &point) { contextMenu_->popup(mapToGlobal(point)); });
+    createDesktopActions();
 }
 
 void MainWindow::updateSeekActionLabels(int seconds) {

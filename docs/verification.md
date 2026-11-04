@@ -1,5 +1,16 @@
 # Verification Record
 
+## 2026-11-04 — desktop integration, autosave and network options
+
+- Debug build with `-j4`: 0 warnings; `ctest --preset debug -j4`: **94/94** passed.
+- MPRIS: registered `org.mpris.MediaPlayer2.NekoPlayer` on the session bus; verified `org.mpris.MediaPlayer2` and `.Player` interfaces, `Identity=NekoPlayer`, `Pause` command and property reads via `gdbus`. Added `mpris` unit coverage for status, metadata, volume/rate, shuffle/loop and stop.
+- Desktop: system tray menu and media-key actions added; tray availability depends on the desktop and is not exercised by offscreen tests.
+- Autosave: `session-autosave-window` verifies the queue and position are written without closing the window; normal close still performs the final save. `--no-config` skips autosave.
+- Screenshot: `screenshot-menu` verifies Ctrl+Shift+E copies the current frame to the clipboard and removes its temporary file.
+- Network: `network-options` verifies proxy/header normalization and mpv property application; `network-open-dialog` verifies URL/advanced-field parsing. Options are session-only and require a D-Bus session for MPRIS only.
+- Translation `lrelease`: **562** finished, 0 unfinished.
+- Boundary: native Wayland HDR/hardware decoding, multi-monitor scaling, real audio devices, tray appearance across compositors and Windows packaging remain manual acceptance items.
+
 ## 2026-10-30 — v0.2.0-rc1 published
 
 - Tag `v0.2.0-rc1` created at `e41af19` and pushed with tagger/committer `NekoRain <yukathleenlxy@gmail.com>`; the release workflow (run `40989255745`) completed successfully.

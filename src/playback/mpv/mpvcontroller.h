@@ -25,6 +25,12 @@ enum class EqualizerPreset { Off, Flat, Rock, Pop, Jazz, Classical, Vocal, BassB
 enum class SharpenLevel { Off, Low, Medium, High };
 enum class DenoiseLevel { Off, Low, Medium, High };
 
+struct NetworkOptions {
+    QString proxy;
+    QStringList headers;
+    QString cookiesFile;
+};
+
 struct PlaybackState {
     bool active = false;
     bool paused = false;
@@ -58,6 +64,8 @@ class MpvController final : public QObject {
     [[nodiscard]] const MediaInformation &mediaInformation() const;
     [[nodiscard]] const QList<MediaTrack> &tracks() const;
     [[nodiscard]] const QList<MediaChapter> &chapters() const;
+    [[nodiscard]] const NetworkOptions &networkOptions() const;
+    void setNetworkOptions(NetworkOptions options);
     [[nodiscard]] const QList<AudioDevice> &audioDevices() const;
     [[nodiscard]] QString selectedAudioDevice() const;
     // Navigation uses the latest accepted request until the backend confirms it.

@@ -157,6 +157,8 @@ struct MpvController::Impl {
     bool stateDirty = false;
     bool hardwareDecodingEnabled = true;
     SubtitlePreferences subtitles;
+    NetworkOptions network;
+    void applyNetworkOptions();
     bool suppressAutoLoadForNextOpen = false;
     VideoPresentation presentation;
     VideoFraming framing;

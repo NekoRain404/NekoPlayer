@@ -11,6 +11,11 @@ include(GNUInstallDirs)
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools Network)
 # Qt DBus (and therefore MPRIS) is not available in every platform build.
 find_package(Qt6 6.5 QUIET COMPONENTS DBus)
+if(WIN32)
+    # MSYS2 .pc files carry Unix-style prefixes (/ucrt64). pkgconf can rewrite
+    # them from the .pc file location so native Windows CMake sees real paths.
+    set(PKG_CONFIG_ARGN --define-prefix)
+endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 pkg_check_modules(AVFORMAT REQUIRED IMPORTED_TARGET libavformat)

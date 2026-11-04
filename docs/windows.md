@@ -1,6 +1,6 @@
 # Windows 兼容方案
 
-> 状态：方案与审计（2026-11-04）。代码尚未包含 Windows 平台实现；本机没有 MinGW/MSVC 工具链，本文的结论来自源码与构建脚本静态审计，需在真实 Windows 环境验证。
+> 状态：第一阶段已落地（2026-11-04）：可选 DBus、跨平台单实例、Windows 资源与预设、窗口外观回退、便携打包脚本与 Windows CI 任务。Windows 构建/运行仍以 CI 与真机验收为准；本机没有 Windows 工具链。
 
 ## 结论
 
@@ -14,11 +14,11 @@ Windows 兼容可行，工作量集中在**构建依赖、桌面集成、窗口�
 
 ## 当前进度（2026-11-04）
 
-- **P0 已落地**：Qt DBus 可选、MPRIS 条件编译、`windows`/`windows-cross` 预设、MinGW 工具链文件、Windows `.rc`/`.ico`/manifest、按平台安装规则、`windows-msys2` CI 与 Windows 便携 zip 发布任务。CI 尚未实际执行。
+- **P0 已落地**：Qt DBus 可选、MPRIS 条件编译、`windows`/`windows-cross` 预设、MinGW 工具链文件、Windows `.rc`/`.ico`/manifest、按平台安装规则、`windows-msys2`（UCRT64）CI 与 Windows 便携 zip 发布任务。CI 首次运行发现 MSYS2 已弃用 MINGW64 且其仓库不再提供 mpv，已切换到 UCRT64；构建结果以最新 CI 为准。
 - **P1 已落地**：单实例改为 `QLocalServer`/`QLocalSocket`，Linux 行为与端点命名保持，`single-instance` 测试通过；桌面媒体控制抽象与 Windows 全局媒体键尚未实现。
 - **P2 第一步已落地**：Windows 顶层窗口改为不透明回退，DWM 暗色标题栏按应用调色板设置（属性 20，回退 19）。Mica/Acrylic、运行时主题切换、对话框透明属性统一仍待完成。
 - **P4 骨架已落地**：`packaging/windows/deploy.sh`、manifest/图标/版本资源、release 工作流 Windows job；安装器、文件关联与代码签名未做。
-- **仍缺**：Windows 真机/CI 构建验证、SMTC 或全局媒体键、双显示器/HiDPI/全屏视觉验收、D3D11/HDR 路径。
+- **仍缺**：Windows 真机运行与视觉验收、SMTC 或全局媒体键、双显示器/HiDPI/全屏验收、D3D11/HDR 路径。
 - Linux 回归：Debug `-j4` 构建无警告，串行全量 **102/102** 通过（见 [verification.md](verification.md)）。
 
 ## 现状审计

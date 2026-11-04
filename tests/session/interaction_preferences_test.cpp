@@ -104,19 +104,39 @@ class InteractionPreferencesTest final : public QObject {
         QVERIFY(player.isReady());
     }
 
-    void headlessControllerAcceptsSessionPreferences() {
+    void headlessControllerAcceptsVolume() {
         MpvController player(true, true);
         QVERIFY(player.isReady());
         player.setVolume(40);
         player.setMuted(false);
+    }
+
+    void headlessControllerAcceptsHardwarePreference() {
+        MpvController player(true, true);
+        QVERIFY(player.isReady());
         player.setHardwareDecodingEnabled(true);
+    }
+
+    void headlessControllerAcceptsSubtitlePreferences() {
+        MpvController player(true, true);
+        QVERIFY(player.isReady());
         SubtitlePreferences subtitles;
         subtitles.visible = false;
         subtitles.scale = 1.25;
         player.setSubtitlePreferences(subtitles);
+    }
+
+    void headlessControllerAcceptsTuning() {
+        MpvController player(true, true);
+        QVERIFY(player.isReady());
         player.setPlaybackSpeed(1.25);
         player.setAudioDelay(0.1);
         player.setSubtitleDelay(0.2);
+    }
+
+    void headlessControllerAcceptsVideoColor() {
+        MpvController player(true, true);
+        QVERIFY(player.isReady());
         player.setVideoColorAdjustment(VideoColorAdjustment{});
     }
 

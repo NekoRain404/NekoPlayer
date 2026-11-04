@@ -1,7 +1,10 @@
 #include "desktop/singleinstance.h"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -126,7 +129,17 @@ class SingleInstance::Private {
             return Probe::Failed;
         }
         socket.flush();
-        if (socket.bytesToWrite() > 0 && !socket.waitForBytesWritten(kWriteTimeoutMs)) {
+        // Pump events until the payload leaves the local buffer. Besides
+        // completing the client write, this lets an owner living in the same
+        // process accept the connection (the single-instance test does that);
+        // a separate process drains the pipe without requiring this loop.
+        QElapsedTimer timer;
+        timer.start();
+        while (socket.bytesToWrite() > 0 && socket.state() == QLocalSocket::ConnectedState &&
+               timer.elapsed() < kWriteTimeoutMs) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        }
+        if (socket.bytesToWrite() > 0) {
             qWarning("single-instance flush failed: %s", qPrintable(socket.errorString()));
             socket.abort();
             return Probe::Failed;

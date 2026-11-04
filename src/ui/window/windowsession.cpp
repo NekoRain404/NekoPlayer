@@ -90,6 +90,7 @@ int MainWindow::seekStepSeconds() const {
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     folderMenu_->cancel();
+    controller_->stopRecording();
     sessionAutosaveTimer_.stop();
     const auto error = saveSession();
     sessionSaveAttempted_ = true;

@@ -12,6 +12,7 @@
 | [development.md](development.md) | 开发环境、构建/测试预设、目录结构、代码约定与发布流程 |
 | [verification.md](verification.md) | 按日期记录的构建、CTest、sanitizer 与真机验证结果 |
 | [packaging.md](packaging.md) | Arch 打包、安装布局与 checksum 流程 |
+| [windows.md](windows.md) | Windows 兼容审计、分阶段方案与验收矩阵 |
 | [references.md](references.md) | 上游参考项目、克隆提交与许可证核查边界 |
 | [skills.md](skills.md) | 本机 Codex / Claude Code 开发 skills 的安装与使用 |
 | [CHANGELOG](../CHANGELOG.md) | 版本变更与预发布说明 |

@@ -25,6 +25,13 @@ bool validEntry(const QString &entry) {
            !entry.contains('\r');
 }
 
+QString playlistSource(const QString &source) {
+    // Many M3U8 readers treat a backslash as an escape. Local absolute paths
+    // are therefore written with forward slashes on every platform; network
+    // URLs and relative entries keep their original spelling.
+    return QDir::isAbsolutePath(source) ? QDir::fromNativeSeparators(source) : source;
+}
+
 bool parseCurrent(const QString &line, int &index) {
     bool ok = false;
     const auto value = line.mid(QString::fromLatin1(CurrentPrefix).size()).toInt(&ok);
@@ -174,7 +181,7 @@ QString M3u8Store::saveEntries(const QString &filePath, const QList<M3u8Entry> &
                                             : QByteArray("-1")) +
                 ',' + title.toUtf8() + '\n';
         }
-        contents += entry.source.toUtf8() + '\n';
+        contents += playlistSource(entry.source).toUtf8() + '\n';
     }
 
     QSaveFile file(filePath);

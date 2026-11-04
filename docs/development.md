@@ -3,7 +3,7 @@
 ## 环境与依赖
 
 - CMake 3.25+、Ninja、支持 C++20 的 GCC/Clang。
-- Qt 6.5+：Core、Concurrent、Widgets、OpenGLWidgets、DBus（MPRIS）、Network（测试）、LinguistTools。
+- Qt 6.5+：Core、Concurrent、Widgets、OpenGLWidgets、Network、LinguistTools；DBus 为可选组件，仅在 Unix 且可用时启用 MPRIS。
 - libmpv 开发库、FFmpeg 开发库（libavformat/libavcodec/libavutil/libswscale）、pkg-config。
 - 测试额外需要 Qt Test、Qt Network（仅本地 HTTP 测试服务）与本地 `ffmpeg` 可执行文件（生成测试媒体）。缩略图预览直接使用 FFmpeg 解码，因此即使 `-DBUILD_TESTING=OFF` 仍需要 FFmpeg 开发包。
 - 原生 Wayland 测试需要 Qt Wayland 平台插件和可用的 Wayland 会话；Xvfb、xvfb-run、Openbox 仅用于显式 X11 回归。
@@ -22,7 +22,7 @@ ctest --preset debug
 
 - CTest 会为每个测试注入 `LC_ALL=C`/`LANG=C`（libmpv 要求 C 数值 locale），无需手动设置。
 - 窗口测试已注册，只在桌面预设中运行：`debug`/`sanitizers` 在原生 Wayland，`*-x11` 通过 Xvfb + Openbox。
-- GitHub Actions 的 `arch-smoke` 运行在 `archlinux:base-devel` 容器中，与打包目标保持一致：完整构建 + 核心 smoke（code-size、后端启动、媒体源/M3U8/库/扫描/缩略图/纯逻辑测试）。托管容器没有 GPU、音频与显示，libmpv 的视频输出相关用例（帧步进、媒体信息刷新）在容器内不稳定，因此完整 89 项套件与窗口集成仍以桌面预设（`debug`/`debug-x11`）为验收门槛。CI 设置 `QT_QPA_PLATFORM=offscreen`、可写 HOME/XDG 目录、字体缓存与 `ctest --timeout 180`，并对同一 ref 的新推送启用并发取消。
+- GitHub Actions 的 `arch-smoke` 运行在 `archlinux:base-devel` 容器中，与打包目标保持一致：完整构建 + 核心 smoke（code-size、后端启动、媒体源/M3U8/库/扫描/缩略图/纯逻辑测试）。托管容器没有 GPU、音频与显示，libmpv 的视频输出相关用例（帧步进、媒体信息刷新）在容器内不稳定，因此完整 102 项套件与窗口集成仍以桌面预设（`debug`/`debug-x11`）为验收门槛。CI 设置 `QT_QPA_PLATFORM=offscreen`、可写 HOME/XDG 目录、字体缓存与 `ctest --timeout 180`，并对同一 ref 的新推送启用并发取消。
 - `always_on_top_window_test`、`playlist_maintenance_window_test` 仅编译、不注册。
 - 生命周期、回调和关闭顺序变更后运行 sanitizer 预设的聚焦测试：
 
@@ -33,6 +33,23 @@ ASAN_OPTIONS=detect_leaks=0 ctest --preset sanitizers -R '<相关测试>'
 ```
 
 `--smoke-test` 只验证初始化与可选文件加载，不能代替真实视频渲染、硬解或 HDR 验收。
+
+Windows（MSYS2 MinGW-w64）：
+
+```bash
+# MSYS2 MINGW64 shell
+pacman -S --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake \
+    mingw-w64-x86_64-ninja mingw-w64-x86_64-pkgconf mingw-w64-x86_64-qt6-base \
+    mingw-w64-x86_64-qt6-tools mingw-w64-x86_64-mpv mingw-w64-x86_64-ffmpeg
+cmake --preset windows
+cmake --build --preset windows -j 4
+ctest --preset windows -R '<确定性 smoke 集合>'
+```
+
+- `windows` 预设使用 Ninja；`windows-cross` 预设通过 `cmake/toolchains/mingw-w64.cmake` 在 Linux 上交叉编译（需要目标 sysroot 中的 Qt/libmpv/FFmpeg）。
+- Windows 不提供 Qt DBus，因此不构建 MPRIS；平台窗口外观、单实例和媒体键走各自的跨平台实现，详见 [windows.md](windows.md)。
+- 窗口测试的后端由 `NEKOPLAYER_WINDOW_TEST_BACKEND` 选择：Linux 默认 `wayland`，Windows 默认 `windows`。托管 CI 只运行确定性 smoke，媒体/窗口套件仍是桌面验收项。
+- 便携包由 `packaging/windows/deploy.sh` 组装（`windeployqt` + libmpv/FFmpeg DLL），发布工作流在 tag 上生成 zip。
 
 ## 目录结构
 

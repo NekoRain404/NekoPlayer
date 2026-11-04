@@ -24,6 +24,7 @@
 #include "ui/panels/transportbar.h"
 #include "ui/panels/welcomepanel.h"
 #include "ui/theme/appearanceicons.h"
+#include "ui/theme/platformappearance.h"
 #include "ui/window/fullscreencontrols.h"
 #include "ui/window/interactionpolicy.h"
 #include "ui/window/windowopacitytransition.h"
@@ -72,7 +73,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     setWindowTitle(QStringLiteral("NekoPlayer"));
     // Keep the toplevel alpha-capable; the QSS switches between transparent
     // glass chrome and the opaque canvas when glass is disabled.
-    setAttribute(Qt::WA_TranslucentBackground, true);
+    PlatformAppearance::enableGlassSurface(*this);
     resize(1100, 680);
     setMinimumSize(560, 360);
     setAcceptDrops(true);
@@ -90,7 +91,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         folderMenu_->start(paths, true, folderMenu_->recursiveEnabled());
     });
     auto *content = new QWidget(this);
-    content->setAttribute(Qt::WA_TranslucentBackground, true);
+    PlatformAppearance::enableGlassSurface(*content);
     auto *layout = new QVBoxLayout(content);
     centralLayout_ = layout;
     layout->setContentsMargins(0, 0, 0, 0);
@@ -98,7 +99,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     video_ = new VideoWidget(*controller_, content);
     // The idle video area shares the window's alpha surface so the whole
     // non-video chrome can show the compositor-blurred backdrop.
-    video_->setAttribute(Qt::WA_TranslucentBackground, true);
+    PlatformAppearance::enableGlassSurface(*video_);
     feedbackOverlay_ = new ActionFeedbackOverlay(video_);
     feedbackOverlay_->setGeometry(video_->rect());
     playbackOverlay_ = new PlaybackOverlay(*controller_, video_);
@@ -153,7 +154,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
         }
     });
     statusBar()->setSizeGripEnabled(false);
-    statusBar()->setAttribute(Qt::WA_TranslucentBackground, true);
+    PlatformAppearance::enableGlassSurface(*statusBar());
     statusBar()->setAttribute(Qt::WA_NoSystemBackground, true);
     statusBar()->setAutoFillBackground(false);
     statusBar()->setObjectName(QStringLiteral("statusBar"));
@@ -290,8 +291,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
             controlsTimer_.start();
     });
     installEventFilter(this);
-    const auto children = findChildren<QWidget *>();
-    for (auto *child : children) {
+    for (auto *child : findChildren<QWidget *>()) {
         child->setMouseTracking(true);
         child->installEventFilter(this);
     }
@@ -304,6 +304,7 @@ MainWindow::MainWindow(bool silentAudio, const QString &sessionPath)
     updateState();
     if (!controller_->isReady())
         showError(controller_->errorString());
+    PlatformAppearance::apply(*this);
 }
 
 MainWindow::~MainWindow() {

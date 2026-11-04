@@ -213,3 +213,9 @@ target_link_libraries(network_open_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME network-open-dialog COMMAND network_open_dialog_test)
 set_tests_properties(network-open-dialog PROPERTIES TIMEOUT 20
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+add_executable(platform_appearance_test ui/platform_appearance_test.cpp)
+target_link_libraries(platform_appearance_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME platform-appearance COMMAND platform_appearance_test)
+set_tests_properties(platform-appearance PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

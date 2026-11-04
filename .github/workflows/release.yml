@@ -38,3 +38,46 @@ jobs:
           esac
           gh release create "$tag" "nekoplayer-${version}.tar.gz" SHA256SUMS \
             --title "NekoPlayer ${version}" --generate-notes "${prerelease[@]}"
+
+  windows-portable:
+    needs: source-archive
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-qt6-base
+            mingw-w64-x86_64-qt6-tools
+            mingw-w64-x86_64-mpv
+            mingw-w64-x86_64-ffmpeg
+      - name: Configure
+        run: cmake --preset windows
+      - name: Build
+        run: cmake --build --preset windows -j 4
+      - name: Assemble portable directory
+        run: bash packaging/windows/deploy.sh build/windows/NekoPlayer.exe build/windows-portable
+      - name: Create zip
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart('v')
+          Compress-Archive -Path build/windows-portable/* -DestinationPath "nekoplayer-$version-windows-x86_64.zip"
+      - name: Upload to release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag.TrimStart('v')
+          gh release upload $tag "nekoplayer-$version-windows-x86_64.zip" --clobber

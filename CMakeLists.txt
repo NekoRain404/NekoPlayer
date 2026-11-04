@@ -8,7 +8,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools DBus)
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Concurrent Widgets OpenGLWidgets LinguistTools Network)
+# Qt DBus (and therefore MPRIS) is not available in every platform build.
+find_package(Qt6 6.5 QUIET COMPONENTS DBus)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 pkg_check_modules(AVFORMAT REQUIRED IMPORTED_TARGET libavformat)
@@ -79,7 +81,8 @@ target_include_directories(neko_preview PUBLIC src)
 target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Concurrent Qt6::Gui
     PkgConfig::AVFORMAT PkgConfig::AVCODEC PkgConfig::AVUTIL PkgConfig::SWSCALE)
 
-add_library(neko_ui src/playback/render/videowidget.cpp src/desktop/mprisplayer.cpp src/ui/window/mainwindow.cpp src/ui/panels/playlistpane.cpp
+add_library(neko_ui src/playback/render/videowidget.cpp src/desktop/singleinstance.cpp
+    src/ui/theme/platformappearance.cpp src/ui/window/mainwindow.cpp src/ui/panels/playlistpane.cpp
     src/ui/theme/appearanceicons.cpp src/ui/theme/appicon.cpp
     src/ui/panels/playlistitemdelegate.cpp
     src/ui/panels/welcomepanel.cpp
@@ -108,25 +111,42 @@ add_library(neko_ui src/playback/render/videowidget.cpp src/desktop/mprisplayer.
     src/ui/dialogs/shortcutsdialog.cpp src/ui/dialogs/quickactionsdialog.cpp src/ui/window/windowtitle.cpp
     src/ui/dialogs/librarydialog.cpp src/ui/dialogs/equalizerdialog.cpp)
 target_link_libraries(neko_ui PUBLIC neko_playback neko_session neko_input neko_preview Qt6::Widgets
-    Qt6::OpenGLWidgets Qt6::DBus)
+    Qt6::OpenGLWidgets Qt6::Network)
+set(NEKOPLAYER_HAS_MPRIS OFF)
+if(UNIX AND Qt6DBus_FOUND)
+    set(NEKOPLAYER_HAS_MPRIS ON)
+    target_sources(neko_ui PRIVATE src/desktop/mprisplayer.cpp)
+    target_link_libraries(neko_ui PUBLIC Qt6::DBus)
+    target_compile_definitions(neko_ui PUBLIC NEKOPLAYER_HAS_MPRIS)
+endif()
 qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
     FILES data/checkmark.png data/chevron.png data/chevron-up.png data/chevron-down.png)
 
 add_executable(NekoPlayer src/main.cpp src/playback/mpv/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)
+if(WIN32)
+    configure_file(packaging/windows/nekoplayer.rc.in
+        "${CMAKE_CURRENT_BINARY_DIR}/nekoplayer.rc" @ONLY)
+    target_sources(NekoPlayer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/nekoplayer.rc")
+    target_link_libraries(neko_ui PUBLIC dwmapi)
+endif()
 target_compile_definitions(NekoPlayer PRIVATE NEKOPLAYER_VERSION="${PROJECT_VERSION}")
 qt_add_translations(NekoPlayer TS_FILES translations/NekoPlayer_en.ts
     RESOURCE_PREFIX "/i18n")
 
 install(TARGETS NekoPlayer RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES data/nekoplayer.desktop
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-install(FILES data/nekoplayer.svg
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
-install(FILES data/nekoplayer.metainfo.xml
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
-install(FILES LICENSE
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/nekoplayer)
+if(UNIX)
+    install(FILES data/nekoplayer.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+    install(FILES data/nekoplayer.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+    install(FILES data/nekoplayer.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+    install(FILES LICENSE
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/nekoplayer)
+elseif(WIN32)
+    install(FILES LICENSE README.md DESTINATION .)
+endif()
 
 include(CTest)
 if(BUILD_TESTING)

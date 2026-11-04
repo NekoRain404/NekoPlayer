@@ -12,6 +12,15 @@ Windows 兼容可行，工作量集中在**构建依赖、桌面集成、窗口�
 2. **第二目标（可选）：MSVC + vcpkg**。需要补 `Findmpv`/`FindFFmpeg` 或不依赖 pkg-config 的查找逻辑；建议等 MinGW 版本稳定后再做。
 3. **发布形态先做便携 zip**（exe + Qt/libmpv/FFmpeg DLL），稳定后再加 Inno Setup 安装器、文件关联与代码签名。
 
+## 当前进度（2026-11-04）
+
+- **P0 已落地**：Qt DBus 可选、MPRIS 条件编译、`windows`/`windows-cross` 预设、MinGW 工具链文件、Windows `.rc`/`.ico`/manifest、按平台安装规则、`windows-msys2` CI 与 Windows 便携 zip 发布任务。CI 尚未实际执行。
+- **P1 已落地**：单实例改为 `QLocalServer`/`QLocalSocket`，Linux 行为与端点命名保持，`single-instance` 测试通过；桌面媒体控制抽象与 Windows 全局媒体键尚未实现。
+- **P2 第一步已落地**：Windows 顶层窗口改为不透明回退，DWM 暗色标题栏按应用调色板设置（属性 20，回退 19）。Mica/Acrylic、运行时主题切换、对话框透明属性统一仍待完成。
+- **P4 骨架已落地**：`packaging/windows/deploy.sh`、manifest/图标/版本资源、release 工作流 Windows job；安装器、文件关联与代码签名未做。
+- **仍缺**：Windows 真机/CI 构建验证、SMTC 或全局媒体键、双显示器/HiDPI/全屏视觉验收、D3D11/HDR 路径。
+- Linux 回归：Debug `-j4` 构建无警告，串行全量 **102/102** 通过（见 [verification.md](verification.md)）。
+
 ## 现状审计
 
 | 区域 | 现状 | Windows 影响 | 处理 |
@@ -132,11 +141,10 @@ endif()
 - **签名与安装器**：首版便携 zip 不涉及安装器/签名，但 SmartScreen 提示会存在。
 - **无法在本机验证**：本机无 MinGW/MSVC；所有 Windows 结论必须由 CI + 真机验收补证。
 
-## 建议的第一步 PR
+## 下一步
 
-1. CMake 组件可选化 + 平台条件编译 + 安装规则条件化 + `windows` preset；
-2. `window_tests` 与 `mpris_test` 的平台条件；
-3. `windows-msys2` CI job（先只构建与确定性 smoke）；
-4. 单实例迁移到 `QLocalServer`（Linux 回归验证，Windows 由 CI 验证）。
-
-完成后再进入窗口外观与打包，避免在不可编译的状态下叠加改动。
+1. 推送后观察 `windows-msys2` 首次构建，修正 MSYS2 依赖名称、`mpv.pc`/FFmpeg 查找与 Qt 模块差异；
+2. 真机验收暗色标题栏、不透明窗口阴影/圆角与 QSS 面板；
+3. 实现 Windows 全局媒体键（`RegisterHotKey`）与可选 SMTC；
+4. 统一对话框的透明属性策略，评估 Win11 Mica/Acrylic 与运行时主题更新；
+5. 补齐安装器/文件关联/签名与便携包验收。

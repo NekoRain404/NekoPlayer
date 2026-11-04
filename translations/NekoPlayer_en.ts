@@ -480,62 +480,62 @@ Click “Refresh” to scan the added folders.</translation>
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="367"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="525"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="366"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="524"/>
         <source>外观设置…</source>
         <translation>Appearance Settings…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="361"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="524"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="360"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="523"/>
         <source>媒体库设置…</source>
         <translation>Media Library Settings…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="372"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="526"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="371"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="525"/>
         <source>交互设置…</source>
         <translation>Interaction Settings…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="734"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="268"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="508"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="735"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="267"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="507"/>
         <source>窗口置顶</source>
         <translation>Always on Top</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="160"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="161"/>
         <source>就绪 · Qt 6 + libmpv</source>
         <translation>Ready · Qt 6 + libmpv</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="174"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="175"/>
         <source>正在播放 · %1</source>
         <translation>Playing · %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="183"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="184"/>
         <source>已暂停 · %1</source>
         <translation>Paused · %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="191"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="192"/>
         <source>播放列表已结束</source>
         <translation>Playlist finished</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="344"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="345"/>
         <source>媒体地址无效；网络地址需要包含受支持的协议与主机名</source>
         <translation>Invalid media address; network addresses must include a supported protocol and host name</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="349"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="350"/>
         <source>OpenGL 初始化失败，无法打开媒体文件</source>
         <translation>OpenGL initialization failed; cannot open media</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="362"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="363"/>
         <source>媒体地址无效；未添加到播放列表</source>
         <translation>Invalid media address; it was not added to the playlist</translation>
     </message>
@@ -558,260 +558,260 @@ Click “Refresh” to scan the added folders.</translation>
         <translation type="vanished">M3U8 Playlists (*.m3u8)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="384"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="385"/>
         <source>OpenGL 初始化失败，无法打开播放列表</source>
         <translation>OpenGL initialization failed; cannot open playlist</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="406"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="407"/>
         <source>已导入含网络地址的播放列表；确认后按空格开始播放</source>
         <translation>Imported a playlist containing network entries; press Space to start playback</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="428"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="429"/>
         <source>播放列表已保存</source>
         <translation>Playlist saved</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="434"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="435"/>
         <source>打开媒体文件</source>
         <translation>Open Media</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="435"/>
-        <location filename="../src/ui/window/mainwindow.cpp" line="454"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="436"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="455"/>
         <source>媒体文件 (%1);;所有文件 (*)</source>
         <translation>Media Files (%1);;All Files (*)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="717"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="507"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="718"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="506"/>
         <source>退出小窗</source>
         <translation>Exit Mini Player</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="717"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="263"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="507"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="718"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="262"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="506"/>
         <source>小窗播放</source>
         <translation>Mini Player</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="453"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="454"/>
         <source>添加媒体文件</source>
         <translation>Add Media Files</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="460"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="461"/>
         <source>OpenGL 初始化失败，无法打开文件夹</source>
         <translation>OpenGL initialization failed; cannot open folder</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="475"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="498"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="476"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="497"/>
         <source>播放</source>
         <translation>Play</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="475"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="85"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="88"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="498"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="476"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="84"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="87"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="497"/>
         <source>暂停</source>
         <translation>Pause</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="60"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="492"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="59"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="491"/>
         <source>打开文件…</source>
         <translation>Open File…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="64"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="493"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="63"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="492"/>
         <source>打开网络地址…</source>
         <translation>Open Network URL…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="67"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="494"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="66"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="493"/>
         <source>打开播放列表…</source>
         <translation>Open Playlist…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="70"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="495"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="69"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="494"/>
         <source>保存播放列表…</source>
         <translation>Save Playlist…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="74"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="496"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="73"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="495"/>
         <source>添加文件…</source>
         <translation>Add Files…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="90"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="499"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="89"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="498"/>
         <source>停止</source>
         <translation>Stop</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="93"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="92"/>
         <source>已停止</source>
         <translation>Stopped</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="94"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="99"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="500"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="93"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="98"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="499"/>
         <source>上一个</source>
         <translation>Previous</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="100"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="103"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="501"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="99"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="102"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="500"/>
         <source>下一个</source>
         <translation>Next</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="104"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="502"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="103"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="501"/>
         <source>清空播放列表</source>
         <translation>Clear Playlist</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="107"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="505"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="106"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="504"/>
         <source>静音</source>
         <translation>Mute</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="650"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="112"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="506"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="651"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="111"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="505"/>
         <source>全屏</source>
         <translation>Fullscreen</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="650"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="117"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="506"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="651"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="116"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="505"/>
         <source>退出全屏</source>
         <translation>Exit Fullscreen</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="123"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="122"/>
         <source>后退 5 秒</source>
         <translation>Seek Back 5 Seconds</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="124"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="123"/>
         <source>前进 5 秒</source>
         <translation>Seek Forward 5 Seconds</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="465"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="464"/>
         <source>后退 %1 秒</source>
         <translation>Back %1 s</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="465"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="464"/>
         <source>前进 %1 秒</source>
         <translation>Forward %1 s</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="137"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="136"/>
         <source>增加音量</source>
         <translation>Volume Up</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="138"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="137"/>
         <source>降低音量</source>
         <translation>Volume Down</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="153"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="152"/>
         <source>退出</source>
         <translation>Quit</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="157"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="156"/>
         <source>媒体信息…</source>
         <translation>Media Information…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="201"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="510"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="200"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="509"/>
         <source>文件(&amp;F)</source>
         <translation>&amp;File</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="215"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="510"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="214"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="509"/>
         <source>播放(&amp;P)</source>
         <translation>&amp;Playback</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="228"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="510"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="227"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="509"/>
         <source>声音(&amp;A)</source>
         <translation>&amp;Audio</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="250"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="511"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="249"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="510"/>
         <source>播放列表(&amp;L)</source>
         <translation>Play&amp;list</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="260"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="512"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="259"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="511"/>
         <source>视图(&amp;V)</source>
         <translation>&amp;View</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="272"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="271"/>
         <source>显示当前播放信息</source>
         <translation>Show Playback Information</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="283"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="282"/>
         <source>显示播放列表</source>
         <translation>Show Playlist</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="292"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="512"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="291"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="511"/>
         <source>设置(&amp;S)</source>
         <translation>&amp;Settings</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="426"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="512"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="425"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="511"/>
         <source>帮助(&amp;H)</source>
         <translation>&amp;Help</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="511"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="510"/>
         <source>字幕(&amp;U)</source>
         <translation>&amp;Subtitles</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="511"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="510"/>
         <source>视频(&amp;I)</source>
         <translation>&amp;Video</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="412"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="528"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="411"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="527"/>
         <source>快捷键…</source>
         <translation>Keyboard Shortcuts…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="356"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="523"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="355"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="522"/>
         <source>播放设置…</source>
         <translation>Playback Settings…</translation>
     </message>
@@ -846,62 +846,62 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>M3U8 (*.m3u8 *.m3u);;PLS (*.pls);;XSPF (*.xspf)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="379"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="516"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="378"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="515"/>
         <source>主题</source>
         <translation>Theme</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="382"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="518"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="381"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="517"/>
         <source>语言</source>
         <translation>Language</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="392"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="522"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="391"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="521"/>
         <source>简体中文</source>
         <translation>简体中文</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="419"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="527"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="418"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="526"/>
         <source>关于 NekoPlayer…</source>
         <translation>About NekoPlayer…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="498"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="499"/>
         <source>无法播放：%1</source>
         <translation>Could not play: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowactions.cpp" line="78"/>
-        <location filename="../src/ui/window/windowactions.cpp" line="497"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="77"/>
+        <location filename="../src/ui/window/windowactions.cpp" line="496"/>
         <source>媒体库…</source>
         <translation>Media Library…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="26"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="29"/>
         <source>播放（媒体键）</source>
         <translation>Play (media key)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="28"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="31"/>
         <source>暂停（媒体键）</source>
         <translation>Pause (media key)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="29"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="32"/>
         <source>播放/暂停（媒体键）</source>
         <translation>Play/Pause (media key)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="32"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="35"/>
         <source>停止（媒体键）</source>
         <translation>Stop (media key)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="72"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="77"/>
         <source>显示/隐藏窗口</source>
         <translation>Show/Hide window</translation>
     </message>
@@ -1694,8 +1694,22 @@ Open a file or folder, or drop media here</translation>
     </message>
     <message>
         <location filename="../src/ui/dialogs/preferencesappearancepage.cpp" line="73"/>
+        <source>窗口外框的背景模糊由 Windows 桌面窗口管理器（DWM）根据系统版本与桌面设置提供。</source>
+        <translation>The window frame's background blur is provided by the Windows Desktop Window Manager (DWM) according to the OS version and desktop settings.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/dialogs/preferencesappearancepage.cpp" line="76"/>
+        <source>窗口外框的背景模糊由支持该能力的 Wayland 合成器提供。</source>
+        <translation>The window frame's background blur is provided by a Wayland compositor that supports it.</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/dialogs/preferencesappearancepage.cpp" line="79"/>
+        <source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不透明度控制面板半透明程度，模糊程度调节面板渐变的柔化层次。</source>
+        <translation>Changes preview immediately and are saved when applied. The glass effect applies only to interface panels and does not blur video; opacity controls panel translucency, and blur softens the panel gradient.</translation>
+    </message>
+    <message>
         <source>更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；不透明度控制面板半透明程度，模糊程度调节面板渐变的柔化层次。窗口外框的背景模糊由支持该能力的 Wayland 合成器提供。</source>
-        <translation>Changes preview immediately and are saved when applied. Glass affects interface panels only, never video; opacity controls panel translucency, while blur softens the panel gradient layers. Background blur behind the window chrome is provided by a Wayland compositor that supports it.</translation>
+        <translation type="vanished">Changes preview immediately and are saved when applied. Glass affects interface panels only, never video; opacity controls panel translucency, while blur softens the panel gradient layers. Background blur behind the window chrome is provided by a Wayland compositor that supports it.</translation>
     </message>
 </context>
 <context>

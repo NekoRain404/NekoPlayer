@@ -1,5 +1,15 @@
 # Verification Record
 
+## 2026-11-04 — Windows compatibility groundwork
+
+- Build: `cmake --build --preset debug -j4` succeeded with 0 warnings; full serial `ctest --preset debug` passed **102/102** in **129.28 s** (new `single-instance`, `platform-appearance`; `mpris` restored after making DBus optional).
+- Build system: Qt DBus is now a `QUIET` optional component; MPRIS sources are compiled only on Unix when the module exists, with a `NEKOPLAYER_HAS_MPRIS` CMake variable guarding test registration. Added `windows`/`windows-cross` presets, MinGW toolchain file, Windows `.rc`/icon/manifest, platform-conditional install rules, and a `windows-msys2` CI job plus a tagged Windows portable-zip release job. None of the Windows jobs has run yet.
+- Single instance: the Unix socket/poll implementation was replaced by `QLocalServer`/`QLocalSocket`; the endpoint stays a per-user SHA-256 name derived from `AppConfigLocation`, payloads are capped at 1 MiB, malformed payloads are dropped, and stale endpoints are removed before listening. `single-instance` covers ownership, exact argument forwarding (spaces/Unicode/empty), malformed/oversized payloads, and endpoint release; it also passed 5 repeated runs.
+- Window appearance: Windows now keeps the top-level opaque (QSS base colours, native frame) while other platforms keep `WA_TranslucentBackground`; the DWM dark title bar is applied from the application palette with attribute 20 and the legacy 19 fallback. `platform-appearance` covers apply-before/after-show, repeated application, palette variants and translucency preservation off Windows. Linux visual behaviour is unchanged by the existing window suite.
+- Paths: Windows file URLs with a host become `//host/share/...` UNC paths; M3U8/PLS/XSPF saves use forward slashes for local absolute paths. Windows-only cases were syntax-checked and exercised through a forced-guard copy on Linux, but not run on Windows.
+- Translation `lupdate`/`lrelease`: **584** finished, 0 unfinished; four obsolete entries remain vanished.
+- Boundary: no Windows runtime verification yet — the new CI job is the next gate. MPRIS has no Windows counterpart yet (SMTC/global media keys are not implemented), Mica/Acrylic and live dark-title updates are deferred, dialogs still request translucency directly, and window/media suites remain desktop acceptance items.
+
 ## 2026-11-04 — secondary subtitles
 
 - Debug build with `-j4`: 0 warnings; full serial `ctest --preset debug`: **100/100** passed in 118.12 s.

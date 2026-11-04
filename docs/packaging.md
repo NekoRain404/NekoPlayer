@@ -119,3 +119,15 @@ The package proves installation and linkage through pacman. Native Wayland
 visual/keyboard/pointer acceptance, HDR output, GPU hardware decoding, physical
 audio devices, mixed-scale multi-monitor behavior, and Windows remain separate
 acceptance items; see `docs/verification.md`.
+
+## Windows（便携包）
+
+Windows 构建使用 MSYS2 MinGW-w64（`windows` 预设）或 Linux 交叉工具链（`windows-cross` 预设）。发布工作流在 tag 上执行：
+
+1. `cmake --preset windows && cmake --build --preset windows -j 4`；
+2. `packaging/windows/deploy.sh build/windows/NekoPlayer.exe build/windows-portable` 复制 `NekoPlayer.exe`、`windeployqt` 收集的 Qt/平台插件/MinGW 运行库，以及 `ldd` 解析出的 libmpv/FFmpeg DLL；
+3. 生成 `nekoplayer-<version>-windows-x86_64.zip` 并附加到同一 GitHub Release。
+
+包内包含 `LICENSE` 与 `README.txt`。MSYS2 的 mpv/FFmpeg 构建通常启用 GPL 组件，分发 DLL 时需要提供对应源码获取方式；NekoPlayer 自身仍为 GPL-3.0-only。首版不包含安装器、文件关联和代码签名，SmartScreen 可能提示未知发布者。
+
+Windows 专属资源位于 `packaging/windows/`：`nekoplayer.ico`、`nekoplayer.manifest`（PerMonitorV2、长路径、Windows 10/11 兼容）与 `nekoplayer.rc.in`（图标、manifest、版本信息，构建时由 CMake 生成）。

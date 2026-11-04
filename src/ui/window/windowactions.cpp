@@ -1,4 +1,3 @@
-#include "desktop/mprisplayer.h"
 #include "playback/mpv/mpvcontroller.h"
 #include "playback/playlist/playlistcontroller.h"
 #include "playback/playlist/playlistmodel.h"

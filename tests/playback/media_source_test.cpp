@@ -1,6 +1,7 @@
 #include "playback/media/mediasource.h"
 #include "playback/playlist/playlistmodel.h"
 
+#include <QDir>
 #include <QtTest>
 
 class MediaSourceTest final : public QObject {
@@ -47,11 +48,34 @@ class MediaSourceTest final : public QObject {
                  QStringLiteral("https://example.org/a/../b?x=/../"));
         QVERIFY(MediaSource::normalize(QStringLiteral("http:missing-host")).isEmpty());
         QVERIFY(MediaSource::normalize(QStringLiteral("file:///tmp/video?x=1")).isEmpty());
+#ifndef Q_OS_WIN
+        // Only Windows reinterprets a host as a UNC share; elsewhere it stays
+        // ambiguous and is rejected.
         QVERIFY(MediaSource::normalize(QStringLiteral("file://localhost/tmp/video.mkv")).isEmpty());
         QVERIFY(MediaSource::normalize(QStringLiteral("file://server/share/video.mkv")).isEmpty());
+#endif
         QVERIFY(MediaSource::normalize(QStringLiteral("file:///tmp/%00movie.mkv")).isEmpty());
         QVERIFY(MediaSource::normalize(QStringLiteral("a") + QChar::Null).isEmpty());
     }
+
+#ifdef Q_OS_WIN
+    void fileUrlsWithHostsBecomeUncPaths() {
+        const auto unc =
+            MediaSource::normalize(QStringLiteral("file://server/share/folder/../movie.mkv"));
+        QVERIFY(!unc.isEmpty());
+        QVERIFY(unc.startsWith(QLatin1String("//")));
+        QVERIFY(QDir::isAbsolutePath(unc));
+        QCOMPARE(unc, QStringLiteral("//server/share/movie.mkv"));
+        QCOMPARE(MediaSource::normalize(QStringLiteral("file://server/share/%E7%8C%AB%20clip.mkv")),
+                 QStringLiteral("//server/share/猫 clip.mkv"));
+        QVERIFY(MediaSource::normalize(QStringLiteral("file://server")).isEmpty());
+        QVERIFY(MediaSource::normalize(QStringLiteral("file://server/")).isEmpty());
+        QVERIFY(MediaSource::normalize(QStringLiteral("file://server/share/a.mkv?x=1")).isEmpty());
+        QVERIFY(MediaSource::normalize(QStringLiteral("file://server/share/a.mkv#frag")).isEmpty());
+        QVERIFY(
+            MediaSource::normalize(QStringLiteral("file://server/share/%00movie.mkv")).isEmpty());
+    }
+#endif
 
     void playlistShowsMediaNameWithoutUrlQuery() {
         PlaylistModel model;

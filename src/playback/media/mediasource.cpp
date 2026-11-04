@@ -5,6 +5,28 @@
 #include <QUrl>
 #include <algorithm>
 
+namespace {
+#ifdef Q_OS_WIN
+// Explorer spells a dropped UNC share as file://server/share/... . Decode it
+// to the //server/share/... form so it can be opened like any local path.
+QString uncLocalFile(const QUrl &url) {
+    if (!url.isValid() || url.host().isEmpty() || url.hasQuery() || url.hasFragment())
+        return {};
+    const auto path = url.path(QUrl::FullyDecoded);
+    if (path.contains(QChar::Null))
+        return {};
+    // A server without a share is not an addressable local file.
+    auto cleanedPath = QDir::cleanPath(path);
+    if (cleanedPath.isEmpty() || cleanedPath == QLatin1String("/"))
+        return {};
+    if (!cleanedPath.startsWith(QLatin1Char('/')))
+        cleanedPath.prepend(QLatin1Char('/'));
+    const auto unc = QStringLiteral("//") + url.host() + cleanedPath;
+    return QDir::isAbsolutePath(unc) ? unc : QString{};
+}
+#endif
+} // namespace
+
 namespace MediaSource {
 QString networkUrl(const QString &input) {
     const auto text = input.trimmed();
@@ -45,6 +67,10 @@ QString normalize(const QString &source) {
     if (QDir::isAbsolutePath(source))
         return QDir::cleanPath(source);
     const QUrl url(source, QUrl::StrictMode);
+#ifdef Q_OS_WIN
+    if (url.scheme() == QLatin1String("file") && !url.host().isEmpty())
+        return uncLocalFile(url);
+#endif
     if (url.isLocalFile()) {
         // Match drag-and-drop: a host component makes the authority ambiguous
         // (UNC/localhost spelling), so reject instead of reinterpreting it.

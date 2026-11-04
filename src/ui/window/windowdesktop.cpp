@@ -1,10 +1,13 @@
-#include "desktop/mprisplayer.h"
 #include "playback/mpv/mpvcontroller.h"
 #include "playback/playlist/playlistcontroller.h"
 #include "playback/playlist/playlistmodel.h"
 #include "playback/render/videowidget.h"
 #include "ui/dialogs/quickactionsdialog.h"
 #include "ui/window/mainwindow.h"
+
+#ifdef NEKOPLAYER_HAS_MPRIS
+#include "desktop/mprisplayer.h"
+#endif
 
 #include <QAction>
 #include <QApplication>
@@ -50,6 +53,7 @@ void MainWindow::setupDesktopIntegration() {
     new QuickActionsDialog(this, this);
     if (auto *quickActions = findChild<QAction *>(QStringLiteral("quickActionsAction")))
         helpMenu_->addAction(quickActions);
+#ifdef NEKOPLAYER_HAS_MPRIS
     mpris_ = new MprisPlayer(*controller_, *playlist_, this);
     mpris_->setWindow(this);
     connect(mpris_, &MprisPlayer::openUriRequested, this, &MainWindow::openFile);
@@ -59,6 +63,7 @@ void MainWindow::setupDesktopIntegration() {
         activateWindow();
     });
     connect(mpris_, &MprisPlayer::quitRequested, this, &QWidget::close);
+#endif
 }
 
 void MainWindow::setupTrayIcon() {

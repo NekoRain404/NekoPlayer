@@ -1,6 +1,11 @@
-set(NEKOPLAYER_WINDOW_TEST_BACKEND "wayland" CACHE STRING
-    "Desktop backend for GUI integration tests (wayland or x11)")
-set_property(CACHE NEKOPLAYER_WINDOW_TEST_BACKEND PROPERTY STRINGS wayland x11)
+if(WIN32)
+    set(_neko_default_window_backend "windows")
+else()
+    set(_neko_default_window_backend "wayland")
+endif()
+set(NEKOPLAYER_WINDOW_TEST_BACKEND "${_neko_default_window_backend}" CACHE STRING
+    "Desktop backend for GUI integration tests (wayland, x11 or windows)")
+set_property(CACHE NEKOPLAYER_WINDOW_TEST_BACKEND PROPERTY STRINGS wayland x11 windows)
 set(WINDOW_TEST_ENVIRONMENT
     "QT_QPA_PLATFORMTHEME=generic;QT_IM_MODULE=compose;QT_IM_MODULES=compose;MALLOC_PERTURB_=128")
 if(NEKOPLAYER_WINDOW_TEST_BACKEND STREQUAL "wayland")
@@ -17,8 +22,13 @@ elseif(NEKOPLAYER_WINDOW_TEST_BACKEND STREQUAL "x11")
     set(WINDOW_TEST_RUNNER ${XVFB_RUN_EXECUTABLE} -a -s "-screen 0 1280x900x24"
         sh "${CMAKE_CURRENT_SOURCE_DIR}/run-desktop.sh" ${OPENBOX_EXECUTABLE})
     list(APPEND WINDOW_TEST_ENVIRONMENT "QT_QPA_PLATFORM=xcb" "LIBGL_ALWAYS_SOFTWARE=1")
+elseif(NEKOPLAYER_WINDOW_TEST_BACKEND STREQUAL "windows")
+    # A hosted Windows runner has a desktop session, but GPU/OpenGL behavior is
+    # not part of this suite; the runner is the test executable itself.
+    set(WINDOW_TEST_RUNNER)
+    list(APPEND WINDOW_TEST_ENVIRONMENT "QT_QPA_PLATFORM=windows")
 else()
-    message(FATAL_ERROR "NEKOPLAYER_WINDOW_TEST_BACKEND must be wayland or x11")
+    message(FATAL_ERROR "NEKOPLAYER_WINDOW_TEST_BACKEND must be wayland, x11 or windows")
 endif()
 add_executable(window_test window/window_test.cpp)
 add_executable(fullscreen_feedback_window_test window/fullscreen_feedback_window_test.cpp)

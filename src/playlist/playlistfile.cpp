@@ -187,12 +187,18 @@ M3u8LoadResult loadXspf(const QString &path) {
     return {paths, paths.isEmpty() ? -1 : 0, {}, entries};
 }
 
+QString portableSource(const QString &source) {
+    // Backslashes in absolute paths are escaped by many playlist readers; keep
+    // saved local entries portable, like M3U8Store does.
+    return QDir::isAbsolutePath(source) ? QDir::fromNativeSeparators(source) : source;
+}
+
 QString savePls(const QString &path, const QList<M3u8Entry> &entries) {
     QByteArray contents("[playlist]\n");
     contents += "NumberOfEntries=" + QByteArray::number(entries.size()) + "\nVersion=2\n";
     for (qsizetype index = 0; index < entries.size(); ++index) {
         const auto number = QByteArray::number(index + 1);
-        contents += "File" + number + '=' + entries[index].source.toUtf8() + '\n';
+        contents += "File" + number + '=' + portableSource(entries[index].source).toUtf8() + '\n';
         const auto title = cleanTitle(entries[index].title);
         if (!title.isEmpty())
             contents += "Title" + number + '=' + title.toUtf8() + '\n';
@@ -223,7 +229,7 @@ QString saveXspf(const QString &path, const QList<M3u8Entry> &entries) {
     writer.writeStartElement(QStringLiteral("trackList"));
     for (const auto &entry : entries) {
         writer.writeStartElement(QStringLiteral("track"));
-        writer.writeTextElement(QStringLiteral("location"), entry.source);
+        writer.writeTextElement(QStringLiteral("location"), portableSource(entry.source));
         if (!cleanTitle(entry.title).isEmpty())
             writer.writeTextElement(QStringLiteral("title"), cleanTitle(entry.title));
         if (entry.durationSeconds >= 0)

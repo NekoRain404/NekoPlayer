@@ -69,10 +69,16 @@ PreferencesAppearancePage::PreferencesAppearancePage(
     form->addRow(glass_);
     form->addRow(tr("玻璃不透明度："), sliderRow(opacity_, opacityValue_));
     form->addRow(tr("玻璃模糊程度："), sliderRow(blur_, blurValue_));
+#ifdef Q_OS_WIN
+    const auto chromeHelp = tr("窗口外框的背景模糊由 Windows 桌面窗口管理器（DWM）根据系统版本与"
+                               "桌面设置提供。");
+#else
+    const auto chromeHelp = tr("窗口外框的背景模糊由支持该能力的 Wayland 合成器提供。");
+#endif
     auto *help =
         new QLabel(tr("更改会立即预览，应用后保存。玻璃质感仅作用于界面面板，不会模糊视频；"
-                      "不透明度控制面板半透明程度，模糊程度调节面板渐变的柔化层次。"
-                      "窗口外框的背景模糊由支持该能力的 Wayland 合成器提供。"),
+                      "不透明度控制面板半透明程度，模糊程度调节面板渐变的柔化层次。") +
+                       chromeHelp,
                    this);
     help->setWordWrap(true);
     form->addRow(help);

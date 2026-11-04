@@ -32,8 +32,8 @@ jobs:
         run: cmake --build --preset debug -j 4
       # The hosted container has no GPU/audio/display, and libmpv's video
       # pipeline (frame stepping, media-info refresh) is not deterministic
-      # there. Keep CI to a build + core-logic smoke set; the full 89-test
-      # suite and the X11 window preset are desktop-run acceptance gates.
+      # there. Keep CI to a build + core-logic smoke set; the full suite and
+      # the X11 window preset are desktop-run acceptance gates.
       - name: Smoke tests
         env:
           QT_QPA_PLATFORM: offscreen
@@ -47,4 +47,36 @@ jobs:
           chmod 700 "$XDG_RUNTIME_DIR"
           fc-cache -f >/dev/null
           ctest --preset debug --output-on-failure --timeout 180 -R \
-            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move)$'
+            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move|single-instance)$'
+
+  windows-msys2:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-qt6-base
+            mingw-w64-x86_64-qt6-tools
+            mingw-w64-x86_64-mpv
+            mingw-w64-x86_64-ffmpeg
+      - name: Configure
+        run: cmake --preset windows
+      - name: Build
+        run: cmake --build --preset windows -j 4
+      - name: Smoke tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          ctest --preset windows --output-on-failure --timeout 180 -R \
+            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move|single-instance)$'

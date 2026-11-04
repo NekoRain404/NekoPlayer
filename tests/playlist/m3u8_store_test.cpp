@@ -260,6 +260,48 @@ class M3u8StoreTest final : public QObject {
         QCOMPARE(loaded.currentIndex, 2);
     }
 
+    void saveLeavesNetworkAndRelativeEntriesUnchanged() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("mixed.m3u8"));
+        const auto network = QStringLiteral("https://example.test/%7e/a%2Fb.mkv?sig=a%2fb");
+        const auto relative = QStringLiteral("sub/clip.mkv");
+        QVERIFY(M3u8Store::save(file, {network, relative}, -1).isEmpty());
+
+        QFile saved(file);
+        QVERIFY(saved.open(QIODevice::ReadOnly));
+        const auto contents = saved.readAll();
+        QVERIFY(contents.contains(network.toUtf8() + '\n'));
+        QVERIFY(contents.contains(relative.toUtf8() + '\n'));
+
+        const auto loaded = M3u8Store::load(file);
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.paths.at(0), network);
+        QCOMPARE(loaded.paths.at(1),
+                 QDir(QFileInfo(file).absolutePath()).absoluteFilePath(relative));
+    }
+
+#ifdef Q_OS_WIN
+    void savedWindowsPathsUseForwardSlashesAndRoundTrip() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto file = temporary.filePath(QStringLiteral("windows.m3u8"));
+        const auto native = QStringLiteral("C:\\Media\\猫 clip.mkv");
+        QVERIFY2(M3u8Store::save(file, {native}, 0).isEmpty(), "save failed");
+
+        QFile saved(file);
+        QVERIFY(saved.open(QIODevice::ReadOnly));
+        const auto contents = QString::fromUtf8(saved.readAll());
+        QVERIFY(contents.contains(QStringLiteral("C:/Media/猫 clip.mkv\n")));
+        QVERIFY(!contents.contains(QLatin1Char('\\')));
+
+        const auto loaded = M3u8Store::load(file);
+        QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));
+        QCOMPARE(loaded.paths, QStringList{QStringLiteral("C:/Media/猫 clip.mkv")});
+        QCOMPARE(loaded.currentIndex, 0);
+    }
+#endif
+
     void signedNetworkEntriesSurviveRoundTripByteForByte() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

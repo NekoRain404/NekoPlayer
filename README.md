@@ -122,7 +122,8 @@ flowchart TB
 - [x] 标签驱动的源码归档、校验和与 Arch 打包跟进
 - [x] MPRIS/托盘/媒体键、自动会话快照、截图剪贴板、网络代理/请求头
 - [ ] 原生 Wayland HDR / 硬件解码 / 多显示器实机验收
-- [ ] 字幕搜索与下载、Windows 构建
+- [ ] 字幕搜索与下载
+- [ ] Windows 构建与便携包（MSYS2/MinGW，进行中，见 [windows.md](docs/windows.md)）
 - [ ] 可复现构建与更多架构的发布证据
 
 ## 文档
@@ -134,6 +135,7 @@ flowchart TB
 | [架构说明](docs/architecture.md) | 分层边界、线程、渲染与持久化 |
 | [文档索引](docs/README.md) | 全部文档与历史归档入口 |
 | [验证记录](docs/verification.md) | 按日期的构建、测试与真机验证 |
+| [Windows 兼容](docs/windows.md) | Windows 审计、分阶段方案与验收矩阵 |
 | [更新日志](CHANGELOG.md) | 版本变更 |
 | [贡献指南](CONTRIBUTING.md) · [安全策略](SECURITY.md) | 参与开发与漏洞报告 |
 

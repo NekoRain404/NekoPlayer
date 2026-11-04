@@ -75,6 +75,12 @@ MpvController::~MpvController() {
     impl_->shuttingDown = true;
     if (impl_->client) {
         mpv_set_wakeup_callback(impl_->client.get(), nullptr, nullptr);
+        // Wait for a wakeup that already passed the shutdown check before the
+        // owner and client are released; otherwise the backend thread can post
+        // to a QObject that is being destroyed.
+        {
+            const std::lock_guard lock(impl_->wakeupMutex);
+        }
         impl_->client.reset();
     }
 }

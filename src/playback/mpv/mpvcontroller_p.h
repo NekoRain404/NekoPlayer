@@ -14,6 +14,7 @@
 #include <climits>
 #include <cmath>
 #include <initializer_list>
+#include <mutex>
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -156,6 +157,9 @@ struct MpvController::Impl {
     bool recoveringRenderer = false;
     QString error;
     std::atomic_bool shuttingDown{false};
+    // Serializes the wakeup callback with destruction: a callback that already
+    // passed the flag check must finish posting before the client is released.
+    std::mutex wakeupMutex;
     bool ready = false;
     // Property observations can arrive many times per event-loop turn (time-pos
     // ticks). Coalesce their stateChanged notifications into one per drain.
@@ -466,10 +470,10 @@ struct MpvController::Impl {
 
     static void wakeup(void *userdata) {
         auto *self = static_cast<Impl *>(userdata);
-        if (!self->shuttingDown.load()) {
+        const std::lock_guard lock(self->wakeupMutex);
+        if (!self->shuttingDown.load())
             QMetaObject::invokeMethod(
                 self->owner, [self] { self->drainEvents(); }, Qt::QueuedConnection);
-        }
     }
 
     void flushStateChanged() {

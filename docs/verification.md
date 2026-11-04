@@ -1,5 +1,15 @@
 # Verification Record
 
+## 2026-11-04 — Windows CI and cross-platform hardening
+
+- Windows: the new `windows-msys2` job (MSYS2 UCRT64) completed configure, the full build, the 19-test deterministic smoke set and a repeated teardown run successfully (CI run `41869263977`, commit `242978d`); the Linux `arch-smoke` job passed in parallel.
+- Build portability: Qt DBus is optional (MPRIS guarded), Qt Network is linked, MSYS2 `.pc` prefixes are resolved from the pkg-config location instead of `/ucrt64`, `windows`/`windows-cross` presets and the MinGW toolchain file were added, and Windows gets `.ico`/manifest/version resources plus a conditional install layout.
+- Real Windows fixes: `ThumbnailService` now accepts drive-letter paths (`C:/...`) before parsing them as URLs; `MediaSource` maps `file://server/...` to `//server/...`; M3U8/PLS/XSPF save local paths with forward slashes; folder scans treat dot-files as hidden on every platform; QLocalServer single-instance forwarding pumps the local event loop before disconnecting.
+- Test portability: POSIX permission-bit assertions and symlink creation are skipped or guarded on Windows; `single-instance` covers exact argument forwarding, malformed/oversized payloads and endpoint release; `platform-appearance` covers the Windows opaque-surface/DWM path.
+- Known Windows issue: destroying a headless `MpvController` (used only by tests/diagnostics) can crash inside libmpv after a few milliseconds; `interaction-preferences` and `language-preferences` skip on Windows until this is debugged on a real Windows host. The application path still initializes successfully (`backend-startup`) and the non-headless controller is used by the app.
+- Linux regression after the cross-platform changes: Debug `-j4` build with 0 warnings; full serial `ctest --preset debug` passed **102/102** in **123.69 s**. Translation `lrelease`: **584** finished, 0 unfinished.
+- Boundary: the Windows portable zip is produced only by the tag release job and has not been downloaded/run on a physical Windows machine; Mica/Acrylic, SMTC/global media keys and the headless teardown crash remain open.
+
 ## 2026-11-04 — Windows compatibility groundwork
 
 - Build: `cmake --build --preset debug -j4` succeeded with 0 warnings; full serial `ctest --preset debug` passed **102/102** in **129.28 s** (new `single-instance`, `platform-appearance`; `mpris` restored after making DBus optional).

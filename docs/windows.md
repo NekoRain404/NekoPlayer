@@ -1,6 +1,6 @@
 # Windows 兼容方案
 
-> 状态：第一阶段已落地（2026-11-04）：可选 DBus、跨平台单实例、Windows 资源与预设、窗口外观回退、便携打包脚本与 Windows CI 任务。Windows 构建/运行仍以 CI 与真机验收为准；本机没有 Windows 工具链。
+> 状态：第一阶段已落地并在 CI 通过（2026-11-04）：可选 DBus、跨平台单实例、Windows 资源与预设、窗口外观回退、便携打包脚本，MSYS2 UCRT64 构建与 19 项 smoke 全部通过。仍待真机运行、视觉验收与 headless libmpv 退出问题定位；本机没有 Windows 工具链。
 
 ## 结论
 
@@ -18,7 +18,8 @@ Windows 兼容可行，工作量集中在**构建依赖、桌面集成、窗口�
 - **P1 已落地**：单实例改为 `QLocalServer`/`QLocalSocket`，Linux 行为与端点命名保持，`single-instance` 测试通过；桌面媒体控制抽象与 Windows 全局媒体键尚未实现。
 - **P2 第一步已落地**：Windows 顶层窗口改为不透明回退，DWM 暗色标题栏按应用调色板设置（属性 20，回退 19）。Mica/Acrylic、运行时主题切换、对话框透明属性统一仍待完成。
 - **P4 骨架已落地**：`packaging/windows/deploy.sh`、manifest/图标/版本资源、release 工作流 Windows job；安装器、文件关联与代码签名未做。
-- **仍缺**：Windows 真机运行与视觉验收、SMTC 或全局媒体键、双显示器/HiDPI/全屏验收、D3D11/HDR 路径。
+- **仍缺**：Windows 真机运行与视觉验收、SMTC 或全局媒体键、双显示器/HiDPI/全屏验收、D3D11/HDR 路径、headless `MpvController` 退出崩溃（仅测试/诊断路径；`interaction-preferences` 与 `language-preferences` 在 Windows 上暂时跳过）。
+- CI：`windows-msys2`（UCRT64）构建 + 19 项 smoke + 重复 teardown 通过；Linux `arch-smoke` 并行通过（run `41869263977`）。
 - Linux 回归：Debug `-j4` 构建无警告，串行全量 **102/102** 通过（见 [verification.md](verification.md)）。
 
 ## 现状审计
@@ -143,8 +144,8 @@ endif()
 
 ## 下一步
 
-1. 推送后观察 `windows-msys2` 首次构建，修正 MSYS2 依赖名称、`mpv.pc`/FFmpeg 查找与 Qt 模块差异；
-2. 真机验收暗色标题栏、不透明窗口阴影/圆角与 QSS 面板；
+1. 在真实 Windows 10/11 上运行 tag 便携包，验收启动、播放、暗色标题栏、不透明窗口阴影/圆角与 QSS 面板；
+2. 定位 headless `MpvController` 退出时的 libmpv 崩溃（Windows 测试暂时跳过；应用非 headless 路径仍需退出压力验证）；
 3. 实现 Windows 全局媒体键（`RegisterHotKey`）与可选 SMTC；
 4. 统一对话框的透明属性策略，评估 Win11 Mica/Acrylic 与运行时主题更新；
-5. 补齐安装器/文件关联/签名与便携包验收。
+5. 补齐安装器/文件关联/签名与便携包校验和。

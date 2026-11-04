@@ -123,7 +123,7 @@ flowchart TB
 - [x] MPRIS/托盘/媒体键、自动会话快照、截图剪贴板、网络代理/请求头
 - [ ] 原生 Wayland HDR / 硬件解码 / 多显示器实机验收
 - [ ] 字幕搜索与下载
-- [ ] Windows 构建与便携包（MSYS2/MinGW，进行中，见 [windows.md](docs/windows.md)）
+- [ ] Windows 便携包与真机验收（MSYS2 UCRT64 的 CI 构建与 smoke 已通过，见 [windows.md](docs/windows.md)）
 - [ ] 可复现构建与更多架构的发布证据
 
 ## 文档

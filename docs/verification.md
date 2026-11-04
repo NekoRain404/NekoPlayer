@@ -7,6 +7,7 @@
 - `secondary-subtitles` covers selection/clearing, backend property values, rejecting non-subtitle ids and same-as-primary selections, idle and stop behavior, reload of a different file, external subtitles as the secondary layer across a renderer reset, two consecutive resets, and visibility coupling. `track-menus` verifies the submenu's object names, exclusive checks and action wiring.
 - Track parsing now honors mpv's `main-selection` field: mpv reports a secondary subtitle as `selected`, which previously made the primary menu and restore matching ambiguous.
 - Translation `lupdate`/`lrelease`: **582** finished, 0 unfinished; three obsolete playlist/subtitle labels remain vanished.
+- CI smoke set now also runs `playlist-file` and `playlist-block-move` (18 deterministic tests); media/playback tests remain desktop-only.
 - Boundary: dual-subtitle visual layout (position/overlap) was not inspected on a real display.
 
 ## 2026-11-04 — desktop integration, autosave and network options

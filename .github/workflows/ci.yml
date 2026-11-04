@@ -47,4 +47,4 @@ jobs:
           chmod 700 "$XDG_RUNTIME_DIR"
           fc-cache -f >/dev/null
           ctest --preset debug --output-on-failure --timeout 180 -R \
-            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report)$'
+            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move)$'

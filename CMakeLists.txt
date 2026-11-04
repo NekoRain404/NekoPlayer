@@ -48,6 +48,7 @@ add_library(neko_playback src/playback/mpv/mpvcontroller.cpp src/playback/mpv/mp
     src/playback/mpv/mpvcontroller_framing.cpp
     src/playback/mpv/mpvcontroller_screenshot.cpp
     src/playback/mpv/mpvcontroller_subtitles.cpp src/playback/mpv/subtitlepreferences.cpp
+    src/playback/mpv/mpvcontroller_secondary_subtitles.cpp
     src/playback/mpv/mpvcontroller_video_color.cpp
     src/playback/mpv/mpvcontroller_network.cpp
     src/playback/mpv/mpvcontroller_audioeffects.cpp

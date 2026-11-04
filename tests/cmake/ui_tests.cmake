@@ -200,6 +200,14 @@ add_test(NAME screenshot-menu COMMAND screenshot_menu_test)
 set_tests_properties(screenshot-menu PROPERTIES TIMEOUT 30
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+add_executable(track_menus_test ui/track_menus_test.cpp)
+target_link_libraries(track_menus_test PRIVATE neko_ui Qt6::Test)
+target_compile_definitions(track_menus_test PRIVATE TEST_LANGUAGE_MEDIA_PATH="${TEST_LANGUAGE_MEDIA}")
+add_dependencies(track_menus_test test_language_media)
+add_test(NAME track-menus COMMAND track_menus_test)
+set_tests_properties(track-menus PROPERTIES TIMEOUT 60
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 add_executable(network_open_dialog_test ui/network_open_dialog_test.cpp)
 target_link_libraries(network_open_dialog_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME network-open-dialog COMMAND network_open_dialog_test)

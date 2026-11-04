@@ -116,6 +116,16 @@ void MpvController::Impl::restoreSelections(const QList<MediaTrack> &current) {
         if (identity != restoreIdentity || restoreGeneration != openGeneration)
             return;
     }
+    if (secondarySidToRestore != 0) {
+        const auto target = restoredTrackId(tracksToRestore, current, MediaTrack::Type::Subtitle,
+                                            secondarySidToRestore);
+        command({"set", "secondary-sid", target ? QByteArray::number(target) : QByteArray("no")});
+        secondarySid = target;
+        secondarySidToRestore = 0;
+        emit owner->secondarySubtitleChanged();
+        if (identity != restoreIdentity || restoreGeneration != openGeneration)
+            return;
+    }
     applyingRestoredSelections = true;
     updateTracks(current);
 }

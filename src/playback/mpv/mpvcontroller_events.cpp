@@ -427,6 +427,9 @@ void MpvController::prepareForRendererReset() {
             self.recovery->tracks = self.pendingRestoreTracks;
         else if (!self.tracksToRestore.isEmpty())
             self.recovery->tracks = self.tracksToRestore;
+        // Never overwrite the retained selection with the zeroed live state.
+        if (self.secondarySid != 0)
+            self.recovery->secondarySid = self.secondarySid;
         // The in-flight reload died with this renderer. Tombstone its entry and
         // drop the registration so its teardown is not reported as a failure;
         // the next ready submits a fresh attempt from the retained snapshot.
@@ -453,7 +456,7 @@ void MpvController::prepareForRendererReset() {
         self.tracksToRestore.isEmpty()
             ? (self.pendingRestoreTracks.isEmpty() ? tracks() : self.pendingRestoreTracks)
             : self.tracksToRestore,
-        self.explicitExternalPaths};
+        self.explicitExternalPaths, self.secondarySid};
     if (self.openingPosition)
         self.recovery->playback.position = *self.openingPosition;
     self.recoveringRenderer = true;
@@ -506,6 +509,7 @@ void MpvController::resumeAfterRendererReset() {
         ",sid=" + selectedInternal(MediaTrack::Type::Subtitle) + ",sub-auto=no,audio-file-auto=no" +
         ",ab-loop-a=" + loopPoint(abLoop().start) + ",ab-loop-b=" + loopPoint(abLoop().end);
     self.tracksToRestore = saved.tracks;
+    self.secondarySidToRestore = saved.secondarySid;
     self.pendingRestoreTracks.clear();
     self.state.path = saved.playback.path;
     self.playingPath = saved.playback.path;

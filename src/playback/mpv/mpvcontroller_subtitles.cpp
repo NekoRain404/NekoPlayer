@@ -15,6 +15,9 @@ void MpvController::setSubtitlePreferences(const SubtitlePreferences &preference
     };
     // Commands copy their arguments before returning. Store accepted intent now,
     // so immediate saves and rapid shortcuts do not depend on event delivery.
+    // The primary toggle hides every subtitle layer, including the secondary one.
+    if (target.visible != current.visible)
+        impl_->property("secondary-sub-visibility", MPV_FORMAT_FLAG, int(target.visible));
     submit("sub-visibility", target.visible, current.visible, target.visible ? "yes" : "no");
     submit("sub-scale", target.scale, current.scale, QByteArray::number(target.scale, 'g', 15));
     submit("sub-pos", target.position, current.position,

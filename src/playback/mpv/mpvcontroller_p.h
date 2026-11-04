@@ -76,6 +76,7 @@ struct MpvController::Impl {
         PlaybackState playback;
         QList<MediaTrack> tracks;
         QSet<QString> explicitExternalPaths;
+        qint64 secondarySid = 0;
     };
     struct PendingOpen {
         uint64_t command = 0;
@@ -114,6 +115,10 @@ struct MpvController::Impl {
     QHash<uint64_t, uint64_t> informationQueries;
     bool informationRefreshQueued = false;
     QList<MediaTrack> tracks;
+    // Secondary subtitle selection (0 = off); restored after a renderer reset
+    // because the reload clears mpv's secondary-sid.
+    qint64 secondarySid = 0;
+    qint64 secondarySidToRestore = 0;
     QList<MediaChapter> chapters;
     std::optional<int> requestedChapter;
     uint64_t chapterCommand = 0;
@@ -322,6 +327,10 @@ struct MpvController::Impl {
 
     void resetPlayback() {
         owner->stopRecording();
+        if (secondarySid != 0) {
+            secondarySid = 0;
+            emit owner->secondarySubtitleChanged();
+        }
         mediaReady = false;
         explicitExternalPaths.clear();
         cancelInformationQueries();
@@ -367,6 +376,8 @@ struct MpvController::Impl {
         emit owner->tracksChanged();
     }
 
+    void selectSecondaryTrack(qint64 id);
+
     void selectTrack(MediaTrack::Type type, qint64 id) {
         if (!state.active)
             return;
@@ -408,6 +419,7 @@ struct MpvController::Impl {
         tracksToRestore.clear();
         explicitExternalPathsToRestore.clear();
         externalPathsToRestore.clear();
+        secondarySidToRestore = 0;
         ++restoreIdentity;
         restoreCommand = restoreQuery = 0;
         cancelPreferenceRestore();

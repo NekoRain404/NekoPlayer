@@ -65,27 +65,27 @@
     </message>
     <message>
         <source>前进 %1 秒</source>
-        <translation>Seek Forward %1 Seconds</translation>
+        <translation >Seek Forward %1 Seconds</translation>
     </message>
     <message>
         <source>后退 %1 秒</source>
-        <translation>Seek Back %1 Seconds</translation>
+        <translation >Seek Back %1 Seconds</translation>
     </message>
     <message>
         <source>已静音</source>
-        <translation>Muted</translation>
+        <translation >Muted</translation>
     </message>
     <message>
         <source>取消静音</source>
-        <translation>Unmuted</translation>
+        <translation >Unmuted</translation>
     </message>
     <message>
         <source>已暂停</source>
-        <translation>Paused</translation>
+        <translation >Paused</translation>
     </message>
     <message>
         <source>继续播放</source>
-        <translation>Resumed</translation>
+        <translation >Resumed</translation>
     </message>
 </context>
 <context>
@@ -341,7 +341,7 @@ Click “Refresh” to scan the added folders.</translation>
     </message>
     <message>
         <source>扫描完成，共 %1 项。\n%2</source>
-        <translation>Scan complete: %1 items.\n%2</translation>
+        <translation >Scan complete: %1 items.\n%2</translation>
     </message>
     <message>
         <location filename="../src/ui/dialogs/librarydialog.cpp" line="225"/>
@@ -355,11 +355,11 @@ Click “Refresh” to scan the added folders.</translation>
     </message>
     <message>
         <source>媒体库为空。\n点击“刷新”扫描已添加的文件夹。</source>
-        <translation>The library is empty.\nClick Refresh to scan the added folders.</translation>
+        <translation >The library is empty.\nClick Refresh to scan the added folders.</translation>
     </message>
     <message>
         <source>尚未添加媒体文件夹。\n点击“添加文件夹…”并刷新以建立媒体库。</source>
-        <translation>No media folders yet.\nClick Add Folder… and refresh to build the library.</translation>
+        <translation >No media folders yet.\nClick Add Folder… and refresh to build the library.</translation>
     </message>
     <message>
         <location filename="../src/ui/dialogs/librarydialog.cpp" line="299"/>
@@ -546,7 +546,7 @@ Click “Refresh” to scan the added folders.</translation>
     </message>
     <message>
         <source>M3U8 播放列表 (*.m3u8);;所有文件 (*)</source>
-        <translation>M3U8 Playlists (*.m3u8);;All Files (*)</translation>
+        <translation type="vanished">M3U8 Playlists (*.m3u8);;All Files (*)</translation>
     </message>
     <message>
         <location filename="../src/ui/window/windowsession.cpp" line="115"/>
@@ -555,7 +555,7 @@ Click “Refresh” to scan the added folders.</translation>
     </message>
     <message>
         <source>M3U8 播放列表 (*.m3u8)</source>
-        <translation>M3U8 Playlists (*.m3u8)</translation>
+        <translation type="vanished">M3U8 Playlists (*.m3u8)</translation>
     </message>
     <message>
         <location filename="../src/ui/window/mainwindow.cpp" line="384"/>
@@ -910,87 +910,87 @@ Click “Refresh” to scan the added folders.</translation>
     <name>MediaInformation</name>
     <message>
         <source>未播放媒体</source>
-        <translation>No media playing</translation>
+        <translation >No media playing</translation>
     </message>
     <message>
         <source>未知</source>
-        <translation>Unknown</translation>
+        <translation >Unknown</translation>
     </message>
     <message>
         <source>文件</source>
-        <translation>File</translation>
+        <translation >File</translation>
     </message>
     <message>
         <source>容器格式</source>
-        <translation>Container format</translation>
+        <translation >Container format</translation>
     </message>
     <message>
         <source>文件大小</source>
-        <translation>File size</translation>
+        <translation >File size</translation>
     </message>
     <message>
         <source>%1（%2 字节）</source>
-        <translation>%1 (%2 bytes)</translation>
+        <translation >%1 (%2 bytes)</translation>
     </message>
     <message>
         <source>视频编码</source>
-        <translation>Video codec</translation>
+        <translation >Video codec</translation>
     </message>
     <message>
         <source>视频尺寸</source>
-        <translation>Video resolution</translation>
+        <translation >Video resolution</translation>
     </message>
     <message>
         <source>像素格式</source>
-        <translation>Pixel format</translation>
+        <translation >Pixel format</translation>
     </message>
     <message>
         <source>视频色彩</source>
-        <translation>Video color</translation>
+        <translation >Video color</translation>
     </message>
     <message>
         <source>视频原色</source>
-        <translation>Video primaries</translation>
+        <translation >Video primaries</translation>
     </message>
     <message>
         <source>HDR · %1</source>
-        <translation>HDR · %1</translation>
+        <translation >HDR · %1</translation>
     </message>
     <message>
         <source>SDR</source>
-        <translation>SDR</translation>
+        <translation >SDR</translation>
     </message>
     <message>
         <source>容器帧率（估计值）</source>
-        <translation>Container frame rate (estimated)</translation>
+        <translation >Container frame rate (estimated)</translation>
     </message>
     <message>
         <source>实际视频解码</source>
-        <translation>Active video decoder</translation>
+        <translation >Active video decoder</translation>
     </message>
     <message>
         <source>软件解码</source>
-        <translation>Software decoding</translation>
+        <translation >Software decoding</translation>
     </message>
     <message>
         <source>音频编码</source>
-        <translation>Audio codec</translation>
+        <translation >Audio codec</translation>
     </message>
     <message>
         <source>采样率</source>
-        <translation>Sample rate</translation>
+        <translation >Sample rate</translation>
     </message>
     <message>
         <source>声道</source>
-        <translation>Channels</translation>
+        <translation >Channels</translation>
     </message>
     <message>
         <source>采样格式</source>
-        <translation>Sample format</translation>
+        <translation >Sample format</translation>
     </message>
     <message>
         <source>（已隐藏凭据与查询参数）</source>
-        <translation> (credentials and query parameters hidden)</translation>
+        <translation > (credentials and query parameters hidden)</translation>
     </message>
 </context>
 <context>
@@ -1057,7 +1057,8 @@ Click “Refresh” to scan the added folders.</translation>
 <context>
     <name>MpvController</name>
     <message>
-        <location filename="../src/playback/mpv/mpvcontroller_p.h" line="378"/>
+        <location filename="../src/playback/mpv/mpvcontroller_p.h" line="389"/>
+        <location filename="../src/playback/mpv/mpvcontroller_secondary_subtitles.cpp" line="16"/>
         <source>所选轨道不存在</source>
         <translation>The selected track does not exist</translation>
     </message>
@@ -1340,111 +1341,111 @@ Click “Refresh” to scan the added folders.</translation>
     </message>
     <message>
         <source>未播放媒体</source>
-        <translation>No media playing</translation>
+        <translation >No media playing</translation>
     </message>
     <message>
         <source>未知</source>
-        <translation>Unknown</translation>
+        <translation >Unknown</translation>
     </message>
     <message>
         <source>软件解码</source>
-        <translation>Software decoding</translation>
+        <translation >Software decoding</translation>
     </message>
     <message>
         <source>无视频</source>
-        <translation>No video</translation>
+        <translation >No video</translation>
     </message>
     <message>
         <source>媒体: %1</source>
-        <translation>Media: %1</translation>
+        <translation >Media: %1</translation>
     </message>
     <message>
         <source>时间: %1 / %2</source>
-        <translation>Time: %1 / %2</translation>
+        <translation >Time: %1 / %2</translation>
     </message>
     <message>
         <source>状态: %1 · 速度 %2</source>
-        <translation>Status: %1 · Speed %2</translation>
+        <translation >Status: %1 · Speed %2</translation>
     </message>
     <message>
         <source>已暂停</source>
-        <translation>Paused</translation>
+        <translation >Paused</translation>
     </message>
     <message>
         <source>播放中</source>
-        <translation>Playing</translation>
+        <translation >Playing</translation>
     </message>
     <message>
         <source>视频: %1 · %2 · %3</source>
-        <translation>Video: %1 · %2 · %3</translation>
+        <translation >Video: %1 · %2 · %3</translation>
     </message>
     <message>
         <source>容器帧率（估计）: %1</source>
-        <translation>Container frame rate (estimated): %1</translation>
+        <translation >Container frame rate (estimated): %1</translation>
     </message>
     <message>
         <source>实际视频解码: %1</source>
-        <translation>Active video decoder: %1</translation>
+        <translation >Active video decoder: %1</translation>
     </message>
     <message>
         <source>SDR</source>
-        <translation>SDR</translation>
+        <translation >SDR</translation>
     </message>
     <message>
         <source>视频色彩: %1 · 原色: %2</source>
-        <translation>Video color: %1 · Primaries: %2</translation>
+        <translation >Video color: %1 · Primaries: %2</translation>
     </message>
     <message>
         <source>容器: %1 · 文件大小: %2</source>
-        <translation>Container: %1 · File size: %2</translation>
+        <translation >Container: %1 · File size: %2</translation>
     </message>
     <message>
         <source>进度: %1 · 剩余: %2</source>
-        <translation>Progress: %1 · Remaining: %2</translation>
+        <translation >Progress: %1 · Remaining: %2</translation>
     </message>
     <message>
         <source>不可定位</source>
-        <translation>Not seekable</translation>
+        <translation >Not seekable</translation>
     </message>
     <message>
         <source>音量: %1 · 音频延迟: %2 · 字幕延迟: %3</source>
-        <translation>Volume: %1 · Audio delay: %2 · Subtitle delay: %3</translation>
+        <translation >Volume: %1 · Audio delay: %2 · Subtitle delay: %3</translation>
     </message>
     <message>
         <source>音频: %1 · %2 · %3 · %4</source>
-        <translation>Audio: %1 · %2 · %3 · %4</translation>
+        <translation >Audio: %1 · %2 · %3 · %4</translation>
     </message>
     <message>
         <source>当前音轨: %1</source>
-        <translation>Selected audio track: %1</translation>
+        <translation >Selected audio track: %1</translation>
     </message>
     <message>
         <source>当前字幕: %1</source>
-        <translation>Selected subtitle: %1</translation>
+        <translation >Selected subtitle: %1</translation>
     </message>
     <message>
         <source>轨道 %1</source>
-        <translation>Track %1</translation>
+        <translation >Track %1</translation>
     </message>
     <message>
         <source>外部</source>
-        <translation>External</translation>
+        <translation >External</translation>
     </message>
     <message>
         <source>无音频轨道</source>
-        <translation>No audio track</translation>
+        <translation >No audio track</translation>
     </message>
     <message>
         <source>未选择字幕</source>
-        <translation>No subtitle selected</translation>
+        <translation >No subtitle selected</translation>
     </message>
     <message>
         <source>%1 字节</source>
-        <translation>%1 bytes</translation>
+        <translation >%1 bytes</translation>
     </message>
     <message>
         <source>（静音）</source>
-        <translation>(muted)</translation>
+        <translation >(muted)</translation>
     </message>
 </context>
 <context>
@@ -2529,7 +2530,7 @@ libmpv client API: %3</translation>
     </message>
     <message>
         <source>字幕(&amp;S)</source>
-        <translation>&amp;Subtitles</translation>
+        <translation type="vanished">&amp;Subtitles</translation>
     </message>
     <message>
         <location filename="../src/ui/menus/trackmenus.cpp" line="31"/>
@@ -2537,37 +2538,43 @@ libmpv client API: %3</translation>
         <translation>Subtitles(&amp;U)</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/trackmenus.cpp" line="34"/>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="32"/>
+        <source>第二字幕</source>
+        <translation>Secondary subtitles</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="36"/>
         <source>加载外挂音轨…</source>
         <translation>Load External Audio Track…</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/trackmenus.cpp" line="35"/>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="37"/>
         <source>加载外挂字幕…</source>
         <translation>Load External Subtitles…</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/trackmenus.cpp" line="69"/>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="75"/>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="115"/>
         <source>关闭</source>
         <translation>Off</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/trackmenus.cpp" line="119"/>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="152"/>
         <source>加载外挂音轨</source>
         <translation>Load External Audio Track</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/trackmenus.cpp" line="119"/>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="152"/>
         <source>加载外挂字幕</source>
         <translation>Load External Subtitles</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/trackmenus.cpp" line="120"/>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="153"/>
         <source>音频文件 (*.mka *.aac *.ac3 *.eac3 *.dts *.dtshd *.flac *.mp3 *.ogg *.opus *.wav *.m4a *.mp4 *.mkv);;所有文件 (*)</source>
         <translation>Audio Files (*.mka *.aac *.ac3 *.eac3 *.dts *.dtshd *.flac *.mp3 *.ogg *.opus *.wav *.m4a *.mp4 *.mkv);;All Files (*)</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/trackmenus.cpp" line="122"/>
+        <location filename="../src/ui/menus/trackmenus.cpp" line="155"/>
         <source>字幕文件 (*.srt *.ass *.ssa *.sub *.vtt *.sup *.idx *.mks);;所有文件 (*)</source>
         <translation>Subtitle Files (*.srt *.ass *.ssa *.sub *.vtt *.sup *.idx *.mks);;All Files (*)</translation>
     </message>
@@ -3166,11 +3173,11 @@ libmpv client API: %3</translation>
     </message>
     <message>
         <source>网络媒体：%1</source>
-        <translation>Network media: %1</translation>
+        <translation >Network media: %1</translation>
     </message>
     <message>
         <source>本地媒体：%1</source>
-        <translation>Local media: %1</translation>
+        <translation >Local media: %1</translation>
     </message>
 </context>
 </TS>

@@ -26,6 +26,13 @@ bool flag(const mpv_node &node, const char *name) {
     const auto *value = field(node, name);
     return value && value->format == MPV_FORMAT_FLAG && value->u.flag;
 }
+
+// mpv marks secondary subtitles as selected too and distinguishes them by
+// main-selection (0 = primary, 1 = secondary). Older builds omit the field.
+bool mainSelection(const mpv_node &node) {
+    const auto *value = field(node, "main-selection");
+    return !value || value->format != MPV_FORMAT_INT64 || value->u.int64 == 0;
+}
 } // namespace
 
 QList<MediaTrack> parseMpvTracks(const mpv_node &node) {
@@ -45,7 +52,8 @@ QList<MediaTrack> parseMpvTracks(const mpv_node &node) {
             {id->u.int64,
              type == QLatin1String("audio") ? MediaTrack::Type::Audio : MediaTrack::Type::Subtitle,
              text(entry, "lang"), text(entry, "title"), text(entry, "codec"),
-             flag(entry, "external"), flag(entry, "selected"), text(entry, "external-filename")});
+             flag(entry, "external"), flag(entry, "selected") && mainSelection(entry),
+             text(entry, "external-filename")});
     }
     return tracks;
 }
@@ -70,6 +78,29 @@ qint64 trackIdForRestore(const QList<MediaTrack> &saved, const QList<MediaTrack>
             }
         }
         break;
+    }
+    return 0;
+}
+
+qint64 restoredTrackId(const QList<MediaTrack> &saved, const QList<MediaTrack> &current,
+                       MediaTrack::Type type, qint64 savedId) {
+    QHash<QString, int> ordinals;
+    for (const auto &track : saved) {
+        if (track.type != type)
+            continue;
+        const int ordinal = track.external ? ordinals[track.externalPath]++ : 0;
+        if (track.id != savedId)
+            continue;
+        int candidateOrdinal = 0;
+        for (const auto &candidate : current) {
+            if (candidate.type != type || candidate.external != track.external)
+                continue;
+            if (track.external ? (candidate.externalPath == track.externalPath &&
+                                  candidateOrdinal++ == ordinal)
+                               : candidate.id == track.id)
+                return candidate.id;
+        }
+        return 0;
     }
     return 0;
 }

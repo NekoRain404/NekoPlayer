@@ -11,4 +11,7 @@ QList<MediaTrack> parseMpvTracks(const mpv_node &node);
 // Internal IDs are stable on reload; external IDs must match by file and stream order.
 qint64 trackIdForRestore(const QList<MediaTrack> &saved, const QList<MediaTrack> &current,
                          MediaTrack::Type type);
+// Maps a specific saved track (for example the secondary subtitle) to the reload's id.
+qint64 restoredTrackId(const QList<MediaTrack> &saved, const QList<MediaTrack> &current,
+                       MediaTrack::Type type, qint64 savedId);
 bool trackSelectionRestored(const QList<MediaTrack> &saved, const QList<MediaTrack> &current);

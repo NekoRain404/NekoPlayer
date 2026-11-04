@@ -186,6 +186,15 @@ add_dependencies(track_language_test test_language_media)
 add_test(NAME track-language COMMAND track_language_test)
 set_tests_properties(track-language PROPERTIES TIMEOUT 60)
 
+add_executable(secondary_subtitles_test playback/secondary_subtitles_test.cpp)
+target_link_libraries(secondary_subtitles_test PRIVATE neko_playback Qt6::Test)
+target_compile_definitions(secondary_subtitles_test PRIVATE
+    TEST_LANGUAGE_MEDIA_PATH="${TEST_LANGUAGE_MEDIA}"
+    TEST_TRACK_MEDIA_PATH="${TEST_TRACK_MEDIA}")
+add_dependencies(secondary_subtitles_test test_language_media test_track_media)
+add_test(NAME secondary-subtitles COMMAND secondary_subtitles_test)
+set_tests_properties(secondary-subtitles PROPERTIES TIMEOUT 90)
+
 add_executable(stop_interleaving_test playback/stop_interleaving_test.cpp)
 target_link_libraries(stop_interleaving_test PRIVATE neko_playback Qt6::Test)
 add_test(NAME stop-interleaving COMMAND stop_interleaving_test)

@@ -29,12 +29,15 @@ TrackMenus::TrackMenus(MpvController &controller, QWidget *window, QMenu *subtit
                        QMenu *subtitleDisplayMenu)
     : QObject(window), controller_(controller), window_(window),
       audioMenu_(new QMenu(tr("音轨"), window)), subtitleMenu_(new QMenu(tr("字幕(&U)"), window)),
+      secondarySubtitleMenu_(new QMenu(tr("第二字幕"), window)),
       subtitleDelayMenu_(subtitleDelayMenu), subtitleDisplayMenu_(subtitleDisplayMenu),
       audioGroup_(new QActionGroup(audioMenu_)), subtitleGroup_(new QActionGroup(subtitleMenu_)),
+      secondarySubtitleGroup_(new QActionGroup(secondarySubtitleMenu_)),
       loadAudioAction_(new QAction(tr("加载外挂音轨…"), this)),
       loadSubtitleAction_(new QAction(tr("加载外挂字幕…"), this)) {
     audioMenu_->setObjectName(QStringLiteral("audioTracksMenu"));
     subtitleMenu_->setObjectName(QStringLiteral("subtitleTracksMenu"));
+    secondarySubtitleMenu_->setObjectName(QStringLiteral("secondarySubtitleTracksMenu"));
     loadAudioAction_->setObjectName(QStringLiteral("loadAudioAction"));
     loadAudioAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A));
     window->addAction(loadAudioAction_);
@@ -51,6 +54,9 @@ TrackMenus::TrackMenus(MpvController &controller, QWidget *window, QMenu *subtit
             [this](QAction *action) { controller_.selectAudioTrack(action->data().toLongLong()); });
     connect(subtitleGroup_, &QActionGroup::triggered, this, [this](QAction *action) {
         controller_.selectSubtitleTrack(action->data().toLongLong());
+    });
+    connect(secondarySubtitleGroup_, &QActionGroup::triggered, this, [this](QAction *action) {
+        controller_.selectSecondarySubtitleTrack(action->data().toLongLong());
     });
     connect(&controller_, &MpvController::tracksChanged, this, &TrackMenus::rebuild);
     connect(&controller_, &MpvController::stateChanged, this, [this] {
@@ -95,10 +101,36 @@ void TrackMenus::rebuild() {
     subtitleMenu_->addAction(loadSubtitleAction_);
     subtitleMenu_->addSeparator();
     populate(subtitleMenu_, subtitleGroup_, MediaTrack::Type::Subtitle);
+    secondarySubtitleMenu_->clear();
+    populateSecondarySubtitles();
+    subtitleMenu_->addSeparator();
+    subtitleMenu_->addMenu(secondarySubtitleMenu_);
     subtitleMenu_->addSeparator();
     subtitleMenu_->addMenu(subtitleDelayMenu_);
     subtitleMenu_->addMenu(subtitleDisplayMenu_);
     updateAvailability();
+}
+
+void TrackMenus::populateSecondarySubtitles() {
+    auto *off = secondarySubtitleMenu_->addAction(tr("关闭"));
+    off->setObjectName(QStringLiteral("secondarySubtitleTrack0Action"));
+    off->setData(qint64{0});
+    off->setCheckable(true);
+    secondarySubtitleGroup_->addAction(off);
+    bool selected = false;
+    for (const auto &track : controller_.tracks()) {
+        if (track.type != MediaTrack::Type::Subtitle)
+            continue;
+        auto *action = secondarySubtitleMenu_->addAction(trackLabel(track));
+        action->setObjectName(QStringLiteral("secondarySubtitleTrack") + QString::number(track.id) +
+                              QStringLiteral("Action"));
+        action->setData(track.id);
+        action->setCheckable(true);
+        secondarySubtitleGroup_->addAction(action);
+        action->setChecked(track.id == controller_.secondarySubtitleTrack());
+        selected |= action->isChecked();
+    }
+    off->setChecked(!selected);
 }
 
 void TrackMenus::updateAvailability() {
@@ -106,6 +138,7 @@ void TrackMenus::updateAvailability() {
     audioMenu_->setEnabled(active_);
     loadAudioAction_->setEnabled(active_);
     subtitleMenu_->setEnabled(active_);
+    secondarySubtitleMenu_->setEnabled(active_);
     loadSubtitleAction_->setEnabled(active_);
 }
 

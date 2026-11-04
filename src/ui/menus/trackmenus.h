@@ -20,16 +20,19 @@ class TrackMenus final : public QObject {
   private:
     void rebuild();
     void populate(QMenu *menu, QActionGroup *group, MediaTrack::Type type);
+    void populateSecondarySubtitles();
     void updateAvailability();
     void chooseExternalTrack(MediaTrack::Type type);
     MpvController &controller_;
     QWidget *window_;
     QMenu *audioMenu_;
     QMenu *subtitleMenu_;
+    QMenu *secondarySubtitleMenu_;
     QMenu *subtitleDelayMenu_;
     QMenu *subtitleDisplayMenu_;
     QActionGroup *audioGroup_;
     QActionGroup *subtitleGroup_;
+    QActionGroup *secondarySubtitleGroup_;
     QAction *loadAudioAction_;
     QAction *loadSubtitleAction_;
     quint64 sourceRevision_ = 0;

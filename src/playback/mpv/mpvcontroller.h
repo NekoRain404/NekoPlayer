@@ -149,6 +149,8 @@ class MpvController final : public QObject {
     void adjustSubtitleDelay(double seconds);
     void selectAudioTrack(qint64 id);
     void selectSubtitleTrack(qint64 id);
+    void selectSecondarySubtitleTrack(qint64 id);
+    [[nodiscard]] qint64 secondarySubtitleTrack() const;
     void addAudio(const QString &path);
     void addSubtitle(const QString &path);
     void setSubtitleVisible(bool visible);
@@ -178,6 +180,7 @@ class MpvController final : public QObject {
     void tuningRequested(double playbackSpeed, double audioDelay, double subtitleDelay);
     void hardwareDecodingPreferenceChanged(bool enabled);
     void subtitlePreferencesChanged();
+    void secondarySubtitleChanged();
     void videoPresentationChanged();
     void videoFramingChanged();
     void videoColorAdjustmentChanged();

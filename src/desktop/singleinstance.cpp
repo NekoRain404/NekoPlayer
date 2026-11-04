@@ -13,8 +13,8 @@
 
 namespace {
 constexpr qsizetype kMaxPayloadBytes = 1024 * 1024;
-constexpr int kConnectTimeoutMs = 300;
-constexpr int kWriteTimeoutMs = 300;
+constexpr int kConnectTimeoutMs = 2000;
+constexpr int kWriteTimeoutMs = 2000;
 
 QByteArray encodeArguments(const QStringList &arguments) {
     QJsonArray array;
@@ -116,7 +116,8 @@ class SingleInstance::Private {
         QLocalSocket socket;
         socket.connectToServer(endpoint_);
         if (!socket.waitForConnected(kConnectTimeoutMs)) {
-            qWarning("single-instance connect failed: %s", qPrintable(socket.errorString()));
+            qWarning("single-instance connect failed (%s): %s", qPrintable(endpoint_),
+                     qPrintable(socket.errorString()));
             return Probe::NotRunning;
         }
         if (socket.write(payload) != payload.size()) {

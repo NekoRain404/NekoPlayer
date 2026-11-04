@@ -38,6 +38,10 @@ void SingleInstanceTest::firstProcessOwnsEndpoint() {
     QVERIFY(QFileInfo(endpoint).fileName().startsWith(QStringLiteral("nekoplayer-")));
 #ifdef Q_OS_UNIX
     QVERIFY(QDir::isAbsolutePath(endpoint));
+#else
+    // QLocalSocket rejects path separators in named-pipe names.
+    QVERIFY(!endpoint.contains(QLatin1Char('/')));
+    QVERIFY(!endpoint.contains(QLatin1Char('\\')));
 #endif
     QCOMPARE(instance.start({}), SingleInstance::StartResult::Owner);
 }

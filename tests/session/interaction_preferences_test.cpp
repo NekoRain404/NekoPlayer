@@ -99,6 +99,27 @@ class InteractionPreferencesTest final : public QObject {
         QCOMPARE(SessionStore(path).load().state.interaction.wheelVolumeStep, 5);
     }
 
+    void headlessControllerConstructsAndDestroys() {
+        MpvController player(true, true);
+        QVERIFY(player.isReady());
+    }
+
+    void headlessControllerAcceptsSessionPreferences() {
+        MpvController player(true, true);
+        QVERIFY(player.isReady());
+        player.setVolume(40);
+        player.setMuted(false);
+        player.setHardwareDecodingEnabled(true);
+        SubtitlePreferences subtitles;
+        subtitles.visible = false;
+        subtitles.scale = 1.25;
+        player.setSubtitlePreferences(subtitles);
+        player.setPlaybackSpeed(1.25);
+        player.setAudioDelay(0.1);
+        player.setSubtitleDelay(0.2);
+        player.setVideoColorAdjustment(VideoColorAdjustment{});
+    }
+
     void sessionManagerRestoresAndSavesInteractionPreferences() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());

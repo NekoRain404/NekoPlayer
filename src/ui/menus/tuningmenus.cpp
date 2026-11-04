@@ -45,8 +45,10 @@ QAction *addAction(QMenu *menu, QWidget *window, const QString &text, const QStr
 TuningMenus::TuningMenus(MpvController &controller, QWidget *window)
     : QObject(window), controller_(controller), window_(window), speedMenu_(new QMenu(window)),
       audioDelayMenu_(new QMenu(window)), subtitleDelayMenu_(new QMenu(window)),
-      equalizerMenu_(new QMenu(window)), speedGroup_(new QActionGroup(speedMenu_)),
-      equalizerGroup_(new QActionGroup(equalizerMenu_)) {
+      equalizerMenu_(new QMenu(window)), replayGainMenu_(new QMenu(window)),
+      speedGroup_(new QActionGroup(speedMenu_)), equalizerGroup_(new QActionGroup(equalizerMenu_)),
+      replayGainGroup_(new QActionGroup(replayGainMenu_)),
+      audioExclusiveAction_(new QAction(tr("独占音频输出"), window)) {
     speedMenu_->setObjectName(QStringLiteral("speedMenu"));
     audioDelayMenu_->setObjectName(QStringLiteral("audioDelayMenu"));
     subtitleDelayMenu_->setObjectName(QStringLiteral("subtitleDelayMenu"));
@@ -54,13 +56,17 @@ TuningMenus::TuningMenus(MpvController &controller, QWidget *window)
     createDelayMenu(audioDelayMenu_, true);
     createDelayMenu(subtitleDelayMenu_, false);
     createEqualizerMenu();
+    createAudioEffectsMenu();
     // TuningMenus is attached to the 声音 menu through its audio delay menu, so
-    // the equalizer lives there until a dedicated audio-effects menu exists.
+    // the equalizer/ReplayGain live there until a dedicated effects menu exists.
     audioDelayMenu_->addSeparator();
     audioDelayMenu_->addMenu(equalizerMenu_);
+    audioDelayMenu_->addMenu(replayGainMenu_);
+    audioDelayMenu_->addAction(audioExclusiveAction_);
     connect(&controller_, &MpvController::tuningChanged, this, &TuningMenus::update);
     connect(&controller_, &MpvController::equalizerPresetChanged, this, &TuningMenus::update);
     restoreEqualizer();
+    restoreAudioEffects();
     update();
 }
 
@@ -68,6 +74,7 @@ QMenu *TuningMenus::speedMenu() const { return speedMenu_; }
 QMenu *TuningMenus::audioDelayMenu() const { return audioDelayMenu_; }
 QMenu *TuningMenus::subtitleDelayMenu() const { return subtitleDelayMenu_; }
 QMenu *TuningMenus::equalizerMenu() const { return equalizerMenu_; }
+QMenu *TuningMenus::replayGainMenu() const { return replayGainMenu_; }
 
 void TuningMenus::retranslate() {
     const auto speedActions = speedGroup_->actions();
@@ -95,6 +102,11 @@ void TuningMenus::retranslate() {
     const auto labels = equalizerLabels();
     for (size_t index = 0; index < labels.size(); ++index)
         setText(equalizerMenu_, equalizerActionNames[index], labels[index]);
+    replayGainMenu_->setTitle(tr("重放增益"));
+    setText(replayGainMenu_, "replayGainOffAction", tr("关闭"));
+    setText(replayGainMenu_, "replayGainTrackAction", tr("按音轨"));
+    setText(replayGainMenu_, "replayGainAlbumAction", tr("按专辑"));
+    audioExclusiveAction_->setText(tr("独占音频输出"));
     update();
 }
 
@@ -181,6 +193,64 @@ void TuningMenus::createEqualizerMenu() {
     }
 }
 
+void TuningMenus::createAudioEffectsMenu() {
+    replayGainMenu_->setObjectName(QStringLiteral("replayGainMenu"));
+    const auto addMode = [this](const QString &text, const char *name, ReplayGainMode mode) {
+        auto *action = replayGainMenu_->addAction(text);
+        action->setObjectName(QString::fromLatin1(name));
+        action->setCheckable(true);
+        action->setData(static_cast<int>(mode));
+        replayGainGroup_->addAction(action);
+        connect(action, &QAction::triggered, this, [this, mode, text] {
+            controller_.setReplayGainMode(mode);
+            if (controller_.replayGainMode() != mode)
+                return;
+            saveAudioEffects();
+            emit feedback(tr("重放增益：%1").arg(text));
+            update();
+        });
+    };
+    addMode(tr("关闭"), "replayGainOffAction", ReplayGainMode::Off);
+    addMode(tr("按音轨"), "replayGainTrackAction", ReplayGainMode::Track);
+    addMode(tr("按专辑"), "replayGainAlbumAction", ReplayGainMode::Album);
+    audioExclusiveAction_->setObjectName(QStringLiteral("audioExclusiveAction"));
+    audioExclusiveAction_->setCheckable(true);
+    connect(audioExclusiveAction_, &QAction::toggled, this, [this](bool enabled) {
+        controller_.setAudioExclusive(enabled);
+        if (controller_.audioExclusive() != enabled) {
+            QSignalBlocker blocker(audioExclusiveAction_);
+            audioExclusiveAction_->setChecked(!enabled);
+            return;
+        }
+        saveAudioEffects();
+        emit feedback(enabled ? tr("已启用独占音频输出") : tr("已关闭独占音频输出"));
+    });
+}
+
+void TuningMenus::restoreAudioEffects() {
+    if (!qApp->property("configurationEnabled").toBool())
+        return;
+    const QSettings store;
+    const auto mode =
+        store.value(QStringLiteral("audio/replayGain"), QStringLiteral("off")).toString();
+    controller_.setReplayGainMode(mode == QLatin1String("track")   ? ReplayGainMode::Track
+                                  : mode == QLatin1String("album") ? ReplayGainMode::Album
+                                                                   : ReplayGainMode::Off);
+    controller_.setAudioExclusive(store.value(QStringLiteral("audio/exclusive"), false).toBool());
+}
+
+void TuningMenus::saveAudioEffects() {
+    if (!qApp->property("configurationEnabled").toBool())
+        return;
+    QSettings store;
+    const auto mode =
+        controller_.replayGainMode() == ReplayGainMode::Track   ? QStringLiteral("track")
+        : controller_.replayGainMode() == ReplayGainMode::Album ? QStringLiteral("album")
+                                                                : QStringLiteral("off");
+    store.setValue(QStringLiteral("audio/replayGain"), mode);
+    store.setValue(QStringLiteral("audio/exclusive"), controller_.audioExclusive());
+}
+
 void TuningMenus::restoreEqualizer() {
     if (!qApp->property("configurationEnabled").toBool())
         return;
@@ -227,9 +297,15 @@ void TuningMenus::update() {
     for (auto *action : equalizerGroup_->actions())
         action->setChecked(action->data().toInt() ==
                            static_cast<int>(controller_.equalizerPreset()));
+    for (auto *action : replayGainGroup_->actions())
+        action->setChecked(action->data().toInt() ==
+                           static_cast<int>(controller_.replayGainMode()));
+    audioExclusiveAction_->setChecked(controller_.audioExclusive());
     for (auto *menu : {speedMenu_, audioDelayMenu_, subtitleDelayMenu_})
         menu->setEnabled(controller_.isReady());
     equalizerGroup_->setEnabled(controller_.isReady());
+    replayGainGroup_->setEnabled(controller_.isReady());
+    audioExclusiveAction_->setEnabled(controller_.isReady());
     if (announce_)
         emit feedback(tr("速度 %1 倍 · 音频 %2 秒 · 字幕 %3 秒")
                           .arg(state.playbackSpeed, 0, 'f', 2)

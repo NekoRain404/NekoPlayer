@@ -26,9 +26,8 @@ class NetworkOpenDialogTest final : public QObject {
         QVERIFY(open->isEnabled());
         const auto options = dialog.networkOptions();
         QCOMPARE(options.proxy, QStringLiteral("http://127.0.0.1:7890"));
-        QCOMPARE(options.headers,
-                 QStringList({QStringLiteral("X-Test: 1"),
-                              QStringLiteral("Authorization: Bearer token")}));
+        QCOMPARE(options.headers, QStringList({QStringLiteral("X-Test: 1"),
+                                               QStringLiteral("Authorization: Bearer token")}));
         QCOMPARE(options.cookiesFile, QStringLiteral("/tmp/cookies.txt"));
     }
 

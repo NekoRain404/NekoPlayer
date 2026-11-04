@@ -52,12 +52,12 @@ class MprisRootAdaptor final : public QDBusAbstractAdaptor {
     [[nodiscard]] QString identity() const { return QStringLiteral("NekoPlayer"); }
     [[nodiscard]] QString desktopEntry() const { return QStringLiteral("nekoplayer"); }
     [[nodiscard]] QStringList supportedUriSchemes() const {
-        return {QStringLiteral("file"), QStringLiteral("http"), QStringLiteral("https"),
+        return {QStringLiteral("file"), QStringLiteral("http"),  QStringLiteral("https"),
                 QStringLiteral("rtsp"), QStringLiteral("rtsps"), QStringLiteral("rtmp"),
                 QStringLiteral("rtmps")};
     }
     [[nodiscard]] QStringList supportedMimeTypes() const {
-        return {QStringLiteral("video/mp4"), QStringLiteral("video/x-matroska"),
+        return {QStringLiteral("video/mp4"),  QStringLiteral("video/x-matroska"),
                 QStringLiteral("video/webm"), QStringLiteral("audio/mpeg"),
                 QStringLiteral("audio/flac"), QStringLiteral("audio/ogg")};
     }
@@ -392,9 +392,9 @@ void MprisPlayer::refresh() {
     }
     if (changed.isEmpty())
         return;
-    auto message = QDBusMessage::createSignal(
-        QString::fromLatin1(objectPath), QStringLiteral("org.freedesktop.DBus.Properties"),
-        QStringLiteral("PropertiesChanged"));
+    auto message = QDBusMessage::createSignal(QString::fromLatin1(objectPath),
+                                              QStringLiteral("org.freedesktop.DBus.Properties"),
+                                              QStringLiteral("PropertiesChanged"));
     message << QString::fromLatin1(playerInterface) << changed << QStringList{};
     impl_->bus.send(message);
 }

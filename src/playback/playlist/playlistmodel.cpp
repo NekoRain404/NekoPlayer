@@ -82,6 +82,42 @@ bool PlaylistModel::dropMimeData(const QMimeData *data, Qt::DropAction action, i
     return moveRow({}, drag->entry.row(), {}, row == -1 ? rowCount() : row);
 }
 
+bool PlaylistModel::moveBlock(int first, int count, int delta) {
+    if (count <= 0 || (delta != -1 && delta != 1) || first < 0 || first + count > rowCount())
+        return false;
+    if (delta < 0 && first == 0)
+        return false;
+    if (delta > 0 && first + count >= rowCount())
+        return false;
+    const int last = first + count - 1;
+    const int destination = delta < 0 ? first - 1 : last + 2;
+    if (!beginMoveRows({}, first, last, {}, destination))
+        return false;
+    const int target = delta < 0 ? first - 1 : first + 1;
+    const auto previous = currentIndex_;
+    const auto movedPaths = paths_.mid(first, count);
+    const auto movedNames = displayNames_.mid(first, count);
+    const auto movedMetadata = metadata_.mid(first, count);
+    paths_.remove(first, count);
+    displayNames_.remove(first, count);
+    metadata_.remove(first, count);
+    for (int offset = 0; offset < count; ++offset) {
+        paths_.insert(target + offset, movedPaths.at(offset));
+        displayNames_.insert(target + offset, movedNames.at(offset));
+        metadata_.insert(target + offset, movedMetadata.at(offset));
+    }
+    if (currentIndex_ >= first && currentIndex_ <= last)
+        currentIndex_ += delta;
+    else if (delta < 0 && currentIndex_ == first - 1)
+        currentIndex_ += count;
+    else if (delta > 0 && currentIndex_ == last + 1)
+        currentIndex_ -= count;
+    endMoveRows();
+    if (currentIndex_ != previous)
+        emit currentIndexChanged(currentIndex_);
+    return true;
+}
+
 bool PlaylistModel::moveRows(const QModelIndex &sourceParent, int sourceRow, int count,
                              const QModelIndex &destinationParent, int destinationChild) {
     if (sourceParent.isValid() || destinationParent.isValid() || count != 1 || sourceRow < 0 ||

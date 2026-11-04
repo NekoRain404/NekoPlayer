@@ -150,4 +150,6 @@ QSettings schemaVersion=1，原子同步开启；保存前独立检查现存文�
 
 - `src/desktop/mprisplayer.*`：把 `MpvController`/`PlaylistController` 的只读状态翻译为 MPRIS 属性与命令；不直接调用 libmpv，不改变播放层职责。
 - `src/ui/window/windowdesktop.cpp`：托盘、媒体键动作与桌面状态更新；共享既有 `QAction`，不复制播放逻辑。
+- `src/playlist/playlistfile.*`：按扩展名分派 M3U8/PLS/XSPF 读写；M3U8 保留当前行扩展，PLS/XSPF 保留标题与时长。
+- `mpvcontroller_network.cpp` / `mpvcontroller_audioeffects.cpp` / `mpvcontroller_recording.cpp`：分别封装网络选项、ReplayGain/独占音频和 stream-record；UI 只发起意图，不直接调用 libmpv。
 - `SessionManager` 的自动快照仍通过 `SessionStore` 原子写入；UI 只调度保存，不直接拼会话格式。

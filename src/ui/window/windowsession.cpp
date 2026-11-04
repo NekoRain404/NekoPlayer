@@ -102,15 +102,17 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 // the window coordination unit stays focused on playback state.
 void MainWindow::choosePlaylistToOpen() {
     folderMenu_->cancel();
-    const auto path = QFileDialog::getOpenFileName(this, tr("打开播放列表"), mediaDirectory(),
-                                                   tr("M3U8 播放列表 (*.m3u8);;所有文件 (*)"));
+    const auto path =
+        QFileDialog::getOpenFileName(this, tr("打开播放列表"), mediaDirectory(),
+                                     tr("播放列表 (*.m3u8 *.m3u *.pls *.xspf);;M3U8 (*.m3u8 "
+                                        "*.m3u);;PLS (*.pls);;XSPF (*.xspf);;所有文件 (*)"));
     if (!path.isEmpty())
         openPlaylist(path);
 }
 
 void MainWindow::choosePlaylistToSave() {
     auto path = QFileDialog::getSaveFileName(this, tr("保存播放列表"), mediaDirectory(),
-                                             tr("M3U8 播放列表 (*.m3u8)"));
+                                             tr("M3U8 (*.m3u8 *.m3u);;PLS (*.pls);;XSPF (*.xspf)"));
     if (path.isEmpty())
         return;
     if (QFileInfo(path).suffix().isEmpty())
@@ -148,7 +150,6 @@ void MainWindow::setupSessionAutosave() {
 }
 
 void MainWindow::scheduleSessionAutosave() {
-    if (session_ && sessionReady_ && !sessionSaveAttempted_ &&
-        !sessionAutosaveTimer_.isActive())
+    if (session_ && sessionReady_ && !sessionSaveAttempted_ && !sessionAutosaveTimer_.isActive())
         sessionAutosaveTimer_.start();
 }

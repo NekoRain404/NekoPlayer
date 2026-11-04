@@ -7,8 +7,12 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QDateTime>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QMenu>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QWidget>
 
 namespace {
@@ -77,6 +81,32 @@ VideoMenu::VideoMenu(MpvController &controller, QWidget *window)
                                   QKeySequence(Qt::ALT | Qt::Key_Left));
     resetRotation_ = make(tr("重置旋转"), "videoRotationResetAction");
     menu_->addActions({clockwise, counterClockwise, resetRotation_});
+    recordStream_ = make(tr("录制当前流…"), "recordStreamAction");
+    stopRecording_ = make(tr("停止录制"), "stopRecordingAction");
+    menu_->addSeparator();
+    menu_->addActions({recordStream_, stopRecording_});
+    connect(recordStream_, &QAction::triggered, this, [this, window] {
+        const auto directory = QStandardPaths::writableLocation(QStandardPaths::MoviesLocation);
+        const auto suggestion = QDir(directory).filePath(
+            QStringLiteral("NekoPlayer-%1.mkv")
+                .arg(QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss"))));
+        auto path = QFileDialog::getSaveFileName(window, tr("录制当前流"), suggestion,
+                                                 tr("Matroska (*.mkv);;MPEG-TS (*.ts)"));
+        if (path.isEmpty())
+            return;
+        if (QFileInfo(path).suffix().isEmpty())
+            path += QStringLiteral(".mkv");
+        if (!controller_.startRecording(QFileInfo(path).absoluteFilePath()))
+            emit feedback(tr("无法开始录制：当前没有可播放的媒体或路径不可写"));
+        else
+            emit feedback(tr("正在录制到 %1").arg(QFileInfo(path).fileName()));
+    });
+    connect(stopRecording_, &QAction::triggered, &controller_, &MpvController::stopRecording);
+    connect(&controller_, &MpvController::recordingChanged, this, [this] {
+        if (!controller_.isRecording() && controller_.state().active)
+            emit feedback(tr("录制已停止"));
+        update();
+    });
     connect(clockwise, &QAction::triggered, &controller_, &MpvController::rotateVideoClockwise);
     connect(counterClockwise, &QAction::triggered, &controller_,
             &MpvController::rotateVideoCounterClockwise);
@@ -240,6 +270,8 @@ void VideoMenu::retranslate() {
         setActionText(sharpenActionNames[index], labels[index]);
         setActionText(denoiseActionNames[index], labels[index]);
     }
+    setActionText("recordStreamAction", tr("录制当前流…"));
+    setActionText("stopRecordingAction", tr("停止录制"));
     update();
 }
 
@@ -260,6 +292,8 @@ void VideoMenu::update() {
     sharpenLevels_->setEnabled(controller_.isReady());
     denoiseLevels_->setEnabled(controller_.isReady());
     resetRotation_->setEnabled(controller_.isReady() && presentation.rotation != 0);
+    recordStream_->setEnabled(controller_.state().active && !controller_.isRecording());
+    stopRecording_->setEnabled(controller_.isRecording());
     menu_->setTitle(tr("视频(&I) · %1 · %2°")
                         .arg(aspects_->checkedAction()->text())
                         .arg(presentation.rotation));

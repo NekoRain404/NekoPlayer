@@ -15,13 +15,15 @@ class NetworkOptionsTest final : public QObject {
         QVERIFY(cookies.open());
         NetworkOptions options;
         options.proxy = QStringLiteral("http://127.0.0.1:7890");
-        options.headers = {QStringLiteral(" Authorization: Bearer test "),
-                           QString(), QStringLiteral("X-Test: 1")};
+        options.headers = {QStringLiteral(" Authorization: Bearer test "), QString(),
+                           QStringLiteral("X-Test: 1")};
         options.cookiesFile = cookies.fileName();
         player.setNetworkOptions(options);
         QCOMPARE(player.networkOptions().headers,
-                 QStringList({QStringLiteral("Authorization: Bearer test"), QStringLiteral("X-Test: 1")}));
-        QVERIFY2(errors.isEmpty(), qPrintable(errors.isEmpty() ? QString() : errors.first().first().toString()));
+                 QStringList(
+                     {QStringLiteral("Authorization: Bearer test"), QStringLiteral("X-Test: 1")}));
+        QVERIFY2(errors.isEmpty(),
+                 qPrintable(errors.isEmpty() ? QString() : errors.first().first().toString()));
 
         char *proxy = mpv_get_property_string(player.handle(), "http-proxy");
         QCOMPARE(QString::fromUtf8(proxy), options.proxy);

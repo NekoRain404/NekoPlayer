@@ -31,6 +31,7 @@ class PlaylistModel final : public QAbstractListModel {
                       const QModelIndex &parent) override;
     bool moveRows(const QModelIndex &sourceParent, int sourceRow, int count,
                   const QModelIndex &destinationParent, int destinationChild) override;
+    bool moveBlock(int first, int count, int delta);
     [[nodiscard]] int currentIndex() const;
     [[nodiscard]] QString currentPath() const;
     [[nodiscard]] QString pathAt(int row) const;

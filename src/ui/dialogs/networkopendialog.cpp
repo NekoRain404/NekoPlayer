@@ -56,8 +56,7 @@ NetworkOpenDialog::NetworkOpenDialog(QWidget *parent) : QDialog(parent) {
             cookies_->setText(path);
     });
     auto *security = new QLabel(
-        tr("请求头可能包含凭据；只填入可信值。选项不会写入会话文件，重启后需重新输入。"),
-        advanced);
+        tr("请求头可能包含凭据；只填入可信值。选项不会写入会话文件，重启后需重新输入。"), advanced);
     security->setWordWrap(true);
     advancedForm->addRow(security);
 

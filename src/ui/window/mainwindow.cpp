@@ -6,7 +6,7 @@
 #include "playback/playlist/playlistcontroller.h"
 #include "playback/playlist/playlistmodel.h"
 #include "playback/render/videowidget.h"
-#include "playlist/m3u8store.h"
+#include "playlist/playlistfile.h"
 #include "preview/thumbnailservice.h"
 #include "session/recentmediahistory.h"
 #include "session/sessionmanager.h"
@@ -384,7 +384,7 @@ void MainWindow::openPlaylist(const QString &path) {
         showError(tr("OpenGL 初始化失败，无法打开播放列表"));
         return;
     }
-    const auto loaded = M3u8Store::load(path);
+    const auto loaded = PlaylistFile::load(path);
     if (!loaded.error.isEmpty()) {
         showError(loaded.error);
         return;
@@ -421,7 +421,7 @@ void MainWindow::savePlaylist(const QString &path) {
         const auto metadata = model.metadataAt(row);
         entries.append({model.pathAt(row), metadata.durationSeconds, metadata.title});
     }
-    const auto error = M3u8Store::saveEntries(path, entries, model.currentIndex());
+    const auto error = PlaylistFile::save(path, entries, model.currentIndex());
     if (!error.isEmpty())
         showError(error);
     else

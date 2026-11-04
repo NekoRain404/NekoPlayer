@@ -48,6 +48,7 @@ class PlaylistController final : public QObject {
     int removeMissingFiles();
     void sortPlaylist(PlaylistModel::SortKey key, Qt::SortOrder order);
     void moveItem(int from, int to);
+    void moveBlock(const QList<int> &rows, int delta);
     void clear();
     void setRepeatMode(RepeatMode mode);
     void cycleRepeatMode();

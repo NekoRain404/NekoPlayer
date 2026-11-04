@@ -163,6 +163,8 @@ struct MpvController::Impl {
     VideoPresentation presentation;
     VideoFraming framing;
     VideoColorAdjustment videoColor;
+    ReplayGainMode replayGainMode = ReplayGainMode::Off;
+    bool audioExclusive = false;
     HdrToneMapping hdrToneMapping = HdrToneMapping::Auto;
     DeinterlaceMode deinterlaceMode = DeinterlaceMode::Auto;
     QList<AudioDevice> audioDevices;
@@ -190,6 +192,7 @@ struct MpvController::Impl {
     bool hasMotionVideo = false;
     uint64_t screenshotCommand = 0;
     QString screenshotPath;
+    QString recordingPath;
     uint64_t request = 0;
     struct TuningSetting {
         const char *name;
@@ -316,6 +319,7 @@ struct MpvController::Impl {
     }
 
     void resetPlayback() {
+        owner->stopRecording();
         mediaReady = false;
         explicitExternalPaths.clear();
         cancelInformationQueries();

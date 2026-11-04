@@ -1,6 +1,5 @@
 #include "playback/media/mediasource.h"
 #include "playback/mpv/mpvcontroller_p.h"
-
 MpvController::MpvController(bool headless, bool silentAudio, QObject *parent)
     : QObject(parent), impl_(std::make_unique<Impl>(this)) {
     auto &backend = *impl_;
@@ -306,6 +305,7 @@ void MpvController::setSuppressAutoLoadForNextOpen(bool suppress) {
 }
 
 void MpvController::openFileAtPosition(const QString &path, double seconds) {
+    stopRecording();
     const bool suppressAutoLoad = std::exchange(impl_->suppressAutoLoadForNextOpen, false);
     if (!isReady() || path.isEmpty() || !std::isfinite(seconds) || seconds < 0)
         return;

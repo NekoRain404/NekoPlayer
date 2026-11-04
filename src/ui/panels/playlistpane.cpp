@@ -110,13 +110,18 @@ PlaylistPane::PlaylistPane(PlaylistController &queue, QAction *append, QAction *
             queue_.removeRowsAt(rows);
     });
     connect(moveUp_, &QAction::triggered, this, [this] {
-        const auto row = singleSelectedSourceRow();
-        if (row > 0)
+        const auto rows = selectedSourceRows();
+        if (rows.size() > 1)
+            queue_.moveBlock(rows, -1);
+        else if (const auto row = singleSelectedSourceRow(); row > 0)
             queue_.moveItem(row, row - 1);
     });
     connect(moveDown_, &QAction::triggered, this, [this] {
-        const auto row = singleSelectedSourceRow();
-        if (row >= 0 && row + 1 < model_->rowCount())
+        const auto rows = selectedSourceRows();
+        if (rows.size() > 1)
+            queue_.moveBlock(rows, 1);
+        else if (const auto row = singleSelectedSourceRow();
+                 row >= 0 && row + 1 < model_->rowCount())
             queue_.moveItem(row, row + 1);
     });
     connectSelectionModel();
@@ -438,8 +443,17 @@ void PlaylistPane::updateEditingActions() {
     const auto rows = selectedSourceRows();
     remove_->setEnabled(!rows.isEmpty() || view_->currentIndex().isValid());
     const auto single = rows.size() == 1 ? rows.first() : -1;
-    moveUp_->setEnabled(single > 0);
-    moveDown_->setEnabled(single >= 0 && single + 1 < model_->rowCount());
+    bool contiguous = !rows.isEmpty();
+    for (qsizetype index = 1; index < rows.size(); ++index)
+        if (rows[index] != rows[index - 1] + 1)
+            contiguous = false;
+    if (rows.size() > 1) {
+        moveUp_->setEnabled(contiguous && rows.first() > 0);
+        moveDown_->setEnabled(contiguous && rows.last() + 1 < model_->rowCount());
+    } else {
+        moveUp_->setEnabled(single > 0);
+        moveDown_->setEnabled(single >= 0 && single + 1 < model_->rowCount());
+    }
 }
 
 void PlaylistPane::updateEmptyHint() {

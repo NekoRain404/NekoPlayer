@@ -49,7 +49,9 @@ add_library(neko_playback src/playback/mpv/mpvcontroller.cpp src/playback/mpv/mp
     src/playback/mpv/mpvcontroller_screenshot.cpp
     src/playback/mpv/mpvcontroller_subtitles.cpp src/playback/mpv/subtitlepreferences.cpp
     src/playback/mpv/mpvcontroller_video_color.cpp
-    src/playback/mpv/mpvcontroller_network.cpp src/playback/media/videocoloradjustment.cpp
+    src/playback/mpv/mpvcontroller_network.cpp
+    src/playback/mpv/mpvcontroller_audioeffects.cpp
+    src/playback/mpv/mpvcontroller_recording.cpp src/playback/media/videocoloradjustment.cpp
     src/playback/mpv/mpvcontroller_hdr.cpp
     src/playback/mpv/mpvcontroller_deinterlace.cpp
     src/playback/mpv/mpvchapters.cpp src/playback/media/playbacktime.cpp src/playback/media/mediasource.cpp
@@ -79,7 +81,7 @@ add_library(neko_ui src/playback/render/videowidget.cpp src/desktop/mprisplayer.
     src/ui/theme/appearanceicons.cpp src/ui/theme/appicon.cpp
     src/ui/panels/playlistitemdelegate.cpp
     src/ui/panels/welcomepanel.cpp
-    src/playlist/m3u8store.cpp
+    src/playlist/m3u8store.cpp src/playlist/playlistfile.cpp
     src/ui/dialogs/mediainformationtext.cpp src/ui/dialogs/mediainformationdialog.cpp
     src/ui/panels/playbackoverlay.cpp src/ui/panels/playbackoverlaytext.cpp
     src/ui/window/windowactions.cpp src/ui/window/windowdesktop.cpp src/ui/window/windowicons.cpp src/ui/window/shortcutoverride.cpp

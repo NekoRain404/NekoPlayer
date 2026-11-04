@@ -22,6 +22,7 @@
 // Audio equalizer presets and video filter strengths are user-facing choices;
 // the controller owns their mpv representation.
 enum class EqualizerPreset { Off, Flat, Rock, Pop, Jazz, Classical, Vocal, BassBoost };
+enum class ReplayGainMode { Off, Track, Album };
 enum class SharpenLevel { Off, Low, Medium, High };
 enum class DenoiseLevel { Off, Low, Medium, High };
 
@@ -74,6 +75,10 @@ class MpvController final : public QObject {
     [[nodiscard]] bool canStepFrameBackward() const;
     [[nodiscard]] bool canTakeScreenshot() const;
     [[nodiscard]] bool screenshotPending() const;
+    [[nodiscard]] bool isRecording() const;
+    [[nodiscard]] QString recordingPath() const;
+    bool startRecording(const QString &absolutePath);
+    void stopRecording();
     bool takeScreenshot(const QString &absolutePath, bool includeSubtitles = true);
     // User preference; state().hardwareDecoder reports the decoder actually in use.
     [[nodiscard]] bool hardwareDecodingEnabled() const;
@@ -98,9 +103,13 @@ class MpvController final : public QObject {
     [[nodiscard]] HdrToneMapping hdrToneMapping() const;
     [[nodiscard]] DeinterlaceMode deinterlaceMode() const;
     [[nodiscard]] EqualizerPreset equalizerPreset() const;
+    [[nodiscard]] ReplayGainMode replayGainMode() const;
+    [[nodiscard]] bool audioExclusive() const;
     [[nodiscard]] SharpenLevel sharpenLevel() const;
     [[nodiscard]] DenoiseLevel denoiseLevel() const;
     void setEqualizerPreset(EqualizerPreset preset);
+    void setReplayGainMode(ReplayGainMode mode);
+    void setAudioExclusive(bool enabled);
     void setVideoFilters(SharpenLevel sharpen, DenoiseLevel denoise);
     void setVideoColorAdjustment(const VideoColorAdjustment &adjustment);
     void setHdrToneMapping(HdrToneMapping mapping);
@@ -172,6 +181,8 @@ class MpvController final : public QObject {
     void hdrToneMappingChanged();
     void deinterlaceModeChanged();
     void equalizerPresetChanged();
+    void replayGainModeChanged();
+    void audioExclusiveChanged();
     void videoFiltersChanged();
     void abLoopChanged();
     void stateChanged();
@@ -190,6 +201,7 @@ class MpvController final : public QObject {
     void playbackFinished();
     void screenshotPendingChanged();
     void screenshotFinished(const QString &path, bool success);
+    void recordingChanged();
     void mediaLoadFailed(const QString &message);
     void errorOccurred(const QString &message);
 

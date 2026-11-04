@@ -16,8 +16,7 @@ class SessionAutosaveWindowTest final : public QObject {
         MainWindow window(true, sessionPath);
         window.show();
         window.openFiles({QString::fromUtf8(TEST_MEDIA_PATH)});
-        QTRY_VERIFY(window.controller()->state().active &&
-                    window.controller()->state().seekable);
+        QTRY_VERIFY(window.controller()->state().active && window.controller()->state().seekable);
         QTest::qWait(1200);
         const auto loaded = SessionStore(sessionPath).load();
         QVERIFY2(loaded.error.isEmpty(), qPrintable(loaded.error));

@@ -1,8 +1,8 @@
-#include "playback/render/videowidget.h"
 #include "desktop/mprisplayer.h"
 #include "playback/mpv/mpvcontroller.h"
 #include "playback/playlist/playlistcontroller.h"
 #include "playback/playlist/playlistmodel.h"
+#include "playback/render/videowidget.h"
 #include "ui/dialogs/quickactionsdialog.h"
 #include "ui/window/mainwindow.h"
 
@@ -81,16 +81,14 @@ void MainWindow::setupTrayIcon() {
     });
     menu->addSeparator();
     menu->addAction(quitAction_);
-    trayIcon_ = new QSystemTrayIcon(windowIcon().isNull() ? QApplication::windowIcon()
-                                                         : windowIcon(),
-                                   this);
+    trayIcon_ = new QSystemTrayIcon(
+        windowIcon().isNull() ? QApplication::windowIcon() : windowIcon(), this);
     trayIcon_->setObjectName(QStringLiteral("trayIcon"));
     trayIcon_->setToolTip(windowTitle());
     trayIcon_->setContextMenu(menu);
     connect(trayIcon_, &QSystemTrayIcon::activated, this,
             [this](QSystemTrayIcon::ActivationReason reason) {
-                if (reason != QSystemTrayIcon::Trigger &&
-                    reason != QSystemTrayIcon::DoubleClick)
+                if (reason != QSystemTrayIcon::Trigger && reason != QSystemTrayIcon::DoubleClick)
                     return;
                 showNormal();
                 raise();
@@ -101,8 +99,8 @@ void MainWindow::setupTrayIcon() {
 
 void MainWindow::updateDesktopState() {
     if (mediaPlayAction_) {
-        const bool hasMedia =
-            video_->isReady() && (controller_->state().active || playlist_->model()->rowCount() > 0);
+        const bool hasMedia = video_->isReady() &&
+                              (controller_->state().active || playlist_->model()->rowCount() > 0);
         mediaPlayAction_->setEnabled(hasMedia);
         mediaPauseAction_->setEnabled(controller_->state().active);
         mediaToggleAction_->setEnabled(hasMedia);

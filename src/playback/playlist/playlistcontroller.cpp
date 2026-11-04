@@ -259,6 +259,18 @@ void PlaylistController::moveItem(int from, int to) {
     model_->moveRow({}, from, {}, from < to ? to + 1 : to);
 }
 
+void PlaylistController::moveBlock(const QList<int> &rows, int delta) {
+    auto sorted = rows;
+    std::sort(sorted.begin(), sorted.end());
+    sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
+    if (sorted.isEmpty())
+        return;
+    for (qsizetype index = 1; index < sorted.size(); ++index)
+        if (sorted[index] != sorted[index - 1] + 1)
+            return;
+    model_->moveBlock(sorted.first(), static_cast<int>(sorted.size()), delta);
+}
+
 void PlaylistController::removeRowsAt(const QList<int> &rows) {
     std::vector<int> removed;
     removed.reserve(rows.size());

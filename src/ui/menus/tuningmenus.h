@@ -5,6 +5,7 @@
 
 class MpvController;
 enum class EqualizerPreset;
+class QAction;
 class QActionGroup;
 class QMenu;
 class QWidget;
@@ -17,6 +18,7 @@ class TuningMenus final : public QObject {
     [[nodiscard]] QMenu *audioDelayMenu() const;
     [[nodiscard]] QMenu *subtitleDelayMenu() const;
     [[nodiscard]] QMenu *equalizerMenu() const;
+    [[nodiscard]] QMenu *replayGainMenu() const;
     void retranslate();
 
   signals:
@@ -26,6 +28,9 @@ class TuningMenus final : public QObject {
     void createSpeedMenu();
     void createDelayMenu(QMenu *menu, bool audio);
     void createEqualizerMenu();
+    void createAudioEffectsMenu();
+    void restoreAudioEffects();
+    void saveAudioEffects();
     void restoreEqualizer();
     void saveEqualizer(EqualizerPreset preset);
     void update();
@@ -39,5 +44,8 @@ class TuningMenus final : public QObject {
     QMenu *equalizerMenu_;
     QActionGroup *speedGroup_;
     QActionGroup *equalizerGroup_;
+    QMenu *replayGainMenu_;
+    QActionGroup *replayGainGroup_;
+    QAction *audioExclusiveAction_;
     bool announce_ = false;
 };

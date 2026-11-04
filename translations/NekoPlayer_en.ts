@@ -480,44 +480,44 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>Interaction Settings…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="738"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="734"/>
         <location filename="../src/ui/window/windowactions.cpp" line="268"/>
         <location filename="../src/ui/window/windowactions.cpp" line="508"/>
         <source>窗口置顶</source>
         <translation>Always on Top</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="164"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="160"/>
         <source>就绪 · Qt 6 + libmpv</source>
         <translation>Ready · Qt 6 + libmpv</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="178"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="174"/>
         <source>正在播放 · %1</source>
         <translation>Playing · %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="187"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="183"/>
         <source>已暂停 · %1</source>
         <translation>Paused · %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="195"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="191"/>
         <source>播放列表已结束</source>
         <translation>Playlist finished</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="348"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="344"/>
         <source>媒体地址无效；网络地址需要包含受支持的协议与主机名</source>
         <translation>Invalid media address; network addresses must include a supported protocol and host name</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="353"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="349"/>
         <source>OpenGL 初始化失败，无法打开媒体文件</source>
         <translation>OpenGL initialization failed; cannot open media</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="366"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="362"/>
         <source>媒体地址无效；未添加到播放列表</source>
         <translation>Invalid media address; it was not added to the playlist</translation>
     </message>
@@ -527,7 +527,6 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>Open Playlist</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowsession.cpp" line="106"/>
         <source>M3U8 播放列表 (*.m3u8);;所有文件 (*)</source>
         <translation>M3U8 Playlists (*.m3u8);;All Files (*)</translation>
     </message>
@@ -537,67 +536,66 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>Save Playlist</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowsession.cpp" line="113"/>
         <source>M3U8 播放列表 (*.m3u8)</source>
         <translation>M3U8 Playlists (*.m3u8)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="388"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="384"/>
         <source>OpenGL 初始化失败，无法打开播放列表</source>
         <translation>OpenGL initialization failed; cannot open playlist</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="410"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="406"/>
         <source>已导入含网络地址的播放列表；确认后按空格开始播放</source>
         <translation>Imported a playlist containing network entries; press Space to start playback</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="432"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="428"/>
         <source>播放列表已保存</source>
         <translation>Playlist saved</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="438"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="434"/>
         <source>打开媒体文件</source>
         <translation>Open Media</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="439"/>
-        <location filename="../src/ui/window/mainwindow.cpp" line="458"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="435"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="454"/>
         <source>媒体文件 (%1);;所有文件 (*)</source>
         <translation>Media Files (%1);;All Files (*)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="721"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="717"/>
         <location filename="../src/ui/window/windowactions.cpp" line="507"/>
         <source>退出小窗</source>
         <translation>Exit Mini Player</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="721"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="717"/>
         <location filename="../src/ui/window/windowactions.cpp" line="263"/>
         <location filename="../src/ui/window/windowactions.cpp" line="507"/>
         <source>小窗播放</source>
         <translation>Mini Player</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="457"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="453"/>
         <source>添加媒体文件</source>
         <translation>Add Media Files</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="464"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="460"/>
         <source>OpenGL 初始化失败，无法打开文件夹</source>
         <translation>OpenGL initialization failed; cannot open folder</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="479"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="475"/>
         <location filename="../src/ui/window/windowactions.cpp" line="498"/>
         <source>播放</source>
         <translation>Play</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="479"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="475"/>
         <location filename="../src/ui/window/windowactions.cpp" line="85"/>
         <location filename="../src/ui/window/windowactions.cpp" line="88"/>
         <location filename="../src/ui/window/windowactions.cpp" line="498"/>
@@ -672,14 +670,14 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>Mute</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="654"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="650"/>
         <location filename="../src/ui/window/windowactions.cpp" line="112"/>
         <location filename="../src/ui/window/windowactions.cpp" line="506"/>
         <source>全屏</source>
         <translation>Fullscreen</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="654"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="650"/>
         <location filename="../src/ui/window/windowactions.cpp" line="117"/>
         <location filename="../src/ui/window/windowactions.cpp" line="506"/>
         <source>退出全屏</source>
@@ -820,6 +818,16 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>Session was not saved</translation>
     </message>
     <message>
+        <location filename="../src/ui/window/windowsession.cpp" line="106"/>
+        <source>播放列表 (*.m3u8 *.m3u *.pls *.xspf);;M3U8 (*.m3u8 *.m3u);;PLS (*.pls);;XSPF (*.xspf);;所有文件 (*)</source>
+        <translation>Playlists (*.m3u8 *.m3u *.pls *.xspf);;M3U8 (*.m3u8 *.m3u);;PLS (*.pls);;XSPF (*.xspf);;All files (*)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/window/windowsession.cpp" line="113"/>
+        <source>M3U8 (*.m3u8 *.m3u);;PLS (*.pls);;XSPF (*.xspf)</source>
+        <translation>M3U8 (*.m3u8 *.m3u);;PLS (*.pls);;XSPF (*.xspf)</translation>
+    </message>
+    <message>
         <location filename="../src/ui/window/windowactions.cpp" line="379"/>
         <location filename="../src/ui/window/windowactions.cpp" line="516"/>
         <source>主题</source>
@@ -844,7 +852,7 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>About NekoPlayer…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/mainwindow.cpp" line="502"/>
+        <location filename="../src/ui/window/mainwindow.cpp" line="498"/>
         <source>无法播放：%1</source>
         <translation>Could not play: %1</translation>
     </message>
@@ -855,27 +863,27 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>Media Library…</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="25"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="26"/>
         <source>播放（媒体键）</source>
         <translation>Play (media key)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="27"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="28"/>
         <source>暂停（媒体键）</source>
         <translation>Pause (media key)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="28"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="29"/>
         <source>播放/暂停（媒体键）</source>
         <translation>Play/Pause (media key)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="31"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="32"/>
         <source>停止（媒体键）</source>
         <translation>Stop (media key)</translation>
     </message>
     <message>
-        <location filename="../src/ui/window/windowdesktop.cpp" line="68"/>
+        <location filename="../src/ui/window/windowdesktop.cpp" line="72"/>
         <source>显示/隐藏窗口</source>
         <translation>Show/Hide window</translation>
     </message>
@@ -1031,7 +1039,7 @@ Click “Refresh” to scan the added folders.</translation>
 <context>
     <name>MpvController</name>
     <message>
-        <location filename="../src/playback/mpv/mpvcontroller_p.h" line="372"/>
+        <location filename="../src/playback/mpv/mpvcontroller_p.h" line="375"/>
         <source>所选轨道不存在</source>
         <translation>The selected track does not exist</translation>
     </message>
@@ -1270,17 +1278,17 @@ Click “Refresh” to scan the added folders.</translation>
         <translation>Headers may contain credentials; only enter trusted values. These options are not written to the session file and must be re-entered after restart.</translation>
     </message>
     <message>
-        <location filename="../src/ui/dialogs/networkopendialog.cpp" line="66"/>
+        <location filename="../src/ui/dialogs/networkopendialog.cpp" line="67"/>
         <source>播放</source>
         <translation>Play</translation>
     </message>
     <message>
-        <location filename="../src/ui/dialogs/networkopendialog.cpp" line="67"/>
+        <location filename="../src/ui/dialogs/networkopendialog.cpp" line="68"/>
         <source>播放网络媒体</source>
         <translation>Play Network Media</translation>
     </message>
     <message>
-        <location filename="../src/ui/dialogs/networkopendialog.cpp" line="68"/>
+        <location filename="../src/ui/dialogs/networkopendialog.cpp" line="69"/>
         <source>输入有效的 HTTP(S)、RTSP(S) 或 RTMP(S) 地址后播放</source>
         <translation>Enter a valid HTTP(S), RTSP(S), or RTMP(S) address to play</translation>
     </message>
@@ -1424,8 +1432,8 @@ Click “Refresh” to scan the added folders.</translation>
 <context>
     <name>PlaylistController</name>
     <message>
-        <location filename="../src/playback/playlist/playlistcontroller.cpp" line="446"/>
-        <location filename="../src/playback/playlist/playlistcontroller.cpp" line="496"/>
+        <location filename="../src/playback/playlist/playlistcontroller.cpp" line="458"/>
+        <location filename="../src/playback/playlist/playlistcontroller.cpp" line="508"/>
         <source>文件不存在：%1</source>
         <translation>File does not exist: %1</translation>
     </message>
@@ -1537,27 +1545,27 @@ Click “Refresh” to scan the added folders.</translation>
     <name>PlaylistPane</name>
     <message>
         <location filename="../src/ui/panels/playlistpane.cpp" line="54"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="262"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="267"/>
         <source>从列表移除</source>
         <translation>Remove from Playlist</translation>
     </message>
     <message>
         <location filename="../src/ui/panels/playlistpane.cpp" line="54"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="263"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="268"/>
         <source>上移所选项</source>
         <translation>Move Selected Up</translation>
     </message>
     <message>
         <location filename="../src/ui/panels/playlistpane.cpp" line="55"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="264"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="269"/>
         <source>下移所选项</source>
         <translation>Move Selected Down</translation>
     </message>
     <message>
         <location filename="../src/ui/panels/playlistpane.cpp" line="95"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="171"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="268"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="271"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="176"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="273"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="276"/>
         <source>播放列表</source>
         <translation>Playlist</translation>
     </message>
@@ -1565,49 +1573,49 @@ Click “Refresh” to scan the added folders.</translation>
         <location filename="../src/ui/panels/playlistpane.cpp" line="56"/>
         <location filename="../src/ui/panels/playlistpane.cpp" line="66"/>
         <location filename="../src/ui/panels/playlistpane.cpp" line="67"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="265"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="269"/>
         <location filename="../src/ui/panels/playlistpane.cpp" line="270"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="274"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="275"/>
         <source>搜索播放列表</source>
         <translation>Search playlist</translation>
     </message>
     <message>
         <location filename="../src/ui/panels/playlistpane.cpp" line="57"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="266"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="271"/>
         <source>清除播放列表搜索</source>
         <translation>Clear playlist search</translation>
     </message>
     <message>
         <location filename="../src/ui/panels/playlistpane.cpp" line="96"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="272"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="277"/>
         <source>双击播放；可拖动排序</source>
         <translation>Double-click to play; drag to reorder</translation>
     </message>
     <message>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="397"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="402"/>
         <source>%1 项</source>
         <translation>%1 items</translation>
     </message>
     <message>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="395"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="400"/>
         <source>%1 / %2 项</source>
         <translation>%1 / %2 items</translation>
     </message>
     <message>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="448"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="462"/>
         <source>播放列表为空
 打开文件或文件夹，或拖入媒体</source>
         <translation>Playlist is empty
 Open a file or folder, or drop media here</translation>
     </message>
     <message>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="453"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="467"/>
         <source>没有匹配项</source>
         <translation>No matches</translation>
     </message>
     <message>
         <location filename="../src/ui/panels/playlistpane.cpp" line="73"/>
-        <location filename="../src/ui/panels/playlistpane.cpp" line="273"/>
+        <location filename="../src/ui/panels/playlistpane.cpp" line="278"/>
         <source>播放列表提示</source>
         <translation>Playlist hint</translation>
     </message>
@@ -2614,120 +2622,160 @@ libmpv client API: %3</translation>
 <context>
     <name>TuningMenus</name>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="77"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="105"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="85"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="118"/>
         <source>%1 倍</source>
         <translation>%1×</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="82"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="115"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="90"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="128"/>
         <source>减慢 0.1 倍</source>
         <translation>Decrease Speed by 0.1×</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="83"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="120"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="91"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="133"/>
         <source>加快 0.1 倍</source>
         <translation>Increase Speed by 0.1×</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="84"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="125"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="92"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="138"/>
         <source>正常速度</source>
         <translation>Normal Speed</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="85"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="130"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="93"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="143"/>
         <source>自定义速度…</source>
         <translation>Custom Speed…</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="86"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="90"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="145"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="94"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="98"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="158"/>
         <source>提前 %1 毫秒</source>
         <translation>Earlier by %1 ms</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="87"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="91"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="148"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="95"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="99"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="161"/>
         <source>延后 %1 毫秒</source>
         <translation>Later by %1 ms</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="88"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="92"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="151"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="96"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="100"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="164"/>
         <source>延迟归零</source>
         <translation>Reset Delay</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="89"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="93"/>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="159"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="97"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="101"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="172"/>
         <source>自定义延迟…</source>
         <translation>Custom Delay…</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="200"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="106"/>
+        <source>重放增益</source>
+        <translation>ReplayGain</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="108"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="215"/>
+        <source>按音轨</source>
+        <translation>Per track</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="109"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="216"/>
+        <source>按专辑</source>
+        <translation>Per album</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="210"/>
+        <source>重放增益：%1</source>
+        <translation>ReplayGain: %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="227"/>
+        <source>已启用独占音频输出</source>
+        <translation>Exclusive audio output enabled</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="227"/>
+        <source>已关闭独占音频输出</source>
+        <translation>Exclusive audio output disabled</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="272"/>
         <source>播放速度</source>
         <translation>Playback Speed</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="200"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="272"/>
         <source>音频延迟</source>
         <translation>Audio Delay</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="200"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="272"/>
         <source>字幕延迟</source>
         <translation>Subtitle Delay</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="202"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="274"/>
         <source>播放倍率（0.25–4.00，保持音调）</source>
         <translation>Playback speed (0.25–4.00, preserve pitch)</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="202"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="274"/>
         <source>延迟秒数（正值延后，负值提前）</source>
         <translation>Delay in seconds (positive is later, negative is earlier)</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="222"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="294"/>
         <source>播放速度 · %1 倍</source>
         <translation>Playback Speed · %1×</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="223"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="295"/>
         <source>音频延迟 · %1 秒</source>
         <translation>Audio Delay · %1 s</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="224"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="296"/>
         <source>字幕延迟 · %1 秒</source>
         <translation>Subtitle Delay · %1 s</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="234"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="312"/>
         <source>速度 %1 倍 · 音频 %2 秒 · 字幕 %3 秒</source>
         <translation>Speed %1× · Audio %2 s · Subtitles %3 s</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="94"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="102"/>
         <source>均衡器</source>
         <translation>Equalizer</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/tuningmenus.cpp" line="178"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="52"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="110"/>
+        <source>独占音频输出</source>
+        <translation>Exclusive audio output</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="191"/>
         <source>均衡器：%1</source>
         <translation>Equalizer: %1</translation>
     </message>
     <message>
         <location filename="../src/ui/menus/tuningmenus.cpp" line="21"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="107"/>
+        <location filename="../src/ui/menus/tuningmenus.cpp" line="214"/>
         <source>关闭</source>
         <translation>Off</translation>
     </message>
@@ -2871,131 +2919,168 @@ libmpv client API: %3</translation>
 <context>
     <name>VideoMenu</name>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="52"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="221"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="56"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="252"/>
         <source>宽高比</source>
         <translation>Aspect Ratio</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="67"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="222"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="71"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="253"/>
         <source>原始比例</source>
         <translation>Source</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="72"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="223"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="76"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="254"/>
         <source>拉伸填满</source>
         <translation>Stretch to Fill</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="74"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="224"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="78"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="255"/>
         <source>向右旋转 90°</source>
         <translation>Rotate Right 90°</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="76"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="225"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="80"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="256"/>
         <source>向左旋转 90°</source>
         <translation>Rotate Left 90°</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="78"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="226"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="82"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="257"/>
         <source>重置旋转</source>
         <translation>Reset Rotation</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="89"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="227"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="84"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="274"/>
+        <source>录制当前流…</source>
+        <translation>Record current stream…</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/videomenu.cpp" line="85"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="275"/>
+        <source>停止录制</source>
+        <translation>Stop recording</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/videomenu.cpp" line="94"/>
+        <source>录制当前流</source>
+        <translation>Record current stream</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/videomenu.cpp" line="95"/>
+        <source>Matroska (*.mkv);;MPEG-TS (*.ts)</source>
+        <translation>Matroska (*.mkv);;MPEG-TS (*.ts)</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/videomenu.cpp" line="101"/>
+        <source>无法开始录制：当前没有可播放的媒体或路径不可写</source>
+        <translation>Cannot start recording: no playable media or the path is not writable</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/videomenu.cpp" line="103"/>
+        <source>正在录制到 %1</source>
+        <translation>Recording to %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/videomenu.cpp" line="108"/>
+        <source>录制已停止</source>
+        <translation>Recording stopped</translation>
+    </message>
+    <message>
+        <location filename="../src/ui/menus/videomenu.cpp" line="120"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="258"/>
         <source>色彩调整…</source>
         <translation>Color Adjustment…</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="96"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="228"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="127"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="259"/>
         <source>HDR 色调映射</source>
         <translation>HDR Tone Mapping</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="110"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="129"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="229"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="234"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="141"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="160"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="260"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="265"/>
         <source>自动</source>
         <translation>Auto</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="111"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="230"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="142"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="261"/>
         <source>BT.2390</source>
         <translation>BT.2390</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="112"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="231"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="143"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="262"/>
         <source>剪裁</source>
         <translation>Clip</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="114"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="232"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="145"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="263"/>
         <source>去隔行</source>
         <translation>Deinterlace</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="21"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="128"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="233"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="25"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="159"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="264"/>
         <source>关闭</source>
         <translation>Off</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="130"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="235"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="161"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="266"/>
         <source>开启</source>
         <translation>On</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="263"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="298"/>
         <source>视频(&amp;I) · %1 · %2°</source>
         <translation>&amp;Video · %1 · %2°</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="166"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="197"/>
         <source>画面比例：%1 · 旋转：%2°</source>
         <translation>Aspect ratio: %1 · Rotation: %2°</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="132"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="236"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="163"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="267"/>
         <source>锐化</source>
         <translation>Sharpen</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="134"/>
-        <location filename="../src/ui/menus/videomenu.cpp" line="237"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="165"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="268"/>
         <source>降噪</source>
         <translation>Denoise</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="21"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="25"/>
         <source>低</source>
         <translation>Low</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="21"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="25"/>
         <source>中</source>
         <translation>Medium</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="21"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="25"/>
         <source>高</source>
         <translation>High</translation>
     </message>
     <message>
-        <location filename="../src/ui/menus/videomenu.cpp" line="174"/>
+        <location filename="../src/ui/menus/videomenu.cpp" line="205"/>
         <source>锐化：%1 · 降噪：%2</source>
         <translation>Sharpen: %1 · Denoise: %2</translation>
     </message>

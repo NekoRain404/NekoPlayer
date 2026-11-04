@@ -37,4 +37,6 @@ class VideoMenu final : public QObject {
     QActionGroup *sharpenLevels_;
     QActionGroup *denoiseLevels_;
     QAction *resetRotation_;
+    QAction *recordStream_;
+    QAction *stopRecording_;
 };

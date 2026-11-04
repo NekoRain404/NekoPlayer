@@ -8,7 +8,7 @@ Windows 兼容可行，工作量集中在**构建依赖、桌面集成、窗口�
 
 推荐路线：
 
-1. **第一目标：MSYS2 MinGW-w64 + Ninja**。它与当前 `pkg-config` 依赖方式、GPL 依赖组合和 Arch 构建习惯最接近，能最快得到一个可运行版本。
+1. **第一目标：MSYS2 UCRT64 + Ninja**。它与当前 `pkg-config` 依赖方式、GPL 依赖组合和 Arch 构建习惯最接近，能最快得到一个可运行版本。
 2. **第二目标（可选）：MSVC + vcpkg**。需要补 `Findmpv`/`FindFFmpeg` 或不依赖 pkg-config 的查找逻辑；建议等 MinGW 版本稳定后再做。
 3. **发布形态先做便携 zip**（exe + Qt/libmpv/FFmpeg DLL），稳定后再加 Inno Setup 安装器、文件关联与代码签名。
 

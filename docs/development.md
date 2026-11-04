@@ -34,13 +34,13 @@ ASAN_OPTIONS=detect_leaks=0 ctest --preset sanitizers -R '<相关测试>'
 
 `--smoke-test` 只验证初始化与可选文件加载，不能代替真实视频渲染、硬解或 HDR 验收。
 
-Windows（MSYS2 MinGW-w64）：
+Windows（MSYS2 UCRT64）：
 
 ```bash
-# MSYS2 MINGW64 shell
-pacman -S --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake \
-    mingw-w64-x86_64-ninja mingw-w64-x86_64-pkgconf mingw-w64-x86_64-qt6-base \
-    mingw-w64-x86_64-qt6-tools mingw-w64-x86_64-mpv mingw-w64-x86_64-ffmpeg
+# MSYS2 UCRT64 shell（MINGW64 环境已弃用，且其软件仓库不再提供 mpv）
+pacman -S --needed mingw-w64-ucrt-x86_64-toolchain mingw-w64-ucrt-x86_64-cmake \
+    mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-qt6-base \
+    mingw-w64-ucrt-x86_64-qt6-tools mingw-w64-ucrt-x86_64-mpv mingw-w64-ucrt-x86_64-ffmpeg
 cmake --preset windows
 cmake --build --preset windows -j 4
 ctest --preset windows -R '<确定性 smoke 集合>'

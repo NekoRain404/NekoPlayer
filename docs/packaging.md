@@ -122,7 +122,7 @@ acceptance items; see `docs/verification.md`.
 
 ## Windows（便携包）
 
-Windows 构建使用 MSYS2 MinGW-w64（`windows` 预设）或 Linux 交叉工具链（`windows-cross` 预设）。发布工作流在 tag 上执行：
+Windows 构建使用 MSYS2 UCRT64（`windows` 预设）或 Linux 交叉工具链（`windows-cross` 预设）。发布工作流在 tag 上执行：
 
 1. `cmake --preset windows && cmake --build --preset windows -j 4`；
 2. `packaging/windows/deploy.sh build/windows/NekoPlayer.exe build/windows-portable` 复制 `NekoPlayer.exe`、`windeployqt` 收集的 Qt/平台插件/MinGW 运行库，以及 `ldd` 解析出的 libmpv/FFmpeg DLL；

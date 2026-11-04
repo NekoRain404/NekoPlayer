@@ -80,6 +80,12 @@ jobs:
         run: |
           ctest --preset windows --output-on-failure --timeout 180 -R \
             '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move|single-instance)$'
+      - name: Repeat teardown-sensitive tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          ctest --preset windows --output-on-failure --timeout 120 --repeat until-fail:5 \
+            -R '^(interaction-preferences|language-preferences)$'
       - name: Diagnose failing smoke tests
         if: failure()
         env:

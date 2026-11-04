@@ -118,11 +118,8 @@ class SingleInstance::Private {
     [[nodiscard]] Probe forward(const QByteArray &payload) {
         QLocalSocket socket;
         socket.connectToServer(endpoint_);
-        if (!socket.waitForConnected(kConnectTimeoutMs)) {
-            qWarning("single-instance connect failed (%s): %s", qPrintable(endpoint_),
-                     qPrintable(socket.errorString()));
+        if (!socket.waitForConnected(kConnectTimeoutMs))
             return Probe::NotRunning;
-        }
         if (socket.write(payload) != payload.size()) {
             qWarning("single-instance write failed: %s", qPrintable(socket.errorString()));
             socket.abort();

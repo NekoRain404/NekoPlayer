@@ -108,6 +108,11 @@ class InteractionPreferencesTest final : public QObject {
         MpvController player(true, true);
         QVERIFY(player.isReady());
         player.setVolume(40);
+    }
+
+    void headlessControllerAcceptsMute() {
+        MpvController player(true, true);
+        QVERIFY(player.isReady());
         player.setMuted(false);
     }
 

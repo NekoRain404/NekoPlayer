@@ -103,6 +103,7 @@ target_link_libraries(neko_preview PUBLIC neko_options Qt6::Core Qt6::Concurrent
     neko_ffmpeg)
 
 add_library(neko_ui src/playback/render/videowidget.cpp src/desktop/singleinstance.cpp
+    src/desktop/windowsintegration.cpp
     src/ui/theme/platformappearance.cpp src/ui/window/mainwindow.cpp src/ui/panels/playlistpane.cpp
     src/ui/theme/appearanceicons.cpp src/ui/theme/appicon.cpp
     src/ui/panels/playlistitemdelegate.cpp
@@ -143,13 +144,13 @@ endif()
 qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
     FILES data/checkmark.png data/chevron.png data/chevron-up.png data/chevron-down.png)
 
-add_executable(NekoPlayer src/main.cpp src/playback/mpv/backenddiagnostic.cpp)
+qt_add_executable(NekoPlayer src/main.cpp src/playback/mpv/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)
 if(WIN32)
     configure_file(packaging/windows/nekoplayer.rc.in
         "${CMAKE_CURRENT_BINARY_DIR}/nekoplayer.rc" @ONLY)
     target_sources(NekoPlayer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/nekoplayer.rc")
-    target_link_libraries(neko_ui PUBLIC dwmapi)
+    target_link_libraries(neko_ui PUBLIC dwmapi user32 shell32 ole32)
 endif()
 target_compile_definitions(NekoPlayer PRIVATE NEKOPLAYER_VERSION="${PROJECT_VERSION}")
 qt_add_translations(NekoPlayer TS_FILES translations/NekoPlayer_en.ts

@@ -108,3 +108,9 @@ add_executable(single_instance_test desktop/single_instance_test.cpp)
 target_link_libraries(single_instance_test PRIVATE neko_ui Qt6::Test)
 add_test(NAME single-instance COMMAND single_instance_test)
 set_tests_properties(single-instance PROPERTIES TIMEOUT 30)
+
+add_executable(windows_integration_test desktop/windows_integration_test.cpp)
+target_link_libraries(windows_integration_test PRIVATE neko_ui Qt6::Test)
+add_test(NAME windows-integration COMMAND windows_integration_test)
+set_tests_properties(windows-integration PROPERTIES TIMEOUT 20
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

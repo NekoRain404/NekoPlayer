@@ -1,3 +1,4 @@
+#include "desktop/windowsintegration.h"
 #include "playback/mpv/mpvcontroller.h"
 #include "playback/playlist/playlistcontroller.h"
 #include "playback/playlist/playlistmodel.h"
@@ -50,6 +51,12 @@ void MainWindow::createDesktopActions() {
 
 void MainWindow::setupDesktopIntegration() {
     setupTrayIcon();
+    WindowsIntegration::installMediaHotkeys(*this, mediaToggleAction_, mediaStopAction_,
+                                            previousAction_, nextAction_);
+    connect(controller_.get(), &MpvController::stateChanged, this, [this] {
+        const auto &state = controller_->state();
+        WindowsIntegration::setPlaybackScreenAwake(state.active && !state.paused);
+    });
     new QuickActionsDialog(this, this);
     if (auto *quickActions = findChild<QAction *>(QStringLiteral("quickActionsAction")))
         helpMenu_->addAction(quickActions);

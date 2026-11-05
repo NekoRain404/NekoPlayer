@@ -15,11 +15,22 @@
 #include <QStandardPaths>
 #include <QTimer>
 #include <clocale>
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 
 int main(int argc, char *argv[]) {
+#ifdef Q_OS_WIN
+    // The release build uses the GUI subsystem so double-clicking the exe does
+    // not flash a console. Reattach stdout/stderr when a terminal launched us so
+    // --help/--check-backend remain usable.
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        FILE *stream = nullptr;
+        freopen_s(&stream, "CONOUT$", "w", stdout);
+        freopen_s(&stream, "CONOUT$", "w", stderr);
+    }
+#endif
     const bool checkBackendOnly =
         CommandLineArguments::hasOptionBeforeSeparator(argc, argv, "--check-backend");
     std::unique_ptr<QCoreApplication> app;
@@ -33,6 +44,9 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setApplicationName(QStringLiteral("NekoPlayer"));
     QCoreApplication::setOrganizationName(QStringLiteral("NekoPlayer"));
     QCoreApplication::setApplicationVersion(QStringLiteral(NEKOPLAYER_VERSION));
+#ifdef Q_OS_WIN
+    SetCurrentProcessExplicitAppUserModelID(L"NekoRain.NekoPlayer");
+#endif
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QStringLiteral("NekoPlayer — Qt 6 / libmpv 桌面播放器"));

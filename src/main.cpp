@@ -21,9 +21,9 @@
 #include <memory>
 
 #ifdef Q_OS_WIN
-#include <windows.h>
 #include <consoleapi.h>
 #include <shobjidl.h>
+#include <windows.h>
 #endif
 
 int main(int argc, char *argv[]) {

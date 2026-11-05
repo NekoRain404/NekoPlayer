@@ -147,6 +147,7 @@ qt_add_resources(neko_ui "appearance_resources" PREFIX "/appearance"
 qt_add_executable(NekoPlayer src/main.cpp src/playback/mpv/backenddiagnostic.cpp)
 target_link_libraries(NekoPlayer PRIVATE neko_ui)
 if(WIN32)
+    target_compile_definitions(neko_ui PUBLIC _WIN32_WINNT=0x0A00 NTDDI_VERSION=0x0A000000)
     configure_file(packaging/windows/nekoplayer.rc.in
         "${CMAKE_CURRENT_BINARY_DIR}/nekoplayer.rc" @ONLY)
     target_sources(NekoPlayer PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/nekoplayer.rc")

@@ -21,9 +21,11 @@
 #include <memory>
 
 #ifdef Q_OS_WIN
+// clang-format off
+#include <windows.h>
 #include <consoleapi.h>
 #include <shobjidl.h>
-#include <windows.h>
+// clang-format on
 #endif
 
 int main(int argc, char *argv[]) {

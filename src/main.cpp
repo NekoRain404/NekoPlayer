@@ -20,6 +20,12 @@
 #include <iostream>
 #include <memory>
 
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <consoleapi.h>
+#include <shobjidl.h>
+#endif
+
 int main(int argc, char *argv[]) {
 #ifdef Q_OS_WIN
     // The release build uses the GUI subsystem so double-clicking the exe does

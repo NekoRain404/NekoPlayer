@@ -1,5 +1,14 @@
 # Verification Record
 
+## 2026-11-05 — Windows desktop integration
+
+- Windows `windows-msys2` (UCRT64) and Linux `arch-smoke` jobs both passed for commit `49d63a9` (run `41943643503`): Windows configure, full build, 19-test smoke and the repeated teardown run all succeeded.
+- The Windows executable now uses the GUI subsystem (`qt_add_executable`), reattaches stdout/stderr when launched from a terminal, and sets `NekoRain.NekoPlayer` as its AppUserModelID.
+- Added `desktop/windowsintegration`: system-wide media keys via `RegisterHotKey` + a native event filter, and `SetThreadExecutionState` wake lock while media is actively playing. `windows-integration` covers repeated install/release and wake-lock calls (no-op off Windows).
+- Added `packaging/windows/nekoplayer.iss` (optional Inno Setup installer with per-user install, Start Menu/desktop shortcuts, AppUserModelID and optional video/audio/playlist associations). It has not been built; the portable zip remains the primary artifact.
+- Linux regression: Debug `-j4` build with 0 warnings; full serial `ctest --preset debug` passed **103/103** in **187.34 s** (higher wall time with the machine at load average ~10; `ab-loop` was re-run three times after the load settled and passed each time).
+- Known issue unchanged: headless `MpvController` teardown can still crash on Windows; the two preference suites self-skip there. Global hotkeys and screen-awake behavior were compiled but not exercised on a physical Windows desktop.
+
 ## 2026-11-04 — Windows CI and cross-platform hardening
 
 - Windows: the new `windows-msys2` job (MSYS2 UCRT64) completed configure, the full build, the 19-test deterministic smoke set and a repeated teardown run successfully (CI run `41869263977`, commit `242978d`); the Linux `arch-smoke` job passed in parallel.

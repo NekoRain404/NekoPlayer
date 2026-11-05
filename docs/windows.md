@@ -17,8 +17,9 @@ Windows 兼容可行，工作量集中在**构建依赖、桌面集成、窗口�
 - **P0 已落地**：Qt DBus 可选、MPRIS 条件编译、`windows`/`windows-cross` 预设、MinGW 工具链文件、Windows `.rc`/`.ico`/manifest、按平台安装规则、`windows-msys2`（UCRT64）CI 与 Windows 便携 zip 发布任务。CI 首次运行发现 MSYS2 已弃用 MINGW64 且其仓库不再提供 mpv，已切换到 UCRT64；构建结果以最新 CI 为准。
 - **P1 已落地**：单实例改为 `QLocalServer`/`QLocalSocket`，Linux 行为与端点命名保持，`single-instance` 测试通过；桌面媒体控制抽象与 Windows 全局媒体键尚未实现。
 - **P2 第一步已落地**：Windows 顶层窗口改为不透明回退，DWM 暗色标题栏按应用调色板设置（属性 20，回退 19）。Mica/Acrylic、运行时主题切换、对话框透明属性统一仍待完成。
+- **桌面集成已落地**：GUI 子系统（从终端启动时 `AttachConsole` 保留 CLI 输出）、AppUserModelID、系统级媒体键（`RegisterHotKey` + 原生事件过滤器）、播放期间 `SetThreadExecutionState` 防止息屏；Inno Setup 安装脚本含可选的视频/音频/播放列表关联。
 - **P4 骨架已落地**：`packaging/windows/deploy.sh`、manifest/图标/版本资源、release 工作流 Windows job；安装器、文件关联与代码签名未做。
-- **仍缺**：Windows 真机运行与视觉验收、SMTC 或全局媒体键、双显示器/HiDPI/全屏验收、D3D11/HDR 路径、headless `MpvController` 退出崩溃（仅测试/诊断路径；`interaction-preferences` 与 `language-preferences` 在 Windows 上暂时跳过）。
+- **仍缺**：Windows 真机运行与视觉验收、完整 SMTC 系统媒体浮层（当前为全局热键）、安装器实际构建与签名、双显示器/HiDPI/全屏验收、D3D11/HDR 路径、headless `MpvController` 退出崩溃（仅测试/诊断路径；`interaction-preferences` 与 `language-preferences` 在 Windows 上暂时跳过）。
 - CI：`windows-msys2`（UCRT64）构建 + 19 项 smoke + 重复 teardown 通过；Linux `arch-smoke` 并行通过（run `41869263977`）。
 - Linux 回归：Debug `-j4` 构建无警告，串行全量 **102/102** 通过（见 [verification.md](verification.md)）。
 

@@ -47,7 +47,7 @@ jobs:
           chmod 700 "$XDG_RUNTIME_DIR"
           fc-cache -f >/dev/null
           ctest --preset debug --output-on-failure --timeout 180 -R \
-            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move|single-instance)$'
+            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move|single-instance|windows-integration)$'
 
   windows-msys2:
     runs-on: windows-latest
@@ -79,7 +79,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           ctest --preset windows --output-on-failure --timeout 180 -R \
-            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move|single-instance)$'
+            '^(code-size|backend-startup|media-source|m3u8-store|playback-time|command-line-arguments|media-library|folder-scan|thumbnail-decoder|thumbnail-service|recent-media-history|playback-history-store|track-preference-store|interaction-preferences|language-preferences|media-report|playlist-file|playlist-block-move|single-instance|windows-integration)$'
       - name: Repeat teardown-sensitive tests
         env:
           QT_QPA_PLATFORM: offscreen

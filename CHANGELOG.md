@@ -13,7 +13,8 @@
 - ReplayGain 关闭/按音轨/按专辑、独占音频输出与自定义 10 段均衡器。
 - “录制当前流”支持把正在播放的流复制到 Matroska/MPEG-TS。
 - “字幕 → 第二字幕”支持叠加显示另一条字幕轨道（含外挂字幕），并在渲染恢复后保留选择。
-- Windows 兼容基础：Qt DBus 改为可选（MPRIS 仅在可用平台编译）、单实例改用跨平台本地套接字、Windows 图标/manifest/便携部署脚本、`windows`/`windows-cross` 预设；MSYS2 UCRT64 的 CI 构建与 19 项 smoke 已通过。
+- Windows 兼容基础：Qt DBus 改为可选（MPRIS 仅在可用平台编译）、单实例改用跨平台本地套接字、Windows 图标/manifest/便携部署脚本、`windows`/`windows-cross` 预设；MSYS2 UCRT64 的 CI 构建与 smoke 已通过。
+- Windows 桌面集成：GUI 子系统与终端输出回连、AppUserModelID、系统级媒体键、播放期间防息屏；可选 Inno Setup 安装脚本（文件关联/快捷方式）。
 
 ### 计划
 - 原生 Wayland HDR、硬件解码与多显示器实机验收。
